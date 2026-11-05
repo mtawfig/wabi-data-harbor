@@ -64,4 +64,5 @@ public static class UsageEventTypes
     public const string ApplicationCreated = "Application.Created";
     public const string ConnectionTested = "Application.ConnectionTested";
     public const string MetadataRefreshed = "Metadata.Refreshed";
+    public const string InsightsQueried = "Insights.Queried";
 }

@@ -1,0 +1,140 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'common.platform' | transloco }}</p>
+      <h1>{{ 'platformInsights.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'platformInsights.subtitle' | transloco }}</p>
+    </div>
+    <button mat-flat-button type="button" (click)="sync()" [disabled]="busy()" data-testid="insights-sync"><mat-icon>sync</mat-icon>{{ 'platformInsights.sync' | transloco }}</button>
+  </header>
+
+  @if (error(); as e) { <div class="wi-card catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+  @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+
+  @if (source(); as s) {
+    <div class="wi-card source" data-testid="insights-source">
+      <div class="source__item"><mat-icon [class.ok]="s.reachable" [class.bad]="!s.reachable">{{ s.reachable ? 'check_circle' : 'error' }}</mat-icon><div><strong>{{ 'platformInsights.source.reachable' | transloco }}</strong><span class="wi-muted">{{ s.reachable ? ('platformInsights.source.views' | transloco: { count: s.viewCount }) : (('admin.errors.' + s.error) | transloco) }}</span></div></div>
+      <div class="source__item"><mat-icon [class.ok]="s.dedicatedLoginConfigured" [class.warn]="!s.dedicatedLoginConfigured">{{ s.dedicatedLoginConfigured ? 'verified_user' : 'warning_amber' }}</mat-icon><div><strong>{{ 'platformInsights.source.login' | transloco }}</strong><span class="wi-muted">{{ (s.dedicatedLoginConfigured ? 'platformInsights.source.loginConfigured' : 'platformInsights.source.loginMissing') | transloco }}</span></div></div>
+      <div class="source__item"><mat-icon [class.ok]="s.confinedToInsightsSchema" [class.warn]="!s.confinedToInsightsSchema">{{ s.confinedToInsightsSchema ? 'lock' : 'lock_open' }}</mat-icon><div><strong>{{ 'platformInsights.source.confined' | transloco }}</strong><span class="wi-muted">{{ (s.confinedToInsightsSchema ? 'platformInsights.source.confinedYes' : 'platformInsights.source.confinedNo') | transloco }}</span></div></div>
+      <div class="source__item"><mat-icon>schedule</mat-icon><div><strong>{{ 'platformInsights.source.checked' | transloco }}</strong><span class="wi-muted">{{ s.checkedAt | date: 'medium' }}</span></div></div>
+    </div>
+  }
+
+  <mat-tab-group animationDuration="0ms" data-testid="insights-tabs">
+    <mat-tab [label]="'platformInsights.tabViews' | transloco">
+      <div class="layout" [class.layout--detail]="selectedObject()">
+        <div class="wi-card">
+          <table class="matrix" data-testid="insights-views">
+            <thead><tr><th>{{ 'platformInsights.view' | transloco }}</th><th>{{ 'platformInsights.names' | transloco }}</th><th class="num">{{ 'platformInsights.columns' | transloco }}</th><th>{{ 'admin.fields.status' | transloco }}</th></tr></thead>
+            <tbody>
+              @for (o of objects(); track o.objectId) {
+                <tr class="row" [class.row--active]="selectedObject()?.objectId === o.objectId" [class.row--off]="!o.isPresent" (click)="openObject(o)" [attr.data-testid]="'insights-view-' + o.viewName">
+                  <td><span class="wi-ltr"><span class="wi-muted">insights.</span><strong>{{ o.viewName }}</strong></span>@if (!o.isPresent) { <span class="chip off">{{ 'admin.metadata.removed' | transloco }}</span> }</td>
+                  <td>{{ o.displayNameEn }}<br /><span dir="rtl">{{ o.displayNameAr }}</span></td>
+                  <td class="num">{{ approvedCount(o) }} / {{ o.columns.length }}</td>
+                  <td><span class="chip" [attr.data-on]="o.isApproved">{{ (o.isApproved ? 'admin.metadata.approved' : 'admin.metadata.pending') | transloco }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (selectedObject(); as o) {
+          <aside class="wi-card detail" data-testid="insights-detail">
+            <header class="detail__head">
+              <div><p class="wi-eyebrow">{{ 'platformInsights.view' | transloco }}</p><h2 class="wi-ltr">insights.{{ o.viewName }}</h2></div>
+              <button mat-icon-button type="button" (click)="selectedObject.set(null)" [attr.aria-label]="'common.cancel' | transloco"><mat-icon>close</mat-icon></button>
+            </header>
+            <div class="grid">
+              <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameEn' | transloco }}</mat-label><input matInput [value]="objectDraft().displayNameEn" (input)="objectDraft.set({ ...objectDraft(), displayNameEn: $any($event.target).value })" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameAr' | transloco }}</mat-label><input matInput dir="rtl" [value]="objectDraft().displayNameAr" (input)="objectDraft.set({ ...objectDraft(), displayNameAr: $any($event.target).value })" /></mat-form-field>
+              <mat-form-field appearance="outline" class="span"><mat-label>{{ 'admin.metadata.businessDescription' | transloco }}</mat-label><textarea matInput rows="2" [value]="objectDraft().description" (input)="objectDraft.set({ ...objectDraft(), description: $any($event.target).value })"></textarea></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'admin.templates.order' | transloco }}</mat-label><input matInput type="number" [value]="objectDraft().sortOrder" (input)="objectDraft.set({ ...objectDraft(), sortOrder: +$any($event.target).value })" /></mat-form-field>
+              <mat-checkbox [checked]="objectDraft().isApproved" [disabled]="!o.isPresent" (change)="objectDraft.set({ ...objectDraft(), isApproved: $event.checked })" data-testid="insights-view-approved">{{ 'admin.metadata.approvedForQueries' | transloco }}</mat-checkbox>
+            </div>
+            <div class="detail__actions"><button mat-flat-button type="button" (click)="saveObject()" [disabled]="busy()" data-testid="insights-view-save">{{ 'common.save' | transloco }}</button></div>
+
+            <h3>{{ 'platformInsights.columns' | transloco }}</h3>
+            <ul class="cols">
+              @for (c of o.columns; track c.columnId) {
+                <li [class.cols__editing]="editingColumn() === c.columnId" [class.cols__removed]="!c.isPresent">
+                  <div class="cols__row">
+                    <mat-checkbox [checked]="c.isApproved" [disabled]="!c.isPresent || busy()" (change)="toggleColumnApproval(c, $event.checked)" [attr.data-testid]="'insights-col-' + c.columnName"></mat-checkbox>
+                    <span class="cols__name wi-ltr">{{ c.columnName }}</span>
+                    <span class="cols__type wi-muted wi-ltr">{{ c.dataType }}</span>
+                    <span class="cols__labels">{{ c.displayNameEn }} · <span dir="rtl">{{ c.displayNameAr }}</span></span>
+                    <button mat-icon-button type="button" (click)="editingColumn() === c.columnId ? editingColumn.set(null) : editColumn(c)" [attr.aria-label]="'admin.metadata.editColumn' | transloco"><mat-icon>edit</mat-icon></button>
+                  </div>
+                  @if (editingColumn() === c.columnId) {
+                    <div class="cols__form">
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'admin.fields.nameEn' | transloco }}</mat-label><input matInput [value]="columnDraft().displayNameEn" (input)="columnDraft.set({ ...columnDraft(), displayNameEn: $any($event.target).value })" /></mat-form-field>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'admin.fields.nameAr' | transloco }}</mat-label><input matInput dir="rtl" [value]="columnDraft().displayNameAr" (input)="columnDraft.set({ ...columnDraft(), displayNameAr: $any($event.target).value })" /></mat-form-field>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span"><mat-label>{{ 'admin.metadata.businessDescription' | transloco }}</mat-label><input matInput [value]="columnDraft().description" (input)="columnDraft.set({ ...columnDraft(), description: $any($event.target).value })" /></mat-form-field>
+                      <div class="span"><button mat-stroked-button type="button" (click)="saveColumn(c)" [disabled]="busy()">{{ 'common.save' | transloco }}</button></div>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          </aside>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab [label]="'platformInsights.tabMetrics' | transloco">
+      <div class="tab-head"><p class="wi-muted">{{ 'platformInsights.metricsHint' | transloco }}</p><button mat-flat-button type="button" (click)="startCreateMetric()" data-testid="metric-new"><mat-icon>add</mat-icon>{{ 'platformInsights.newMetric' | transloco }}</button></div>
+
+      @if (showMetricForm()) {
+        <form class="wi-card catalog-form" [formGroup]="metricForm" (ngSubmit)="submitMetric()" novalidate data-testid="metric-form">
+          <h3>{{ (editingMetric() ? 'platformInsights.editMetric' : 'platformInsights.newMetric') | transloco }}</h3>
+          <div class="catalog-form__grid">
+            <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.code' | transloco }}</mat-label><input matInput formControlName="metricCode" data-testid="metric-code" /><mat-hint>{{ 'platformInsights.codeHint' | transloco }}</mat-hint></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>{{ 'platformInsights.view' | transloco }}</mat-label><mat-select formControlName="objectId" data-testid="metric-object">@for (o of objects(); track o.objectId) { <mat-option [value]="o.objectId"><span class="wi-ltr">{{ o.viewName }}</span> · {{ name(o) }}</mat-option> }</mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>{{ 'platformInsights.aggregate' | transloco }}</mat-label><mat-select formControlName="aggregate" data-testid="metric-aggregate">@for (a of aggregates; track a) { <mat-option [value]="a">{{ 'platformInsights.aggregates.' + a | transloco }}</mat-option> }</mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameEn' | transloco }}</mat-label><input matInput formControlName="displayNameEn" data-testid="metric-name-en" /></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameAr' | transloco }}</mat-label><input matInput formControlName="displayNameAr" dir="rtl" data-testid="metric-name-ar" /></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>{{ 'platformInsights.unit' | transloco }}</mat-label><input matInput formControlName="unit" /></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>{{ 'platformInsights.column' | transloco }}</mat-label><mat-select formControlName="columnName" data-testid="metric-column"><mat-option value="">—</mat-option>@for (c of formColumns(); track c.columnId) { <mat-option [value]="c.columnName"><span class="wi-ltr">{{ c.columnName }}</span> <span class="wi-muted">({{ c.dataType }})</span></mat-option> }</mat-select><mat-hint>{{ 'platformInsights.columnHint' | transloco }}</mat-hint></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>{{ 'platformInsights.dateColumn' | transloco }}</mat-label><mat-select formControlName="dateColumn" data-testid="metric-date"><mat-option value="">—</mat-option>@for (c of formColumns(); track c.columnId) { <mat-option [value]="c.columnName"><span class="wi-ltr">{{ c.columnName }}</span></mat-option> }</mat-select><mat-hint>{{ 'platformInsights.dateColumnHint' | transloco }}</mat-hint></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>{{ 'admin.templates.order' | transloco }}</mat-label><input matInput type="number" formControlName="sortOrder" /></mat-form-field>
+            <mat-form-field appearance="outline" style="grid-column: 1 / span 2"><mat-label>{{ 'admin.fields.description' | transloco }}</mat-label><input matInput formControlName="description" /></mat-form-field>
+            <mat-checkbox formControlName="isApproved" data-testid="metric-approved">{{ 'admin.metadata.approvedForQueries' | transloco }}</mat-checkbox>
+          </div>
+          <h4>{{ 'platformInsights.filters' | transloco }} <button mat-button type="button" (click)="addFilter()" data-testid="metric-add-filter"><mat-icon>add</mat-icon>{{ 'platformInsights.addFilter' | transloco }}</button></h4>
+          <p class="wi-muted small">{{ 'platformInsights.filtersHint' | transloco }}</p>
+          @for (f of filters(); track $index; let i = $index) {
+            <div class="filter-row">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'platformInsights.column' | transloco }}</mat-label><mat-select [value]="f.column" (valueChange)="updateFilter(i, { column: $event })">@for (c of formColumns(); track c.columnId) { <mat-option [value]="c.columnName"><span class="wi-ltr">{{ c.columnName }}</span></mat-option> }</mat-select></mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="op"><mat-label>{{ 'platformInsights.operator' | transloco }}</mat-label><mat-select [value]="f.operator" (valueChange)="updateFilter(i, { operator: $event })">@for (op of operators; track op) { <mat-option [value]="op">{{ 'platformInsights.operators.' + op | transloco }}</mat-option> }</mat-select></mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="values"><mat-label>{{ 'platformInsights.values' | transloco }}</mat-label><input matInput [value]="f.values" (input)="updateFilter(i, { values: $any($event.target).value })" /></mat-form-field>
+              <button mat-icon-button type="button" (click)="removeFilter(i)" [attr.aria-label]="'platformInsights.removeFilter' | transloco"><mat-icon>delete</mat-icon></button>
+            </div>
+          }
+          @if (preview(); as p) { <pre class="sql" data-testid="metric-sql">{{ p.sql }}</pre> }
+          <div class="catalog-form__actions">
+            <button mat-button type="button" (click)="cancelMetric()">{{ 'common.cancel' | transloco }}</button>
+            @if (editingMetric()) { <button mat-stroked-button type="button" (click)="previewSql()" data-testid="metric-preview"><mat-icon>code</mat-icon>{{ 'platformInsights.previewSql' | transloco }}</button> }
+            <button mat-flat-button type="submit" [disabled]="busy()" data-testid="metric-save">{{ 'common.save' | transloco }}</button>
+          </div>
+        </form>
+      }
+
+      <div class="wi-card">
+        <table class="matrix" data-testid="insights-metrics">
+          <thead><tr><th>{{ 'admin.fields.code' | transloco }}</th><th>{{ 'platformInsights.names' | transloco }}</th><th>{{ 'platformInsights.definition' | transloco }}</th><th>{{ 'admin.fields.status' | transloco }}</th><th></th></tr></thead>
+          <tbody>
+            @for (m of metrics(); track m.metricId) {
+              <tr [attr.data-testid]="'metric-' + m.metricCode">
+                <td><span class="wi-ltr"><strong>{{ m.metricCode }}</strong></span></td>
+                <td>{{ m.displayNameEn }}<br /><span dir="rtl">{{ m.displayNameAr }}</span></td>
+                <td class="small wi-ltr"><span class="chip agg">{{ 'platformInsights.aggregates.' + m.aggregate | transloco }}</span> {{ m.columnName || '*' }} · {{ m.viewName }}@if (m.dateColumn) { · <mat-icon class="inline">event</mat-icon>{{ m.dateColumn }} }@if (m.filters.length) { <br /><span class="wi-muted">{{ filterSummary(m) }}</span> }</td>
+                <td><mat-checkbox [checked]="m.isApproved" [disabled]="busy()" (change)="toggleMetricApproval(m, $event.checked)" [attr.data-testid]="'metric-approve-' + m.metricCode">{{ 'admin.metadata.approved' | transloco }}</mat-checkbox></td>
+                <td class="actions"><button mat-icon-button type="button" (click)="startEditMetric(m)" [attr.aria-label]="'platformInsights.editMetric' | transloco"><mat-icon>edit</mat-icon></button><button mat-icon-button type="button" (click)="deleteMetric(m)" [disabled]="busy()" [attr.aria-label]="'platformInsights.deleteMetric' | transloco"><mat-icon>delete</mat-icon></button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</section>

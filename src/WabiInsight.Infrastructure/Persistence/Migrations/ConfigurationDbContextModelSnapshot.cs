@@ -158,6 +158,183 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Insights.InsightsColumn", b =>
+                {
+                    b.Property<Guid>("InsightsColumnId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ColumnName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DisplayNameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DisplayNameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("InsightsObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsNullable")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPresent")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OrdinalPosition")
+                        .HasColumnType("int");
+
+                    b.HasKey("InsightsColumnId");
+
+                    b.HasIndex("InsightsObjectId", "ColumnName")
+                        .IsUnique();
+
+                    b.ToTable("InsightsColumns", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Insights.InsightsMetric", b =>
+                {
+                    b.Property<Guid>("InsightsMetricId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Aggregate")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ColumnName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("DateColumn")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DisplayNameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DisplayNameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FiltersJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid>("InsightsObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MetricCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("InsightsMetricId");
+
+                    b.HasIndex("InsightsObjectId");
+
+                    b.HasIndex("MetricCode")
+                        .IsUnique();
+
+                    b.ToTable("InsightsMetrics", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InsightsMetrics_Aggregate", "[Aggregate] IN ('Count','CountDistinct','Sum','Average','Min','Max')");
+                        });
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Insights.InsightsObject", b =>
+                {
+                    b.Property<Guid>("InsightsObjectId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DisplayNameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DisplayNameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPresent")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ViewName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("InsightsObjectId");
+
+                    b.HasIndex("ViewName")
+                        .IsUnique();
+
+                    b.ToTable("InsightsObjects", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Metadata.DatabaseColumn", b =>
                 {
                     b.Property<Guid>("ColumnId")
@@ -1848,6 +2025,24 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrganizationId", "EventType", "CreatedAt");
 
                     b.ToTable("UsageEvents", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Insights.InsightsColumn", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Insights.InsightsObject", null)
+                        .WithMany()
+                        .HasForeignKey("InsightsObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Insights.InsightsMetric", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Insights.InsightsObject", null)
+                        .WithMany()
+                        .HasForeignKey("InsightsObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Metadata.DatabaseColumn", b =>

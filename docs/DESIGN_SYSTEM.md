@@ -69,3 +69,9 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 
 ## Screenshots (P6.2)
 `docs/screenshots/p6-2-*.png`: matrix for a custom role, grant with selected columns and an unmapped Department scope warning, the same grant after mapping, matrix with two grants, Management (automatic), preview as user EN/AR, grant editor AR, and the platform-side support-mode run form for `UpdateTablePermissions` before and after execution.
+
+## Platform Insights Configuration (P7.1)
+- `app-insights-config` under the platform shell: a four-cell source status card (views reachable, dedicated login, confinement to the insights schema, last check) with green/amber/red icons, then two tabs. *Views and columns* lists the `insights` views with EN/AR names and approved column counts; the sticky detail card edits names, description, order and approval, and lists columns with approval checkboxes and inline label editing. *Metrics* lists definitions as code, names, an aggregate chip plus column/view/date column and filter summary, with approval checkboxes and edit/delete; the metric form adds fixed filters (column, operator, comma-separated values) and a dark *Preview SQL* block that shows the compiled statement with `@tenant`.
+
+## Screenshots (P7.1)
+`docs/screenshots/p7-1-*.png`: views list EN, view detail with columns EN/AR, metrics list EN/AR, metric editor with SQL preview.

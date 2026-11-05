@@ -56,6 +56,11 @@ public static class AuditEvents
     public const string MetadataColumnUpdated = "Metadata.ColumnUpdated";
     public const string PermissionChanged = "Permission.Changed";
     public const string RowMappingChanged = "Permission.RowMappingChanged";
+    public const string InsightsCatalogSynced = "Insights.CatalogSynced";
+    public const string InsightsObjectUpdated = "Insights.ObjectUpdated";
+    public const string InsightsColumnUpdated = "Insights.ColumnUpdated";
+    public const string InsightsMetricChanged = "Insights.MetricChanged";
+    public const string InsightsMetricQueried = "Insights.MetricQueried";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>
