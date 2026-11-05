@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>wabi-insight-api</UserSecretsId>
+    <RootNamespace>WabiInsight.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WabiInsight.Core\WabiInsight.Core.csproj" />
+    <ProjectReference Include="..\WabiInsight.Infrastructure\WabiInsight.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WabiInsight.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

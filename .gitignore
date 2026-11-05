@@ -1,0 +1,32 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+appsettings.*.local.json
+appsettings.Local.json
+secrets.local.json
+# Data Protection keys and local artifacts (never commit)
+.keys/
+.artifacts/
+# Node / Angular
+node_modules/
+src/web/dist/
+src/web/.angular/
+src/web/coverage/
+src/web/test-results/
+src/web/playwright-report/
+npm-debug.log*
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+# Environment
+.env
+.env.*
+!.env.example

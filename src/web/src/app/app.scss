@@ -1,0 +1,57 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: linear-gradient(160deg, #0b1f3a 0%, #087df2 70%, #22b8cf 100%);
+  font-family: Inter, system-ui, sans-serif;
+  color: #f5f8fc;
+}
+
+.shell__card {
+  width: min(560px, 100%);
+  padding: 40px 32px;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 8%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  backdrop-filter: blur(12px);
+  text-align: center;
+}
+
+.shell__eyebrow {
+  margin: 0 0 8px;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.shell__title {
+  margin: 0;
+  font-size: clamp(36px, 6vw, 56px);
+  font-weight: 700;
+}
+
+.shell__tagline {
+  margin: 12px 0 24px;
+  font-size: 16px;
+}
+
+.shell__status {
+  display: inline-block;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  background: rgb(255 255 255 / 15%);
+
+  &[data-status='online'] {
+    background: #22b8cf;
+    color: #0b1f3a;
+  }
+
+  &[data-status='offline'] {
+    background: #ffd166;
+    color: #0b1f3a;
+  }
+}

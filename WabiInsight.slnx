@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WabiInsight.Api/WabiInsight.Api.csproj" />
+    <Project Path="src/WabiInsight.Core/WabiInsight.Core.csproj" />
+    <Project Path="src/WabiInsight.Infrastructure/WabiInsight.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WabiInsight.IntegrationTests/WabiInsight.IntegrationTests.csproj" />
+    <Project Path="tests/WabiInsight.UnitTests/WabiInsight.UnitTests.csproj" />
+  </Folder>
+</Solution>
