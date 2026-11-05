@@ -12,6 +12,10 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 - [Progress log](docs/PROGRESS.md)
 - [Guide for Claude Code sessions](CLAUDE.md)
 
+## Local configuration
+
+Copy `src/WabiInsight.Api/appsettings.Local.example.json` to `appsettings.Local.json` (git-ignored) and set your SQL Server connection string and bootstrap values there. Never commit real credentials to `appsettings.json`.
+
 ## Status
 
 Phase 0 (planning) complete. Application code starts with PR P1.1.
