@@ -1,0 +1,41 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ (isPlatform() ? 'common.platform' : 'nav.org.admin.title') | transloco }}</p>
+      <h1>{{ 'supportAccess.title' | transloco }}</h1>
+      <p class="wi-muted">{{ (isPlatform() ? 'supportAccess.subtitlePlatform' : 'supportAccess.subtitleOrganization') | transloco }}</p>
+    </div>
+  </header>
+  <div class="wi-card">
+    <div class="filters">
+      <mat-button-toggle-group [value]="filter()" (change)="filter.set($event.value); apply()" hideSingleSelectionIndicator data-testid="grant-filter">
+        <mat-button-toggle value="pending">{{ 'supportAccess.pending' | transloco }}</mat-button-toggle>
+        <mat-button-toggle value="all">{{ 'supportAccess.all' | transloco }}</mat-button-toggle>
+      </mat-button-toggle-group>
+      @if (filter() === 'all') {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'support.fields.status' | transloco }}</mat-label>
+          <mat-select [value]="status()" (valueChange)="status.set($event); apply()">
+            <mat-option [value]="null">{{ 'support.allStatuses' | transloco }}</mat-option>
+            @for (s of statuses; track s) { <mat-option [value]="s">{{ 'supportAccess.statuses.' + s | transloco }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      }
+    </div>
+    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+    <table mat-table [dataSource]="items()" class="full" data-testid="grant-table">
+      <ng-container matColumnDef="ticket"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.reference' | transloco }}</th><td mat-cell *matCellDef="let g"><span class="wi-ltr ref">{{ g.ticketReference }}</span><br /><span class="small">{{ g.ticketSubject }}</span></td></ng-container>
+      <ng-container matColumnDef="organization"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.organization' | transloco }}</th><td mat-cell *matCellDef="let g">{{ organizationName(g) }}</td></ng-container>
+      <ng-container matColumnDef="operations"><th mat-header-cell *matHeaderCellDef>{{ 'supportAccess.operationsColumn' | transloco }}</th><td mat-cell *matCellDef="let g">{{ operations(g) }}</td></ng-container>
+      <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.status' | transloco }}</th><td mat-cell *matCellDef="let g"><app-grant-status [status]="g.status" />@if (g.sessionActive) { <mat-icon class="live" [title]="'supportAccess.sessionActive' | transloco">radio_button_checked</mat-icon> }</td></ng-container>
+      <ng-container matColumnDef="assigned"><th mat-header-cell *matHeaderCellDef>{{ 'supportAccess.assignedTo' | transloco }}</th><td mat-cell *matCellDef="let g">{{ g.assignedAdministratorName }}</td></ng-container>
+      <ng-container matColumnDef="proposedBy"><th mat-header-cell *matHeaderCellDef>{{ 'supportAccess.proposedBy' | transloco }}</th><td mat-cell *matCellDef="let g">{{ g.proposedByName }}</td></ng-container>
+      <ng-container matColumnDef="expires"><th mat-header-cell *matHeaderCellDef>{{ 'supportAccess.expiresAt' | transloco }}</th><td mat-cell *matCellDef="let g">{{ g.expiresAt && (g.status === 'Approved' || g.status === 'Active') ? (g.expiresAt | date: 'medium') : '—' }}</td></ng-container>
+      <ng-container matColumnDef="created"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.created' | transloco }}</th><td mat-cell *matCellDef="let g">{{ g.createdAt | date: 'medium' }}</td></ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns()" class="row" (click)="open(row)" [attr.data-testid]="'grant-row-' + row.ticketReference"></tr>
+    </table>
+    @if (!loading() && items().length === 0) { <p class="empty wi-muted">{{ 'supportAccess.empty' | transloco }}</p> }
+    <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50]" (page)="onPage($event)" />
+  </div>
+</section>

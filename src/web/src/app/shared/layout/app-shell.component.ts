@@ -14,6 +14,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
 import { map, startWith, switchMap, timer } from 'rxjs';
 import { NotificationsService } from '../../core/notifications/notifications.service';
+import { SupportAccessService } from '../../core/support/support-access.service';
+import { SupportModeBannerComponent } from '../../features/support/support-mode-banner.component';
 import { AuthService } from '../../core/auth/auth.service';
 import { BrandLogoComponent } from '../ui/brand-logo.component';
 import { LanguageSwitcherComponent } from '../ui/language-switcher.component';
@@ -35,13 +37,14 @@ export interface NavSection {
  */
 @Component({
   selector: 'app-shell',
-  imports: [MatBadgeModule, MatButtonModule, MatDividerModule, MatIconModule, MatListModule, MatMenuModule, MatSidenavModule, MatToolbarModule, RouterLink, RouterLinkActive, RouterOutlet, TranslocoModule, BrandLogoComponent, LanguageSwitcherComponent],
+  imports: [MatBadgeModule, MatButtonModule, MatDividerModule, MatIconModule, MatListModule, MatMenuModule, MatSidenavModule, MatToolbarModule, RouterLink, RouterLinkActive, RouterOutlet, TranslocoModule, BrandLogoComponent, LanguageSwitcherComponent, SupportModeBannerComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
 })
 export class AppShellComponent {
   readonly auth = inject(AuthService);
   readonly notifications = inject(NotificationsService);
+  readonly supportAccess = inject(SupportAccessService);
   private readonly breakpoints = inject(BreakpointObserver);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -60,6 +63,10 @@ export class AppShellComponent {
     // Unread badge: refreshed on load and every minute while the shell is open.
     timer(0, 60_000)
       .pipe(startWith(0), switchMap(() => this.notifications.refreshUnread()), takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => undefined });
+    // Support-mode session (platform shell only): the banner must reflect expiry and revocation without a reload.
+    timer(0, 60_000)
+      .pipe(switchMap(() => (this.accent() === 'platform' ? this.supportAccess.refreshSession() : [])), takeUntilDestroyed(this.destroyRef))
       .subscribe({ error: () => undefined });
   }
 

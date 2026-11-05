@@ -20,6 +20,8 @@ public sealed record SupportAccessGrantDto(
     string OrganizationNameAr,
     SupportAccessGrantStatus Status,
     IReadOnlyList<SupportOperationEntry> Operations,
+    /// <summary>Display labels for target references (user name and email, role name, "new"); identity only.</summary>
+    IReadOnlyDictionary<string, string> TargetLabels,
     string Reason,
     string? DecisionNote,
     Guid RequestedByUserId,
@@ -40,12 +42,22 @@ public sealed record SupportAccessGrantDto(
     /// <summary>What the current principal may do with this grant, so the UI only offers valid actions.</summary>
     IReadOnlyList<string> AllowedActions);
 
+/// <summary>Objects a proposal may target inside the ticket's organization: identity only, never business data.</summary>
+public sealed record SupportTargetUser(Guid UserId, string FullName, string Email, bool IsActive);
+
+public sealed record SupportTargetRole(Guid RoleId, string RoleCode, string NameEn, string NameAr, bool IsSystem, bool IsActive);
+
+public sealed record SupportTargetsDto(IReadOnlyList<SupportTargetUser> Users, IReadOnlyList<SupportTargetRole> Roles);
+
 public sealed record SupportSessionDto(Guid SessionId, SupportAccessGrantDto Grant, DateTimeOffset StartedAt, DateTimeOffset ExpiresAt, IReadOnlyList<SupportOperationEntry> Operations);
 
 /// <summary>Grant lifecycle (specification §16.1): propose → approve/decline → enter/exit support mode → complete, revoke, expire.</summary>
 public interface ISupportAccessService
 {
     IReadOnlyList<SupportOperationDefinition> Catalog { get; }
+
+    /// <summary>Platform administrators only: users and roles of the ticket's organization that a proposal may target.</summary>
+    Task<SupportTargetsDto> ListTargetsAsync(Guid ticketId, CancellationToken cancellationToken = default);
 
     /// <summary>Platform administrators only. Marks the ticket as requiring support access and notifies the organization's administrators.</summary>
     Task<SupportAccessGrantDto> ProposeAsync(Guid ticketId, ProposeGrantCommand command, CancellationToken cancellationToken = default);

@@ -179,7 +179,8 @@
         "permissions": "Permissions",
         "insights": "Organization Insights",
         "integrations": "Integrations",
-        "settings": "Organization Settings"
+        "settings": "Organization Settings",
+        "supportAccess": "Support Access"
       }
     },
     "platform": {
@@ -308,6 +309,11 @@
       "organization-status-transition": "This status change is not allowed.",
       "organization_code_invalid": "Use 2–31 uppercase letters, digits or dashes.",
       "unknown": "The operation failed."
+    },
+    "settings": {
+      "supportAccessTitle": "Support access policy",
+      "requireSecondAdmin": "Require a different organization administrator to approve support access requested by an administrator",
+      "requireSecondAdminHint": "By default an administrator may approve support access on their own ticket. Turn this on to always require a second administrator."
     }
   },
   "admin": {
@@ -445,7 +451,31 @@
       "administrator_not_found": "Administrator not found or inactive.",
       "attachment_type_not_allowed": "This file type is not allowed.",
       "attachment_too_large": "The file exceeds 10 MB.",
-      "attachment_rejected_by_scan": "The file was rejected by the security scan."
+      "attachment_rejected_by_scan": "The file was rejected by the security scan.",
+      "support_grant_not_found": "Support access request not found.",
+      "support_grant_not_pending": "This request is no longer awaiting approval.",
+      "support_second_admin_required": "Your organization requires a different administrator to approve support access on your own ticket.",
+      "support_grant_not_revocable": "This grant can no longer be revoked.",
+      "support_grant_not_assigned_to_you": "This grant is assigned to another administrator.",
+      "support_grant_not_approved": "The organization has not approved this grant yet.",
+      "support_grant_not_usable": "This grant is no longer usable.",
+      "support_grant_already_open": "This ticket already has an open support access request.",
+      "support_operations_required": "Select at least one operation.",
+      "support_operations_duplicate": "Each operation can be listed once.",
+      "support_operation_unknown": "Unknown operation.",
+      "support_target_required": "Select the targets for every operation that needs them.",
+      "support_target_not_applicable": "This operation takes no targets.",
+      "support_expiry_out_of_range": "Validity must be between 1 and 72 hours.",
+      "support_reason_required": "A reason is required.",
+      "support_target_not_in_organization": "A selected target does not belong to the ticket's organization.",
+      "support_session_required": "Enter support mode first.",
+      "support_grant_expired": "The grant has expired.",
+      "support_operation_not_granted": "This operation is not part of the approved grant.",
+      "support_operation_not_available": "This operation becomes executable in a later phase.",
+      "support_target_not_granted": "This target was not approved.",
+      "support_payload_required": "Fill in the operation fields.",
+      "organization_profile_invalid": "Check the organization fields.",
+      "support_access_denied": "Support access denied."
     }
   },
   "platformDashboard": {
@@ -604,7 +634,7 @@
       "lastActivity": "Last activity",
       "comments": "Replies",
       "attachments": "Attachments",
-      "requiresSupportAccess": "This request needs the platform team to change our configuration (approved support access, Phase 5)",
+      "requiresSupportAccess": "This request needs the platform team to change our configuration (approved support access)",
       "resolution": "Resolution summary",
       "reopened": "Reopened",
       "firstOpened": "First opened",
@@ -636,7 +666,8 @@
       "overview": "Overview",
       "conversation": "Conversation",
       "timeline": "Activity timeline",
-      "attachments": "Attachments"
+      "attachments": "Attachments",
+      "supportAccess": "Support access"
     },
     "actions": {
       "title": "Actions",
@@ -680,7 +711,16 @@
       },
       "from": "from",
       "to": "to",
-      "autoReply": "Automatic: the requester replied"
+      "autoReply": "Automatic: the requester replied",
+      "SupportAccessProposed": "Support access proposed",
+      "SupportAccessApproved": "Support access approved",
+      "SupportAccessDeclined": "Support access declined",
+      "SupportAccessRevoked": "Support access revoked",
+      "SupportAccessExpired": "Support access expired",
+      "SupportAccessCompleted": "Support access completed",
+      "SupportSessionStarted": "Support mode entered",
+      "SupportSessionEnded": "Support mode ended",
+      "SupportOperationExecuted": "Support operation executed"
     },
     "attachments": {
       "upload": "Add attachment",
@@ -716,7 +756,112 @@
       "Ticket.StatusChanged": "Ticket {{reference}} moved to {{newStatus}}",
       "Ticket.Assigned": "Ticket {{reference}} was assigned to you by {{actorName}}",
       "Ticket.CommentAdded": "{{actorName}} replied on ticket {{reference}}",
-      "Ticket.AttachmentAdded": "{{actorName}} attached a file to ticket {{reference}}"
+      "Ticket.AttachmentAdded": "{{actorName}} attached a file to ticket {{reference}}",
+      "SupportAccess.Proposed": "{{actorName}} requests support access on ticket {{reference}}: approval needed",
+      "SupportAccess.Approved": "Support access on ticket {{reference}} was approved by {{actorName}}",
+      "SupportAccess.Declined": "Support access on ticket {{reference}} was declined by {{actorName}}",
+      "SupportAccess.Revoked": "Support access on ticket {{reference}} was revoked by {{actorName}}",
+      "SupportAccess.Expired": "Support access on ticket {{reference}} expired",
+      "SupportAccess.OperationExecuted": "{{actorName}} ran \"{{operation}}\" on ticket {{reference}} ({{outcome}})"
+    }
+  },
+  "supportAccess": {
+    "title": "Support Access",
+    "subtitlePlatform": "Scoped, time-limited grants to change an organization's configuration. Nothing changes without the organization's approval.",
+    "subtitleOrganization": "Requests from the platform team to change your organization's configuration. Only what you approve, for the time you approve.",
+    "intro": "The platform team never changes your organization's users, roles or settings without an approved, time-limited grant that lists the exact operations. A ticket alone grants nothing.",
+    "propose": "Propose support access",
+    "proposalTitle": "Proposed operations",
+    "proposalHint": "Select only what this ticket needs and name the exact targets. The organization administrator must approve before anything runs.",
+    "laterPhase": "executable from Phase 6",
+    "targetUsers": "Users",
+    "targetRoles": "Roles",
+    "newRole": "New role",
+    "targetApplications": "Application ids",
+    "targetApplicationsHint": "Comma-separated application ids (Phase 6).",
+    "reason": "Reason",
+    "expiryHours": "Validity (hours)",
+    "expiryHint": "1 to 72 hours after approval",
+    "asProposed": "as proposed",
+    "submitProposal": "Send for approval",
+    "none": "No support access has been requested on this ticket.",
+    "grantBy": "Proposed by {{name}}",
+    "expiresAt": "Valid until",
+    "sessionActive": "Support mode active",
+    "assignedTo": "Assigned administrator",
+    "requestedBy": "Requester",
+    "approvedBy": "Approved by",
+    "note": "Note",
+    "operationsExecuted": "Operations executed",
+    "proposedBy": "Proposed by",
+    "operationsColumn": "Operations",
+    "actions": {
+      "approve": "Approve",
+      "decline": "Decline",
+      "enter": "Enter support mode",
+      "exit": "Exit support mode",
+      "complete": "Mark completed",
+      "revoke": "Revoke"
+    },
+    "done": {
+      "approve": "Support access approved.",
+      "decline": "Proposal declined.",
+      "enter": "Support mode entered.",
+      "exit": "Support mode ended.",
+      "complete": "Grant completed.",
+      "revoke": "Support access revoked."
+    },
+    "proposed": "Proposal sent to the organization administrators.",
+    "executed": "Operation executed and recorded on the ticket.",
+    "executedDelivered": "Operation executed; the temporary password was emailed to {{email}}.",
+    "runTitle": "Run a permitted operation",
+    "runHint": "Only the operations and targets approved on this grant are available. Every run is recorded on the ticket timeline and in the audit log.",
+    "operation": "Operation",
+    "target": "Target",
+    "run": "Run",
+    "settingsHint": "Leave a field empty to keep its current value.",
+    "pending": "Pending approval",
+    "all": "All",
+    "empty": "No grants match.",
+    "statuses": {
+      "Proposed": "Awaiting approval",
+      "Approved": "Approved",
+      "Active": "In support mode",
+      "Expired": "Expired",
+      "Revoked": "Revoked",
+      "Completed": "Completed",
+      "Declined": "Declined"
+    },
+    "operations": {
+      "CreateOrganizationUser": "Create an organization user",
+      "ResetOrganizationUserPassword": "Reset a user's password",
+      "ConfigureRole": "Configure a role",
+      "UpdateTablePermissions": "Update table permissions",
+      "RefreshMetadata": "Refresh metadata",
+      "DiagnoseApplicationConnection": "Diagnose an application connection",
+      "UpdateOrganizationSettings": "Update organization settings"
+    },
+    "operationHints": {
+      "CreateOrganizationUser": "Creates a user with the chosen roles; the temporary password is emailed to that user.",
+      "ResetOrganizationUserPassword": "Emails a new temporary password to the selected user(s).",
+      "ConfigureRole": "Creates or edits the selected role(s): code, names, description, active flag.",
+      "UpdateTablePermissions": "Changes table, column or row permissions of the selected role(s).",
+      "RefreshMetadata": "Refreshes the metadata catalog of the selected application(s).",
+      "DiagnoseApplicationConnection": "Connectivity and object-existence checks only; never reads business rows.",
+      "UpdateOrganizationSettings": "Names, description, contacts, time zone and default language."
+    },
+    "endReasons": {
+      "Exit": "left by the administrator",
+      "Expired": "expired",
+      "Revoked": "revoked",
+      "Completed": "completed",
+      "Superseded": "replaced by another session"
+    },
+    "banner": {
+      "title": "Support mode",
+      "detail": "{{organization}} · ticket {{reference}}",
+      "remaining": "{{minutes}} min left",
+      "openTicket": "Open ticket"
     }
   }
 }

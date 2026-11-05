@@ -37,7 +37,7 @@ describe('OrganizationsService', () => {
     const profile = TestBed.inject(OrganizationProfileService);
     profile.get().subscribe();
     http.expectOne('/api/organization').flush({});
-    profile.update({ organizationName: 'A', organizationNameAr: 'أ', timeZone: 'UTC', defaultLanguage: 'en' }).subscribe();
+    profile.update({ requireSecondAdminApprovalForSupportAccess: false, organizationName: 'A', organizationNameAr: 'أ', timeZone: 'UTC', defaultLanguage: 'en' }).subscribe();
     const request = http.expectOne('/api/organization');
     expect(request.request.method).toBe('PUT');
     request.flush({});
