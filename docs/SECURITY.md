@@ -60,8 +60,11 @@ By owner decision G (see `docs/SPEC_REVIEW.md`), the connection string is commit
 ## Platform operations data
 Platform Administrators read aggregates (`/api/platform/dashboard`), health (`/api/platform/health`) and the audit trail (`/api/platform/audit`). The dashboard counts applications but never returns their names or connection details; audit details never contain secrets or business data; unhandled exceptions are recorded as `Api.Error` usage events with the exception type only, never its message. `UsageEvents` and `AuditLogs` are both append-only.
 
+## Support desk
+Ticket visibility is decided from the tenant context only: a requester sees their own tickets, an `OrganizationAdmin` every ticket of their organization, a Platform Administrator the platform queue. A ticket of another organization is a 404, even by id. Status changes follow the fixed transition table (`TicketStateMachine`); anything else is rejected with a stable code. Attachments: 10 MB, extension allow-list (`pdf, png, jpg, jpeg, xlsx, docx, csv, txt, log, zip`), SHA-256 recorded, scanner hook (`IAttachmentScanner`), stored outside the web root under random keys and served only through the authorized download endpoint with `nosniff`; Platform Administrator downloads are audited (review C6). `SupportTicketEvents` is append-only. Notifications are readable and markable only by their recipient.
+
 ## Audit
 `AuditLogs` is append-only (application guard plus `scripts/sql/create-runtime-login.sql`). Records carry actor type/id, event code, entity, JSON details without secrets, correlation id and client IP.
 
 ## Not yet implemented (later phases)
-Organization-user password reset by Organization Administrators (P2.2), role claims (P2.2), data-protection–encrypted connection strings (P6.1), support-access grants (P5), request body size limits and security headers review (P12.1).
+Organization-user password reset by Organization Administrators (P2.2), role claims (P2.2), data-protection–encrypted connection strings (P6.1), support-access grants (P5), a real virus scanner behind `IAttachmentScanner`, request body size limits beyond uploads and security headers review (P12.1).

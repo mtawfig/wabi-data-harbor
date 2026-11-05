@@ -2,7 +2,7 @@
 .dash__org { min-width: 240px; }
 .dash__period { margin: 0 0 12px; font-size: 13px; }
 .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 16px; }
-.kpi { display: flex; flex-direction: column; padding: 16px; &__value { font-size: 28px; font-weight: 700; color: var(--wi-ocean); line-height: 1.1; } &__label { font-size: 13px; color: var(--wi-slate); margin-top: 4px; } }
+.kpi { display: flex; flex-direction: column; padding: 16px; &__value { font-size: 28px; font-weight: 700; color: var(--wi-ocean); line-height: 1.1; small { font-size: 13px; font-weight: 500; color: var(--wi-slate); margin-inline-start: 4px; } } &__label { font-size: 13px; color: var(--wi-slate); margin-top: 4px; } }
 .kpi[data-kpi='failedLogins'] .kpi__value, .kpi[data-kpi='emailsFailed'] .kpi__value, .kpi[data-kpi='apiErrors'] .kpi__value { color: #b45309; }
 .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .chart-card h3 { margin-bottom: 4px; }

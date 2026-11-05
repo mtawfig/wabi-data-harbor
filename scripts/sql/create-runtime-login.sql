@@ -16,5 +16,5 @@ GO
 -- Append-only tables: the API may INSERT and SELECT only.
 DENY UPDATE, DELETE ON dbo.AuditLogs TO [wabi_insight_app];
 DENY UPDATE, DELETE ON dbo.UsageEvents TO [wabi_insight_app];
--- Later phases add: DENY UPDATE, DELETE ON dbo.SupportTicketEvents.
+DENY UPDATE, DELETE ON dbo.SupportTicketEvents TO [wabi_insight_app];
 GO

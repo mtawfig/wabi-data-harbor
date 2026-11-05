@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
+using WabiInsight.Core.Entities.Support;
 using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Platform;
 using WabiInsight.Core.Tenancy;
@@ -18,7 +19,6 @@ public sealed class PlatformMetricsService : IPlatformMetricsService
     private static readonly string[] NotYetCollected =
     [
         "aiRequests", "analysesCompleted", "analysesFailed", "reportsGenerated", "emailDraftsCreated",
-        "openTickets", "criticalIncidents", "avgFirstResponseMinutes", "avgResolutionMinutes",
     ];
 
     private readonly ConfigurationDbContext _context;
@@ -45,8 +45,10 @@ public sealed class PlatformMetricsService : IPlatformMetricsService
         var users = _context.OrganizationUsers.AsNoTracking().IgnoreQueryFilters();
         var applications = _context.Applications.AsNoTracking().IgnoreQueryFilters();
         var events = _context.UsageEvents.AsNoTracking().Where(e => e.CreatedAt >= from && e.CreatedAt <= to);
+        var tickets = _context.SupportTickets.AsNoTracking().AsPlatformScope(_tenantContext);
         if (organizationId is { } scopedOrganization)
         {
+            tickets = tickets.Where(t => t.OrganizationId == scopedOrganization);
             organizations = organizations.Where(o => o.OrganizationId == scopedOrganization);
             users = users.Where(u => u.OrganizationId == scopedOrganization);
             applications = applications.Where(a => a.OrganizationId == scopedOrganization);
@@ -82,6 +84,7 @@ public sealed class PlatformMetricsService : IPlatformMetricsService
             new("usersCreatedInPeriod", Sum(daily, UsageEventTypes.UserCreated, true)),
             new("apiErrors", Sum(daily, UsageEventTypes.ApiError, false)),
         };
+        kpis.AddRange(await TicketKpisAsync(tickets, from, to, cancellationToken));
         kpis.AddRange(NotYetCollected.Select(code => new MetricValue(code, 0, Collected: false)));
 
         var buckets = BucketStarts(from, to, bucket);
@@ -98,6 +101,8 @@ public sealed class PlatformMetricsService : IPlatformMetricsService
             SeriesOf("emailsFailed", UsageEventTypes.EmailFailed, false),
             SeriesOf("usersCreated", UsageEventTypes.UserCreated, true),
             SeriesOf("apiErrors", UsageEventTypes.ApiError, false),
+            SeriesOf("ticketsCreated", UsageEventTypes.TicketCreated, true),
+            SeriesOf("ticketsResolved", UsageEventTypes.TicketResolved, true),
         };
 
         var organizationRows = await organizations
@@ -123,6 +128,26 @@ public sealed class PlatformMetricsService : IPlatformMetricsService
             .ToListAsync(cancellationToken);
 
         return new PlatformDashboard(period, kpis, series, usage, errors);
+    }
+
+    /// <summary>Support desk KPIs (specification §13.1) from SupportTickets: identity and timing only, never ticket content.</summary>
+    private static async Task<List<MetricValue>> TicketKpisAsync(IQueryable<SupportTicket> tickets, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    {
+        var openTickets = await tickets.LongCountAsync(t => t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Cancelled, cancellationToken);
+        var criticalIncidents = await tickets.LongCountAsync(t => t.TicketType == TicketType.Incident && t.Impact == TicketImpact.Critical && t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Cancelled, cancellationToken);
+        var inPeriod = await tickets.Where(t => t.CreatedAt >= from && t.CreatedAt <= to)
+            .Select(t => new { t.CreatedAt, t.FirstOpenedAt, t.ResolvedAt })
+            .ToListAsync(cancellationToken);
+        var firstResponse = inPeriod.Where(t => t.FirstOpenedAt != null).Select(t => (t.FirstOpenedAt!.Value - t.CreatedAt).TotalMinutes).ToList();
+        var resolution = inPeriod.Where(t => t.ResolvedAt != null).Select(t => (t.ResolvedAt!.Value - t.CreatedAt).TotalMinutes).ToList();
+        return
+        [
+            new("openTickets", openTickets),
+            new("criticalIncidents", criticalIncidents),
+            new("ticketsCreatedInPeriod", inPeriod.Count),
+            new("avgFirstResponseMinutes", firstResponse.Count == 0 ? 0 : (long)Math.Round(firstResponse.Average())),
+            new("avgResolutionMinutes", resolution.Count == 0 ? 0 : (long)Math.Round(resolution.Average())),
+        ];
     }
 
     private static long Sum(IEnumerable<dynamic> daily, string eventType, bool succeeded)

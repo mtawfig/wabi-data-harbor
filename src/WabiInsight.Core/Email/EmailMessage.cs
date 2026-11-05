@@ -22,6 +22,7 @@ public static class EmailTemplateCodes
 {
     public const string AccountCreated = "Account.Created";
     public const string PasswordReset = "Account.PasswordReset";
+    public const string SupportNotification = "Support.Notification";
 }
 
 /// <summary>

@@ -54,4 +54,9 @@ public static class UsageEventTypes
     public const string EmailSent = "Email.Sent";
     public const string EmailFailed = "Email.Failed";
     public const string ApiError = "Api.Error";
+    public const string TicketCreated = "Support.TicketCreated";
+    public const string TicketResolved = "Support.TicketResolved";
+    public const string TicketCancelled = "Support.TicketCancelled";
+    public const string TicketCommentAdded = "Support.CommentAdded";
+    public const string TicketAttachmentAdded = "Support.AttachmentAdded";
 }

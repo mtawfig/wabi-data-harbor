@@ -72,4 +72,34 @@ public static class EmailTemplates
 
         return new EmailMessage(toEmail, toName, subject, html, text, ar ? "ar" : "en") { ReplyTo = string.IsNullOrWhiteSpace(replyTo) ? null : replyTo };
     }
+
+    /// <summary>Generic bilingual notification (support desk events). Bodies are plain sentences; links go to the app.</summary>
+    public static EmailMessage Notification(string toEmail, string toName, string language, string subjectEn, string subjectAr, string bodyEn, string bodyAr, string linkUrl, string replyTo = "")
+    {
+        var ar = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase);
+        var subject = ar ? subjectAr : subjectEn;
+        var body = ar ? bodyAr : bodyEn;
+        var greeting = ar ? $"مرحبًا {WebUtility.HtmlEncode(toName)}،" : $"Hello {WebUtility.HtmlEncode(toName)},";
+        var open = ar ? "فتح في وابي إنسايت" : "Open in Wabi Insight";
+        var footer = ar ? "وابي إنسايت — اسأل بياناتك. وثق بالإجابة." : "Wabi Insight — Ask Your Data. Trust the Answer.";
+        var dir = ar ? "rtl" : "ltr";
+        var font = ar ? "'IBM Plex Sans Arabic', Arial, sans-serif" : "Inter, Arial, sans-serif";
+        var url = WebUtility.HtmlEncode(linkUrl);
+        var html = $"""
+            <!doctype html>
+            <html lang="{(ar ? "ar" : "en")}" dir="{dir}">
+            <body style="margin:0;background:#f5f8fc;font-family:{font};color:#0b1f3a;">
+              <div style="max-width:560px;margin:24px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:32px;direction:{dir};text-align:start;">
+                <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#087df2;margin:0 0 12px;">Wabi Insight · AP-AIR</p>
+                <p style="font-size:16px;margin:0 0 12px;">{greeting}</p>
+                <p style="font-size:15px;line-height:1.6;margin:0 0 20px;">{WebUtility.HtmlEncode(body)}</p>
+                <p style="margin:0 0 24px;"><a href="{url}" style="display:inline-block;background:#087df2;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px;">{open}</a></p>
+                <p style="font-size:12px;color:#94a3b8;margin:0;">{footer}</p>
+              </div>
+            </body>
+            </html>
+            """;
+        var text = $"{(ar ? $"مرحبًا {toName}،" : $"Hello {toName},")}\n\n{body}\n\n{open}: {linkUrl}\n\n{footer}\n";
+        return new EmailMessage(toEmail, toName, subject, html, text, ar ? "ar" : "en") { ReplyTo = string.IsNullOrWhiteSpace(replyTo) ? null : replyTo };
+    }
 }

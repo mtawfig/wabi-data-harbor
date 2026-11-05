@@ -45,6 +45,11 @@ One SQL Server database, EF Core 10, migrations in `src/WabiInsight.Infrastructu
 | `Departments` / `Sections` | Organization structure | unique codes per organization (sections per department); composite FKs keep a section inside its department's organization, and a user's `(OrganizationId, DepartmentId, SectionId)` inside one section of one department |
 | `DefaultRoleTemplates` | Platform-managed role templates (seeded: OrganizationAdmin, Management, Analyst) | unique `RoleCode`; copied into new organizations only |
 | `UsageEvents` | Append-only verified event stream feeding platform and organization metrics (logins, failures, provisioning, email delivery, API errors; AI/report/support codes arrive with their phases) | application guard rejects UPDATE/DELETE; runtime login denied; indexes on organization/type/date |
+| `SupportTickets` | Support desk tickets (P4.1) | unique `ReferenceNumber`; composite FK `(OrganizationId, CreatedByUserId)` keeps the requester inside the ticket's organization; status check constraint; indexes on `(OrganizationId, Status)`, `(AssignedAdministratorId, Status)`, `LastActivityAt` |
+| `TicketSequences` | Yearly counter behind `WI-YYYY-NNNNNN` | `UPDATE … OUTPUT` inside the create transaction, never MAX+1 |
+| `SupportTicketEvents` | Append-only ticket timeline (created, viewed, status changes, reopen, assignment, comments, attachments) | application guard rejects UPDATE/DELETE; runtime login denied; composite FK to the ticket's `(OrganizationId, TicketId)` |
+| `SupportTicketComments` / `SupportTicketAttachments` | Conversation and files (metadata; bytes live in `IArtifactStorage` under random keys) | composite FKs to the ticket; unique `StorageKey`; SHA-256 and scan status recorded |
+| `Notifications` | In-app notification centre for organization users and platform administrators (codes + parameters, localized in the UI) | recipient index `(RecipientType, RecipientId, ReadAt, CreatedAt)`; services always filter by the current principal |
 | `Applications` | Business applications; one built-in `WI-INSIGHTS` row per organization | unique `(OrganizationId, ApplicationCode)`, unique built-in code per organization, globally unique `ConnectionFingerprint`, built-in rows cannot carry a connection string (check constraint) |
 
 Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC timestamps stamped by the context, `rowversion` concurrency tokens on editable aggregates, enum codes stored as strings with check constraints.
@@ -60,6 +65,10 @@ Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC 
 ### Usage metrics (P3.1)
 
 `IUsageEventWriter` appends `UsageEvents` inside the same unit of work as the business change (login, failed login, logout, password change, organization created/status changed, user and administrator created, email queued/sent/failed, unhandled API errors). `PlatformMetricsService` aggregates per day in SQL (`GROUP BY CAST(CreatedAt AS date)`) and buckets by day/week/month in memory; it reads identity tables and the event stream only, so application names, prompts and business data never reach the platform dashboard. Organization-scoped metrics for the organization dashboard (P7.2) reuse the same stream through the tenant filter.
+
+### Support desk (P4.1)
+
+`SupportTicketService` resolves the caller's role from the tenant context only (requester, OrganizationAdmin of the ticket's organization, or Platform Administrator) and applies the §15.3 transition table through the pure `TicketStateMachine`. Platform reads use `AsPlatformScope`; organization reads go through the tenant filter plus a `CreatedByUserId` restriction for non-administrators. The first platform view records `FirstOpenedBy/At`, a `TicketViewed` timeline event and `NEW → READ` exactly once; later views only write an audit row. A requester or OrganizationAdmin reply on `PendingUserResponse` moves the ticket back to `Started` automatically. Attachments are limited to 10 MB and an extension allow-list, hashed, passed through `IAttachmentScanner` (no-op by default) and stored by `FileSystemArtifactStorage` under `Storage:RootPath` with random object names; platform downloads are audited (review C6). `NotificationDispatcher` writes `Notifications` rows in the same unit of work and queues bilingual emails through the outbox after the change is saved. Ticket KPIs (open tickets, critical incidents, tickets created, average first response and resolution) are now collected by `PlatformMetricsService`.
 
 ### Tenant core
 
@@ -107,6 +116,9 @@ CLI commands handled before the pipeline starts: `migrate` (apply migrations) an
 | `GET /api/platform/dashboard?from&to&bucket&organizationId` | KPI cards, time series, per-organization usage aggregates and recent errors from `UsageEvents`. Metrics of later phases carry `collected = false`. |
 | `GET /api/platform/health` | Detailed on-demand health report (API, configuration database, email provider configuration, outbox backlog). |
 | `GET /api/platform/audit`, `GET …/event-types` | Paged, filtered audit trail for Platform Administrators. |
+| `GET/POST /api/support/tickets`, `GET …/{id}`, `GET …/{id}/events`, `GET/POST …/{id}/comments`, `POST …/{id}/status`, `GET/POST …/{id}/attachments`, `GET …/{id}/attachments/{attachmentId}` | Organization area support desk: requester sees own tickets, `OrganizationAdmin` all of the organization's. |
+| `GET /api/platform/support/tickets`, same sub-resources, plus `POST …/{id}/assign` | Platform queue across organizations (Platform Administrators), first-open rule, assignment. |
+| `GET /api/notifications`, `GET …/unread-count`, `POST …/{id}/read`, `POST …/read-all` | Notification centre of the signed-in principal. |
 
 ## Angular (P1.4)
 

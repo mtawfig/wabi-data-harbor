@@ -29,6 +29,13 @@ public static class AuditEvents
     public const string RoleTemplateSaved = "RoleTemplate.Saved";
     public const string EmailQueued = "Email.Queued";
     public const string EmailFailed = "Email.Failed";
+    public const string TicketCreated = "SupportTicket.Created";
+    public const string TicketViewedByPlatform = "SupportTicket.ViewedByPlatform";
+    public const string TicketStatusChanged = "SupportTicket.StatusChanged";
+    public const string TicketAssigned = "SupportTicket.Assigned";
+    public const string TicketCommentAdded = "SupportTicket.CommentAdded";
+    public const string TicketAttachmentAdded = "SupportTicket.AttachmentAdded";
+    public const string TicketAttachmentDownloaded = "SupportTicket.AttachmentDownloaded";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>

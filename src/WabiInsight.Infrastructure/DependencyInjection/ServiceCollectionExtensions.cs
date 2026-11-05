@@ -22,6 +22,12 @@ using WabiInsight.Infrastructure.Usage;
 using WabiInsight.Infrastructure.Organizations;
 using WabiInsight.Infrastructure.Persistence;
 using WabiInsight.Infrastructure.Security;
+using WabiInsight.Core.Notifications;
+using WabiInsight.Core.Storage;
+using WabiInsight.Core.Support;
+using WabiInsight.Infrastructure.Notifications;
+using WabiInsight.Infrastructure.Storage;
+using WabiInsight.Infrastructure.Support;
 
 namespace WabiInsight.Infrastructure.DependencyInjection;
 
@@ -117,6 +123,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlatformMetricsService, PlatformMetricsService>();
         services.AddScoped<IAuditQueryService, AuditQueryService>();
         services.AddScoped<IPlatformHealthService, PlatformHealthService>();
+
+        services.AddOptions<SupportDeskOptions>().Bind(configuration.GetSection(SupportDeskOptions.SectionName));
+        services.AddOptions<StorageOptions>().Bind(configuration.GetSection(StorageOptions.SectionName));
+        services.TryAddSingleton<IArtifactStorage, FileSystemArtifactStorage>();
+        services.TryAddSingleton<IAttachmentScanner, NoOpAttachmentScanner>();
+        services.AddScoped<ISupportTicketService, SupportTicketService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
 
         return services;
     }
