@@ -94,7 +94,7 @@ public sealed class ApplicationsAndMetadataTests : IDisposable
         Assert.True(diff.GetProperty("relationshipsAdded").GetInt32() >= 1);
 
         var objects = await (await alice.GetAsync($"/api/metadata/applications/{applicationId}/objects?search=SupportTickets&pageSize=10")).ReadJsonAsync();
-        var tickets = objects.GetProperty("items").EnumerateArray().Single(o => o.GetProperty("objectName").GetString() == "SupportTickets");
+        var tickets = objects.GetProperty("items").EnumerateArray().Single(o => o.GetProperty("schemaName").GetString() == "dbo" && o.GetProperty("objectName").GetString() == "SupportTickets");
         Assert.False(tickets.GetProperty("isApproved").GetBoolean()); // new objects stay unapproved
         Assert.Equal("Table", tickets.GetProperty("objectType").GetString());
         var objectId = tickets.GetProperty("objectId").GetGuid();

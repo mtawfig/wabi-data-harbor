@@ -38,6 +38,8 @@ using WabiInsight.Infrastructure.Databases;
 using WabiInsight.Infrastructure.Metadata;
 using WabiInsight.Core.Permissions;
 using WabiInsight.Infrastructure.Permissions;
+using WabiInsight.Core.Insights;
+using WabiInsight.Infrastructure.Insights;
 
 namespace WabiInsight.Infrastructure.DependencyInjection;
 
@@ -160,6 +162,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IConnectionStringProtector, ConnectionStringProtector>();
         services.AddSingleton<IDatabaseAdapter, SqlServerAdapter>();
         services.AddSingleton<IDatabaseAdapter, OracleAdapter>();
+        services.AddOptions<InsightsOptions>().Bind(configuration.GetSection(InsightsOptions.SectionName));
+        services.AddSingleton<IInsightsConnectionFactory, InsightsConnectionFactory>();
+        services.AddSingleton<IDatabaseAdapter, PlatformInsightsAdapter>();
+        services.AddScoped<IInsightsCatalogService, InsightsCatalogService>();
+        services.AddScoped<IInsightsQueryService, InsightsQueryService>();
         services.AddSingleton<IDatabaseAdapterFactory, DatabaseAdapterFactory>();
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IMetadataService, MetadataService>();

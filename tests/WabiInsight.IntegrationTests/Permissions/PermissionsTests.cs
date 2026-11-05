@@ -51,7 +51,7 @@ public sealed class PermissionsTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/applications/{applicationId}/approval", new { isApproved = true })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/metadata/applications/{applicationId}/refresh", new { })).StatusCode);
         var objects = await (await alice.GetAsync($"/api/metadata/applications/{applicationId}/objects?search=SupportTickets&pageSize=10")).ReadJsonAsync();
-        var objectId = objects.GetProperty("items").EnumerateArray().Single(o => o.GetProperty("objectName").GetString() == "SupportTickets").GetProperty("objectId").GetGuid();
+        var objectId = objects.GetProperty("items").EnumerateArray().Single(o => o.GetProperty("schemaName").GetString() == "dbo" && o.GetProperty("objectName").GetString() == "SupportTickets").GetProperty("objectId").GetGuid();
         var approved = await (await alice.PostJsonAsync($"/api/metadata/objects/{objectId}/approve", new { approve = true })).ReadJsonAsync();
         return (applicationId, objectId, approved.GetProperty("columns").EnumerateArray().ToList());
     }
