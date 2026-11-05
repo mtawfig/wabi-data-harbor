@@ -106,6 +106,8 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<AiProviderConfiguration> AiProviderConfigurations => Set<AiProviderConfiguration>();
 
+    public DbSet<AnalysisExecutionMetric> AnalysisExecutionMetrics => Set<AnalysisExecutionMetric>();
+
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;
 

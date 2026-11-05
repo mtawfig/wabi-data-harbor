@@ -13,8 +13,8 @@
         <mat-form-field appearance="outline" class="ask__control">
           <mat-label>{{ 'ask.application' | transloco }}</mat-label>
           <mat-select [value]="selectedApplication()" (valueChange)="selectedApplication.set($event)" [placeholder]="'ask.applicationPlaceholder' | transloco" data-testid="ask-application">
-            @for (app of applications; track app.id) {
-              <mat-option [value]="app.id">{{ app.name }}</mat-option>
+            @for (app of applications(); track app.applicationId) {
+              <mat-option [value]="app.applicationId">{{ appName(app) }} <span class="wi-ltr wi-muted">({{ app.applicationCode }})</span></mat-option>
             } @empty {
               <mat-option disabled>{{ 'ask.applicationPlaceholder' | transloco }}</mat-option>
             }
@@ -30,13 +30,14 @@
         </mat-form-field>
       </div>
 
-      @if (applications.length === 0) {
-        <p class="ask__notice wi-muted"><mat-icon>info</mat-icon><span>{{ 'ask.noApplications' | transloco }}</span></p>
+      @if (applicationsLoaded() && applications().length === 0) {
+        <p class="ask__notice wi-muted"><mat-icon>info</mat-icon><span>{{ 'ask.noAskable' | transloco }}</span></p>
       }
+      @if (application(); as app) { <p class="ask__scope wi-muted small"><mat-icon>lock</mat-icon>{{ 'ask.scope' | transloco: { count: app.objectCount } }}</p> }
 
       <mat-form-field appearance="outline" class="wi-full-width">
         <mat-label>{{ 'ask.prompt' | transloco }}</mat-label>
-        <textarea matInput rows="4" [ngModel]="prompt()" (ngModelChange)="prompt.set($event)" [placeholder]="'ask.promptPlaceholder' | transloco" data-testid="ask-prompt"></textarea>
+        <textarea matInput rows="4" [ngModel]="prompt()" (ngModelChange)="prompt.set($event)" [placeholder]="'ask.promptPlaceholder' | transloco" (keydown.control.enter)="submit()" data-testid="ask-prompt"></textarea>
       </mat-form-field>
 
       <div class="ask__actions">
@@ -48,24 +49,55 @@
             }
           </mat-chip-set>
         </div>
-        <button mat-flat-button type="button" (click)="submit()" [disabled]="!prompt().trim()" data-testid="ask-submit">
+        <button mat-flat-button type="button" (click)="submit()" [disabled]="busy() || !prompt().trim() || !selectedApplication()" data-testid="ask-submit">
           <mat-icon>auto_awesome</mat-icon>{{ 'ask.submit' | transloco }}
         </button>
       </div>
+      @if (busy()) { <mat-progress-bar mode="indeterminate" /><p class="wi-muted small ask__working">{{ 'ask.working' | transloco }}</p> }
     </div>
 
-    <div class="wi-card ask__results">
-      @if (submitted()) {
-        <div class="ask__engine" data-testid="ask-engine-notice">
-          <mat-icon>engineering</mat-icon>
-          <p>{{ 'ask.engineComing' | transloco }}</p>
-        </div>
-      } @else {
-        <div class="ask__empty wi-muted">
-          <mat-icon>insights</mat-icon>
-          <p>{{ 'ask.noAnswerYet' | transloco }}</p>
-        </div>
-      }
-    </div>
+    @if (error(); as e) { <div class="wi-card ask__error" role="alert" data-testid="ask-error"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+    @if (rejection(); as r) {
+      <div class="wi-card ask__error" role="alert" data-testid="ask-rejected">
+        <mat-icon>block</mat-icon>
+        <div><strong>{{ 'ask.rejected.' + r.stage | transloco }}</strong><ul>@for (c of r.codes; track c) { <li>{{ 'ask.codes.' + c | transloco }}</li> }</ul></div>
+      </div>
+    }
+
+    @if (answer(); as a) {
+      <div class="wi-card ask__answer" data-testid="ask-answer">
+        <p class="wi-eyebrow">{{ 'ask.answer' | transloco }}</p>
+        <h2>{{ a.plan.objective }}</h2>
+        @if (a.interpretation?.narrative) { <p class="ask__narrative" data-testid="ask-narrative">{{ a.interpretation!.narrative }}</p> }
+        @if (a.interpretation?.highlights?.length) { <ul class="ask__highlights">@for (h of a.interpretation!.highlights; track h) { <li><mat-icon>check_circle</mat-icon>{{ h }}</li> }</ul> }
+        @if (a.result.truncated) { <p class="ask__truncated"><mat-icon>warning_amber</mat-icon>{{ 'ask.truncated' | transloco: { count: a.result.rowCount } }}</p> }
+
+        @if (kpiValue() !== null) {
+          <div class="ask__kpi" data-testid="ask-kpi"><span class="ask__kpi-value">{{ format(kpiValue(), true) }}</span><span class="wi-muted">{{ a.result.columns[0].name }}</span></div>
+        }
+        @if (chart(); as c) { <div echarts [options]="c" class="ask__chart" data-testid="ask-chart"></div> }
+
+        @if (a.result.rows.length > 0) {
+          <div class="ask__table-wrap">
+            <table class="ask__table" data-testid="ask-table">
+              <thead><tr>@for (col of a.result.columns; track col.name) { <th [class.num]="col.isNumeric">{{ col.name }}</th> }</tr></thead>
+              <tbody>@for (row of a.result.rows; track $index) { <tr>@for (col of a.result.columns; track col.name; let i = $index) { <td [class.num]="col.isNumeric">{{ format(row[i], col.isNumeric) }}</td> }</tr> }</tbody>
+            </table>
+          </div>
+        } @else { <p class="wi-muted">{{ 'ask.noRows' | transloco }}</p> }
+
+        <mat-expansion-panel class="ask__how" data-testid="ask-how">
+          <mat-expansion-panel-header><mat-panel-title>{{ 'ask.how' | transloco }}</mat-panel-title></mat-expansion-panel-header>
+          @if (a.plan.assumptions.length) { <h4>{{ 'ask.assumptions' | transloco }}</h4><ul>@for (s of a.plan.assumptions; track s) { <li>{{ s }}</li> }</ul> }
+          <h4>{{ 'ask.sql' | transloco }}</h4>
+          <pre class="ask__sql">{{ a.compiledSqlPreview }}</pre>
+          <p class="wi-muted small">{{ 'ask.usage' | transloco: { model: a.planUsage.model, tokens: (a.planUsage.inputTokens + a.planUsage.outputTokens + (a.interpretation?.usage?.inputTokens ?? 0) + (a.interpretation?.usage?.outputTokens ?? 0)), cost: (a.totalEstimatedCost | number: '1.4-4'), ms: (a.totalDurationMs | number: '1.0-0'), rows: a.result.rowCount } }}</p>
+        </mat-expansion-panel>
+      </div>
+    } @else if (!busy() && !rejection() && !error()) {
+      <div class="wi-card ask__results">
+        <div class="ask__empty wi-muted"><mat-icon>insights</mat-icon><p>{{ 'ask.noAnswerYet' | transloco }}</p></div>
+      </div>
+    }
   </div>
 </section>

@@ -90,3 +90,11 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 
 ## Screenshots (P8.1)
 `docs/screenshots/p8-1-*.png`: platform providers list after a test EN/AR, provider form, organization AI settings with the own-provider form EN and the saved state EN/AR.
+
+## Ask Wabi Insight (P8.2)
+- `app-ask`: composer card (application selector showing the permitted-object count, answer language, question with Ctrl+Enter, example chips) with a progress bar and a status line while planning, running and interpreting.
+- Answer card: objective as the heading, narrative, highlight list with green check icons, an amber truncation band, a large KPI value for single-number answers, an ECharts bar/line/pie from the plan's visualization hint, a sticky-header rows table, and the *How this was computed* expansion panel (assumptions, dark redacted SQL block, model · tokens · cost · time · rows).
+- Rejections and execution failures are red bands with the stage and localized reason codes.
+
+## Screenshots (P8.2)
+`docs/screenshots/p8-2-*.png`: empty Ask page, a live answer from Claude Opus 5.5 over the demo ERP (chart, rows, narrative), the *How this was computed* panel, an Arabic answer, and the outcome of an injection-style question.

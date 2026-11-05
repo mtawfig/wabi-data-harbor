@@ -31,3 +31,20 @@ internal sealed class AiProviderConfigurationConfiguration : IEntityTypeConfigur
         builder.HasOne<WabiInsight.Core.Entities.Platform.Organization>().WithMany().HasForeignKey(p => p.OrganizationId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class AnalysisExecutionMetricConfiguration : IEntityTypeConfiguration<AnalysisExecutionMetric>
+{
+    public void Configure(EntityTypeBuilder<AnalysisExecutionMetric> builder)
+    {
+        builder.ToTable("AnalysisExecutionMetrics");
+        builder.HasKey(m => m.MetricId);
+        builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Property(m => m.Model).HasMaxLength(200);
+        builder.Property(m => m.FailureStage).HasMaxLength(32);
+        builder.Property(m => m.FailureCode).HasMaxLength(100);
+        builder.Property(m => m.Language).HasMaxLength(2);
+        builder.Property(m => m.EstimatedCost).HasPrecision(14, 6);
+        builder.HasIndex(m => new { m.OrganizationId, m.CreatedAt });
+        builder.HasIndex(m => new { m.OrganizationId, m.UserId });
+    }
+}

@@ -185,6 +185,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAiProviderService>(sp => sp.GetRequiredService<AiProviderService>());
         services.AddScoped<IAiProviderResolver>(sp => sp.GetRequiredService<AiProviderService>());
         services.AddScoped<IQueryPlanner, QueryPlanner>();
+        services.AddSingleton<Core.Ai.Compilers.ISqlDialectCompilerFactory, Core.Ai.Compilers.SqlDialectCompilerFactory>();
+        services.AddScoped<IQueryExecutor, QueryExecutor>();
+        services.AddScoped<IAnalysisService, AnalysisService>();
         services.AddHostedService<AiProviderSeeder>();
         services.AddSingleton<IDatabaseAdapterFactory, DatabaseAdapterFactory>();
         services.AddScoped<IApplicationService, ApplicationService>();

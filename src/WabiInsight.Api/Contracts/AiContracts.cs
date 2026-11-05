@@ -30,3 +30,8 @@ public sealed record PlanQuestionRequest([Required] Guid ApplicationId, [Require
 
 /// <summary>Rejected plans are reported as 422 with the stage and stable codes, never as a generic failure.</summary>
 public sealed record PlanRejectedResponse(string Stage, IReadOnlyList<PlanError> Errors);
+
+public sealed record AskQuestionRequest([Required] Guid ApplicationId, [Required, MaxLength(2000)] string Question, [RegularExpression("^(en|ar)$")] string Language = "en", bool Interpret = true);
+
+/// <summary>Execution failures (source unreachable, timeout, schema drift) carry a stable code for the UI.</summary>
+public sealed record AnalysisFailedResponse(string Stage, string Code);

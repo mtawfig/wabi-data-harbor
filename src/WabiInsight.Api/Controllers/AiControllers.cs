@@ -100,10 +100,36 @@ public sealed class AiProvidersController : ControllerBase
 public sealed class AiController : ControllerBase
 {
     private readonly IQueryPlanner _planner;
+    private readonly IAnalysisService _analysis;
 
-    public AiController(IQueryPlanner planner)
+    public AiController(IQueryPlanner planner, IAnalysisService analysis)
     {
         _planner = planner;
+        _analysis = analysis;
+    }
+
+    /// <summary>Applications the signed-in user may ask about (approved, active, with at least one permitted object).</summary>
+    [HttpGet("applications")]
+    public async Task<ActionResult<IReadOnlyList<AskableApplication>>> Applications(CancellationToken cancellationToken) => Ok(await _analysis.ListApplicationsAsync(cancellationToken));
+
+    /// <summary>The full secure workflow: plan, compile, execute read-only, calculate, interpret.</summary>
+    [HttpPost("ask")]
+    [ProducesResponseType(typeof(AskResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PlanRejectedResponse), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Ask([FromBody] AskQuestionRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _analysis.AskAsync(new AskRequest(request.ApplicationId, request.Question, request.Language, request.Interpret), cancellationToken));
+        }
+        catch (PlanRejectedException ex)
+        {
+            return UnprocessableEntity(new PlanRejectedResponse(ex.Stage, ex.Errors));
+        }
+        catch (Infrastructure.Ai.AnalysisExecutionException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new AnalysisFailedResponse("execute", ex.Code));
+        }
     }
 
     /// <summary>What the signed-in user may ask about in an application: the exact snapshot the model receives.</summary>

@@ -68,4 +68,6 @@ public static class UsageEventTypes
     public const string AiPlanGenerated = "Ai.PlanGenerated";
     public const string AiPlanRejected = "Ai.PlanRejected";
     public const string AiProviderTested = "Ai.ProviderTested";
+    public const string AnalysisCompleted = "Ai.AnalysisCompleted";
+    public const string AnalysisFailed = "Ai.AnalysisFailed";
 }

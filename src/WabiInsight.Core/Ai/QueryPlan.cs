@@ -145,7 +145,7 @@ public sealed class PlanVisualization
     public List<string> Y { get; set; } = [];
 }
 
-/// <summary>JSON schema sent as structured-output format and used by the validator's shape checks.</summary>
+/// <summary>JSON schema sent as the structured-output format. Size and range limits are deliberately absent (providers reject them); the validator enforces them.</summary>
 public static class QueryPlanSchema
 {
     public const string Name = "wabi_query_plan";
@@ -164,21 +164,21 @@ public static class QueryPlanSchema
           "properties": {
             "objective": { "type": "string", "description": "One sentence restating what is computed, in the user's language." },
             "source": { "$ref": "#/$defs/objectRef" },
-            "joins": { "type": "array", "maxItems": 5, "items": { "$ref": "#/$defs/join" } },
-            "select": { "type": "array", "minItems": 1, "maxItems": 30, "items": { "$ref": "#/$defs/selectItem" } },
+            "joins": { "type": "array", "items": { "$ref": "#/$defs/join" } },
+            "select": { "type": "array", "items": { "$ref": "#/$defs/selectItem" } },
             "filters": { "anyOf": [ { "$ref": "#/$defs/filterGroup" }, { "type": "null" } ] },
             "groupBy": { "type": "array", "items": { "type": "string" }, "description": "Aliases of non-aggregate select items." },
-            "orderBy": { "type": "array", "maxItems": 5, "items": { "type": "object", "additionalProperties": false, "required": ["alias", "direction"], "properties": { "alias": { "type": "string" }, "direction": { "type": "string", "enum": ["asc", "desc"] } } } },
-            "limit": { "anyOf": [ { "type": "integer", "minimum": 1, "maximum": 5000 }, { "type": "null" } ] },
+            "orderBy": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["alias", "direction"], "properties": { "alias": { "type": "string" }, "direction": { "type": "string", "enum": ["asc", "desc"] } } } },
+            "limit": { "anyOf": [ { "type": "integer" }, { "type": "null" } ] },
             "visualization": { "anyOf": [ { "type": "object", "additionalProperties": false, "required": ["type", "x", "y"], "properties": { "type": { "type": "string", "enum": ["table", "bar", "line", "pie", "kpi"] }, "x": { "anyOf": [ { "type": "string" }, { "type": "null" } ] }, "y": { "type": "array", "items": { "type": "string" } } } }, { "type": "null" } ] },
             "assumptions": { "type": "array", "items": { "type": "string" }, "description": "Interpretation choices worth telling the user, in the user's language." }
           },
           "$defs": {
             "objectRef": { "type": "object", "additionalProperties": false, "required": ["schema", "object", "alias"], "properties": { "schema": { "type": "string" }, "object": { "type": "string" }, "alias": { "type": "string" } } },
-            "join": { "type": "object", "additionalProperties": false, "required": ["schema", "object", "alias", "type", "on"], "properties": { "schema": { "type": "string" }, "object": { "type": "string" }, "alias": { "type": "string" }, "type": { "type": "string", "enum": ["inner", "left"] }, "on": { "type": "array", "minItems": 1, "maxItems": 3, "items": { "type": "object", "additionalProperties": false, "required": ["left", "right"], "properties": { "left": { "type": "string" }, "right": { "type": "string" } } } } } },
+            "join": { "type": "object", "additionalProperties": false, "required": ["schema", "object", "alias", "type", "on"], "properties": { "schema": { "type": "string" }, "object": { "type": "string" }, "alias": { "type": "string" }, "type": { "type": "string", "enum": ["inner", "left"] }, "on": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["left", "right"], "properties": { "left": { "type": "string" }, "right": { "type": "string" } } } } } },
             "selectItem": { "type": "object", "additionalProperties": false, "required": ["alias", "column", "aggregate", "dateTrunc"], "properties": { "alias": { "type": "string" }, "column": { "anyOf": [ { "type": "string" }, { "type": "null" } ], "description": "alias.Column" }, "aggregate": { "anyOf": [ { "type": "string", "enum": ["count", "count_distinct", "sum", "avg", "min", "max"] }, { "type": "null" } ] }, "dateTrunc": { "anyOf": [ { "type": "string", "enum": ["day", "week", "month", "quarter", "year"] }, { "type": "null" } ] } } },
-            "condition": { "type": "object", "additionalProperties": false, "required": ["column", "operator", "values"], "properties": { "column": { "type": "string" }, "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "in", "not_in", "between", "contains", "starts_with", "is_null", "not_null"] }, "values": { "type": "array", "maxItems": 50, "items": { "type": "string" } } } },
-            "filterGroup": { "type": "object", "additionalProperties": false, "required": ["logic", "conditions", "groups"], "properties": { "logic": { "type": "string", "enum": ["and", "or"] }, "conditions": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/condition" } }, "groups": { "type": "array", "maxItems": 5, "items": { "type": "object", "additionalProperties": false, "required": ["logic", "conditions", "groups"], "properties": { "logic": { "type": "string", "enum": ["and", "or"] }, "conditions": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/condition" } }, "groups": { "type": "array", "maxItems": 0, "items": { "type": "object" } } } } } } }
+            "condition": { "type": "object", "additionalProperties": false, "required": ["column", "operator", "values"], "properties": { "column": { "type": "string" }, "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "in", "not_in", "between", "contains", "starts_with", "is_null", "not_null"] }, "values": { "type": "array", "items": { "type": "string" } } } },
+            "filterGroup": { "type": "object", "additionalProperties": false, "required": ["logic", "conditions", "groups"], "properties": { "logic": { "type": "string", "enum": ["and", "or"] }, "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } }, "groups": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["logic", "conditions", "groups"], "properties": { "logic": { "type": "string", "enum": ["and", "or"] }, "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } }, "groups": { "type": "array", "items": { "type": "object", "additionalProperties": false, "properties": {} } } } } } } }
           }
         }
         """;

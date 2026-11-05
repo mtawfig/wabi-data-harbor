@@ -24,20 +24,27 @@ public sealed class FakeAiProvider : IAiProvider
 
     public static string NextText { get; set; } = "{}";
 
+    /// <summary>When set, decides the answer per request (planning vs interpretation); otherwise NextText is returned.</summary>
+    public static Func<AiRequest, string>? Script { get; set; }
+
     public static AiRequest? LastRequest { get; private set; }
 
     public static AiProviderDescriptor? LastDescriptor { get; private set; }
+
+    public static List<AiRequest> Requests { get; } = [];
 
     public Task<AiCompletion> CompleteAsync(AiProviderDescriptor descriptor, AiRequest request, CancellationToken cancellationToken = default)
     {
         LastRequest = request;
         LastDescriptor = descriptor;
+        Requests.Add(request);
         if (descriptor.ApiKey == "bad-key")
         {
             throw new AiProviderException("ai_provider_unauthorized", "bad key");
         }
 
-        return Task.FromResult(new AiCompletion(NextText, new AiUsage(1500, 400, 1000), descriptor.Model, "end_turn"));
+        var text = Script?.Invoke(request) ?? NextText;
+        return Task.FromResult(new AiCompletion(text, new AiUsage(1500, 400, 1000), descriptor.Model, "end_turn"));
     }
 }
 
@@ -132,6 +139,7 @@ public sealed class AiProviderTests : IDisposable
     [Fact]
     public async Task Organizations_SelectWithinTheAllowList_AndNeverSeeEachOthersProviders()
     {
+        FakeAiProvider.Script = null;
         using var platform = await LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
         Assert.Equal(HttpStatusCode.OK, (await platform.PutAsJsonAsync(new Uri("/api/platform/ai-providers/allowed-types", UriKind.Relative), new { types = new[] { "Anthropic", "OpenAiCompatible" } })).StatusCode);
 
@@ -184,6 +192,7 @@ public sealed class AiProviderTests : IDisposable
     [Fact]
     public async Task Plan_SendsOnlyPermittedMetadata_ValidatesAndAuthorizesTheModelsPlan()
     {
+        FakeAiProvider.Script = null;
         using var alice = await LoginAsync(TestData.AliceEmail);
         var (applicationId, columns) = await PrepareApplicationAsync(alice, "aiplan");
         var subjectId = columns.Single(c => c.GetProperty("columnName").GetString() == "Subject").GetProperty("columnId").GetGuid();
@@ -249,17 +258,10 @@ public sealed class AiProviderTests : IDisposable
         rejected = await analyst.PostJsonAsync("/api/ai/plan", new { applicationId, question = "x" });
         Assert.Equal("format", (await rejected.ReadJsonAsync()).GetProperty("stage").GetString());
 
-        // Other organizations' applications, built-in applications and unapproved ones are not plannable.
+        // Other organizations' applications are not plannable (built-in Platform Insights is covered by AnalysisTests).
         var (_, adminBEmail) = await InsertAdminOfBAsync();
         using var adminB = await LoginAsync(adminBEmail);
         Assert.Equal(HttpStatusCode.NotFound, (await adminB.PostJsonAsync("/api/ai/plan", new { applicationId, question = "x" })).StatusCode);
-        var builtIn = (await (await alice.GetAsync("/api/applications")).ReadJsonAsync()).EnumerateArray().FirstOrDefault(a => a.GetProperty("isBuiltIn").GetBoolean());
-        if (builtIn.ValueKind == JsonValueKind.Object)
-        {
-            var unsupported = await alice.PostJsonAsync("/api/ai/plan", new { applicationId = builtIn.GetProperty("applicationId").GetGuid(), question = "x" });
-            Assert.Equal(HttpStatusCode.BadRequest, unsupported.StatusCode);
-            Assert.Contains("ai_application_unsupported", await unsupported.Content.ReadAsStringAsync(), StringComparison.Ordinal);
-        }
 
         await using var context = _db.CreateContext(_db.Data.PlatformAdministrator);
         Assert.True(await context.UsageEvents.AnyAsync(u => u.EventType == "Ai.PlanGenerated" && u.OrganizationId == _db.Data.OrganizationAId && u.Quantity == 1900));

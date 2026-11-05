@@ -39,4 +39,11 @@ describe('AiService', () => {
     expect(JSON.stringify(plan.request.body)).not.toContain('organizationId');
     plan.flush({});
   });
+
+  it('asks with the application id, question, language and interpretation flag', () => {
+    service.ask('app1', 'Tickets by status', 'en', false).subscribe();
+    const ask = http.expectOne({ method: 'POST', url: '/api/ai/ask' });
+    expect(ask.request.body).toEqual({ applicationId: 'app1', question: 'Tickets by status', language: 'en', interpret: false });
+    ask.flush({});
+  });
 });

@@ -13,6 +13,9 @@ public sealed class AiOptions
 
     public int RequestTimeoutSeconds { get; set; } = 90;
 
+    /// <summary>Statement timeout for analysis queries on organization sources.</summary>
+    public int QueryTimeoutSeconds { get; set; } = 30;
+
     /// <summary>Default allow-list of provider types organizations may configure themselves.</summary>
     public string[] AllowedProviderTypes { get; set; } = ["Anthropic", "OpenAiCompatible", "Gemini"];
 
