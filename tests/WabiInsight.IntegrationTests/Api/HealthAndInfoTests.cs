@@ -57,11 +57,16 @@ public sealed class HealthAndInfoTests : IDisposable
     }
 
     [Fact]
-    public async Task UnknownRoute_ReturnsProblemDetails()
+    public async Task UnknownRoute_IsUnauthorized_ForAnonymous_AndNotFound_WhenAuthenticated()
     {
-        var response = await _client.GetAsync(new Uri("/api/does-not-exist", UriKind.Relative));
+        // Default-deny: without a session even unknown routes are not revealed.
+        var anonymous = await _client.GetAsync(new Uri("/api/does-not-exist", UriKind.Relative));
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.Equal("application/problem+json", anonymous.Content.Headers.ContentType?.MediaType);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        await _client.LoginAsync(TestData.AliceEmail, TestData.UserPassword);
+        var authenticated = await _client.GetAsync(new Uri("/api/does-not-exist", UriKind.Relative));
+        Assert.Equal(HttpStatusCode.NotFound, authenticated.StatusCode);
+        Assert.Equal("application/problem+json", authenticated.Content.Headers.ContentType?.MediaType);
     }
 }

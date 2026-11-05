@@ -17,6 +17,7 @@ public class ConfigurationDbContext : DbContext
 {
     private readonly ITenantContext _tenantContext;
     private readonly IClock _clock;
+    private bool _systemScope;
 
     public ConfigurationDbContext(
         DbContextOptions<ConfigurationDbContext> options,
@@ -61,6 +62,17 @@ public class ConfigurationDbContext : DbContext
                     .Invoke(this, [modelBuilder]);
             }
         }
+    }
+
+    /// <summary>
+    /// Allows pre-authentication and system operations (login counters, bootstrap, onboarding) to write
+    /// tenant-owned rows without a tenant principal. Scoped and explicit; never used by request handlers
+    /// acting for an organization user.
+    /// </summary>
+    public IDisposable BeginSystemScope()
+    {
+        _systemScope = true;
+        return new SystemScope(this);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -125,8 +137,23 @@ public class ConfigurationDbContext : DbContext
         {
             case PrincipalType.OrganizationUser when owned.OrganizationId != _tenantContext.OrganizationId:
                 throw new TenantContextException("Cross-organization write rejected.");
-            case PrincipalType.Anonymous:
+            case PrincipalType.Anonymous when !_systemScope:
                 throw new TenantContextException("Anonymous scopes cannot write tenant-owned data.");
+        }
+    }
+
+    private sealed class SystemScope : IDisposable
+    {
+        private readonly ConfigurationDbContext _context;
+
+        public SystemScope(ConfigurationDbContext context)
+        {
+            _context = context;
+        }
+
+        public void Dispose()
+        {
+            _context._systemScope = false;
         }
     }
 }
