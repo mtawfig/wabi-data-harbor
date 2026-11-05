@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Audit;
 using WabiInsight.Core.Entities.Email;
+using WabiInsight.Core.Entities.Metadata;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Entities.Support;
@@ -77,6 +78,12 @@ public class ConfigurationDbContext : DbContext
     public DbSet<SupportAccessGrant> SupportAccessGrants => Set<SupportAccessGrant>();
 
     public DbSet<SupportSession> SupportSessions => Set<SupportSession>();
+
+    public DbSet<DatabaseObject> DatabaseObjects => Set<DatabaseObject>();
+
+    public DbSet<DatabaseColumn> DatabaseColumns => Set<DatabaseColumn>();
+
+    public DbSet<DatabaseRelationship> DatabaseRelationships => Set<DatabaseRelationship>();
 
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;

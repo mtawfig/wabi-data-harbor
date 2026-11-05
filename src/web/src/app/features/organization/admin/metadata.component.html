@@ -1,0 +1,118 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'nav.org.admin.title' | transloco }}</p>
+      <h1>{{ 'admin.metadata.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'admin.metadata.subtitle' | transloco }}</p>
+    </div>
+    <div class="head-actions">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="app-select">
+        <mat-label>{{ 'admin.applications.application' | transloco }}</mat-label>
+        <mat-select [value]="selected()" (valueChange)="select($event)" data-testid="meta-app">
+          <mat-select-trigger>{{ selectedApp() ? name(selectedApp()!) : '' }}</mat-select-trigger>
+          @for (a of selectable(); track a.applicationId) { <mat-option [value]="a.applicationId">{{ name(a) }} <span class="wi-ltr wi-muted">({{ a.applicationCode }})</span></mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <button mat-flat-button type="button" (click)="refresh()" [disabled]="busy() || !selectedApp()?.connectionConfigured" data-testid="meta-refresh"><mat-icon>sync</mat-icon>{{ 'admin.metadata.refresh' | transloco }}</button>
+    </div>
+  </header>
+
+  @if (error(); as e) { <div class="wi-card catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+  @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+
+  @if (selectable().length === 0) {
+    <div class="wi-card wi-muted">{{ 'admin.metadata.noApplications' | transloco }}</div>
+  } @else {
+    <div class="layout" [class.layout--detail]="detail()">
+      <div class="wi-card">
+        <div class="filters">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search"><mat-label>{{ 'admin.metadata.search' | transloco }}</mat-label><input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" (keyup.enter)="apply()" data-testid="meta-search" /><mat-icon matSuffix>search</mat-icon></mat-form-field>
+          <mat-button-toggle-group [value]="filter()" (change)="filter.set($event.value); apply()" hideSingleSelectionIndicator>
+            <mat-button-toggle value="all">{{ 'admin.metadata.filterAll' | transloco }}</mat-button-toggle>
+            <mat-button-toggle value="approved">{{ 'admin.metadata.filterApproved' | transloco }}</mat-button-toggle>
+            <mat-button-toggle value="pending">{{ 'admin.metadata.filterPending' | transloco }}</mat-button-toggle>
+          </mat-button-toggle-group>
+          <mat-checkbox [checked]="includeRemoved()" (change)="includeRemoved.set($event.checked); apply()">{{ 'admin.metadata.includeRemoved' | transloco }}</mat-checkbox>
+        </div>
+        @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+        <table mat-table [dataSource]="items()" class="catalog-table" data-testid="meta-table">
+          <ng-container matColumnDef="object"><th mat-header-cell *matHeaderCellDef>{{ 'admin.metadata.object' | transloco }}</th><td mat-cell *matCellDef="let o"><span class="wi-ltr"><span class="wi-muted">{{ o.schemaName }}.</span><strong>{{ o.objectName }}</strong></span>@if (!o.isPresent) { <span class="chip removed">{{ 'admin.metadata.removed' | transloco }}</span> }</td></ng-container>
+          <ng-container matColumnDef="type"><th mat-header-cell *matHeaderCellDef>{{ 'admin.metadata.type' | transloco }}</th><td mat-cell *matCellDef="let o">{{ 'admin.metadata.types.' + o.objectType | transloco }}</td></ng-container>
+          <ng-container matColumnDef="names"><th mat-header-cell *matHeaderCellDef>{{ 'admin.metadata.displayNames' | transloco }}</th><td mat-cell *matCellDef="let o">{{ o.displayNameEn || '—' }}@if (o.displayNameAr) { <br /><span dir="rtl">{{ o.displayNameAr }}</span> }</td></ng-container>
+          <ng-container matColumnDef="columns"><th mat-header-cell *matHeaderCellDef class="num">{{ 'admin.metadata.columns' | transloco }}</th><td mat-cell *matCellDef="let o" class="num">{{ o.approvedColumnCount }} / {{ o.columnCount }}</td></ng-container>
+          <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.status' | transloco }}</th><td mat-cell *matCellDef="let o"><span class="chip" [attr.data-on]="o.isApproved">{{ (o.isApproved ? 'admin.metadata.approved' : 'admin.metadata.pending') | transloco }}</span></td></ng-container>
+          <tr mat-header-row *matHeaderRowDef="objectColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: objectColumns" class="row" [class.row--active]="detail()?.summary?.objectId === row.objectId" (click)="open(row.objectId)" [attr.data-testid]="'meta-row-' + row.objectName"></tr>
+        </table>
+        @if (!loading() && items().length === 0) { <p class="empty wi-muted">{{ (selectedApp()?.lastMetadataRefreshAt ? 'admin.metadata.empty' : 'admin.metadata.neverRefreshed') | transloco }}</p> }
+        <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[25, 50, 100]" (page)="onPage($event)" />
+      </div>
+
+      @if (detail(); as d) {
+        <aside class="wi-card detail" data-testid="meta-detail">
+          <header class="detail__head">
+            <div>
+              <p class="wi-eyebrow">{{ 'admin.metadata.types.' + d.summary.objectType | transloco }}</p>
+              <h2 class="wi-ltr">{{ d.summary.schemaName }}.{{ d.summary.objectName }}</h2>
+              <p class="wi-muted small">{{ 'admin.metadata.discovered' | transloco }} {{ d.summary.discoveredAt | date: 'medium' }} · {{ 'admin.metadata.lastSeen' | transloco }} {{ d.summary.lastSeenAt | date: 'medium' }}</p>
+            </div>
+            <button mat-icon-button type="button" (click)="close()" [attr.aria-label]="'common.cancel' | transloco"><mat-icon>close</mat-icon></button>
+          </header>
+          @if (!d.summary.isPresent) { <p class="removed-note"><mat-icon>warning</mat-icon>{{ 'admin.metadata.removedNote' | transloco }}</p> }
+          <div class="grid">
+            <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameEn' | transloco }}</mat-label><input matInput [ngModel]="objectDraft().displayNameEn" (ngModelChange)="setObjectField('displayNameEn', $event)" maxlength="200" data-testid="meta-object-en" /></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameAr' | transloco }}</mat-label><input matInput dir="rtl" [ngModel]="objectDraft().displayNameAr" (ngModelChange)="setObjectField('displayNameAr', $event)" maxlength="200" data-testid="meta-object-ar" /></mat-form-field>
+            <mat-form-field appearance="outline" class="span" subscriptSizing="dynamic"><mat-label>{{ 'admin.metadata.businessDescription' | transloco }}</mat-label><textarea matInput rows="2" [ngModel]="objectDraft().businessDescription" (ngModelChange)="setObjectField('businessDescription', $event)" maxlength="2000"></textarea><mat-hint>{{ 'admin.metadata.descriptionHint' | transloco }}</mat-hint></mat-form-field>
+            <mat-checkbox [checked]="objectDraft().isApproved" (change)="objectDraft.set({ displayNameEn: objectDraft().displayNameEn, displayNameAr: objectDraft().displayNameAr, businessDescription: objectDraft().businessDescription, isApproved: $event.checked })" [disabled]="!d.summary.isPresent" data-testid="meta-object-approved">{{ 'admin.metadata.approvedForQueries' | transloco }}</mat-checkbox>
+          </div>
+          <div class="detail__actions">
+            <button mat-stroked-button type="button" (click)="approveAll(true)" [disabled]="busy() || !d.summary.isPresent" data-testid="meta-approve-all"><mat-icon>done_all</mat-icon>{{ 'admin.metadata.approveAll' | transloco }}</button>
+            <button mat-stroked-button type="button" (click)="approveAll(false)" [disabled]="busy()"><mat-icon>remove_done</mat-icon>{{ 'admin.metadata.unapproveAll' | transloco }}</button>
+            <span class="wi-ms-auto"></span>
+            <button mat-flat-button type="button" (click)="saveObject()" [disabled]="busy()" data-testid="meta-object-save">{{ 'common.save' | transloco }}</button>
+          </div>
+
+          <h3>{{ 'admin.metadata.columns' | transloco }} ({{ d.columns.length }})</h3>
+          <ul class="cols" data-testid="meta-columns">
+            @for (c of d.columns; track c.columnId) {
+              <li [class.cols__removed]="!c.isPresent" [class.cols__editing]="editingColumn() === c.columnId">
+                <div class="cols__row">
+                  <mat-checkbox [checked]="c.isApproved" (change)="toggleColumnApproval(c, $event.checked)" [disabled]="busy() || !c.isPresent" [attr.data-testid]="'meta-col-approve-' + c.columnName" />
+                  <span class="cols__name wi-ltr">@if (c.isPrimaryKey) { <mat-icon class="pk" [title]="'admin.metadata.primaryKey' | transloco">key</mat-icon> }{{ c.columnName }}</span>
+                  <span class="cols__type wi-ltr wi-muted">{{ typeLabel(c) }}{{ c.isNullable ? '' : ' NOT NULL' }}</span>
+                  <span class="chip cls" [attr.data-cls]="c.classification">{{ 'admin.metadata.classifications.' + c.classification | transloco }}</span>
+                  <span class="cols__labels wi-muted">{{ c.displayNameEn || '' }}@if (c.displayNameAr) { · <span dir="rtl">{{ c.displayNameAr }}</span> }</span>
+                  <button mat-icon-button type="button" (click)="editingColumn() === c.columnId ? editingColumn.set(null) : editColumn(c)" [attr.aria-label]="'admin.metadata.editColumn' | transloco" [attr.data-testid]="'meta-col-edit-' + c.columnName"><mat-icon>{{ editingColumn() === c.columnId ? 'expand_less' : 'edit' }}</mat-icon></button>
+                </div>
+                @if (editingColumn() === c.columnId) {
+                  <div class="cols__form">
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'admin.fields.nameEn' | transloco }}</mat-label><input matInput [ngModel]="columnDraft().displayNameEn" (ngModelChange)="setColumnField('displayNameEn', $event)" maxlength="200" /></mat-form-field>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'admin.fields.nameAr' | transloco }}</mat-label><input matInput dir="rtl" [ngModel]="columnDraft().displayNameAr" (ngModelChange)="setColumnField('displayNameAr', $event)" maxlength="200" /></mat-form-field>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>{{ 'admin.metadata.classification' | transloco }}</mat-label>
+                      <mat-select [value]="columnDraft().classification" (valueChange)="setColumnField('classification', $event)">
+                        @for (k of classifications; track k) { <mat-option [value]="k">{{ 'admin.metadata.classifications.' + k | transloco }}</mat-option> }
+                      </mat-select>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span"><mat-label>{{ 'admin.metadata.businessDescription' | transloco }}</mat-label><input matInput [ngModel]="columnDraft().businessDescription" (ngModelChange)="setColumnField('businessDescription', $event)" maxlength="2000" /></mat-form-field>
+                    <mat-checkbox [checked]="columnDraft().isApproved" (change)="setColumnField('isApproved', $event.checked)" [disabled]="!c.isPresent">{{ 'admin.metadata.approvedForQueries' | transloco }}</mat-checkbox>
+                    <button mat-flat-button type="button" (click)="saveColumn(c)" [disabled]="busy()" [attr.data-testid]="'meta-col-save-' + c.columnName">{{ 'common.save' | transloco }}</button>
+                  </div>
+                }
+              </li>
+            }
+          </ul>
+
+          @if (d.relationships.length > 0) {
+            <h3>{{ 'admin.metadata.relationships' | transloco }} ({{ d.relationships.length }})</h3>
+            <ul class="rels">
+              @for (r of d.relationships; track r.relationshipId) {
+                <li class="wi-ltr" [class.cols__removed]="!r.isPresent"><strong>{{ r.fromObject }}</strong>.{{ r.fromColumn }} <mat-icon>arrow_forward</mat-icon> <strong>{{ r.toObject }}</strong>.{{ r.toColumn }} <span class="wi-muted small">({{ r.constraintName }})</span></li>
+              }
+            </ul>
+          }
+        </aside>
+      }
+    </div>
+  }
+</section>

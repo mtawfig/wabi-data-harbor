@@ -172,7 +172,7 @@ public sealed class TestData
         TemplateVersion = SystemRoles.TemplateVersion,
     };
 
-    private static LoginIdentity Identity(string email, PrincipalType type, Guid principalId, Guid? organizationId, DateTimeOffset now) => new()
+    public static LoginIdentity Identity(string email, PrincipalType type, Guid principalId, Guid? organizationId, DateTimeOffset now) => new()
     {
         NormalizedEmail = EmailNormalizer.Normalize(email),
         PrincipalType = type,

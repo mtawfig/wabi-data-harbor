@@ -47,4 +47,15 @@ public class Application : AuditableEntity, ITenantOwned
     public bool IsApproved { get; set; }
 
     public Guid? CreatedByUserId { get; set; }
+
+    /// <summary>Server/database hint typed by the administrator; shown instead of the connection string.</summary>
+    public string? ConnectionHint { get; set; }
+
+    public DateTimeOffset? LastConnectionTestAt { get; set; }
+
+    public bool? LastConnectionTestSucceeded { get; set; }
+
+    public DateTimeOffset? LastMetadataRefreshAt { get; set; }
+
+    public Guid? UpdatedByUserId { get; set; }
 }

@@ -30,6 +30,12 @@ using WabiInsight.Infrastructure.Storage;
 using WabiInsight.Infrastructure.Support;
 using WabiInsight.Core.SupportAccess;
 using WabiInsight.Infrastructure.SupportAccess;
+using Microsoft.AspNetCore.DataProtection;
+using WabiInsight.Core.Applications;
+using WabiInsight.Core.Metadata;
+using WabiInsight.Infrastructure.Applications;
+using WabiInsight.Infrastructure.Databases;
+using WabiInsight.Infrastructure.Metadata;
 
 namespace WabiInsight.Infrastructure.DependencyInjection;
 
@@ -139,6 +145,23 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISupportAccessAuthorizer, SupportAccessAuthorizer>();
         services.AddScoped<ISupportOperationExecutor, SupportOperationExecutor>();
         services.AddHostedService<SupportAccessExpiryWorker>();
+
+        // Connection-string protection (specification §11): purpose-specific protector, key ring on the file system
+        // outside the database, automatic rotation; old keys stay available for decryption.
+        var dataProtection = configuration.GetSection(Core.Applications.DataProtectionOptions.SectionName).Get<Core.Applications.DataProtectionOptions>() ?? new Core.Applications.DataProtectionOptions();
+        var keyRing = new DirectoryInfo(Path.GetFullPath(dataProtection.KeyRingPath));
+        keyRing.Create();
+        services.AddDataProtection()
+            .SetApplicationName("WabiInsight")
+            .PersistKeysToFileSystem(keyRing)
+            .SetDefaultKeyLifetime(TimeSpan.FromDays(Math.Clamp(dataProtection.KeyLifetimeDays, 7, 365)));
+        services.AddScoped<IConnectionStringProtector, ConnectionStringProtector>();
+        services.AddSingleton<IDatabaseAdapter, SqlServerAdapter>();
+        services.AddSingleton<IDatabaseAdapter, OracleAdapter>();
+        services.AddSingleton<IDatabaseAdapterFactory, DatabaseAdapterFactory>();
+        services.AddScoped<IApplicationService, ApplicationService>();
+        services.AddScoped<IMetadataService, MetadataService>();
+        services.AddScoped<MetadataService>();
 
         return services;
     }

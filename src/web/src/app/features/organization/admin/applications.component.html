@@ -1,0 +1,113 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'nav.org.admin.title' | transloco }}</p>
+      <h1>{{ 'admin.applications.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'admin.applications.subtitle' | transloco }}</p>
+    </div>
+    <button mat-flat-button type="button" (click)="startCreate()" data-testid="app-new"><mat-icon>add</mat-icon>{{ 'admin.applications.new' | transloco }}</button>
+  </header>
+
+  @if (error(); as e) { <div class="wi-card catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  @if (showForm()) {
+    <form class="wi-card catalog-form" [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="app-form">
+      <h3>{{ (editing() ? 'admin.applications.edit' : 'admin.applications.new') | transloco }}</h3>
+      <div class="catalog-form__grid">
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.code' | transloco }}</mat-label><input matInput formControlName="applicationCode" data-testid="app-code" /><mat-hint>{{ 'admin.applications.codeHint' | transloco }}</mat-hint></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameEn' | transloco }}</mat-label><input matInput formControlName="applicationName" data-testid="app-name-en" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameAr' | transloco }}</mat-label><input matInput formControlName="applicationNameAr" dir="rtl" data-testid="app-name-ar" /></mat-form-field>
+        <mat-form-field appearance="outline" class="span2"><mat-label>{{ 'admin.fields.description' | transloco }}</mat-label><input matInput formControlName="description" /></mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'admin.applications.databaseType' | transloco }}</mat-label>
+          <mat-select formControlName="databaseType" data-testid="app-type">
+            <mat-select-trigger>{{ 'admin.applications.types.' + form.controls.databaseType.value | transloco }}</mat-select-trigger>
+            @for (t of types; track t) { <mat-option [value]="t">{{ 'admin.applications.types.' + t | transloco }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        @if (!editing()) {
+          <mat-form-field appearance="outline" class="span3">
+            <mat-label>{{ 'admin.applications.connectionString' | transloco }}</mat-label>
+            <textarea matInput formControlName="connectionString" rows="2" autocomplete="off" data-testid="app-connection"></textarea>
+            <mat-hint>{{ 'admin.applications.connectionHintText' | transloco }}</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="span2"><mat-label>{{ 'admin.applications.hint' | transloco }}</mat-label><input matInput formControlName="connectionHint" data-testid="app-hint" /><mat-hint>{{ 'admin.applications.hintHint' | transloco }}</mat-hint></mat-form-field>
+          <div class="test-cell"><button mat-stroked-button type="button" (click)="testTyped()" [disabled]="busy() || !form.controls.connectionString.value" data-testid="app-test"><mat-icon>network_check</mat-icon>{{ 'admin.applications.test' | transloco }}</button></div>
+        } @else {
+          <mat-checkbox formControlName="isActive">{{ 'admin.fields.active' | transloco }}</mat-checkbox>
+        }
+      </div>
+      <ng-container *ngTemplateOutlet="testPanel" />
+      <div class="catalog-form__actions">
+        <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
+        <button mat-flat-button type="submit" [disabled]="busy()" data-testid="app-save">{{ 'common.save' | transloco }}</button>
+      </div>
+    </form>
+  }
+
+  @if (connectionFor(); as target) {
+    <form class="wi-card catalog-form" [formGroup]="connectionForm" (ngSubmit)="submitConnection()" novalidate data-testid="app-connection-form">
+      <h3>{{ 'admin.applications.replaceConnection' | transloco: { name: name(target) } }}</h3>
+      <p class="wi-muted">{{ 'admin.applications.replaceHint' | transloco }}</p>
+      <div class="catalog-form__grid">
+        <mat-form-field appearance="outline" class="span3"><mat-label>{{ 'admin.applications.connectionString' | transloco }}</mat-label><textarea matInput formControlName="connectionString" rows="2" autocomplete="off" data-testid="app-connection-new"></textarea></mat-form-field>
+        <mat-form-field appearance="outline" class="span2"><mat-label>{{ 'admin.applications.hint' | transloco }}</mat-label><input matInput formControlName="connectionHint" /></mat-form-field>
+        <div class="test-cell"><button mat-stroked-button type="button" (click)="testTyped()" [disabled]="busy() || !connectionForm.controls.connectionString.value"><mat-icon>network_check</mat-icon>{{ 'admin.applications.test' | transloco }}</button></div>
+      </div>
+      <ng-container *ngTemplateOutlet="testPanel" />
+      <div class="catalog-form__actions">
+        <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
+        <button mat-flat-button type="submit" [disabled]="busy()" data-testid="app-connection-save">{{ 'common.save' | transloco }}</button>
+      </div>
+    </form>
+  }
+
+  <ng-template #testPanel>
+    @if (testResult(); as r) {
+      <div class="test" [class.test--ok]="r.succeeded" [class.test--fail]="!r.succeeded" data-testid="app-test-result">
+        <mat-icon>{{ r.succeeded ? 'check_circle' : 'error' }}</mat-icon>
+        <div>
+          <strong>{{ (r.succeeded ? 'admin.applications.testOk' : 'admin.applications.testFailed') | transloco }}</strong>
+          @if (r.succeeded) {
+            <span class="wi-muted"> · {{ r.databaseName }} · <span class="wi-ltr">{{ r.serverVersion }}</span> · {{ r.durationMs | number: '1.0-0' }} ms</span>
+            <br /><span [class.warn]="r.readOnlyVerified === false">{{ (r.readOnlyVerified ? 'admin.applications.readOnlyOk' : 'admin.applications.readOnlyWarning') | transloco }}</span>
+          } @else if (r.error) { <br /><span class="wi-ltr">{{ errorLabel(r.error) }}</span> }
+        </div>
+      </div>
+    }
+  </ng-template>
+
+  <div class="wi-card">
+    @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+    <table mat-table [dataSource]="items()" class="catalog-table" data-testid="app-table">
+      <ng-container matColumnDef="name"><th mat-header-cell *matHeaderCellDef>{{ 'admin.applications.application' | transloco }}</th><td mat-cell *matCellDef="let a"><strong>{{ name(a) }}</strong> <span class="wi-ltr wi-muted code">{{ a.applicationCode }}</span>@if (a.description) { <br /><span class="wi-muted small">{{ a.description }}</span> }</td></ng-container>
+      <ng-container matColumnDef="type"><th mat-header-cell *matHeaderCellDef>{{ 'admin.applications.databaseType' | transloco }}</th><td mat-cell *matCellDef="let a">{{ 'admin.applications.types.' + a.databaseType | transloco }}@if (a.isBuiltIn) { <span class="chip">{{ 'admin.applications.builtIn' | transloco }}</span> }</td></ng-container>
+      <ng-container matColumnDef="connection"><th mat-header-cell *matHeaderCellDef>{{ 'admin.applications.connection' | transloco }}</th><td mat-cell *matCellDef="let a">
+        @if (a.isBuiltIn) { <span class="wi-muted">{{ 'admin.applications.builtInConnection' | transloco }}</span> }
+        @else if (a.connectionConfigured) { <span class="ok"><mat-icon>lock</mat-icon>{{ 'admin.applications.configured' | transloco }}</span><br /><span class="wi-ltr wi-muted small">{{ a.connectionHint }}</span>@if (a.lastConnectionTestAt) { <br /><span class="small" [class.warn]="a.lastConnectionTestSucceeded === false">{{ (a.lastConnectionTestSucceeded ? 'admin.applications.lastTestOk' : 'admin.applications.lastTestFailed') | transloco }} · {{ a.lastConnectionTestAt | date: 'short' }}</span> } }
+        @else { <span class="warn">{{ 'admin.applications.notConfigured' | transloco }}</span> }
+      </td></ng-container>
+      <ng-container matColumnDef="metadata"><th mat-header-cell *matHeaderCellDef>{{ 'nav.org.admin.metadata' | transloco }}</th><td mat-cell *matCellDef="let a">@if (a.isBuiltIn) { — } @else { {{ 'admin.applications.objects' | transloco: { approved: a.approvedObjectCount, total: a.objectCount } }}@if (a.lastMetadataRefreshAt) { <br /><span class="wi-muted small">{{ a.lastMetadataRefreshAt | date: 'short' }}</span> } }</td></ng-container>
+      <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.status' | transloco }}</th><td mat-cell *matCellDef="let a"><span class="chip" [attr.data-on]="a.isActive">{{ (a.isActive ? 'admin.active' : 'admin.inactive') | transloco }}</span> <span class="chip" [attr.data-on]="a.isApproved">{{ (a.isApproved ? 'admin.applications.approvedChip' : 'admin.applications.pendingChip') | transloco }}</span></td></ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let a" class="actions">
+          @if (!a.isBuiltIn) {
+            <button mat-icon-button type="button" (click)="startEdit(a)" [attr.aria-label]="'admin.applications.edit' | transloco" [title]="'admin.applications.edit' | transloco"><mat-icon>edit</mat-icon></button>
+            <button mat-icon-button type="button" (click)="startConnection(a)" [attr.aria-label]="'admin.applications.replaceConnectionShort' | transloco" [title]="'admin.applications.replaceConnectionShort' | transloco" [attr.data-testid]="'app-connection-' + a.applicationCode"><mat-icon>vpn_key</mat-icon></button>
+            <button mat-icon-button type="button" (click)="testStored(a)" [disabled]="busy() || !a.connectionConfigured" [attr.aria-label]="'admin.applications.test' | transloco" [title]="'admin.applications.test' | transloco" [attr.data-testid]="'app-test-stored-' + a.applicationCode"><mat-icon>network_check</mat-icon></button>
+            <a mat-icon-button [routerLink]="['/app/admin/metadata']" [queryParams]="{ application: a.applicationId }" [attr.aria-label]="'nav.org.admin.metadata' | transloco" [title]="'nav.org.admin.metadata' | transloco"><mat-icon>schema</mat-icon></a>
+            @if (a.isApproved) {
+              <button mat-icon-button type="button" (click)="setApproval(a, false)" [disabled]="busy()" [attr.aria-label]="'admin.applications.unapprove' | transloco" [title]="'admin.applications.unapprove' | transloco"><mat-icon>block</mat-icon></button>
+            } @else {
+              <button mat-icon-button type="button" (click)="setApproval(a, true)" [disabled]="busy() || !a.connectionConfigured" [attr.aria-label]="'admin.applications.approve' | transloco" [title]="'admin.applications.approve' | transloco" [attr.data-testid]="'app-approve-' + a.applicationCode"><mat-icon>verified</mat-icon></button>
+            }
+          }
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns" [attr.data-testid]="'app-row-' + row.applicationCode"></tr>
+    </table>
+    @if (items().length === 0) { <p class="empty wi-muted">{{ 'admin.applications.empty' | transloco }}</p> }
+  </div>
+</section>

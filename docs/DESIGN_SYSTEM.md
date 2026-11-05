@@ -58,3 +58,6 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 
 ## Screenshots (P5.2)
 `docs/screenshots/p5-2-*.png`: proposal form (platform), proposed grant, organization approval list, pending grant on the organization side, approved grant AR, platform Support Access page, support mode with the operation panel before and after a run, support-mode banner EN/AR, timeline with grant events.
+
+## Screenshots (P6.1)
+`docs/screenshots/p6-1-*.png`: new application form with a readable connection error, applications list EN/AR (configured connection with hint, last test, metadata counts, approval), metadata after refresh, object detail with columns, classification chips and approval EN/AR.

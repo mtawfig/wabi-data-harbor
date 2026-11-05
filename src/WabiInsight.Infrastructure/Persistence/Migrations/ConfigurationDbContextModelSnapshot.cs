@@ -158,6 +158,238 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Metadata.DatabaseColumn", b =>
+                {
+                    b.Property<Guid>("ColumnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BusinessDescription")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Classification")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ColumnName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("DiscoveredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DisplayNameAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DisplayNameEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsNullable")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPresent")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrimaryKey")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("MaxLength")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("OrdinalPosition")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("Precision")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int?>("Scale")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("ColumnId");
+
+                    b.HasIndex("ObjectId", "ColumnName")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "ObjectId");
+
+                    b.ToTable("DatabaseColumns", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DatabaseColumns_Classification", "[Classification] IN ('Internal','Confidential','Restricted')");
+                        });
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Metadata.DatabaseObject", b =>
+                {
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BusinessDescription")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("DiscoveredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DisplayNameAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DisplayNameEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPresent")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ObjectName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ObjectType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SchemaName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("ObjectId");
+
+                    b.HasIndex("ApplicationId", "SchemaName", "ObjectName")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "ApplicationId", "IsApproved");
+
+                    b.ToTable("DatabaseObjects", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Metadata.DatabaseRelationship", b =>
+                {
+                    b.Property<Guid>("RelationshipId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConstraintName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("DiscoveredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("FromColumnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FromObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsPresent")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ToColumnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ToObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RelationshipId");
+
+                    b.HasIndex("OrganizationId", "ApplicationId");
+
+                    b.HasIndex("OrganizationId", "FromColumnId");
+
+                    b.HasIndex("OrganizationId", "FromObjectId");
+
+                    b.HasIndex("OrganizationId", "ToColumnId");
+
+                    b.HasIndex("OrganizationId", "ToObjectId");
+
+                    b.HasIndex("ApplicationId", "ConstraintName", "FromColumnId")
+                        .IsUnique();
+
+                    b.ToTable("DatabaseRelationships", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.Application", b =>
                 {
                     b.Property<Guid>("ApplicationId")
@@ -186,6 +418,10 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("ConnectionHint")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -213,6 +449,15 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsBuiltIn")
                         .HasColumnType("bit");
 
+                    b.Property<DateTimeOffset?>("LastConnectionTestAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool?>("LastConnectionTestSucceeded")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastMetadataRefreshAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
 
@@ -224,6 +469,9 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ApplicationId");
 
@@ -1473,6 +1721,70 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrganizationId", "EventType", "CreatedAt");
 
                     b.ToTable("UsageEvents", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Metadata.DatabaseColumn", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseObject", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ObjectId")
+                        .HasPrincipalKey("OrganizationId", "ObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Metadata.DatabaseObject", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Application", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ApplicationId")
+                        .HasPrincipalKey("OrganizationId", "ApplicationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Metadata.DatabaseRelationship", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Application", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ApplicationId")
+                        .HasPrincipalKey("OrganizationId", "ApplicationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseColumn", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "FromColumnId")
+                        .HasPrincipalKey("OrganizationId", "ColumnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseObject", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "FromObjectId")
+                        .HasPrincipalKey("OrganizationId", "ObjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseColumn", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ToColumnId")
+                        .HasPrincipalKey("OrganizationId", "ColumnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseObject", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ToObjectId")
+                        .HasPrincipalKey("OrganizationId", "ObjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.Application", b =>

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using WabiInsight.Core.Applications;
 using WabiInsight.Core.Audit;
 using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Organizations;
@@ -12,6 +13,7 @@ using WabiInsight.Core.Security;
 using WabiInsight.Core.SupportAccess;
 using WabiInsight.Core.Tenancy;
 using WabiInsight.Core.Usage;
+using WabiInsight.Infrastructure.Metadata;
 using WabiInsight.Infrastructure.Persistence;
 
 namespace WabiInsight.Infrastructure.SupportAccess;
@@ -32,9 +34,15 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
     private readonly IAuditWriter _audit;
     private readonly IUsageEventWriter _usage;
     private readonly INotificationDispatcher _notifications;
+    private readonly MetadataService _metadata;
+    private readonly IConnectionStringProtector _protector;
+    private readonly IDatabaseAdapterFactory _adapters;
 
-    public SupportOperationExecutor(ConfigurationDbContext context, ISupportAccessAuthorizer authorizer, IOrganizationUserProvisioningService provisioning, ITenantContext tenantContext, IClock clock, IAuditWriter audit, IUsageEventWriter usage, INotificationDispatcher notifications)
+    public SupportOperationExecutor(ConfigurationDbContext context, ISupportAccessAuthorizer authorizer, IOrganizationUserProvisioningService provisioning, ITenantContext tenantContext, IClock clock, IAuditWriter audit, IUsageEventWriter usage, INotificationDispatcher notifications, MetadataService metadata, IConnectionStringProtector protector, IDatabaseAdapterFactory adapters)
     {
+        _metadata = metadata;
+        _protector = protector;
+        _adapters = adapters;
         _context = context;
         _authorizer = authorizer;
         _provisioning = provisioning;
@@ -57,6 +65,8 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
                 SupportOperations.ResetOrganizationUserPassword => await ResetPasswordAsync(context, cancellationToken),
                 SupportOperations.ConfigureRole => await ConfigureRoleAsync(context, command.Payload, cancellationToken),
                 SupportOperations.UpdateOrganizationSettings => await UpdateSettingsAsync(context, command.Payload, cancellationToken),
+                SupportOperations.RefreshMetadata => await RefreshMetadataAsync(context, cancellationToken),
+                SupportOperations.DiagnoseApplicationConnection => await DiagnoseAsync(context, cancellationToken),
                 _ => throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "support_operation_not_available"),
             };
 
@@ -184,6 +194,32 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
         _audit.Append(AuditEvents.OrganizationUpdated, "Organization", organization.OrganizationId.ToString(), new { viaSupportGrant = context.GrantId, before, after }, context.OrganizationId);
         await _context.SaveChangesAsync(cancellationToken);
         return (after, null, new { before, after });
+    }
+
+    private async Task<(object Result, string? DeliveredTo, object Summary)> RefreshMetadataAsync(SupportExecutionContext context, CancellationToken cancellationToken)
+    {
+        var applicationId = Guid.Parse(context.TargetReference!);
+        var result = await _metadata.RefreshForOrganizationAsync(context.OrganizationId, applicationId, cancellationToken);
+        return (result, null, new { applicationId, result.ObjectsAdded, result.ObjectsRemoved, result.ColumnsAdded, result.ColumnsRemoved });
+    }
+
+    /// <summary>Narrowest diagnosis (specification §16.3): connectivity, version and read-only verification; never business rows.</summary>
+    private async Task<(object Result, string? DeliveredTo, object Summary)> DiagnoseAsync(SupportExecutionContext context, CancellationToken cancellationToken)
+    {
+        var applicationId = Guid.Parse(context.TargetReference!);
+        var application = await _context.Applications.AsPlatformScope(_tenantContext).AsNoTracking().SingleOrDefaultAsync(a => a.OrganizationId == context.OrganizationId && a.ApplicationId == applicationId, cancellationToken)
+            ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "application_not_found");
+        if (application.IsBuiltIn || application.EncryptedConnectionString is null)
+        {
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "application_connection_missing");
+        }
+
+        var result = await _adapters.Resolve(application.DatabaseType).TestAsync(_protector.Unprotect(application.EncryptedConnectionString), cancellationToken);
+        var tracked = await _context.Applications.AsPlatformScope(_tenantContext).SingleAsync(a => a.ApplicationId == applicationId, cancellationToken);
+        tracked.LastConnectionTestAt = _clock.UtcNow;
+        tracked.LastConnectionTestSucceeded = result.Succeeded;
+        await _context.SaveChangesAsync(cancellationToken);
+        return (result, null, new { applicationId, result.Succeeded, result.ReadOnlyVerified, result.Error });
     }
 
     private async Task RecordAsync(SupportExecutionContext context, string outcome, object? summary, CancellationToken cancellationToken)

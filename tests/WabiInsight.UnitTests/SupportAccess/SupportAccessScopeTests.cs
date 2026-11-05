@@ -13,7 +13,7 @@ public sealed class SupportAccessScopeTests
         new(SupportOperations.ResetOrganizationUserPassword, [UserA.ToString()]),
         new(SupportOperations.CreateOrganizationUser, []),
         new(SupportOperations.ConfigureRole, ["new"]),
-        new(SupportOperations.RefreshMetadata, [Guid.NewGuid().ToString()]),
+        new(SupportOperations.UpdateTablePermissions, [Guid.NewGuid().ToString()]),
     ];
 
     [Fact]
@@ -27,7 +27,7 @@ public sealed class SupportAccessScopeTests
         Assert.Null(SupportAccessScope.Validate(Allowed(), SupportOperations.ConfigureRole, "NEW"));
         Assert.Equal("support_operation_not_granted", SupportAccessScope.Validate(Allowed(), SupportOperations.UpdateOrganizationSettings, null));
         Assert.Equal("support_operation_unknown", SupportAccessScope.Validate(Allowed(), "DropDatabase", null));
-        Assert.Equal("support_operation_not_available", SupportAccessScope.Validate(Allowed(), SupportOperations.RefreshMetadata, Allowed()[3].TargetReferences[0]));
+        Assert.Equal("support_operation_not_available", SupportAccessScope.Validate(Allowed(), SupportOperations.UpdateTablePermissions, Allowed()[3].TargetReferences[0]));
     }
 
     [Fact]
@@ -58,6 +58,8 @@ public sealed class SupportAccessScopeTests
     {
         Assert.Equal(7, SupportOperations.Catalog.Count);
         Assert.DoesNotContain(SupportOperations.Catalog, o => o.Code.Contains("All", StringComparison.Ordinal) || o.Code.Contains("Admin", StringComparison.Ordinal));
-        Assert.All(SupportOperations.Catalog.Where(o => o.Code is SupportOperations.UpdateTablePermissions or SupportOperations.RefreshMetadata or SupportOperations.DiagnoseApplicationConnection), o => Assert.False(o.Executable));
+        Assert.False(SupportOperations.Find(SupportOperations.UpdateTablePermissions)!.Executable); // P6.2
+        Assert.True(SupportOperations.Find(SupportOperations.RefreshMetadata)!.Executable);
+        Assert.True(SupportOperations.Find(SupportOperations.DiagnoseApplicationConnection)!.Executable);
     }
 }

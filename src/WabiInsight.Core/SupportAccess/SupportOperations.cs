@@ -21,8 +21,8 @@ public static class SupportOperations
         new(ConfigureRole, SupportTargetType.RoleOrNew, Executable: true, "Create or update the listed role(s): code, names, description, active flag."),
         new(UpdateOrganizationSettings, SupportTargetType.None, Executable: true, "Update the organization profile: names, description, contacts, time zone, default language."),
         new(UpdateTablePermissions, SupportTargetType.Role, Executable: false, "Change table/column/row permissions of the listed role(s). Executable from Phase 6."),
-        new(RefreshMetadata, SupportTargetType.Application, Executable: false, "Refresh the metadata catalog of the listed application(s). Executable from Phase 6."),
-        new(DiagnoseApplicationConnection, SupportTargetType.Application, Executable: false, "Connectivity and object-existence checks on the listed application(s); never reads business rows. Executable from Phase 6."),
+        new(RefreshMetadata, SupportTargetType.Application, Executable: true, "Refresh the metadata catalog of the listed application(s)."),
+        new(DiagnoseApplicationConnection, SupportTargetType.Application, Executable: true, "Connectivity and read-only checks on the listed application(s); never reads business rows."),
     ];
 
     public static SupportOperationDefinition? Find(string? operation)

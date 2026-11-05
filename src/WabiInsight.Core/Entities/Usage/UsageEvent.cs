@@ -61,4 +61,7 @@ public static class UsageEventTypes
     public const string TicketAttachmentAdded = "Support.AttachmentAdded";
     public const string SupportGrantApproved = "SupportAccess.GrantApproved";
     public const string SupportOperationExecuted = "SupportAccess.OperationExecuted";
+    public const string ApplicationCreated = "Application.Created";
+    public const string ConnectionTested = "Application.ConnectionTested";
+    public const string MetadataRefreshed = "Metadata.Refreshed";
 }
