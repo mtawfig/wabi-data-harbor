@@ -46,6 +46,14 @@ public static class AuditEvents
     public const string SupportSessionEnded = "SupportAccess.SessionEnded";
     public const string SupportOperationExecuted = "SupportAccess.OperationExecuted";
     public const string SupportOperationDenied = "SupportAccess.OperationDenied";
+    public const string ApplicationCreated = "Application.Created";
+    public const string ApplicationUpdated = "Application.Updated";
+    public const string ApplicationConnectionReplaced = "Application.ConnectionReplaced";
+    public const string ApplicationConnectionTested = "Application.ConnectionTested";
+    public const string ApplicationApprovalChanged = "Application.ApprovalChanged";
+    public const string MetadataRefreshed = "Metadata.Refreshed";
+    public const string MetadataObjectUpdated = "Metadata.ObjectUpdated";
+    public const string MetadataColumnUpdated = "Metadata.ColumnUpdated";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>

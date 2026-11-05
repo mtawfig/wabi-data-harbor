@@ -1,0 +1,15 @@
+@use './admin-catalog';
+.head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; .app-select { min-width: 260px; } }
+.layout { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+.layout--detail { grid-template-columns: minmax(0, 1fr) minmax(420px, 46%); }
+.filters .search { min-width: 260px; }
+.row--active { background: #e8f1fe; }
+.chip.removed { background: #fee2e2; color: #991b1b; margin-inline-start: 6px; }
+.detail { position: sticky; top: 92px; max-height: calc(100vh - 110px); overflow: auto; &__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; h2 { margin: 0; font-size: 20px; } } &__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 16px; } }
+.removed-note { display: flex; align-items: center; gap: 6px; color: #92400e; background: #fef3c7; padding: 8px 12px; border-radius: var(--wi-radius-sm); font-size: 13px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; .span { grid-column: 1 / -1; margin-bottom: 12px; } }
+.small { font-size: 12px; }
+.cols { list-style: none; margin: 0; padding: 0; li { border-top: 1px solid var(--wi-border); } &__row { display: flex; align-items: center; gap: 8px; padding: 4px 0; min-height: 40px; } &__name { font-weight: 600; display: inline-flex; align-items: center; gap: 2px; min-width: 160px; .pk { font-size: 16px; width: 16px; height: 16px; color: #b45309; } } &__type { font-size: 12px; min-width: 120px; } &__labels { flex: 1; font-size: 12px; } &__removed { opacity: 0.6; } &__editing { background: #f8fafc; } &__form { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 12px; padding: 8px 0 12px 40px; align-items: center; .span { grid-column: 1 / -1; } } }
+.chip.cls { font-size: 11px; &[data-cls='Confidential'] { background: #fef3c7; color: #92400e; } &[data-cls='Restricted'] { background: #fee2e2; color: #991b1b; } }
+.rels { list-style: none; margin: 0; padding: 0; li { padding: 6px 0; border-top: 1px solid var(--wi-border); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; mat-icon { font-size: 16px; width: 16px; height: 16px; } } }
+@media (max-width: 1100px) { .layout--detail { grid-template-columns: 1fr; } .detail { position: static; max-height: none; } .cols__form { grid-template-columns: 1fr; padding-inline-start: 0; } }

@@ -10,7 +10,7 @@ Wabi Insight (platform code AP-AIR) is a bilingual (EN/AR), multi-organization e
 - AI output is a typed query plan that is validated and authorized before a dialect compiler emits parameterized, read-only SQL. Never execute model-generated SQL. Never append WHERE clauses to arbitrary SQL.
 - Row scopes (`ALL`, `DEPARTMENT`, `SECTION`, `SELF`) apply after organization and application ownership; `ALL` never crosses organizations.
 - Platform Administrators access organization configuration only through an approved, unexpired, scoped `SupportAccessGrant` in support mode, and never business data.
-- Secrets (connection strings, provider keys, OAuth tokens) are encrypted with ASP.NET Core Data Protection and never returned to the browser.
+- Secrets (connection strings, provider keys, OAuth tokens) are encrypted with ASP.NET Core Data Protection and never returned to the browser. The key ring lives under `DataProtection:KeyRingPath` (default `.artifacts/keys`, git-ignored); point it at a persistent directory in deployment or encrypted values become unreadable.
 - `AuditLogs`, `UsageEvents`, `SupportTicketEvents` are append-only.
 - Status/type values are stable codes; labels are localized (EN + AR) in resources.
 

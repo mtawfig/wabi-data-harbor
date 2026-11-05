@@ -67,6 +67,7 @@ public sealed class SupportAccessTests : IDisposable
         using var platform = await LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
 
         // Nothing is possible before a grant: no session, execute denied.
+        await platform.PostJsonAsync("/api/platform/support/session/exit", new { }); // other test classes may leave a session open
         Assert.Equal(HttpStatusCode.NoContent, (await platform.GetAsync("/api/platform/support/session")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = "x@org-a.test", fullName = "X" })).StatusCode);
 
