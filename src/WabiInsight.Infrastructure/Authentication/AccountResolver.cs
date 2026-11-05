@@ -88,7 +88,18 @@ public sealed class AccountResolver : IAccountResolver
             return new ResolvedAccount(null, AccountDenyReason.LockedOut);
         }
 
-        return new ResolvedAccount(ToAccount(row.User), AccountDenyReason.None);
+        var roles = await RoleCodesAsync(_context, row.User, cancellationToken);
+        return new ResolvedAccount(ToAccount(row.User, roles), AccountDenyReason.None);
+    }
+
+    /// <summary>Role codes of an organization user, read with an explicit organization predicate (no tenant context during authentication).</summary>
+    internal static Task<List<string>> RoleCodesAsync(ConfigurationDbContext context, OrganizationUser user, CancellationToken cancellationToken)
+    {
+        return context.UserRoles.IgnoreQueryFilters()
+            .Where(ur => ur.OrganizationId == user.OrganizationId && ur.UserId == user.UserId)
+            .Join(context.Roles.IgnoreQueryFilters().Where(r => r.OrganizationId == user.OrganizationId && r.IsActive), ur => ur.RoleId, r => r.RoleId, (_, r) => r.RoleCode)
+            .OrderBy(code => code)
+            .ToListAsync(cancellationToken);
     }
 
     internal static AuthenticatedAccount ToAccount(Administrator admin) => new(
@@ -98,8 +109,8 @@ public sealed class AccountResolver : IAccountResolver
         admin.MustChangePassword,
         admin.PreferredLanguage);
 
-    internal static AuthenticatedAccount ToAccount(OrganizationUser user) => new(
-        TenantPrincipal.ForOrganizationUser(user.OrganizationId, user.UserId, user.FullName, roles: null, user.DepartmentId, user.SectionId),
+    internal static AuthenticatedAccount ToAccount(OrganizationUser user, IEnumerable<string> roles) => new(
+        TenantPrincipal.ForOrganizationUser(user.OrganizationId, user.UserId, user.FullName, roles, user.DepartmentId, user.SectionId),
         user.Email,
         user.SecurityStamp,
         user.MustChangePassword,

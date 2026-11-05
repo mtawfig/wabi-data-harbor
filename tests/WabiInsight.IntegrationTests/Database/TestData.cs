@@ -39,6 +39,10 @@ public sealed class TestData
 
     public Guid UserCSuspendedId { get; } = Ids.New();
 
+    public Guid RoleAdminAId { get; } = Ids.New();
+
+    public Guid RoleAdminBId { get; } = Ids.New();
+
     public Guid AdministratorId { get; } = Ids.New();
 
     public Guid SecondAdministratorId { get; } = Ids.New();
@@ -90,6 +94,23 @@ public sealed class TestData
             Identity(ChangerEmail, PrincipalType.OrganizationUser, UserAChangerId, OrganizationAId, now),
             Identity(SuspendedOrgUserEmail, PrincipalType.OrganizationUser, UserCSuspendedId, OrganizationCSuspendedId, now));
 
+        context.Roles.AddRange(
+            NewRole(RoleAdminAId, OrganizationAId, SystemRoles.OrganizationAdmin, "Organization Administrator", "مدير المؤسسة"),
+            NewRole(RoleAdminBId, OrganizationBId, SystemRoles.OrganizationAdmin, "Organization Administrator", "مدير المؤسسة"),
+            NewRole(Ids.New(), OrganizationAId, SystemRoles.Management, "Management", "الإدارة"),
+            NewRole(Ids.New(), OrganizationBId, SystemRoles.Management, "Management", "الإدارة"));
+        context.UserRoles.Add(new UserRole { OrganizationId = OrganizationAId, UserId = UserA1Id, RoleId = RoleAdminAId, AssignedAt = now, AssignedByAdministratorId = AdministratorId });
+        context.Applications.Add(new Application
+        {
+            ApplicationId = Ids.New(),
+            OrganizationId = OrganizationAId,
+            ApplicationName = "Secret HR System",
+            ApplicationNameAr = "نظام الموارد البشرية",
+            ApplicationCode = "HR",
+            DatabaseType = DatabaseType.SqlServer,
+            IsApproved = true,
+        });
+
         context.SystemInitialization.Add(new SystemInitialization
         {
             Id = SystemInitialization.SingletonId,
@@ -136,6 +157,17 @@ public sealed class TestData
         SecurityStamp = TemporaryPasswordGenerator.NewSecurityStamp(),
         MustChangePassword = false,
         IsBootstrapAdministrator = isBootstrap,
+    };
+
+    public static Role NewRole(Guid id, Guid organizationId, string code, string nameEn, string nameAr) => new()
+    {
+        RoleId = id,
+        OrganizationId = organizationId,
+        RoleCode = code,
+        NameEn = nameEn,
+        NameAr = nameAr,
+        IsSystem = true,
+        TemplateVersion = SystemRoles.TemplateVersion,
     };
 
     private static LoginIdentity Identity(string email, PrincipalType type, Guid principalId, Guid? organizationId, DateTimeOffset now) => new()

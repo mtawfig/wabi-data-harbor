@@ -3,7 +3,7 @@
     <mat-icon>menu</mat-icon>
   </button>
   <a [routerLink]="auth.homeUrl()" class="shell-header__brand"><app-brand-logo [variant]="accent() === 'platform' ? 'light' : 'dark'" [size]="32" /></a>
-  <span class="shell-header__context">{{ contextLabelKey() | transloco }}</span>
+  <span class="shell-header__context" data-testid="shell-context">{{ contextText() || (contextLabelKey() | transloco) }}</span>
   <span class="wi-ms-auto"></span>
   <app-language-switcher [variant]="accent() === 'platform' ? 'light' : 'dark'" />
   <button mat-button type="button" [matMenuTriggerFor]="userMenu" class="shell-header__user" data-testid="user-menu">

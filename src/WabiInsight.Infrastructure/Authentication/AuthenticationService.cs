@@ -184,7 +184,8 @@ public sealed class AuthenticationService : IAuthenticationService
         _audit.Append(AuditEvents.LoginSucceeded, "OrganizationUser", id.ToString(), new { email = normalizedEmail }, user.OrganizationId);
         await SaveWithSystemScopeAsync(cancellationToken);
 
-        return new LoginResult(LoginOutcome.Success, AccountResolver.ToAccount(user));
+        var roles = await AccountResolver.RoleCodesAsync(_context, user, cancellationToken);
+        return new LoginResult(LoginOutcome.Success, AccountResolver.ToAccount(user, roles));
     }
 
     private async Task<ChangePasswordResult> ChangeAdministratorPasswordAsync(Guid id, string currentPassword, string newPassword, CancellationToken cancellationToken)
@@ -242,7 +243,8 @@ public sealed class AuthenticationService : IAuthenticationService
         _audit.Append(AuditEvents.PasswordChanged, "OrganizationUser", id.ToString());
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new ChangePasswordResult(ChangePasswordOutcome.Success, [], AccountResolver.ToAccount(user));
+        var roles = await AccountResolver.RoleCodesAsync(_context, user, cancellationToken);
+        return new ChangePasswordResult(ChangePasswordOutcome.Success, [], AccountResolver.ToAccount(user, roles));
     }
 
     /// <summary>Login runs before a tenant context exists; the pre-authentication counters are written in system scope.</summary>

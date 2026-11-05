@@ -93,3 +93,7 @@ The owner decided, after the risk was raised, that the configuration-database co
 ## H. Temporary passwords are delivered by email only (2026-11-05)
 
 When an administrator creates or resets an account, the temporary password is generated server-side, hashed, emailed to the account owner, and never shown to the administrator or returned by the API (the API returns the masked recipient address). The first sign-in forces a password change. Email delivery uses the outbox + background worker design from §B8; bodies are never persisted, only recipient, subject, template, status and attempts.
+
+## I. Onboarding invitation delivered as a temporary password (2026-11-05)
+
+Spec §6 steps 7–8 describe a one-time invitation link that lets the initial Organization Administrator set a password. Under owner decision H the platform emails a temporary password instead, and the first sign-in forces a change; the Platform Administrator can re-send a new temporary password until that first sign-in completes. Invitation links and administrator-assisted handover of a one-time link are not implemented.

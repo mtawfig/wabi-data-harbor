@@ -30,6 +30,9 @@ Every outcome is written to `AuditLogs` (`Auth.LoginSucceeded`, `Auth.LoginFaile
 ## Antiforgery (CSRF)
 Double-submit pattern: `GET /api/auth/csrf` issues the `wi.xsrf` cookie and returns the request token; every unsafe request (POST/PUT/PATCH/DELETE) must send it in `X-XSRF-TOKEN`. Tokens are bound to the identity, so clients fetch a new one after login. Validation is default-on for all controllers; `logout` and `csrf` opt out explicitly. Failures return 400 `antiforgery`.
 
+## Organization roles
+`Roles` and `UserRoles` are organization-scoped with composite foreign keys that make cross-organization assignments impossible at the database level. Role codes travel in the session as `role` claims, refreshed with the security stamp, and feed the `OrganizationAdmin` policy. Organization onboarding is the one path where a Platform Administrator creates an organization user (the initial administrator); its temporary password is emailed and the account must change it at first sign-in.
+
 ## Authorization
 - Fallback policy: every endpoint requires an authenticated session unless it carries `[AllowAnonymous]` (login, csrf, bootstrap, platform info, health). Unknown routes return 401 to anonymous callers.
 - Policies: `PlatformAdministrator` (principal type claim), `OrganizationUser` (principal type + organization claim), `OrganizationAdmin` (organization user with the `OrganizationAdmin` role claim).

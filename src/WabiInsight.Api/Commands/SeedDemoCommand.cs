@@ -54,6 +54,44 @@ internal static partial class SeedDemoCommand
             context.Organizations.Add(organization);
         }
 
+        // System roles and the built-in Platform Insights application, exactly as onboarding provisions them.
+        foreach (var template in SystemRoles.Templates)
+        {
+            var roleExists = await context.Roles.IgnoreQueryFilters().AnyAsync(r => r.OrganizationId == organization.OrganizationId && r.RoleCode == template.Code, cancellationToken);
+            if (!roleExists)
+            {
+                context.Roles.Add(new Role
+                {
+                    RoleId = Ids.New(),
+                    OrganizationId = organization.OrganizationId,
+                    RoleCode = template.Code,
+                    NameEn = template.NameEn,
+                    NameAr = template.NameAr,
+                    Description = template.Description,
+                    IsSystem = template.IsSystem,
+                    TemplateVersion = SystemRoles.TemplateVersion,
+                });
+            }
+        }
+
+        if (!await context.Applications.IgnoreQueryFilters().AnyAsync(a => a.OrganizationId == organization.OrganizationId && a.BuiltInCode == Application.PlatformInsightsCode, cancellationToken))
+        {
+            context.Applications.Add(new Application
+            {
+                ApplicationId = Ids.New(),
+                OrganizationId = organization.OrganizationId,
+                ApplicationName = "Platform Insights",
+                ApplicationNameAr = "تحليلات المنصة",
+                ApplicationCode = Application.PlatformInsightsCode,
+                DatabaseType = DatabaseType.PlatformInsights,
+                IsBuiltIn = true,
+                BuiltInCode = Application.PlatformInsightsCode,
+                IsApproved = true,
+            });
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
         var normalized = EmailNormalizer.Normalize(DemoUserEmail);
         var exists = await context.LoginIdentities.AnyAsync(l => l.NormalizedEmail == normalized, cancellationToken);
         if (!exists)
@@ -84,6 +122,16 @@ internal static partial class SeedDemoCommand
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // The demo user administers the demo organization.
+        var demoUserId = await context.LoginIdentities.Where(l => l.NormalizedEmail == normalized).Select(l => l.PrincipalId).SingleAsync(cancellationToken);
+        var adminRoleId = await context.Roles.IgnoreQueryFilters().Where(r => r.OrganizationId == organization.OrganizationId && r.RoleCode == SystemRoles.OrganizationAdmin).Select(r => r.RoleId).SingleAsync(cancellationToken);
+        if (!await context.UserRoles.IgnoreQueryFilters().AnyAsync(ur => ur.UserId == demoUserId && ur.RoleId == adminRoleId, cancellationToken))
+        {
+            context.UserRoles.Add(new UserRole { OrganizationId = organization.OrganizationId, UserId = demoUserId, RoleId = adminRoleId, AssignedAt = clock.UtcNow });
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
         LogDone(logger, DemoOrganizationCode, DemoUserEmail);
         return 0;
     }

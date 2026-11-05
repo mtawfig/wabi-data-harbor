@@ -39,16 +39,37 @@
     },
     "capabilities": {
       "title": "Key capabilities",
-      "ask": { "title": "Ask in plain language", "text": "Employees ask questions in English or Arabic and receive verified results, not guesses." },
-      "trust": { "title": "Trust every answer", "text": "Typed query plans, read-only execution and deterministic calculations keep numbers accurate." },
-      "secure": { "title": "Secure by design", "text": "Organization isolation, table, column and row permissions, encrypted connections, full audit." },
-      "share": { "title": "Report and share", "text": "Dashboards, PDF, Word and Excel reports in both languages, shared under control." }
+      "ask": {
+        "title": "Ask in plain language",
+        "text": "Employees ask questions in English or Arabic and receive verified results, not guesses."
+      },
+      "trust": {
+        "title": "Trust every answer",
+        "text": "Typed query plans, read-only execution and deterministic calculations keep numbers accurate."
+      },
+      "secure": {
+        "title": "Secure by design",
+        "text": "Organization isolation, table, column and row permissions, encrypted connections, full audit."
+      },
+      "share": {
+        "title": "Report and share",
+        "text": "Dashboards, PDF, Word and Excel reports in both languages, shared under control."
+      }
     },
     "how": {
       "title": "How it works",
-      "step1": { "title": "Connect", "text": "Your administrator registers SQL Server or Oracle applications and approves the metadata users may see." },
-      "step2": { "title": "Ask", "text": "Users ask questions. The AI drafts a structured plan that Wabi Insight validates and authorizes before running read-only SQL." },
-      "step3": { "title": "Decide", "text": "Verified results become tables, charts, narratives and reports, saved to history and shared with the right people." }
+      "step1": {
+        "title": "Connect",
+        "text": "Your administrator registers SQL Server or Oracle applications and approves the metadata users may see."
+      },
+      "step2": {
+        "title": "Ask",
+        "text": "Users ask questions. The AI drafts a structured plan that Wabi Insight validates and authorizes before running read-only SQL."
+      },
+      "step3": {
+        "title": "Decide",
+        "text": "Verified results become tables, charts, narratives and reports, saved to history and shared with the right people."
+      }
     },
     "security": {
       "title": "Built for multi-organization trust",
@@ -211,5 +232,82 @@
   "dashboard": {
     "welcome": "Welcome, {{name}}",
     "subtitle": "Your organization workspace."
+  },
+  "organizations": {
+    "title": "Organizations",
+    "subtitle": "Customer organizations using Wabi Insight. Only identity, status and counts are visible here.",
+    "search": "Search by code or name",
+    "allStatuses": "All statuses",
+    "apply": "Apply",
+    "empty": "No organizations match the filters.",
+    "fields": {
+      "code": "Code",
+      "codeHint": "Uppercase letters, digits and dashes. Cannot be changed later.",
+      "name": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "description": "Description",
+      "contactEmail": "Contact email",
+      "contactPhone": "Contact phone",
+      "countryCode": "Country code",
+      "timeZone": "Time zone",
+      "defaultLanguage": "Default language",
+      "status": "Status",
+      "users": "Users (active / total)",
+      "applications": "Applications",
+      "administrator": "Initial administrator",
+      "created": "Created"
+    },
+    "status": {
+      "Active": "Active",
+      "Suspended": "Suspended",
+      "Deactivated": "Deactivated"
+    },
+    "pendingActivation": "Pending first sign-in",
+    "create": {
+      "title": "New organization",
+      "subtitle": "Create the organization and provision its first administrator. The temporary password is emailed to them.",
+      "submit": "Create organization",
+      "success": "Organization created. A temporary password was emailed to {{email}}."
+    },
+    "edit": "Edit",
+    "profile": "Profile",
+    "saved": "Saved.",
+    "kpi": {
+      "activeUsers": "Active users",
+      "users": "Users",
+      "applications": "Applications"
+    },
+    "privacyNote": "Application names, connections and business data are private to the organization.",
+    "initialAdministrator": {
+      "title": "Initial Organization Administrator",
+      "hint": "This person receives a temporary password by email and must change it at first sign-in.",
+      "email": "Administrator email",
+      "fullName": "Administrator full name",
+      "activated": "Activated (first sign-in completed)",
+      "pending": "Temporary password sent; first sign-in pending.",
+      "resend": "Resend temporary password"
+    },
+    "resent": "A new temporary password was emailed to {{email}}.",
+    "lifecycle": {
+      "title": "Lifecycle",
+      "reason": "Reason (recorded in the audit log)",
+      "activate": "Activate",
+      "suspend": "Suspend",
+      "deactivate": "Deactivate",
+      "note": "Suspended and deactivated organizations lose access immediately; their data is retained."
+    },
+    "statusChanged": {
+      "Active": "Organization activated.",
+      "Suspended": "Organization suspended.",
+      "Deactivated": "Organization deactivated."
+    },
+    "errors": {
+      "organization-code-exists": "This organization code already exists.",
+      "email-already-registered": "This email is already registered on the platform.",
+      "organization-validation": "Some fields are invalid.",
+      "organization-status-transition": "This status change is not allowed.",
+      "organization_code_invalid": "Use 2–31 uppercase letters, digits or dashes.",
+      "unknown": "The operation failed."
+    }
   }
 }

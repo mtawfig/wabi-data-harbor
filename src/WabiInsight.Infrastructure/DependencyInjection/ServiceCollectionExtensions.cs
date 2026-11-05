@@ -7,6 +7,7 @@ using WabiInsight.Core.Authentication;
 using WabiInsight.Core.Bootstrap;
 using WabiInsight.Core.Common;
 using WabiInsight.Core.Email;
+using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Security;
 using WabiInsight.Core.Tenancy;
 using WabiInsight.Infrastructure.Audit;
@@ -14,6 +15,7 @@ using WabiInsight.Infrastructure.Authentication;
 using WabiInsight.Infrastructure.Bootstrap;
 using WabiInsight.Infrastructure.Email;
 using WabiInsight.Infrastructure.Health;
+using WabiInsight.Infrastructure.Organizations;
 using WabiInsight.Infrastructure.Persistence;
 using WabiInsight.Infrastructure.Security;
 
@@ -48,6 +50,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
         services.AddScoped<IAdministratorAccountService, AdministratorAccountService>();
+        services.AddScoped<IOrganizationUserProvisioningService, OrganizationUserProvisioningService>();
+        services.AddScoped<IOrganizationService, OrganizationService>();
 
         services.AddOptions<EmailOptions>()
             .Bind(configuration.GetSection(EmailOptions.SectionName))

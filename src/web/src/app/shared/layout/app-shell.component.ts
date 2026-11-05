@@ -42,6 +42,8 @@ export class AppShellComponent {
 
   readonly sections = input.required<NavSection[]>();
   readonly contextLabelKey = input('common.organization');
+  /** Overrides the translated context label with a concrete name (e.g. the organization's name). */
+  readonly contextText = input<string | null>(null);
   readonly accent = input<'organization' | 'platform'>('organization');
 
   readonly isHandset = toSignal(this.breakpoints.observe('(max-width: 960px)').pipe(map((r) => r.matches)), { initialValue: false });

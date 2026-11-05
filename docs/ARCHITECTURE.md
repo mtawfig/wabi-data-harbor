@@ -40,8 +40,15 @@ One SQL Server database, EF Core 10, migrations in `src/WabiInsight.Infrastructu
 | `PlatformSettings` | Key/value platform settings | primary key `Key` |
 | `AuditLogs` | Append-only security events | application guard rejects UPDATE/DELETE; `scripts/sql/create-runtime-login.sql` denies them at the database |
 | `EmailMessages` | Transactional email outbox/log (metadata only, no bodies) | `Status` check (`Queued`, `Sent`, `Failed`); indexes on organization, status and template |
+| `Roles` | Organization-scoped roles; system roles `OrganizationAdmin`, `Management` (+ `Analyst` template) provisioned at onboarding | unique `(OrganizationId, RoleCode)`; alternate key `(OrganizationId, RoleId)` |
+| `UserRoles` | Role assignments | composite FKs `(OrganizationId, UserId)` and `(OrganizationId, RoleId)` so a user of A can never hold a role of B |
+| `Applications` | Business applications; one built-in `WI-INSIGHTS` row per organization | unique `(OrganizationId, ApplicationCode)`, unique built-in code per organization, globally unique `ConnectionFingerprint`, built-in rows cannot carry a connection string (check constraint) |
 
 Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC timestamps stamped by the context, `rowversion` concurrency tokens on editable aggregates, enum codes stored as strings with check constraints.
+
+### Onboarding (P2.1)
+
+`OrganizationService.CreateAsync` runs in one transaction: organization row → system roles from `SystemRoles.Templates` → built-in Platform Insights application → initial Organization Administrator through `OrganizationUserProvisioningService` (user, login identity, `OrganizationAdmin` role, audit) → temporary password emailed through the outbox. Role codes are loaded into the principal at login and on security-stamp revalidation, so the `OrganizationAdmin` policy and the admin navigation follow the stored assignments.
 
 ### Tenant core
 
@@ -78,6 +85,8 @@ CLI commands handled before the pipeline starts: `migrate` (apply migrations) an
 | `POST /api/bootstrap/initialize` | One-time first-administrator creation with the initialization secret. Rate-limited. |
 | `POST /api/platform/administrators` | Platform administrators only: create an administrator; the temporary password is emailed. |
 | `POST /api/platform/administrators/{id}/reset-password` | Platform administrators only: reset another administrator; the temporary password is emailed. |
+| `GET/POST /api/platform/organizations`, `GET/PUT …/{id}`, `POST …/{id}/status`, `POST …/{id}/initial-administrator/resend` | Platform administrators only: organization lifecycle and onboarding. Responses carry counts, never application names. |
+| `GET /api/organization`, `PUT /api/organization` | The signed-in user's own organization (tenant context); PUT requires the `OrganizationAdmin` role. |
 
 ## Angular (P1.4)
 

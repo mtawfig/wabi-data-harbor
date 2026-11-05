@@ -12,6 +12,11 @@ public static class AuditEvents
     public const string PasswordChanged = "Auth.PasswordChanged";
     public const string AdministratorPasswordReset = "Administrator.PasswordReset";
     public const string AdministratorCreated = "Administrator.Created";
+    public const string OrganizationCreated = "Organization.Created";
+    public const string OrganizationUpdated = "Organization.Updated";
+    public const string OrganizationStatusChanged = "Organization.StatusChanged";
+    public const string OrganizationUserCreated = "OrganizationUser.Created";
+    public const string OrganizationUserPasswordReissued = "OrganizationUser.PasswordReissued";
     public const string EmailQueued = "Email.Queued";
     public const string EmailFailed = "Email.Failed";
 }

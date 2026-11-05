@@ -12,6 +12,7 @@ internal sealed class OrganizationUserConfiguration : IEntityTypeConfiguration<O
         builder.ToTable("OrganizationUsers");
         builder.HasKey(u => u.UserId);
         builder.Property(u => u.UserId).ValueGeneratedNever();
+        builder.HasAlternateKey(u => new { u.OrganizationId, u.UserId });
 
         // Mandatory ownership: NOT NULL + FK to Organizations (specification §4.2).
         builder.Property(u => u.OrganizationId).IsRequired();

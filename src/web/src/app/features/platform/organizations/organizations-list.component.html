@@ -1,0 +1,74 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'common.platform' | transloco }}</p>
+      <h1>{{ 'organizations.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'organizations.subtitle' | transloco }}</p>
+    </div>
+    <a mat-flat-button routerLink="/platform/organizations/new" data-testid="org-new"><mat-icon>add</mat-icon>{{ 'organizations.create.title' | transloco }}</a>
+  </header>
+
+  <div class="wi-card">
+    <div class="filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'organizations.search' | transloco }}</mat-label>
+        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" (keyup.enter)="applyFilters()" data-testid="org-search" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'organizations.fields.status' | transloco }}</mat-label>
+        <mat-select [value]="status()" (valueChange)="status.set($event); applyFilters()">
+          <mat-option [value]="null">{{ 'organizations.allStatuses' | transloco }}</mat-option>
+          <mat-option value="Active">{{ 'organizations.status.Active' | transloco }}</mat-option>
+          <mat-option value="Suspended">{{ 'organizations.status.Suspended' | transloco }}</mat-option>
+          <mat-option value="Deactivated">{{ 'organizations.status.Deactivated' | transloco }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button mat-stroked-button type="button" (click)="applyFilters()">{{ 'organizations.apply' | transloco }}</button>
+    </div>
+
+    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+
+    <table mat-table [dataSource]="items()" data-testid="org-table">
+      <ng-container matColumnDef="code">
+        <th mat-header-cell *matHeaderCellDef>{{ 'organizations.fields.code' | transloco }}</th>
+        <td mat-cell *matCellDef="let o"><span class="wi-ltr">{{ o.organizationCode }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>{{ 'organizations.fields.name' | transloco }}</th>
+        <td mat-cell *matCellDef="let o"><strong>{{ o.organizationName }}</strong><br /><span class="wi-muted">{{ o.organizationNameAr }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>{{ 'organizations.fields.status' | transloco }}</th>
+        <td mat-cell *matCellDef="let o"><app-organization-status-chip [status]="o.status" /></td>
+      </ng-container>
+      <ng-container matColumnDef="users">
+        <th mat-header-cell *matHeaderCellDef class="num">{{ 'organizations.fields.users' | transloco }}</th>
+        <td mat-cell *matCellDef="let o" class="num">{{ o.activeUserCount }} / {{ o.userCount }}</td>
+      </ng-container>
+      <ng-container matColumnDef="applications">
+        <th mat-header-cell *matHeaderCellDef class="num">{{ 'organizations.fields.applications' | transloco }}</th>
+        <td mat-cell *matCellDef="let o" class="num">{{ o.applicationCount }}</td>
+      </ng-container>
+      <ng-container matColumnDef="administrator">
+        <th mat-header-cell *matHeaderCellDef>{{ 'organizations.fields.administrator' | transloco }}</th>
+        <td mat-cell *matCellDef="let o">
+          <span class="wi-ltr">{{ o.initialAdministratorEmail }}</span>
+          @if (o.initialAdministratorEmail && !o.initialAdministratorActivated) { <mat-icon class="wi-muted" [title]="'organizations.pendingActivation' | transloco">hourglass_top</mat-icon> }
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="created">
+        <th mat-header-cell *matHeaderCellDef>{{ 'organizations.fields.created' | transloco }}</th>
+        <td mat-cell *matCellDef="let o">{{ o.createdAt | date: 'mediumDate' }}</td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns" class="row" (click)="open(row)" [attr.data-testid]="'org-row-' + row.organizationCode"></tr>
+    </table>
+
+    @if (!loading() && items().length === 0) {
+      <p class="empty wi-muted">{{ 'organizations.empty' | transloco }}</p>
+    }
+
+    <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50]" (page)="onPage($event)" />
+  </div>
+</section>

@@ -1,0 +1,82 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <a routerLink="/platform/organizations" class="back"><mat-icon class="wi-flip-rtl">arrow_back</mat-icon>{{ 'organizations.title' | transloco }}</a>
+      @if (organization(); as o) {
+        <h1>{{ o.organizationName }} <app-organization-status-chip [status]="o.status" /></h1>
+        <p class="wi-muted"><span class="wi-ltr">{{ o.organizationCode }}</span> · {{ o.organizationNameAr }}</p>
+      } @else {
+        <h1>{{ 'common.loading' | transloco }}</h1>
+      }
+    </div>
+    @if (organization() && !editing()) {
+      <button mat-stroked-button type="button" (click)="editing.set(true)" data-testid="org-edit"><mat-icon>edit</mat-icon>{{ 'organizations.edit' | transloco }}</button>
+    }
+  </header>
+
+  @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (error(); as e) { <div class="wi-card error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  @if (organization(); as o) {
+    @if (editing()) {
+      <div class="wi-card">
+        <app-organization-form mode="edit" [initial]="o" [busy]="busy()" (saved)="save($event)" (cancelled)="editing.set(false)" />
+      </div>
+    } @else {
+      <div class="layout">
+        <div class="wi-card">
+          <h3>{{ 'organizations.profile' | transloco }}</h3>
+          <dl class="facts">
+            <dt>{{ 'organizations.fields.contactEmail' | transloco }}</dt><dd><span class="wi-ltr">{{ o.contactEmail || '—' }}</span></dd>
+            <dt>{{ 'organizations.fields.contactPhone' | transloco }}</dt><dd><span class="wi-ltr">{{ o.contactPhone || '—' }}</span></dd>
+            <dt>{{ 'organizations.fields.countryCode' | transloco }}</dt><dd>{{ o.countryCode || '—' }}</dd>
+            <dt>{{ 'organizations.fields.timeZone' | transloco }}</dt><dd><span class="wi-ltr">{{ o.timeZone }}</span></dd>
+            <dt>{{ 'organizations.fields.defaultLanguage' | transloco }}</dt><dd>{{ (o.defaultLanguage === 'ar' ? 'common.arabic' : 'common.english') | transloco }}</dd>
+            <dt>{{ 'organizations.fields.created' | transloco }}</dt><dd>{{ o.createdAt | date: 'medium' }}</dd>
+            <dt>{{ 'organizations.fields.description' | transloco }}</dt><dd>{{ o.description || '—' }}</dd>
+          </dl>
+        </div>
+
+        <div class="stack">
+          <div class="wi-card kpis">
+            <div class="kpi"><span class="kpi__value">{{ o.activeUserCount }}</span><span class="kpi__label">{{ 'organizations.kpi.activeUsers' | transloco }}</span></div>
+            <div class="kpi"><span class="kpi__value">{{ o.userCount }}</span><span class="kpi__label">{{ 'organizations.kpi.users' | transloco }}</span></div>
+            <div class="kpi"><span class="kpi__value">{{ o.applicationCount }}</span><span class="kpi__label">{{ 'organizations.kpi.applications' | transloco }}</span></div>
+          </div>
+          <p class="wi-muted privacy"><mat-icon>lock</mat-icon>{{ 'organizations.privacyNote' | transloco }}</p>
+
+          <div class="wi-card">
+            <h3>{{ 'organizations.initialAdministrator.title' | transloco }}</h3>
+            <p><span class="wi-ltr">{{ o.initialAdministratorEmail }}</span></p>
+            @if (o.initialAdministratorActivated) {
+              <p class="ok"><mat-icon>check_circle</mat-icon>{{ 'organizations.initialAdministrator.activated' | transloco }}</p>
+            } @else {
+              <p class="wi-muted"><mat-icon>hourglass_top</mat-icon>{{ 'organizations.initialAdministrator.pending' | transloco }}</p>
+              <button mat-stroked-button type="button" (click)="resend()" [disabled]="busy()" data-testid="org-resend"><mat-icon>forward_to_inbox</mat-icon>{{ 'organizations.initialAdministrator.resend' | transloco }}</button>
+            }
+          </div>
+
+          <div class="wi-card">
+            <h3>{{ 'organizations.lifecycle.title' | transloco }}</h3>
+            <mat-form-field appearance="outline" class="wi-full-width" subscriptSizing="dynamic">
+              <mat-label>{{ 'organizations.lifecycle.reason' | transloco }}</mat-label>
+              <input matInput [ngModel]="reason()" (ngModelChange)="reason.set($event)" maxlength="500" data-testid="org-reason" />
+            </mat-form-field>
+            <div class="lifecycle">
+              @if (o.status !== 'Active') {
+                <button mat-flat-button type="button" (click)="setStatus('Active')" [disabled]="busy()" data-testid="org-activate">{{ 'organizations.lifecycle.activate' | transloco }}</button>
+              }
+              @if (o.status === 'Active') {
+                <button mat-stroked-button type="button" class="warn" (click)="setStatus('Suspended')" [disabled]="busy()" data-testid="org-suspend">{{ 'organizations.lifecycle.suspend' | transloco }}</button>
+              }
+              @if (o.status !== 'Deactivated') {
+                <button mat-stroked-button type="button" class="danger" (click)="setStatus('Deactivated')" [disabled]="busy()" data-testid="org-deactivate">{{ 'organizations.lifecycle.deactivate' | transloco }}</button>
+              }
+            </div>
+            <p class="wi-muted small">{{ 'organizations.lifecycle.note' | transloco }}</p>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</section>
