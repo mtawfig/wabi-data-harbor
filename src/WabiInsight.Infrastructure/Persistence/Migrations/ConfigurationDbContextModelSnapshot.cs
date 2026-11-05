@@ -248,6 +248,52 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.Department", b =>
+                {
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DepartmentCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("DepartmentNameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DepartmentNameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("DepartmentId");
+
+                    b.HasIndex("OrganizationId", "DepartmentCode")
+                        .IsUnique();
+
+                    b.ToTable("Departments", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.OrganizationUser", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -365,6 +411,8 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrganizationId", "Status");
 
+                    b.HasIndex("OrganizationId", "DepartmentId", "SectionId");
+
                     b.ToTable("OrganizationUsers", null, t =>
                         {
                             t.HasCheckConstraint("CK_OrganizationUsers_Status", "[Status] IN ('PendingInvitation','Active','Inactive')");
@@ -425,6 +473,55 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Roles", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.Section", b =>
+                {
+                    b.Property<Guid>("SectionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SectionCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("SectionNameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SectionNameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("SectionId");
+
+                    b.HasIndex("OrganizationId", "DepartmentId", "SectionCode")
+                        .IsUnique();
+
+                    b.ToTable("Sections", (string)null);
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.UserRole", b =>
@@ -539,6 +636,106 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Administrators", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.DefaultRoleTemplate", b =>
+                {
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RoleCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("TemplateId");
+
+                    b.HasIndex("RoleCode")
+                        .IsUnique();
+
+                    b.ToTable("DefaultRoleTemplates", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            TemplateId = new Guid("4f6a1a10-0000-7000-8000-000000000001"),
+                            Description = "Manages the organization's users, structure, roles, applications, metadata and settings.",
+                            IsActive = true,
+                            IsSystem = true,
+                            NameAr = "مدير المؤسسة",
+                            NameEn = "Organization Administrator",
+                            RoleCode = "OrganizationAdmin",
+                            RowVersion = new byte[0],
+                            SortOrder = 1,
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Version = 1
+                        },
+                        new
+                        {
+                            TemplateId = new Guid("4f6a1a10-0000-7000-8000-000000000002"),
+                            Description = "Read-only access to all approved registered objects of the organization.",
+                            IsActive = true,
+                            IsSystem = true,
+                            NameAr = "الإدارة",
+                            NameEn = "Management",
+                            RoleCode = "Management",
+                            RowVersion = new byte[0],
+                            SortOrder = 2,
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Version = 1
+                        },
+                        new
+                        {
+                            TemplateId = new Guid("4f6a1a10-0000-7000-8000-000000000003"),
+                            Description = "Default business-data role; permissions are granted explicitly.",
+                            IsActive = true,
+                            IsSystem = false,
+                            NameAr = "محلّل",
+                            NameEn = "Analyst",
+                            RoleCode = "Analyst",
+                            RowVersion = new byte[0],
+                            SortOrder = 3,
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Version = 1
+                        });
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Platform.LoginIdentity", b =>
@@ -736,6 +933,15 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.Department", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.OrganizationUser", b =>
                 {
                     b.HasOne("WabiInsight.Core.Entities.Platform.Administrator", null)
@@ -748,6 +954,18 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Department", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DepartmentId")
+                        .HasPrincipalKey("OrganizationId", "DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Section", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DepartmentId", "SectionId")
+                        .HasPrincipalKey("OrganizationId", "DepartmentId", "SectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.Role", b =>
@@ -755,6 +973,22 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.Section", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Department", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DepartmentId")
+                        .HasPrincipalKey("OrganizationId", "DepartmentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

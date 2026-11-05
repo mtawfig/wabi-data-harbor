@@ -42,6 +42,12 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<Application> Applications => Set<Application>();
 
+    public DbSet<Department> Departments => Set<Department>();
+
+    public DbSet<Section> Sections => Set<Section>();
+
+    public DbSet<DefaultRoleTemplate> DefaultRoleTemplates => Set<DefaultRoleTemplate>();
+
     public DbSet<LoginIdentity> LoginIdentities => Set<LoginIdentity>();
 
     public DbSet<SystemInitialization> SystemInitialization => Set<SystemInitialization>();

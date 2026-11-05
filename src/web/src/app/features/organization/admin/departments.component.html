@@ -1,0 +1,43 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'nav.org.admin.title' | transloco }}</p>
+      <h1>{{ 'admin.departments.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'admin.departments.subtitle' | transloco }}</p>
+    </div>
+    <button mat-flat-button type="button" (click)="startCreate()" data-testid="dept-new"><mat-icon>add</mat-icon>{{ 'admin.departments.new' | transloco }}</button>
+  </header>
+
+  @if (showForm()) {
+    <form class="wi-card catalog-form" [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="dept-form">
+      <h3>{{ (editing() ? 'admin.departments.edit' : 'admin.departments.new') | transloco }}</h3>
+      @if (error(); as e) { <div class="catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+      <div class="catalog-form__grid">
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.code' | transloco }}</mat-label><input matInput formControlName="departmentCode" [readonly]="false" data-testid="dept-code" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameEn' | transloco }}</mat-label><input matInput formControlName="departmentNameEn" data-testid="dept-name-en" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameAr' | transloco }}</mat-label><input matInput formControlName="departmentNameAr" dir="rtl" data-testid="dept-name-ar" /></mat-form-field>
+        <mat-checkbox formControlName="isActive">{{ 'admin.fields.active' | transloco }}</mat-checkbox>
+      </div>
+      <div class="catalog-form__actions">
+        <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
+        <button mat-flat-button type="submit" [disabled]="busy()" data-testid="dept-save">{{ 'common.save' | transloco }}</button>
+      </div>
+    </form>
+  }
+
+  <div class="wi-card">
+    @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+    <table mat-table [dataSource]="items()" class="catalog-table" data-testid="dept-table">
+      <ng-container matColumnDef="code"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.code' | transloco }}</th><td mat-cell *matCellDef="let d"><span class="wi-ltr">{{ d.departmentCode }}</span></td></ng-container>
+      <ng-container matColumnDef="nameEn"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.nameEn' | transloco }}</th><td mat-cell *matCellDef="let d">{{ d.departmentNameEn }}</td></ng-container>
+      <ng-container matColumnDef="nameAr"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.nameAr' | transloco }}</th><td mat-cell *matCellDef="let d">{{ d.departmentNameAr }}</td></ng-container>
+      <ng-container matColumnDef="sections"><th mat-header-cell *matHeaderCellDef class="num">{{ 'nav.org.admin.sections' | transloco }}</th><td mat-cell *matCellDef="let d" class="num">{{ d.sectionCount }}</td></ng-container>
+      <ng-container matColumnDef="users"><th mat-header-cell *matHeaderCellDef class="num">{{ 'nav.org.admin.users' | transloco }}</th><td mat-cell *matCellDef="let d" class="num">{{ d.userCount }}</td></ng-container>
+      <ng-container matColumnDef="active"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.status' | transloco }}</th><td mat-cell *matCellDef="let d"><span class="chip" [attr.data-on]="d.isActive">{{ (d.isActive ? 'admin.active' : 'admin.inactive') | transloco }}</span></td></ng-container>
+      <ng-container matColumnDef="actions"><th mat-header-cell *matHeaderCellDef></th><td mat-cell *matCellDef="let d"><button mat-icon-button type="button" (click)="startEdit(d)" [attr.aria-label]="'admin.departments.edit' | transloco"><mat-icon>edit</mat-icon></button></td></ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+    @if (items().length === 0) { <p class="empty wi-muted">{{ 'admin.departments.empty' | transloco }}</p> }
+  </div>
+</section>

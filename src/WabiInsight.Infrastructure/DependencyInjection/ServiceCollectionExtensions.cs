@@ -52,6 +52,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdministratorAccountService, AdministratorAccountService>();
         services.AddScoped<IOrganizationUserProvisioningService, OrganizationUserProvisioningService>();
         services.AddScoped<IOrganizationService, OrganizationService>();
+        services.AddScoped<IOrganizationStructureService, OrganizationStructureService>();
+        services.AddScoped<IOrganizationUserService, OrganizationUserService>();
+        services.AddScoped<IRoleService, RoleService>();
+        services.AddScoped<IRoleTemplateService, RoleTemplateService>();
 
         services.AddOptions<EmailOptions>()
             .Bind(configuration.GetSection(EmailOptions.SectionName))

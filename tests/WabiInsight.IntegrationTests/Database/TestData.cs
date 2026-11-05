@@ -98,7 +98,9 @@ public sealed class TestData
             NewRole(RoleAdminAId, OrganizationAId, SystemRoles.OrganizationAdmin, "Organization Administrator", "مدير المؤسسة"),
             NewRole(RoleAdminBId, OrganizationBId, SystemRoles.OrganizationAdmin, "Organization Administrator", "مدير المؤسسة"),
             NewRole(Ids.New(), OrganizationAId, SystemRoles.Management, "Management", "الإدارة"),
-            NewRole(Ids.New(), OrganizationBId, SystemRoles.Management, "Management", "الإدارة"));
+            NewRole(Ids.New(), OrganizationBId, SystemRoles.Management, "Management", "الإدارة"),
+            NewRole(Ids.New(), OrganizationAId, SystemRoles.Analyst, "Analyst", "محلّل"),
+            NewRole(Ids.New(), OrganizationBId, SystemRoles.Analyst, "Analyst", "محلّل"));
         context.UserRoles.Add(new UserRole { OrganizationId = OrganizationAId, UserId = UserA1Id, RoleId = RoleAdminAId, AssignedAt = now, AssignedByAdministratorId = AdministratorId });
         context.Applications.Add(new Application
         {

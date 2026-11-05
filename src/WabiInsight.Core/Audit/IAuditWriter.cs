@@ -17,6 +17,14 @@ public static class AuditEvents
     public const string OrganizationStatusChanged = "Organization.StatusChanged";
     public const string OrganizationUserCreated = "OrganizationUser.Created";
     public const string OrganizationUserPasswordReissued = "OrganizationUser.PasswordReissued";
+    public const string OrganizationUserUpdated = "OrganizationUser.Updated";
+    public const string OrganizationUserStatusChanged = "OrganizationUser.StatusChanged";
+    public const string OrganizationUserRolesChanged = "OrganizationUser.RolesChanged";
+    public const string DepartmentSaved = "Department.Saved";
+    public const string SectionSaved = "Section.Saved";
+    public const string RoleSaved = "Role.Saved";
+    public const string RoleDeleted = "Role.Deleted";
+    public const string RoleTemplateSaved = "RoleTemplate.Saved";
     public const string EmailQueued = "Email.Queued";
     public const string EmailFailed = "Email.Failed";
 }

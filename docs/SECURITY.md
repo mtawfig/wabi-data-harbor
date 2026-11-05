@@ -33,6 +33,9 @@ Double-submit pattern: `GET /api/auth/csrf` issues the `wi.xsrf` cookie and retu
 ## Organization roles
 `Roles` and `UserRoles` are organization-scoped with composite foreign keys that make cross-organization assignments impossible at the database level. Role codes travel in the session as `role` claims, refreshed with the security stamp, and feed the `OrganizationAdmin` policy. Organization onboarding is the one path where a Platform Administrator creates an organization user (the initial administrator); its temporary password is emailed and the account must change it at first sign-in.
 
+## Organization structure and user management
+Departments, sections and users are tenant-filtered and additionally bound by composite foreign keys (`OrganizationId` travels with every department, section and role reference), so a mismatched section/department or a cross-organization role assignment fails in the database even if application code regressed. Organization Administrators cannot deactivate their own account, remove their own administrator role, or leave the organization without an active administrator. New users and resets go through the same emailed temporary-password flow as administrators.
+
 ## Authorization
 - Fallback policy: every endpoint requires an authenticated session unless it carries `[AllowAnonymous]` (login, csrf, bootstrap, platform info, health). Unknown routes return 401 to anonymous callers.
 - Policies: `PlatformAdministrator` (principal type claim), `OrganizationUser` (principal type + organization claim), `OrganizationAdmin` (organization user with the `OrganizationAdmin` role claim).
