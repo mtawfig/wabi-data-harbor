@@ -47,6 +47,11 @@ if (args.Length > 0)
     {
         return await BootstrapCommand.RunAsync(app, CancellationToken.None);
     }
+
+    if (string.Equals(args[0], SeedDemoCommand.Name, StringComparison.OrdinalIgnoreCase))
+    {
+        return await SeedDemoCommand.RunAsync(app, CancellationToken.None);
+    }
 }
 
 app.UseExceptionHandler();

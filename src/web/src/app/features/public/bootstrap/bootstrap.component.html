@@ -1,0 +1,53 @@
+<div class="auth-layout">
+  <aside class="auth-layout__aside wi-gradient">
+    <a routerLink="/" class="auth-layout__brand"><app-brand-logo variant="light" [size]="40" /></a>
+    <div class="auth-layout__aside-body">
+      <h2>{{ 'bootstrap.title' | transloco }}</h2>
+      <p>{{ 'bootstrap.subtitle' | transloco }}</p>
+    </div>
+    <span class="auth-layout__code">{{ 'common.platformCode' | transloco }}</span>
+  </aside>
+
+  <main class="auth-layout__main">
+    <div class="auth-layout__topbar"><app-language-switcher /></div>
+
+    <section class="auth-card wi-card" data-testid="bootstrap-card">
+      <h1>{{ 'bootstrap.title' | transloco }}</h1>
+
+      @if (status(); as s) {
+        @if (s.bootstrapCompleted) {
+          <dl class="status">
+            <dt>{{ 'bootstrap.completed' | transloco }}</dt><dd><mat-icon class="ok">check_circle</mat-icon></dd>
+            <dt>{{ 'bootstrap.completedAt' | transloco }}</dt><dd>{{ s.bootstrapCompletedAt | date: 'medium' }}</dd>
+            <dt>{{ 'bootstrap.administrator' | transloco }}</dt><dd><span class="wi-ltr">{{ s.bootstrapAdministratorEmail }}</span></dd>
+            <dt>{{ 'bootstrap.schema' | transloco }}</dt><dd><span class="wi-ltr">{{ s.schemaVersion }}</span></dd>
+          </dl>
+          <a mat-flat-button routerLink="/login" class="auth-card__submit">{{ 'bootstrap.goToLogin' | transloco }}</a>
+        } @else if (success()) {
+          <p class="success"><mat-icon>check_circle</mat-icon> {{ 'bootstrap.success' | transloco }}</p>
+          <a mat-flat-button routerLink="/login" class="auth-card__submit">{{ 'bootstrap.goToLogin' | transloco }}</a>
+        } @else if (!s.bootstrapEnabled) {
+          <p class="wi-muted">{{ 'bootstrap.disabled' | transloco }}</p>
+        } @else if (s.pendingMigrations) {
+          <p class="wi-muted">{{ 'bootstrap.migrationsFirst' | transloco }}</p>
+        } @else {
+          <p class="wi-muted">{{ 'bootstrap.notCompleted' | transloco }}</p>
+          <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+            @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+            @if (error(); as e) {
+              <div class="auth-card__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ 'bootstrap.errors.' + e.key | transloco: { detail: e.detail } }}</span></div>
+            }
+            <mat-form-field appearance="outline" class="wi-full-width">
+              <mat-label>{{ 'bootstrap.secret' | transloco }}</mat-label>
+              <input matInput type="password" formControlName="initializationSecret" autocomplete="off" data-testid="bootstrap-secret" />
+              <mat-hint>{{ 'bootstrap.secretHint' | transloco }}</mat-hint>
+            </mat-form-field>
+            <button mat-flat-button type="submit" class="wi-full-width auth-card__submit" [disabled]="busy()">{{ 'bootstrap.submit' | transloco }}</button>
+          </form>
+        }
+      } @else {
+        <p class="wi-muted">{{ 'common.apiOffline' | transloco }}</p>
+      }
+    </section>
+  </main>
+</div>

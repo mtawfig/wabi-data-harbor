@@ -303,7 +303,7 @@ One design system (Angular Material M3 theme + custom components), three shells.
 Organization user: Dashboard, Ask Wabi Insight, My History, My Reports, Favorites, Shared With Me, Shared By Me, Support Desk, Notifications, Profile.
 Organization administrator adds: Organization Administration (dashboard), Users, Departments, Sections, Roles, Applications, Metadata, Permissions, Organization Insights, Integrations, Organization Settings, reached through a visible Administration entry.
 Platform administrator shell: Platform Overview, Organizations, Platform Administrators, System Health, Support Desk, Support Access, Global Role Templates, Platform Insights Configuration, General Settings, Audit Logs.
-Post-login routing: Platform Administrator → `/platform/dashboard`; Organization Administrator → `/app/dashboard` with Administration entry; Organization User → `/app/dashboard`. `MustChangePassword` forces the password screen first.
+Post-login routing **[Revised, owner decision F]**: Platform Administrator → `/platform/overview`; Organization Administrator and Organization User → `/app/ask` (the prompting workspace), with the dashboard and the Administration entry in the sidebar. `MustChangePassword` forces the password screen first.
 
 ---
 

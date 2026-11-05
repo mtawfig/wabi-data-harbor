@@ -1,0 +1,20 @@
+.auth-layout {
+  min-height: 100vh; display: grid; grid-template-columns: minmax(280px, 40%) 1fr;
+  &__aside { display: flex; flex-direction: column; padding: 40px; }
+  &__brand { display: inline-block; }
+  &__aside-body { margin: auto 0; h2 { font-size: clamp(28px, 3vw, 40px); } p { font-size: 18px; opacity: 0.9; } }
+  &__code { font-size: 13px; letter-spacing: 0.1em; opacity: 0.75; }
+  &__main { display: flex; flex-direction: column; padding: 24px; }
+  &__topbar { display: flex; justify-content: flex-end; }
+}
+.auth-card {
+  width: min(440px, 100%); margin: auto; display: flex; flex-direction: column; gap: 8px; padding: 32px;
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  &__error { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: var(--wi-radius-sm); background: #fef2f2; color: #991b1b; font-size: 14px; mat-icon { font-size: 20px; width: 20px; height: 20px; } }
+  &__submit { height: 48px; font-size: 16px; margin-top: 4px; }
+  &__note { font-size: 13px; margin: 12px 0 0; }
+  &__link { font-size: 13px; }
+}
+@media (max-width: 860px) {
+  .auth-layout { grid-template-columns: 1fr; &__aside { padding: 24px; min-height: 180px; } &__aside-body h2 { font-size: 24px; } }
+}

@@ -81,3 +81,7 @@ The owner selected **Wabi Insight** as the product name, replacing "Query Harbor
 | Test environment variable | `QH_TEST_ORACLE_CONNECTION` | `WI_TEST_ORACLE_CONNECTION` |
 
 Unchanged: platform code `AP-AIR`, tagline "Ask Your Data. Trust the Answer." / "اسأل بياناتك. وثق بالإجابة.", the lighthouse-and-waves logo brief. Trademark and domain checks for "Wabi Insight" are the owner's responsibility before public release.
+
+## F. Post-login landing page (2026-11-05)
+
+The owner asked for organization users to land on the "Ask Wabi Insight" prompting page after sign-in. The original §22 routed Organization Users and Organization Administrators to their dashboards. Applied: `OrganizationUser → /app/ask`, with Dashboard one click away in the sidebar; `PlatformAdministrator → /platform/overview`. A `returnUrl` from a guarded deep link still takes precedence, and a `MustChangePassword` session always lands on `/change-password` first.

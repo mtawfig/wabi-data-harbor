@@ -1,0 +1,9 @@
+.ask__layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.ask__controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ask__notice { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; margin: -8px 0 12px; mat-icon { color: var(--wi-ocean); } }
+.ask__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.ask__examples { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.ask__chip { cursor: pointer; }
+.ask__results { min-height: 220px; display: grid; place-items: center; }
+.ask__empty, .ask__engine { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 520px; mat-icon { font-size: 40px; width: 40px; height: 40px; color: var(--wi-aqua); margin-bottom: 8px; } }
+@media (max-width: 760px) { .ask__controls { grid-template-columns: 1fr; } }
