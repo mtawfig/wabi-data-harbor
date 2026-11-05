@@ -131,6 +131,92 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Ai.AnalysisExecutionMetric", b =>
+                {
+                    b.Property<Guid>("MetricId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal>("EstimatedCost")
+                        .HasPrecision(14, 6)
+                        .HasColumnType("decimal(14,6)");
+
+                    b.Property<double>("ExecuteMs")
+                        .HasColumnType("float");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FailureStage")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<long>("InterpretInputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<double>("InterpretMs")
+                        .HasColumnType("float");
+
+                    b.Property<long>("InterpretOutputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ObjectCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("PlanInputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<double>("PlanMs")
+                        .HasColumnType("float");
+
+                    b.Property<long>("PlanOutputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("ProviderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<bool>("Truncated")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("MetricId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.HasIndex("OrganizationId", "UserId");
+
+                    b.ToTable("AnalysisExecutionMetrics", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Audit.AuditLog", b =>
                 {
                     b.Property<Guid>("AuditLogId")

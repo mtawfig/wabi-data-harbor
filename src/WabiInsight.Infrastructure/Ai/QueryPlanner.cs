@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using WabiInsight.Core.Ai;
+using WabiInsight.Core.Insights;
 using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Permissions;
@@ -93,6 +94,12 @@ public sealed class QueryPlanner : IQueryPlanner
             throw new PlanRejectedException("authorization", authErrors);
         }
 
+        if (snapshot.DatabaseType == "PlatformInsights")
+        {
+            // Mandatory organization scope on every insights view (specification §12.1), bound from the principal.
+            authorized = authorized with { Objects = authorized.Objects.Select(o => o with { RowPredicates = [new RowPredicate(InsightsSqlBuilder.OrganizationColumn, InsightsSqlBuilder.TenantParameter, organizationId.ToString())] }).ToList() };
+        }
+
         await _usage.AppendAndSaveAsync(UsageEventTypes.AiPlanGenerated, "Application", request.ApplicationId.ToString(), quantity: usage.InputTokens + usage.OutputTokens,
             metadata: new { usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens, usage.CachedInputTokens, usage.EstimatedCost, usage.DurationMs, objects = authorized.Objects.Count, language }, cancellationToken: cancellationToken);
         return new PlanResponse(plan, authorized, usage);
@@ -123,18 +130,49 @@ public sealed class QueryPlanner : IQueryPlanner
         => await _usage.AppendAndSaveAsync(UsageEventTypes.AiPlanRejected, "Application", request.ApplicationId.ToString(), quantity: usage.InputTokens + usage.OutputTokens, succeeded: false,
             metadata: new { stage, codes = errors.Select(e => e.Code).Distinct().Take(10), usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens }, cancellationToken: cancellationToken);
 
+    /// <summary>
+    /// Platform Insights: the approved views the user may address (every approved view for Organization
+    /// Administrators, otherwise the views behind the metrics granted to their roles). The organization
+    /// predicate is attached as a row predicate on every view, so the compiler applies it at the source level.
+    /// </summary>
+    private async Task<(MetadataSnapshot Snapshot, EffectivePermissions Permissions, Dictionary<Guid, RowMappingColumns> Mappings)> BuildInsightsSnapshotAsync(Core.Entities.Organizations.Application application, CancellationToken cancellationToken)
+    {
+        var organizationId = _tenantContext.RequireOrganizationId();
+        var userId = _tenantContext.Principal.UserId!.Value;
+        var objects = await _context.InsightsObjects.AsNoTracking().Where(o => o.IsApproved && o.IsPresent).OrderBy(o => o.SortOrder).ToListAsync(cancellationToken);
+        if (!_tenantContext.Principal.Roles.Contains(Core.Entities.Organizations.SystemRoles.OrganizationAdmin))
+        {
+            var roleIds = await _context.UserRoles.AsNoTracking().Where(ur => ur.UserId == userId).Select(ur => ur.RoleId).ToListAsync(cancellationToken);
+            var activeRoles = await _context.Roles.AsNoTracking().Where(r => roleIds.Contains(r.RoleId) && r.IsActive).Select(r => r.RoleId).ToListAsync(cancellationToken);
+            var grantedMetricIds = await _context.RoleMetricGrants.AsNoTracking().Where(g => activeRoles.Contains(g.RoleId)).Select(g => g.InsightsMetricId).ToListAsync(cancellationToken);
+            var viewIds = await _context.InsightsMetrics.AsNoTracking().Where(m => m.IsApproved && grantedMetricIds.Contains(m.InsightsMetricId)).Select(m => m.InsightsObjectId).Distinct().ToListAsync(cancellationToken);
+            objects = objects.Where(o => viewIds.Contains(o.InsightsObjectId)).ToList();
+        }
+
+        var objectIds = objects.Select(o => o.InsightsObjectId).ToList();
+        var columns = await _context.InsightsColumns.AsNoTracking().Where(c => objectIds.Contains(c.InsightsObjectId) && c.IsApproved && c.IsPresent).OrderBy(c => c.OrdinalPosition).ToListAsync(cancellationToken);
+        var context = new RowScopeContext(null, null, null);
+        var access = objects.Select(o => new EffectiveObjectAccess(application.ApplicationId, application.ApplicationCode, o.InsightsObjectId, Insights.InsightsSchema.SchemaName, o.ViewName, Core.Entities.Metadata.DatabaseObjectType.View, o.DisplayNameEn, o.DisplayNameAr,
+            columns.Where(c => c.InsightsObjectId == o.InsightsObjectId).Select(c => new EffectiveColumn(c.InsightsColumnId, c.ColumnName, c.DataType, c.DisplayNameEn, c.DisplayNameAr, Core.Entities.Metadata.DataClassification.Internal)).ToList(),
+            [Core.Entities.Permissions.RowScope.All], [], true, [])).ToList();
+        var permissions = new EffectivePermissions(userId, organizationId, [.. _tenantContext.Principal.Roles], context, access);
+        var snapshotObjects = objects.Select(o => new SnapshotObject(Insights.InsightsSchema.SchemaName, o.ViewName, "View", o.DisplayNameEn, o.DisplayNameAr, o.Description,
+            columns.Where(c => c.InsightsObjectId == o.InsightsObjectId).Select(c => new SnapshotColumn(c.ColumnName, c.DataType, c.DisplayNameEn, c.DisplayNameAr, c.Description, false)).ToList())).ToList();
+        return (new MetadataSnapshot(application.ApplicationCode, "PlatformInsights", snapshotObjects, []), permissions, new Dictionary<Guid, RowMappingColumns>());
+    }
+
     private async Task<(MetadataSnapshot Snapshot, EffectivePermissions Permissions, Dictionary<Guid, RowMappingColumns> Mappings)> BuildSnapshotAsync(Guid applicationId, CancellationToken cancellationToken)
     {
         var application = await _context.Applications.AsNoTracking().SingleOrDefaultAsync(a => a.ApplicationId == applicationId, cancellationToken)
             ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "application_not_found");
-        if (application.IsBuiltIn)
-        {
-            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "ai_application_unsupported");
-        }
-
         if (!application.IsApproved || !application.IsActive)
         {
             throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "ai_application_not_approved");
+        }
+
+        if (application.IsBuiltIn)
+        {
+            return await BuildInsightsSnapshotAsync(application, cancellationToken);
         }
 
         var permissions = await _permissions.ResolveAsync(cancellationToken);

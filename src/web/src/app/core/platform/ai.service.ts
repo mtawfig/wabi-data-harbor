@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AiProvider, AiProviderTestResult, AiProviderType, OrganizationAiSettings, PlanResponse, SaveAiProviderRequest } from './ai.models';
+import { AiProvider, AiProviderTestResult, AiProviderType, AskResponse, AskableApplication, OrganizationAiSettings, PlanResponse, SaveAiProviderRequest } from './ai.models';
 
 /** AI provider configuration (platform and organization) and the planning endpoint. API keys are only ever sent, never read back. */
 @Injectable({ providedIn: 'root' })
@@ -66,5 +66,13 @@ export class AiService {
 
   plan(applicationId: string, question: string, language: 'en' | 'ar'): Observable<PlanResponse> {
     return this.http.post<PlanResponse>('/api/ai/plan', { applicationId, question, language });
+  }
+
+  askableApplications(): Observable<AskableApplication[]> {
+    return this.http.get<AskableApplication[]>('/api/ai/applications');
+  }
+
+  ask(applicationId: string, question: string, language: 'en' | 'ar', interpret = true): Observable<AskResponse> {
+    return this.http.post<AskResponse>('/api/ai/ask', { applicationId, question, language, interpret });
   }
 }
