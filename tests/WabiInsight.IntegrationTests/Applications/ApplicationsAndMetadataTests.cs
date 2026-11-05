@@ -179,7 +179,10 @@ public sealed class ApplicationsAndMetadataTests : IDisposable
         Assert.DoesNotContain(list.EnumerateArray(), a => a.GetProperty("applicationId").GetGuid() == applicationId);
         Assert.Equal(HttpStatusCode.NotFound, (await bobAdmin.GetAsync($"/api/applications/{applicationId}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await bobAdmin.PostJsonAsync($"/api/metadata/applications/{applicationId}/refresh", new { })).StatusCode);
-        var duplicate = await bobAdmin.PostJsonAsync("/api/applications", new { applicationCode = "crm2", applicationName = "CRM copy", applicationNameAr = "نسخة", databaseType = "SqlServer", connectionString = "database=" + new SqlConnectionStringBuilder(source).InitialCatalog + ";server=" + new SqlConnectionStringBuilder(source).DataSource + ";User Id=sa;Password=WabiInsight_Dev_2026!;TrustServerCertificate=True;Encrypt=True;Workstation ID=shared;Application Name=whatever" });
+        // The same source written differently (key order, casing, a different application name) must still collide.
+        var parts = new SqlConnectionStringBuilder(source);
+        var rewritten = $"database={parts.InitialCatalog};server={parts.DataSource};user id={parts.UserID};password={parts.Password};TrustServerCertificate={parts.TrustServerCertificate};Encrypt={parts.Encrypt};Workstation ID={parts.WorkstationID};Application Name=whatever";
+        var duplicate = await bobAdmin.PostJsonAsync("/api/applications", new { applicationCode = "crm2", applicationName = "CRM copy", applicationNameAr = "نسخة", databaseType = "SqlServer", connectionString = rewritten });
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
         Assert.Contains("connection_already_registered", await duplicate.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 
