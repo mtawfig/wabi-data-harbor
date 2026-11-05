@@ -1,0 +1,137 @@
+# Query Harbor — Implementation Plan (Phases and Pull Requests)
+
+**Status:** Proposed — awaiting owner approval before coding starts.
+**Specification:** [`docs/QUERY_HARBOR_SPECIFICATION.md`](./QUERY_HARBOR_SPECIFICATION.md) (revised v1.1).
+**Review of the original prompt:** [`docs/SPEC_REVIEW.md`](./SPEC_REVIEW.md).
+
+## Working agreement
+
+- `main` is the integration branch. Nothing is pushed to `main` directly.
+- Every PR lives on its own branch and must be green in CI (build + tests for API and Angular) before the owner merges it.
+- PRs are ordered; each PR assumes every earlier PR is merged. A PR is kept small enough to review in one sitting (target: < 3,000 changed lines excluding generated files and lock files).
+- Every PR updates `docs/PROGRESS.md` and, when behaviour changes, the relevant doc under `docs/`.
+- Branch naming: `qh/p<phase>-<nn>-<short-name>` (for example `qh/p01-02-config-db`). Sessions started from the Claude app receive a generated branch name; the PR title carries the `P1.2` identifier either way.
+- PR title format: `P<phase>.<n> — <short description>`.
+
+## Verified toolchain (checked 2026-11-05)
+
+| Component | Version | Note |
+|---|---|---|
+| .NET | 10.0 (LTS, supported to Nov 2028) | .NET 11 (STS) ships Nov 2026; not used. |
+| ASP.NET Core / EF Core | 10.x | |
+| Angular | 22.2.x (latest stable 22.2.4, 2026-10-29) | Angular 23 expected mid-Nov 2026; upgrade in Phase 12 if stable by then. |
+| Node.js | 22 LTS | |
+| SQL Server | 2022 (dev container `mcr.microsoft.com/mssql/server:2022-latest`) | Integration tests run against a real SQL Server. |
+| Oracle | 23ai Free (`gvenzl/oracle-free`) | Optional live tests; compiler tests are offline. |
+
+## Phase and PR map
+
+### Phase 0 — Planning (this PR)
+| PR | Branch | Scope |
+|---|---|---|
+| P0.1 | `claude/query-harbor-plan-qjo2sh` | Revised specification, spec review, implementation plan, `CLAUDE.md`, `PROGRESS.md`. No application code. |
+
+### Phase 1 — Foundation and Multi-Tenant Identity
+**Acceptance:** A Platform Administrator can be bootstrapped and sign in; the schema makes an organization user without a valid organization impossible; CI is green on both stacks.
+
+| PR | Scope |
+|---|---|
+| P1.1 — Repository scaffolding and CI | Solution layout (`src/QueryHarbor.Api`, `src/QueryHarbor.Core`, `src/QueryHarbor.Infrastructure`, `src/web` Angular 22), health endpoint, GitHub Actions workflow (dotnet build/test + ng build/test with a SQL Server service container), `docker-compose.dev.yml` for local SQL Server, `CLAUDE.md`, `ARCHITECTURE.md` skeleton. |
+| P1.2 — Configuration database and tenant core | EF Core 10 model and first migration: `Organizations`, `Administrators`, `OrganizationUsers`, `LoginIdentities`, `SystemInitialization`, `PlatformSettings`, `AuditLogs`. UUIDv7 keys, scoped unique constraints, `ITenantContext`, tenant query filters, integration-test harness (Testcontainers locally, service container in CI) with a two-organization fixture. |
+| P1.3 — Authentication and bootstrap | Bootstrap configuration + `bootstrap` CLI command + protected `/api/bootstrap`; cookie authentication with antiforgery; login/logout, password change, forced first-login change, lockout, inactive/suspended denial, security-stamp session invalidation; authorization policies (`PlatformAdministrator`, `OrganizationUser`, `OrganizationAdmin`); rate limiting on auth endpoints; production rejection of the sample password. |
+| P1.4 — Angular design system, i18n, and auth UI | Brand theme (tokens, Angular Material M3 theme), Inter / IBM Plex Sans Arabic, Transloco EN/AR with RTL switching and persistence, three layout shells (public, organization, platform), login, bootstrap page, forced password change, profile basics, route guards and HTTP interceptors, first real screenshots. |
+
+### Phase 2 — Organization Onboarding
+**Acceptance:** Two test organizations are onboarded end to end with complete identity isolation, proven by tests.
+
+| PR | Scope |
+|---|---|
+| P2.1 — Organization management and onboarding | Platform API + UI: create/edit/suspend/activate organizations, initial Organization Administrator invitation, one-time invitation token acceptance (set password), administrator-assisted handover, `EmailService` with SMTP provider + development file sink + `EmailMessages` outbox. |
+| P2.2 — Organization identity and roles | Departments, sections, organization users (create/edit/deactivate/reset password), roles and user-role assignment, protected `OrganizationAdmin` and `Management` roles, default role templates (platform-managed, versioned) provisioned on organization creation, organization-admin UI pages. |
+
+### Phase 3 — Platform Administration Dashboard
+**Acceptance:** Platform Administrators see aggregated KPIs, charts, health and operational tables with date filters, and no organization application names, business data or connection details.
+
+| PR | Scope |
+|---|---|
+| P3.1 — Usage events, metrics and health backend | `UsageEvents` pipeline (single append-only event table), `PlatformMetricsService` with date-range aggregation, health checks (API, config DB, AI provider stub, storage, email), `/api/platform/dashboard`, `/api/platform/health`, `/api/platform/metrics`, `/api/platform/audit`. |
+| P3.2 — Platform dashboard and administration UI | Dashboard with KPI cards, ECharts charts in brand palette, filters, drilldown tables; System Health, Audit Logs, Platform Administrators management, General Settings (bootstrap status, platform settings). Later phases add their own widgets to this dashboard. |
+
+### Phase 4 — Support Desk
+**Acceptance:** Organization users create tickets; Platform Administrators manage them; every meaningful action appears in a stored timeline.
+
+| PR | Scope |
+|---|---|
+| P4.1 — Support desk backend | `SupportTickets`, `SupportTicketEvents`, `SupportTicketComments`, `SupportTicketAttachments`, `TicketSequences` (concurrency-safe yearly reference `QH-YYYY-NNNNNN`), status state machine, first-open tracking, assignment, comments, attachment storage via `IArtifactStorage`, `Notifications` table + service, visibility rules per role. |
+| P4.2 — Support desk UI | New ticket, My Tickets, organization ticket list (OrgAdmin), platform queue with filters/search/pagination, ticket details with Overview / Conversation / Activity Timeline / Attachments tabs, notification centre, dashboard ticket widgets. |
+
+### Phase 5 — Authorized Support Access
+**Acceptance:** A Platform Administrator cannot change any organization configuration without an approved, unexpired, narrowly scoped grant, and every assisted action is audited on the ticket.
+
+| PR | Scope |
+|---|---|
+| P5.1 — Support access grants backend | `SupportAccessGrants` with typed operation catalog, request → OrgAdmin approval → support-mode session → scoped execution → expiry/revocation; `SupportAccessAuthorizationHandler`; audited execution of the permitted operations (user create/reset, role config, table permission update, metadata refresh, connection diagnostics). |
+| P5.2 — Support access UI | OrgAdmin approval screen, platform Support Access page, support-mode banner and entry/exit, ticket tab 5 (Support Access), timeline and audit integration. |
+
+### Phase 6 — Organization Data Configuration
+**Acceptance:** Organization Administrators configure their own applications, metadata and permissions; tenant boundaries remain enforced by tests.
+
+| PR | Scope |
+|---|---|
+| P6.1 — Applications, encrypted connections, metadata | `Applications` with Data Protection–encrypted connection strings (key ring outside the DB), SQL Server and Oracle connectivity adapters (test connection, read-only account check), metadata discovery and approval (`DatabaseObjects`, `DatabaseColumns`, `DatabaseRelationships`), refresh with diff, EN/AR display names, organization-admin UI. |
+| P6.2 — Permissions model | `RoleTablePermissions`, `RoleColumnPermissions`, `RoleRowPermissions`, `RowScopeColumnMappings`, effective-permission resolver (union across roles, organization boundary first), `Management` automatic read access, permissions UI (table / column / row). |
+
+### Phase 7 — Built-In Platform Insights and Organization Dashboard
+**Acceptance:** Each Organization Administrator can retrieve only their own organization's platform metrics; the organization dashboard shows only that organization.
+
+| PR | Scope |
+|---|---|
+| P7.1 — Platform Insights data source | `insights` schema of tenant-scoped SQL views in the configuration DB, dedicated read-only DB login, global `QH-INSIGHTS` catalog (objects, columns, metric definitions), per-organization built-in application row provisioned on onboarding, mandatory `OrganizationId` predicate, platform-side Platform Insights Configuration page. |
+| P7.2 — Organization dashboard and Organization Insights | `/app/admin/dashboard` with organization-scoped KPIs, charts and filters; Organization Insights page; default OrgAdmin access and per-role metric grants. Natural-language questions against Platform Insights become available in Phase 8. |
+
+### Phase 8 — Secure AI Engine
+**Acceptance:** Authorized users receive accurate results from SQL Server, Oracle and Platform Insights; unsafe or unauthorized plans are rejected with tests proving it.
+
+| PR | Scope |
+|---|---|
+| P8.1 — AI provider abstraction and query plan | `IAiProvider` with OpenAI-compatible (covers OpenAI, Mistral, local endpoints) and Gemini adapters, encrypted provider credentials, platform allow-list and organization selection, typed query-plan JSON schema, plan validator, authorization pass (table/column/row/organization), prompt-injection safeguards. |
+| P8.2 — Compilers, execution and interpretation | SQL Server and Oracle dialect compilers, parameterized read-only execution with limits/timeouts, deterministic calculations, interpretation step, `/api/ai` end-to-end, `AnalysisExecutionMetrics`, compiler snapshot tests, live Oracle test gated by environment. |
+
+### Phase 9 — User Workspace and History
+**Acceptance:** Users ask questions, see tables and charts, reopen saved results without re-querying, re-run into new versions, and export bilingual reports.
+
+| PR | Scope |
+|---|---|
+| P9.1 — AI workspace and persistent history | Workspace UI (application selector, prompt, output language, result tables/charts/narrative), `AnalysisHistories`, `AnalysisHistoryVersions`, `AnalysisArtifacts`, history list/search/filters/pagination, favorites, collections, archive, delete, re-run. |
+| P9.2 — Reports and exports | PDF / DOCX / XLSX generation with real RTL and Arabic shaping, server-rendered charts, reports library, print view, `ReportGenerationEvents`, verified Arabic output files committed as test fixtures. |
+
+### Phase 10 — Collaboration and Integrations
+**Acceptance:** Sharing respects organization boundaries, classification rules and provider outcomes.
+
+| PR | Scope |
+|---|---|
+| P10.1 — In-app and email sharing | `AnalysisShares`, Shared With Me / Shared By Me, expiry and revocation, notifications, email sharing with external-disclosure approval, `EmailDraftEvents` (draft vs sent). |
+| P10.2 — Google Drive and OneDrive publishing | `ExternalProviderConnections` (encrypted OAuth tokens), Drive upload + reader permissions, OneDrive upload via Microsoft Graph + read-only sharing, `ExternalShareRecords`, `IntegrationOperationLogs`, organization Integrations page, provider failure handling with mocked provider tests. |
+
+### Phase 11 — Landing Page and Visual Polish
+**Acceptance:** Public landing page in EN and AR, responsive, branded; consistent design across every screen.
+
+| PR | Scope |
+|---|---|
+| P11.1 — Logo and landing page | SVG logo set (light/dark/icon/wordmark/favicon), ten-section landing page, data-chaos vs success scenes as illustrations, fictional labelled demo data. |
+| P11.2 — Cross-page polish and screenshots | Visual consistency pass, responsive fixes, Playwright screenshot script producing the 42 required screens in EN/AR, `docs/SCREENSHOTS.md`. |
+
+### Phase 12 — Security Hardening and Quality Assurance
+**Acceptance:** Cross-tenant, support-access, read-only, localization and responsive tests pass; deployment is documented and validated.
+
+| PR | Scope |
+|---|---|
+| P12.1 — Security hardening | Cross-tenant penetration-style test suite, IDOR sweeps, security headers, request-size and rate limits review, error-handling review, audit-trail verification, dependency audit. |
+| P12.2 — Performance, deployment and final docs | Load checks on hot endpoints, index review, production Docker/IIS/Linux deployment guides, `SECURITY.md` and `ARCHITECTURE.md` final, Angular 23 upgrade if stable. |
+
+## Milestone verification (every PR)
+
+1. `dotnet build` and `dotnet test` pass (unit + integration against SQL Server).
+2. `ng build` and `ng test` pass; `ng lint` clean.
+3. Manual check of user-facing behaviour, with real screenshots when UI changed.
+4. `docs/PROGRESS.md` updated with what shipped, what is blocked, and environment requirements.
