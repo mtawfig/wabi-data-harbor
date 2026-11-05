@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using WabiInsight.Api.Commands;
 using WabiInsight.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +20,11 @@ builder.Services.AddProblemDetails();
 builder.Services.AddWabiInsightInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+if (args.Length > 0 && string.Equals(args[0], MigrateCommand.Name, StringComparison.OrdinalIgnoreCase))
+{
+    return await MigrateCommand.RunAsync(app, CancellationToken.None);
+}
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
@@ -44,7 +50,8 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();
+return 0;
 
 static Task WriteHealthResponseAsync(HttpContext context, HealthReport report)
 {

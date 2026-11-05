@@ -32,13 +32,18 @@ docker compose -f docker-compose.dev.yml up -d
 dotnet build WabiInsight.slnx -c Release
 dotnet test WabiInsight.slnx -c Release
 dotnet run --project src/WabiInsight.Api          # http://localhost:5080
+dotnet run --project src/WabiInsight.Api -- migrate   # apply pending migrations (deployment step)
+dotnet tool restore && dotnet ef migrations add <Name> --project src/WabiInsight.Infrastructure --startup-project src/WabiInsight.Infrastructure --output-dir Persistence/Migrations
+
+# Integration tests need SQL Server: either Docker (Testcontainers) or
+WI_TEST_SQLSERVER_CONNECTION="Server=localhost,1433;Database=master;User Id=sa;Password=WabiInsight_Dev_2026!;TrustServerCertificate=True;Encrypt=True" dotnet test WabiInsight.slnx
 
 # Web (from src/web)
 npm ci
 npm run lint && npm test && npm run build -- --configuration production
 npm start                                          # http://localhost:4200, proxies /api to 5080
 ```
-Migrations (`dotnet ef`) and the `bootstrap` command are added in P1.2 / P1.3; the screenshot script in P11.2.
+The `bootstrap` command is added in P1.3; the screenshot script in P11.2.
 
 ## Verification before pushing
 1. `dotnet build` + `dotnet test` green.

@@ -1,6 +1,6 @@
 # Wabi Insight — Architecture
 
-Status: skeleton written in P1.1; each phase extends the relevant section.
+Status: P1.1 skeleton, P1.2 adds the configuration database and tenant core; each phase extends the relevant section.
 
 ## Three logical layers
 
@@ -26,6 +26,33 @@ docs/                          specification, plan, progress, architecture, secu
 docker-compose.dev.yml         local SQL Server 2022
 ```
 
+## Configuration database (P1.2)
+
+One SQL Server database, EF Core 10, migrations in `src/WabiInsight.Infrastructure/Persistence/Migrations`, applied by `dotnet run --project src/WabiInsight.Api -- migrate` at deployment time (never by a web request).
+
+| Table | Purpose | Key constraints |
+|---|---|---|
+| `Organizations` | Customer tenants | unique `OrganizationCode`; `Status` check (`Active`, `Suspended`, `Deactivated`); `DefaultLanguage` check (`en`, `ar`) |
+| `Administrators` | Platform Administrators, **no `OrganizationId`** | unique `NormalizedEmail`; filtered unique index allows exactly one `IsBootstrapAdministrator` |
+| `OrganizationUsers` | Employees, **`OrganizationId` NOT NULL + FK** | unique `(OrganizationId, NormalizedEmail)`; unique `(OrganizationId, EmployeeNumber)`; `Status` check |
+| `LoginIdentities` | Global login registry across both stores | primary key `NormalizedEmail`; unique `(PrincipalType, PrincipalId)` |
+| `SystemInitialization` | Bootstrap state | singleton (`Id = 1` check constraint) |
+| `PlatformSettings` | Key/value platform settings | primary key `Key` |
+| `AuditLogs` | Append-only security events | application guard rejects UPDATE/DELETE; `scripts/sql/create-runtime-login.sql` denies them at the database |
+
+Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC timestamps stamped by the context, `rowversion` concurrency tokens on editable aggregates, enum codes stored as strings with check constraints.
+
+### Tenant core
+
+- `TenantPrincipal` is the trusted identity (type, organization, user/administrator id, roles, department, section). `TenantContext` is scoped per request, initialized once by the authentication middleware (P1.3) and read through `ITenantContext`.
+- `ConfigurationDbContext` applies a global query filter `OrganizationId == CurrentOrganizationId` to every `ITenantOwned` entity. Anonymous and platform-administrator scopes see **no** tenant rows by default.
+- `AsPlatformScope(tenantContext)` is the only sanctioned cross-organization read; it throws for anything but a platform administrator and callers must apply field-level restrictions.
+- Write guard in `SaveChanges`: `OrganizationId` must be set, organization users cannot write outside their organization, anonymous scopes cannot write tenant data, `AuditLogs` cannot be modified or deleted.
+
+### Test strategy
+
+Integration tests run against a real SQL Server: `WI_TEST_SQLSERVER_CONNECTION` (CI service container or a local instance) or, when absent, a Testcontainers SQL Server 2022 container. A fresh database is migrated per run and seeded with two organizations, one user each, and one administrator. SQLite or in-memory providers are never used because constraints, filtered indexes and `rowversion` must be verified on the real engine.
+
 ## Request pipeline (P1.1)
 
 `UseExceptionHandler` (RFC 9457 problem details) → `UseStatusCodePages` → HSTS (non-development) → HTTPS redirection → health endpoints (`/health/live`, `/health/ready`) → controllers.
@@ -37,7 +64,7 @@ Authentication, antiforgery, tenant context resolution, rate limiting and author
 | Endpoint | Purpose |
 |---|---|
 | `GET /health/live` | Process liveness; JSON with per-check status. |
-| `GET /health/ready` | Readiness; later phases add database, storage, email and AI provider checks. |
+| `GET /health/ready` | Readiness: API self-check plus configuration-database connectivity (P1.2). Storage, email and AI provider checks follow in later phases. |
 | `GET /api/platform/info` | Public product identity (name, code, tagline, version, languages). Never exposes configuration or bootstrap state. |
 
 ## Angular (P1.1)
