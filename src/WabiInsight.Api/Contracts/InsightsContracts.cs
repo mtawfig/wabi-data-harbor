@@ -35,3 +35,5 @@ public sealed record MetricQueryRequestBody(DateTimeOffset? From, DateTimeOffset
 }
 
 public sealed record SqlPreviewResponse(string Sql, IReadOnlyDictionary<string, string> Parameters);
+
+public sealed record SetRoleMetricsRequest(IReadOnlyCollection<Guid>? MetricIds);

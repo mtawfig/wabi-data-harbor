@@ -53,3 +53,15 @@ internal sealed class InsightsMetricConfiguration : IEntityTypeConfiguration<Ins
         builder.HasOne<InsightsObject>().WithMany().HasForeignKey(m => m.InsightsObjectId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class RoleMetricGrantConfiguration : IEntityTypeConfiguration<RoleMetricGrant>
+{
+    public void Configure(EntityTypeBuilder<RoleMetricGrant> builder)
+    {
+        builder.ToTable("RoleMetricPermissions");
+        builder.HasKey(g => new { g.RoleId, g.InsightsMetricId });
+        builder.HasOne<WabiInsight.Core.Entities.Organizations.Role>().WithMany().HasForeignKey(g => new { g.OrganizationId, g.RoleId }).HasPrincipalKey(r => new { r.OrganizationId, r.RoleId }).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<InsightsMetric>().WithMany().HasForeignKey(g => g.InsightsMetricId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(g => g.OrganizationId);
+    }
+}

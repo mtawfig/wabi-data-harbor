@@ -112,6 +112,33 @@
       }
     </mat-tab>
 
+    <mat-tab [label]="'admin.permissions.tabMetrics' | transloco">
+      <div class="tab-body">
+        <div class="selectors">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'admin.permissions.role' | transloco }}</mat-label>
+            <mat-select [value]="selectedRole()" (valueChange)="selectRole($event)" data-testid="perm-metrics-role">
+              @for (r of editableRoles(); track r.roleId) { <mat-option [value]="r.roleId">{{ roleName(r) }} <span class="wi-ltr wi-muted">({{ r.roleCode }})</span></mat-option> }
+            </mat-select>
+          </mat-form-field>
+        </div>
+        <p class="wi-muted">{{ 'admin.permissions.metricsHint' | transloco }}</p>
+        @if (metricsLoading()) { <mat-progress-bar mode="indeterminate" /> }
+        @if (metricGrants(); as g) {
+          <div class="wi-card" data-testid="perm-metrics">
+            @if (g.isAutomatic) { <div class="note note--info"><mat-icon>verified_user</mat-icon><span>{{ 'admin.permissions.metricsAutomatic' | transloco }}</span></div> }
+            @if (g.metrics.length === 0) { <p class="wi-muted">{{ 'admin.permissions.noMetrics' | transloco }}</p> }
+            <ul class="cols metrics">
+              @for (m of g.metrics; track m.metricId) {
+                <li><mat-checkbox [checked]="metricDraft().has(m.metricId)" [disabled]="g.isAutomatic || busy()" (change)="toggleMetric(m.metricId, $event.checked)" [attr.data-testid]="'perm-metric-' + m.metricCode"><strong>{{ metricName(m) }}</strong> <span class="wi-muted small wi-ltr">{{ m.metricCode }} · {{ m.viewName }}</span></mat-checkbox></li>
+              }
+            </ul>
+            @if (!g.isAutomatic) { <div class="detail__actions"><button mat-flat-button type="button" (click)="saveMetricGrants()" [disabled]="busy()" data-testid="perm-metrics-save">{{ 'common.save' | transloco }}</button></div> }
+          </div>
+        }
+      </div>
+    </mat-tab>
+
     <mat-tab [label]="'admin.permissions.tabPreview' | transloco">
       <div class="tab-body">
         <div class="selectors">

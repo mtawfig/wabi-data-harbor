@@ -75,3 +75,11 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 
 ## Screenshots (P7.1)
 `docs/screenshots/p7-1-*.png`: views list EN, view detail with columns EN/AR, metrics list EN/AR, metric editor with SQL preview.
+
+## Organization dashboard and Organization Insights (P7.2)
+- `app-organization-dashboard` reuses the platform dashboard layout (presets, granularity, KPI grid, four charts, pending-indicator chips) with an *Organization Insights* shortcut; tables for usage by department, tickets by status and applications, and the open-tickets widget.
+- `app-organization-insights`: metric list on the left (name plus aggregate · column · view), controls card (period presets including *All time*, granularity with *Total*, group by approved columns, *Run*), result card with the total in brand blue, a line (bucketed), bar (grouped) or stacked bar (both) chart and the rows table.
+- Permissions page tab *Platform Insights metrics*: checklist of approved metrics per role; the Organization Administrator role shows an informational band instead.
+
+## Screenshots (P7.2)
+`docs/screenshots/p7-2-*.png`: organization dashboard EN (viewport and full page) and AR, Organization Insights with grouping EN and AR, metric grants tab.

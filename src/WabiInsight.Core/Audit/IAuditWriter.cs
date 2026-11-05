@@ -61,6 +61,7 @@ public static class AuditEvents
     public const string InsightsColumnUpdated = "Insights.ColumnUpdated";
     public const string InsightsMetricChanged = "Insights.MetricChanged";
     public const string InsightsMetricQueried = "Insights.MetricQueried";
+    public const string InsightsMetricGrantChanged = "Insights.MetricGrantChanged";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>

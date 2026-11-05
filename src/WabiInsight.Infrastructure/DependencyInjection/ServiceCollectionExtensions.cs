@@ -167,6 +167,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDatabaseAdapter, PlatformInsightsAdapter>();
         services.AddScoped<IInsightsCatalogService, InsightsCatalogService>();
         services.AddScoped<IInsightsQueryService, InsightsQueryService>();
+        services.AddScoped<IMetricGrantService, MetricGrantService>();
         services.AddSingleton<IDatabaseAdapterFactory, DatabaseAdapterFactory>();
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IMetadataService, MetadataService>();

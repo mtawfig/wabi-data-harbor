@@ -29,4 +29,17 @@ describe('InsightsService', () => {
     expect(JSON.stringify(query.request.body)).not.toContain('organizationId');
     query.flush({ rows: [] });
   });
+
+  it('reads the organization dashboard with the period and bucket, and writes role grants by id list', () => {
+    service.organizationDashboard(new Date('2026-10-01T00:00:00Z'), new Date('2026-11-01T00:00:00Z'), 'Week').subscribe();
+    const dash = http.expectOne((r) => r.url === '/api/insights/dashboard');
+    expect(dash.request.params.get('bucket')).toBe('Week');
+    expect(dash.request.params.get('from')).toBe('2026-10-01T00:00:00.000Z');
+    dash.flush({ kpis: [], series: [] });
+
+    service.setRoleMetrics('r1', ['m1', 'm2']).subscribe();
+    const put = http.expectOne({ method: 'PUT', url: '/api/insights/roles/r1/metrics' });
+    expect(put.request.body).toEqual({ metricIds: ['m1', 'm2'] });
+    put.flush({});
+  });
 });

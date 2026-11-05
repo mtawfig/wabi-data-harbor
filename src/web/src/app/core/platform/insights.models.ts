@@ -124,3 +124,42 @@ export interface MetricResult {
   rows: MetricRow[];
   durationMs: number;
 }
+
+export interface DashboardTableRow {
+  key: string;
+  label: string;
+  labelAr?: string | null;
+  value: number;
+  secondary?: number | null;
+}
+
+export interface DashboardApplicationRow {
+  applicationId: string;
+  applicationCode: string;
+  applicationName: string;
+  applicationNameAr: string;
+  databaseType: string;
+  isBuiltIn: boolean;
+  isApproved: boolean;
+  isActive: boolean;
+  objectCount: number;
+  approvedObjectCount: number;
+  lastMetadataRefreshAt?: string | null;
+}
+
+export interface OrganizationDashboard {
+  period: { from: string; to: string };
+  kpis: { code: string; value: number; collected: boolean }[];
+  series: { code: string; points: { bucket: string; value: number }[] }[];
+  departmentUsage: DashboardTableRow[];
+  ticketsByStatus: DashboardTableRow[];
+  applications: DashboardApplicationRow[];
+}
+
+export interface RoleMetricGrants {
+  roleId: string;
+  roleCode: string;
+  isAutomatic: boolean;
+  metrics: InsightsMetric[];
+  grantedMetricIds: string[];
+}
