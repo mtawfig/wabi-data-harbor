@@ -41,3 +41,5 @@ public sealed record CreateAdministratorRequest(
 
 /// <summary>The temporary password is emailed, never returned; DeliveredTo is the masked recipient address.</summary>
 public sealed record AccountProvisioningResponse(Guid Id, string DeliveredTo, bool MustChangePassword, Guid? EmailMessageId);
+
+public sealed record SetAdministratorStatusRequest(bool IsActive);

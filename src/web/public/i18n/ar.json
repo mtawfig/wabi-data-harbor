@@ -427,5 +427,118 @@
       "system_template_protected": "لا يمكن إعادة تسمية قوالب النظام أو تعطيلها.",
       "template_invalid": "الرمز والاسمان مطلوبون."
     }
+  },
+  "platformDashboard": {
+    "title": "نظرة عامة على المنصة",
+    "subtitle": "رؤية تشغيلية للشركة المشغّلة لوابي إنسايت. أرقام مجمّعة فقط؛ لا بيانات أعمال للمؤسسات.",
+    "presets": {
+      "today": "اليوم",
+      "last7": "آخر 7 أيام",
+      "last30": "آخر 30 يومًا",
+      "thisMonth": "هذا الشهر",
+      "custom": "مخصص"
+    },
+    "from": "من",
+    "to": "إلى",
+    "bucket": "التفصيل",
+    "buckets": {
+      "Day": "يومي",
+      "Week": "أسبوعي",
+      "Month": "شهري"
+    },
+    "organization": "المؤسسة",
+    "allOrganizations": "كل المؤسسات",
+    "apply": "تحديث",
+    "period": "الفترة",
+    "kpis": {
+      "totalOrganizations": "المؤسسات",
+      "activeOrganizations": "مؤسسات نشطة",
+      "suspendedOrganizations": "مؤسسات موقوفة",
+      "totalOrganizationUsers": "مستخدمو المؤسسات",
+      "activeUsersInPeriod": "مستخدمون نشطون (الفترة)",
+      "configuredApplications": "تطبيقات مهيأة",
+      "platformAdministrators": "مديرو المنصة",
+      "logins": "تسجيلات الدخول",
+      "failedLogins": "تسجيلات دخول فاشلة",
+      "emailsSent": "رسائل مرسلة",
+      "emailsFailed": "رسائل فاشلة",
+      "organizationsCreatedInPeriod": "مؤسسات أُنشئت",
+      "usersCreatedInPeriod": "مستخدمون أُنشئوا",
+      "apiErrors": "أخطاء الواجهة",
+      "aiRequests": "طلبات الذكاء الاصطناعي",
+      "analysesCompleted": "تحليلات مكتملة",
+      "analysesFailed": "تحليلات فاشلة",
+      "reportsGenerated": "تقارير مولّدة",
+      "emailDraftsCreated": "مسودات بريد",
+      "openTickets": "تذاكر دعم مفتوحة",
+      "criticalIncidents": "حوادث حرجة",
+      "avgFirstResponseMinutes": "متوسط أول استجابة",
+      "avgResolutionMinutes": "متوسط زمن الحل"
+    },
+    "series": {
+      "organizationsRegistered": "مؤسسات مسجلة",
+      "activeUsers": "مستخدمون نشطون",
+      "logins": "تسجيلات الدخول",
+      "failedLogins": "تسجيلات دخول فاشلة",
+      "emailsSent": "رسائل مرسلة",
+      "emailsFailed": "رسائل فاشلة",
+      "usersCreated": "مستخدمون أُنشئوا",
+      "apiErrors": "أخطاء الواجهة"
+    },
+    "charts": {
+      "organizations": "المؤسسات المسجلة عبر الزمن",
+      "users": "المستخدمون النشطون وتسجيلات الدخول",
+      "emails": "تسليم البريد",
+      "errors": "الأخطاء"
+    },
+    "pendingTitle": "مقاييس تصل مع المراحل اللاحقة",
+    "pendingNote": "تُعرض هذه المؤشرات عند توفر ميزاتها (مكتب الدعم في المرحلة 4، محرك الذكاء الاصطناعي في المرحلة 8، التقارير في المرحلة 9). لا تُعرض أبدًا كأصفار وهمية.",
+    "usageTable": "الاستخدام حسب المؤسسة",
+    "emailsSentFailed": "رسائل مرسلة / فاشلة",
+    "errorsTable": "أحدث الأخطاء",
+    "noErrors": "لا أخطاء في هذه الفترة.",
+    "at": "الوقت",
+    "eventType": "الحدث",
+    "detail": "التفاصيل"
+  },
+  "health": {
+    "subtitle": "فحوصات مباشرة للواجهة وقاعدة بيانات الإعدادات ومزوّد البريد وصندوق الصادر.",
+    "refresh": "تشغيل الفحوصات",
+    "checkedAt": "وقت الفحص",
+    "check": "الفحص",
+    "description": "الوصف",
+    "duration": "المدة",
+    "data": "البيانات",
+    "status": {
+      "Healthy": "سليم",
+      "Degraded": "متدهور",
+      "Unhealthy": "معطّل"
+    }
+  },
+  "audit": {
+    "subtitle": "سجل أمني وإداري للإضافة فقط. لا تحتوي التفاصيل على أسرار أو بيانات أعمال.",
+    "search": "ابحث في الفاعل أو الكيان أو التفاصيل",
+    "allEvents": "كل الأحداث",
+    "actorType": "نوع الفاعل",
+    "allActors": "كل الفاعلين",
+    "actor": "الفاعل",
+    "entity": "الكيان",
+    "empty": "لا توجد إدخالات مطابقة للمرشحات.",
+    "actors": {
+      "PlatformAdministrator": "مدير منصة",
+      "OrganizationUser": "مستخدم مؤسسة",
+      "Anonymous": "مجهول"
+    }
+  },
+  "platformAdmins": {
+    "subtitle": "مديرو الشركة المشغّلة لوابي إنسايت. ليس لهم مؤسسة ولا يرون بيانات أعمال المؤسسات.",
+    "new": "مدير جديد",
+    "you": "أنت",
+    "bootstrap": "تهيئة",
+    "standard": "عادي",
+    "created": "تم إنشاء المدير. أُرسلت كلمة مرور مؤقتة إلى {{email}}.",
+    "resetSent": "أُرسلت كلمة مرور مؤقتة جديدة إلى {{email}}.",
+    "activated": "تم تفعيل المدير.",
+    "deactivated": "تم تعطيل المدير."
   }
 }

@@ -1,0 +1,102 @@
+<section class="wi-page dash">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'common.platform' | transloco }}</p>
+      <h1>{{ 'platformDashboard.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'platformDashboard.subtitle' | transloco }}</p>
+    </div>
+  </header>
+
+  <div class="wi-card dash__filters">
+    <mat-button-toggle-group [value]="preset()" (change)="setPreset($event.value)" hideSingleSelectionIndicator data-testid="dash-presets">
+      <mat-button-toggle value="today">{{ 'platformDashboard.presets.today' | transloco }}</mat-button-toggle>
+      <mat-button-toggle value="7d">{{ 'platformDashboard.presets.last7' | transloco }}</mat-button-toggle>
+      <mat-button-toggle value="30d">{{ 'platformDashboard.presets.last30' | transloco }}</mat-button-toggle>
+      <mat-button-toggle value="month">{{ 'platformDashboard.presets.thisMonth' | transloco }}</mat-button-toggle>
+      <mat-button-toggle value="custom">{{ 'platformDashboard.presets.custom' | transloco }}</mat-button-toggle>
+    </mat-button-toggle-group>
+    @if (preset() === 'custom') {
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'platformDashboard.from' | transloco }}</mat-label><input matInput type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" /></mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'platformDashboard.to' | transloco }}</mat-label><input matInput type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" /></mat-form-field>
+    }
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>{{ 'platformDashboard.bucket' | transloco }}</mat-label>
+      <mat-select [value]="bucket()" (valueChange)="bucket.set($event); load()">
+        <mat-option value="Day">{{ 'platformDashboard.buckets.Day' | transloco }}</mat-option>
+        <mat-option value="Week">{{ 'platformDashboard.buckets.Week' | transloco }}</mat-option>
+        <mat-option value="Month">{{ 'platformDashboard.buckets.Month' | transloco }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="dash__org">
+      <mat-label>{{ 'platformDashboard.organization' | transloco }}</mat-label>
+      <mat-select [value]="organizationId()" (valueChange)="organizationId.set($event); load()">
+        <mat-option [value]="null">{{ 'platformDashboard.allOrganizations' | transloco }}</mat-option>
+        @for (o of organizationOptions(); track o.organizationId) { <mat-option [value]="o.organizationId">{{ organizationNames().get(o.organizationId) }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+    <button mat-flat-button type="button" (click)="load()" data-testid="dash-apply"><mat-icon>refresh</mat-icon>{{ 'platformDashboard.apply' | transloco }}</button>
+  </div>
+
+  @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+
+  @if (data(); as d) {
+    <p class="wi-muted dash__period">{{ 'platformDashboard.period' | transloco }}: {{ d.period.from | date: 'mediumDate' }} – {{ d.period.to | date: 'mediumDate' }}</p>
+
+    <div class="kpis" data-testid="dash-kpis">
+      @for (code of primaryKpis; track code) {
+        <div class="kpi wi-card" [attr.data-kpi]="code">
+          <span class="kpi__value">{{ kpi(code) | number }}</span>
+          <span class="kpi__label">{{ 'platformDashboard.kpis.' + code | transloco }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="charts">
+      <div class="wi-card chart-card"><h3>{{ 'platformDashboard.charts.organizations' | transloco }}</h3><div echarts [options]="organizationsChart()" class="chart"></div></div>
+      <div class="wi-card chart-card"><h3>{{ 'platformDashboard.charts.users' | transloco }}</h3><div echarts [options]="usersChart()" class="chart"></div></div>
+      <div class="wi-card chart-card"><h3>{{ 'platformDashboard.charts.emails' | transloco }}</h3><div echarts [options]="emailsChart()" class="chart"></div></div>
+      <div class="wi-card chart-card"><h3>{{ 'platformDashboard.charts.errors' | transloco }}</h3><div echarts [options]="errorsChart()" class="chart"></div></div>
+    </div>
+
+    <div class="wi-card pending">
+      <h3>{{ 'platformDashboard.pendingTitle' | transloco }}</h3>
+      <p class="wi-muted">{{ 'platformDashboard.pendingNote' | transloco }}</p>
+      <div class="pending__list">
+        @for (code of pendingKpis; track code) { <span class="chip">{{ 'platformDashboard.kpis.' + code | transloco }}</span> }
+      </div>
+    </div>
+
+    <div class="tables">
+      <div class="wi-card">
+        <h3>{{ 'platformDashboard.usageTable' | transloco }}</h3>
+        <p class="wi-muted small"><mat-icon>lock</mat-icon>{{ 'organizations.privacyNote' | transloco }}</p>
+        <table mat-table [dataSource]="d.organizationUsage" class="full" data-testid="dash-usage">
+          <ng-container matColumnDef="organization"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.organization' | transloco }}</th><td mat-cell *matCellDef="let r"><a [routerLink]="['/platform/organizations', r.organizationId]">{{ organizationLabel(r.organizationId) }}</a><br /><span class="wi-muted wi-ltr">{{ r.organizationCode }}</span></td></ng-container>
+          <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'organizations.fields.status' | transloco }}</th><td mat-cell *matCellDef="let r">{{ 'organizations.status.' + r.status | transloco }}</td></ng-container>
+          <ng-container matColumnDef="users"><th mat-header-cell *matHeaderCellDef class="num">{{ 'platformDashboard.kpis.totalOrganizationUsers' | transloco }}</th><td mat-cell *matCellDef="let r" class="num">{{ r.users }}</td></ng-container>
+          <ng-container matColumnDef="activeUsers"><th mat-header-cell *matHeaderCellDef class="num">{{ 'platformDashboard.kpis.activeUsersInPeriod' | transloco }}</th><td mat-cell *matCellDef="let r" class="num">{{ r.activeUsersInPeriod }}</td></ng-container>
+          <ng-container matColumnDef="logins"><th mat-header-cell *matHeaderCellDef class="num">{{ 'platformDashboard.kpis.logins' | transloco }}</th><td mat-cell *matCellDef="let r" class="num">{{ r.logins }}</td></ng-container>
+          <ng-container matColumnDef="emails"><th mat-header-cell *matHeaderCellDef class="num">{{ 'platformDashboard.emailsSentFailed' | transloco }}</th><td mat-cell *matCellDef="let r" class="num">{{ r.emailsSent }} / {{ r.emailsFailed }}</td></ng-container>
+          <tr mat-header-row *matHeaderRowDef="usageColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: usageColumns"></tr>
+        </table>
+      </div>
+
+      <div class="wi-card">
+        <h3>{{ 'platformDashboard.errorsTable' | transloco }}</h3>
+        @if (d.recentErrors.length === 0) { <p class="wi-muted">{{ 'platformDashboard.noErrors' | transloco }}</p> } @else {
+          <table mat-table [dataSource]="d.recentErrors" class="full" data-testid="dash-errors">
+            <ng-container matColumnDef="at"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.at' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.at | date: 'medium' }}</td></ng-container>
+            <ng-container matColumnDef="eventType"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.eventType' | transloco }}</th><td mat-cell *matCellDef="let r"><span class="wi-ltr">{{ r.eventType }}</span></td></ng-container>
+            <ng-container matColumnDef="organization"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.organization' | transloco }}</th><td mat-cell *matCellDef="let r">{{ organizationLabel(r.organizationId) }}</td></ng-container>
+            <ng-container matColumnDef="detail"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.detail' | transloco }}</th><td mat-cell *matCellDef="let r"><code class="wi-ltr detail">{{ r.detail }}</code></td></ng-container>
+            <tr mat-header-row *matHeaderRowDef="errorColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: errorColumns"></tr>
+          </table>
+        }
+      </div>
+    </div>
+
+    <app-bootstrap-status />
+  }
+</section>

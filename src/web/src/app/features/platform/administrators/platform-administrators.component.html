@@ -1,0 +1,59 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'common.platform' | transloco }}</p>
+      <h1>{{ 'nav.platform.administrators' | transloco }}</h1>
+      <p class="wi-muted">{{ 'platformAdmins.subtitle' | transloco }}</p>
+    </div>
+    <button mat-flat-button type="button" (click)="startCreate()" data-testid="padmin-new"><mat-icon>person_add</mat-icon>{{ 'platformAdmins.new' | transloco }}</button>
+  </header>
+
+  @if (error(); as e) { <div class="wi-card catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  @if (showForm()) {
+    <form class="wi-card catalog-form" [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="padmin-form">
+      <h3>{{ 'platformAdmins.new' | transloco }}</h3>
+      <p class="wi-muted">{{ 'admin.users.createHint' | transloco }}</p>
+      <div class="catalog-form__grid">
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.email' | transloco }}</mat-label><input matInput type="email" formControlName="email" data-testid="padmin-email" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.fullName' | transloco }}</mat-label><input matInput formControlName="fullName" data-testid="padmin-name" /></mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'admin.fields.language' | transloco }}</mat-label>
+          <mat-select formControlName="preferredLanguage">
+            <mat-select-trigger>{{ (form.controls.preferredLanguage.value === 'ar' ? 'common.arabic' : 'common.english') | transloco }}</mat-select-trigger>
+            <mat-option value="en">{{ 'common.english' | transloco }}</mat-option>
+            <mat-option value="ar">{{ 'common.arabic' | transloco }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="catalog-form__actions">
+        <button mat-button type="button" (click)="showForm.set(false)">{{ 'common.cancel' | transloco }}</button>
+        <button mat-flat-button type="submit" [disabled]="busy()" data-testid="padmin-save">{{ 'admin.users.create' | transloco }}</button>
+      </div>
+    </form>
+  }
+
+  <div class="wi-card">
+    @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+    <table mat-table [dataSource]="items()" class="catalog-table" data-testid="padmin-table">
+      <ng-container matColumnDef="name"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.fullName' | transloco }}</th><td mat-cell *matCellDef="let a"><strong>{{ a.fullName }}</strong>@if (isSelf(a)) { <span class="chip">{{ 'platformAdmins.you' | transloco }}</span> }</td></ng-container>
+      <ng-container matColumnDef="email"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.email' | transloco }}</th><td mat-cell *matCellDef="let a"><span class="wi-ltr">{{ a.email }}</span></td></ng-container>
+      <ng-container matColumnDef="kind"><th mat-header-cell *matHeaderCellDef>{{ 'admin.roles.kind' | transloco }}</th><td mat-cell *matCellDef="let a">{{ (a.isBootstrapAdministrator ? 'platformAdmins.bootstrap' : 'platformAdmins.standard') | transloco }}</td></ng-container>
+      <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'organizations.fields.status' | transloco }}</th><td mat-cell *matCellDef="let a"><span class="chip" [attr.data-on]="a.isActive">{{ (a.isActive ? 'admin.active' : 'admin.inactive') | transloco }}</span>@if (a.mustChangePassword) { <mat-icon class="wi-muted" style="font-size: 18px; width: 18px; height: 18px; vertical-align: middle" [title]="'admin.users.pendingChange' | transloco">hourglass_top</mat-icon> }</td></ng-container>
+      <ng-container matColumnDef="lastLogin"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.lastLogin' | transloco }}</th><td mat-cell *matCellDef="let a">{{ a.lastLoginAt ? (a.lastLoginAt | date: 'medium') : '—' }}</td></ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let a">
+          <button mat-icon-button type="button" (click)="reset(a)" [disabled]="busy() || isSelf(a)" [attr.aria-label]="'admin.users.resetPassword' | transloco" [title]="'admin.users.resetPassword' | transloco"><mat-icon>forward_to_inbox</mat-icon></button>
+          @if (a.isActive) {
+            <button mat-icon-button type="button" (click)="setStatus(a, false)" [disabled]="busy() || isSelf(a)" [attr.aria-label]="'admin.users.deactivate' | transloco" [title]="'admin.users.deactivate' | transloco"><mat-icon>person_off</mat-icon></button>
+          } @else {
+            <button mat-icon-button type="button" (click)="setStatus(a, true)" [disabled]="busy()" [attr.aria-label]="'admin.users.activate' | transloco" [title]="'admin.users.activate' | transloco"><mat-icon>person</mat-icon></button>
+          }
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+  </div>
+</section>

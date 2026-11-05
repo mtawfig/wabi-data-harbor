@@ -427,5 +427,118 @@
       "system_template_protected": "System templates cannot be renamed or deactivated.",
       "template_invalid": "Code and both names are required."
     }
+  },
+  "platformDashboard": {
+    "title": "Platform Overview",
+    "subtitle": "Operational visibility for the company operating Wabi Insight. Aggregates only; no organization business data.",
+    "presets": {
+      "today": "Today",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days",
+      "thisMonth": "This month",
+      "custom": "Custom"
+    },
+    "from": "From",
+    "to": "To",
+    "bucket": "Granularity",
+    "buckets": {
+      "Day": "Daily",
+      "Week": "Weekly",
+      "Month": "Monthly"
+    },
+    "organization": "Organization",
+    "allOrganizations": "All organizations",
+    "apply": "Refresh",
+    "period": "Period",
+    "kpis": {
+      "totalOrganizations": "Organizations",
+      "activeOrganizations": "Active organizations",
+      "suspendedOrganizations": "Suspended organizations",
+      "totalOrganizationUsers": "Organization users",
+      "activeUsersInPeriod": "Active users (period)",
+      "configuredApplications": "Configured applications",
+      "platformAdministrators": "Platform administrators",
+      "logins": "Sign-ins",
+      "failedLogins": "Failed sign-ins",
+      "emailsSent": "Emails sent",
+      "emailsFailed": "Email failures",
+      "organizationsCreatedInPeriod": "Organizations created",
+      "usersCreatedInPeriod": "Users created",
+      "apiErrors": "API errors",
+      "aiRequests": "AI requests",
+      "analysesCompleted": "Completed analyses",
+      "analysesFailed": "Failed analyses",
+      "reportsGenerated": "Reports generated",
+      "emailDraftsCreated": "Email drafts created",
+      "openTickets": "Open support tickets",
+      "criticalIncidents": "Critical incidents",
+      "avgFirstResponseMinutes": "Average first response",
+      "avgResolutionMinutes": "Average resolution time"
+    },
+    "series": {
+      "organizationsRegistered": "Organizations registered",
+      "activeUsers": "Active users",
+      "logins": "Sign-ins",
+      "failedLogins": "Failed sign-ins",
+      "emailsSent": "Emails sent",
+      "emailsFailed": "Email failures",
+      "usersCreated": "Users created",
+      "apiErrors": "API errors"
+    },
+    "charts": {
+      "organizations": "Organizations registered over time",
+      "users": "Active users and sign-ins",
+      "emails": "Email deliveries",
+      "errors": "Errors"
+    },
+    "pendingTitle": "Metrics arriving with later phases",
+    "pendingNote": "These KPIs are shown once their feature ships (support desk in Phase 4, AI engine in Phase 8, reports in Phase 9). They are never displayed as fake zeros.",
+    "usageTable": "Usage by organization",
+    "emailsSentFailed": "Emails sent / failed",
+    "errorsTable": "Recent errors",
+    "noErrors": "No errors in this period.",
+    "at": "Time",
+    "eventType": "Event",
+    "detail": "Detail"
+  },
+  "health": {
+    "subtitle": "Live checks of the API, configuration database, email provider and outbox.",
+    "refresh": "Run checks",
+    "checkedAt": "Checked at",
+    "check": "Check",
+    "description": "Description",
+    "duration": "Duration",
+    "data": "Data",
+    "status": {
+      "Healthy": "Healthy",
+      "Degraded": "Degraded",
+      "Unhealthy": "Unhealthy"
+    }
+  },
+  "audit": {
+    "subtitle": "Append-only security and administration trail. Details never contain secrets or business data.",
+    "search": "Search actor, entity or details",
+    "allEvents": "All events",
+    "actorType": "Actor type",
+    "allActors": "All actors",
+    "actor": "Actor",
+    "entity": "Entity",
+    "empty": "No audit entries match the filters.",
+    "actors": {
+      "PlatformAdministrator": "Platform administrator",
+      "OrganizationUser": "Organization user",
+      "Anonymous": "Anonymous"
+    }
+  },
+  "platformAdmins": {
+    "subtitle": "Administrators of the company operating Wabi Insight. They have no organization and never see organization business data.",
+    "new": "New administrator",
+    "you": "you",
+    "bootstrap": "Bootstrap",
+    "standard": "Standard",
+    "created": "Administrator created. A temporary password was emailed to {{email}}.",
+    "resetSent": "A new temporary password was emailed to {{email}}.",
+    "activated": "Administrator activated.",
+    "deactivated": "Administrator deactivated."
   }
 }

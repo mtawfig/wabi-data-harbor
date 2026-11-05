@@ -104,6 +104,33 @@ public sealed class AdministratorProvisioningTests : IDisposable
         Assert.Contains("Simulated SMTP failure", failed.LastError, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Administrators_CanBeListed_AndDeactivated_WithLastAdminProtection()
+    {
+        using var admin = _factory.CreateClient();
+        await admin.LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
+
+        var list = await (await admin.GetAsync("/api/platform/administrators")).ReadJsonAsync();
+        Assert.Contains(list.EnumerateArray(), a => a.GetProperty("email").GetString() == TestData.AdminEmail && a.GetProperty("isBootstrapAdministrator").GetBoolean());
+        Assert.DoesNotContain("passwordHash", await (await admin.GetAsync("/api/platform/administrators")).Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+
+        var self = await admin.PostJsonAsync($"/api/platform/administrators/{_db.Data.AdministratorId}/status", new { isActive = false });
+        Assert.Equal(HttpStatusCode.Conflict, self.StatusCode);
+
+        var created = await admin.PostJsonAsync("/api/platform/administrators", new { email = "temp.admin@wabitex.test", fullName = "Temp Admin" });
+        var tempId = (await created.ReadJsonAsync()).GetProperty("id").GetGuid();
+        var deactivate = await admin.PostJsonAsync($"/api/platform/administrators/{tempId}/status", new { isActive = false });
+        Assert.Equal(HttpStatusCode.OK, deactivate.StatusCode);
+
+        var temporary = RecordingEmailSender.TemporaryPasswordOf(await _factory.Emails.WaitForAsync("temp.admin@wabitex.test"));
+        using var temp = _factory.CreateClient();
+        var denied = await temp.LoginAsync("temp.admin@wabitex.test", temporary);
+        Assert.EndsWith("/account_disabled", (await denied.ReadJsonAsync()).GetProperty("type").GetString(), StringComparison.Ordinal);
+
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostJsonAsync($"/api/platform/administrators/{tempId}/status", new { isActive = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await temp.LoginAsync("temp.admin@wabitex.test", temporary)).StatusCode);
+    }
+
     private static async Task WaitUntilAsync(Func<Task<bool>> condition, TimeSpan? timeout = null)
     {
         var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(10));
