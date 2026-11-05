@@ -1,0 +1,71 @@
+<section class="wi-page ask">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'common.appName' | transloco }}</p>
+      <h1>{{ 'ask.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'ask.subtitle' | transloco }}</p>
+    </div>
+  </header>
+
+  <div class="ask__layout">
+    <div class="wi-card ask__composer">
+      <div class="ask__controls">
+        <mat-form-field appearance="outline" class="ask__control">
+          <mat-label>{{ 'ask.application' | transloco }}</mat-label>
+          <mat-select [value]="selectedApplication()" (valueChange)="selectedApplication.set($event)" [placeholder]="'ask.applicationPlaceholder' | transloco" data-testid="ask-application">
+            @for (app of applications; track app.id) {
+              <mat-option [value]="app.id">{{ app.name }}</mat-option>
+            } @empty {
+              <mat-option disabled>{{ 'ask.applicationPlaceholder' | transloco }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ask__control">
+          <mat-label>{{ 'ask.outputLanguage' | transloco }}</mat-label>
+          <mat-select [value]="outputLanguage()" (valueChange)="outputLanguage.set($event)">
+            <mat-option value="same">{{ 'ask.sameAsInterface' | transloco }}</mat-option>
+            <mat-option value="en">{{ 'common.english' | transloco }}</mat-option>
+            <mat-option value="ar">{{ 'common.arabic' | transloco }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      @if (applications.length === 0) {
+        <p class="ask__notice wi-muted"><mat-icon>info</mat-icon><span>{{ 'ask.noApplications' | transloco }}</span></p>
+      }
+
+      <mat-form-field appearance="outline" class="wi-full-width">
+        <mat-label>{{ 'ask.prompt' | transloco }}</mat-label>
+        <textarea matInput rows="4" [ngModel]="prompt()" (ngModelChange)="prompt.set($event)" [placeholder]="'ask.promptPlaceholder' | transloco" data-testid="ask-prompt"></textarea>
+      </mat-form-field>
+
+      <div class="ask__actions">
+        <div class="ask__examples">
+          <span class="wi-muted">{{ 'ask.examplesTitle' | transloco }}</span>
+          <mat-chip-set>
+            @for (key of examples; track key) {
+              <mat-chip (click)="useExample(key)" class="ask__chip">{{ 'ask.examples.' + key | transloco }}</mat-chip>
+            }
+          </mat-chip-set>
+        </div>
+        <button mat-flat-button type="button" (click)="submit()" [disabled]="!prompt().trim()" data-testid="ask-submit">
+          <mat-icon>auto_awesome</mat-icon>{{ 'ask.submit' | transloco }}
+        </button>
+      </div>
+    </div>
+
+    <div class="wi-card ask__results">
+      @if (submitted()) {
+        <div class="ask__engine" data-testid="ask-engine-notice">
+          <mat-icon>engineering</mat-icon>
+          <p>{{ 'ask.engineComing' | transloco }}</p>
+        </div>
+      } @else {
+        <div class="ask__empty wi-muted">
+          <mat-icon>insights</mat-icon>
+          <p>{{ 'ask.noAnswerYet' | transloco }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>

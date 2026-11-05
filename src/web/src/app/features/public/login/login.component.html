@@ -1,0 +1,60 @@
+<div class="auth-layout">
+  <aside class="auth-layout__aside wi-gradient">
+    <a routerLink="/" class="auth-layout__brand"><app-brand-logo variant="light" [size]="40" /></a>
+    <div class="auth-layout__aside-body">
+      <h2>{{ 'landing.hero.title' | transloco }}</h2>
+      <p>{{ 'common.tagline' | transloco }}</p>
+    </div>
+    <span class="auth-layout__code">{{ 'common.platformCode' | transloco }}</span>
+  </aside>
+
+  <main class="auth-layout__main">
+    <div class="auth-layout__topbar">
+      <app-language-switcher />
+    </div>
+
+    <form class="auth-card wi-card" [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="login-form">
+      <h1>{{ 'login.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'login.subtitle' | transloco }}</p>
+
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+
+      @if (error(); as code) {
+        <div class="auth-card__error" role="alert" data-testid="login-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ 'login.errors.' + code | transloco }}</span>
+        </div>
+      }
+
+      <mat-form-field appearance="outline" class="wi-full-width">
+        <mat-label>{{ 'login.email' | transloco }}</mat-label>
+        <input matInput type="email" formControlName="email" autocomplete="username" data-testid="login-email" />
+        @if (form.controls.email.hasError('required')) {
+          <mat-error>{{ 'common.requiredField' | transloco }}</mat-error>
+        } @else if (form.controls.email.hasError('email')) {
+          <mat-error>{{ 'common.invalidEmail' | transloco }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="wi-full-width">
+        <mat-label>{{ 'login.password' | transloco }}</mat-label>
+        <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" data-testid="login-password" />
+        <button mat-icon-button matSuffix type="button" (click)="showPassword.set(!showPassword())" [attr.aria-label]="'login.password' | transloco">
+          <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (form.controls.password.hasError('required')) {
+          <mat-error>{{ 'common.requiredField' | transloco }}</mat-error>
+        }
+      </mat-form-field>
+
+      <button mat-flat-button type="submit" class="wi-full-width auth-card__submit" [disabled]="busy()" data-testid="login-submit">
+        {{ (busy() ? 'login.signingIn' : 'login.submit') | transloco }}
+      </button>
+
+      <p class="wi-muted auth-card__note">{{ 'login.noAccount' | transloco }}</p>
+      <a routerLink="/bootstrap" class="auth-card__link">{{ 'login.bootstrapLink' | transloco }}</a>
+    </form>
+  </main>
+</div>

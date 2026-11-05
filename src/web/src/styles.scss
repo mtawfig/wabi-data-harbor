@@ -1,4 +1,70 @@
-/* Global baseline for P1.1. The full design system (tokens, Material theme, fonts, RTL) arrives in P1.4. */
+// Wabi Insight design system — tokens, Material M3 theme, fonts, direction helpers.
+// Brand palette (docs/WABI_INSIGHT_SPECIFICATION.md §21).
+@use '@angular/material' as mat;
+
+:root {
+  --wi-navy: #0b1f3a;
+  --wi-ocean: #087df2;
+  --wi-aqua: #22b8cf;
+  --wi-cloud: #f5f8fc;
+  --wi-white: #ffffff;
+  --wi-slate: #334155;
+  --wi-border: #e2e8f0;
+  --wi-success: #16a34a;
+  --wi-warning: #f59e0b;
+  --wi-danger: #dc2626;
+
+  --wi-header-height: 76px;
+  --wi-sidebar-width: 248px;
+  --wi-radius: 14px;
+  --wi-radius-sm: 10px;
+  --wi-shadow: 0 1px 2px rgb(11 31 58 / 6%), 0 8px 24px rgb(11 31 58 / 8%);
+
+  --wi-font-latin: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --wi-font-arabic: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;
+  --wi-font: var(--wi-font-latin);
+}
+
+html {
+  color-scheme: light;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$cyan-palette,
+        theme-type: light,
+      ),
+      typography: (
+        plain-family: var(--wi-font),
+        brand-family: var(--wi-font),
+        bold-weight: 700,
+        medium-weight: 600,
+        regular-weight: 400,
+      ),
+      density: 0,
+    )
+  );
+
+  // Pin the key system colours to the brand.
+  --mat-sys-primary: var(--wi-ocean);
+  --mat-sys-on-primary: var(--wi-white);
+  --mat-sys-primary-container: #dbeafe;
+  --mat-sys-on-primary-container: var(--wi-navy);
+  --mat-sys-tertiary: var(--wi-aqua);
+  --mat-sys-surface: var(--wi-white);
+  --mat-sys-surface-container-low: var(--wi-cloud);
+  --mat-sys-on-surface: var(--wi-navy);
+  --mat-sys-on-surface-variant: var(--wi-slate);
+  --mat-sys-outline-variant: var(--wi-border);
+  --mat-sys-corner-medium: var(--wi-radius-sm);
+  --mat-sys-corner-large: var(--wi-radius);
+}
+
+html[lang='ar'] {
+  --wi-font: var(--wi-font-arabic);
+}
+
 *,
 *::before,
 *::after {
@@ -8,5 +74,127 @@
 html,
 body {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--wi-font);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--wi-navy);
+  background: var(--wi-cloud);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 0.5em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 28px;
+}
+
+h2 {
+  font-size: 22px;
+}
+
+h3 {
+  font-size: 17px;
+}
+
+p {
+  margin: 0 0 1em;
+}
+
+a {
+  color: var(--wi-ocean);
+  text-decoration: none;
+}
+
+.wi-card {
+  background: var(--wi-white);
+  border: 1px solid var(--wi-border);
+  border-radius: var(--wi-radius);
+  box-shadow: var(--wi-shadow);
+  padding: 24px;
+}
+
+.wi-page {
+  padding: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.wi-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.wi-eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wi-ocean);
+}
+
+.wi-muted {
+  color: var(--wi-slate);
+}
+
+.wi-full-width {
+  width: 100%;
+}
+
+.wi-gradient {
+  background: linear-gradient(160deg, var(--wi-navy) 0%, var(--wi-ocean) 70%, var(--wi-aqua) 100%);
+  color: var(--wi-white);
+}
+
+// Material surfaces inherit the brand font.
+.mat-mdc-form-field,
+.mat-mdc-button-base,
+.mat-mdc-card,
+.mat-mdc-list-base {
+  font-family: var(--wi-font);
+}
+
+// Logical-direction helpers (work in LTR and RTL).
+.wi-ms-auto {
+  margin-inline-start: auto;
+}
+
+.wi-text-start {
+  text-align: start;
+}
+
+.wi-text-end {
+  text-align: end;
+}
+
+// Codes, emails and identifiers keep their own direction inside RTL text.
+.wi-ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+}
+
+[dir='rtl'] .material-icons.wi-flip-rtl {
+  transform: scaleX(-1);
+}
+
+@media (max-width: 768px) {
+  .wi-page {
+    padding: 16px;
+  }
 }

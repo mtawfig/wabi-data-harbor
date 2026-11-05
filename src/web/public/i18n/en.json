@@ -1,0 +1,215 @@
+{
+  "common": {
+    "appName": "Wabi Insight",
+    "tagline": "Ask Your Data. Trust the Answer.",
+    "platformCode": "AP-AIR",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "language": "Language",
+    "english": "English",
+    "arabic": "Arabic",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "back": "Back",
+    "comingSoon": "Coming in {{phase}}",
+    "comingSoonDetail": "This page is planned for implementation phase {{phase}} of the Wabi Insight roadmap.",
+    "changePassword": "Change password",
+    "profile": "Profile",
+    "administration": "Administration",
+    "organization": "Organization",
+    "platform": "Platform",
+    "apiOffline": "The API is not reachable right now.",
+    "requiredField": "This field is required.",
+    "invalidEmail": "Enter a valid email address."
+  },
+  "landing": {
+    "nav": {
+      "capabilities": "Capabilities",
+      "howItWorks": "How it works",
+      "security": "Security"
+    },
+    "hero": {
+      "eyebrow": "Enterprise AI intelligence platform",
+      "title": "From data chaos to confident decisions",
+      "subtitle": "Wabi Insight lets your teams ask natural-language questions about the enterprise data they are authorized to see, and returns verified answers, charts and reports they can trust and share.",
+      "cta": "Sign in to your organization",
+      "secondary": "See how it works"
+    },
+    "capabilities": {
+      "title": "Key capabilities",
+      "ask": { "title": "Ask in plain language", "text": "Employees ask questions in English or Arabic and receive verified results, not guesses." },
+      "trust": { "title": "Trust every answer", "text": "Typed query plans, read-only execution and deterministic calculations keep numbers accurate." },
+      "secure": { "title": "Secure by design", "text": "Organization isolation, table, column and row permissions, encrypted connections, full audit." },
+      "share": { "title": "Report and share", "text": "Dashboards, PDF, Word and Excel reports in both languages, shared under control." }
+    },
+    "how": {
+      "title": "How it works",
+      "step1": { "title": "Connect", "text": "Your administrator registers SQL Server or Oracle applications and approves the metadata users may see." },
+      "step2": { "title": "Ask", "text": "Users ask questions. The AI drafts a structured plan that Wabi Insight validates and authorizes before running read-only SQL." },
+      "step3": { "title": "Decide", "text": "Verified results become tables, charts, narratives and reports, saved to history and shared with the right people." }
+    },
+    "security": {
+      "title": "Built for multi-organization trust",
+      "text": "Each organization keeps its own users, roles, data sources and history. The platform company operates the service without access to customer business data, and support work needs an approved, time-limited, audited grant.",
+      "points": {
+        "isolation": "Logical tenant isolation enforced in the database and the API",
+        "permissions": "Table, column and row-level permissions applied before every query",
+        "audit": "Append-only audit trail and support-access approval workflow"
+      }
+    },
+    "cta": {
+      "title": "Ready to ask your data?",
+      "text": "Sign in with the account your organization administrator provided.",
+      "button": "Sign in"
+    },
+    "footer": {
+      "rights": "© {{year}} Wabitex. All rights reserved.",
+      "demo": "Demonstration content uses fictional data."
+    }
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Use your organization or platform account.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "signingIn": "Signing in…",
+    "noAccount": "No public registration. Accounts are created by your organization administrator.",
+    "bootstrapLink": "Platform bootstrap",
+    "errors": {
+      "invalid_credentials": "The email or password is incorrect.",
+      "locked_out": "The account is temporarily locked after repeated failed attempts. Try again later.",
+      "account_disabled": "This account is not active. Contact your administrator.",
+      "organization_suspended": "Your organization is currently suspended.",
+      "rate_limited": "Too many attempts. Please wait a minute and try again.",
+      "antiforgery": "Your session token expired. Please try again.",
+      "unknown": "Sign-in failed. Please try again."
+    }
+  },
+  "changePassword": {
+    "title": "Change your password",
+    "required": "You must change your password before continuing.",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Update password",
+    "policy": "Use 12 to 128 characters. Longer passphrases are better than complex short ones.",
+    "mismatch": "The passwords do not match.",
+    "success": "Password updated.",
+    "errors": {
+      "current_password_invalid": "The current password is incorrect.",
+      "password_too_short": "The new password is too short (minimum 12 characters).",
+      "password_too_long": "The new password is too long (maximum 128 characters).",
+      "password_equals_email": "The password must not be your email address.",
+      "password_is_sample": "The sample development password is not allowed.",
+      "password_unchanged": "Choose a password different from the current one.",
+      "password_required": "Enter a new password."
+    }
+  },
+  "bootstrap": {
+    "title": "Platform bootstrap",
+    "subtitle": "One-time creation of the first Platform Administrator.",
+    "completed": "Bootstrap completed",
+    "completedAt": "Completed on",
+    "administrator": "Bootstrap administrator",
+    "schema": "Schema version",
+    "pendingMigrations": "Pending migrations",
+    "notCompleted": "Bootstrap has not been completed.",
+    "disabled": "Bootstrap is disabled in this deployment. Enable it in the deployment configuration or use the CLI command.",
+    "migrationsFirst": "Apply migrations before bootstrapping.",
+    "secret": "Initialization secret",
+    "secretHint": "The Bootstrap:InitializationSecret value from the deployment configuration.",
+    "submit": "Create first administrator",
+    "success": "The first Platform Administrator was created. Sign in and change the password.",
+    "goToLogin": "Go to sign in",
+    "errors": {
+      "unauthorized": "The initialization secret is incorrect.",
+      "conflict": "Bootstrap has already been completed.",
+      "forbidden": "Bootstrap is disabled.",
+      "configuration": "The bootstrap configuration is invalid: {{detail}}",
+      "unknown": "Bootstrap failed."
+    },
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "org": {
+      "dashboard": "Dashboard",
+      "ask": "Ask Wabi Insight",
+      "history": "My History",
+      "reports": "My Reports",
+      "favorites": "Favorites",
+      "sharedWithMe": "Shared With Me",
+      "sharedByMe": "Shared By Me",
+      "support": "Support Desk",
+      "notifications": "Notifications",
+      "profile": "Profile",
+      "admin": {
+        "title": "Organization Administration",
+        "dashboard": "Organization Dashboard",
+        "users": "Organization Users",
+        "departments": "Departments",
+        "sections": "Sections",
+        "roles": "Roles",
+        "applications": "Applications",
+        "metadata": "Metadata",
+        "permissions": "Permissions",
+        "insights": "Organization Insights",
+        "integrations": "Integrations",
+        "settings": "Organization Settings"
+      }
+    },
+    "platform": {
+      "overview": "Platform Overview",
+      "organizations": "Organizations",
+      "administrators": "Platform Administrators",
+      "health": "System Health",
+      "support": "Support Desk",
+      "supportAccess": "Support Access",
+      "roleTemplates": "Global Role Templates",
+      "insights": "Platform Insights Configuration",
+      "settings": "General Settings",
+      "audit": "Audit Logs"
+    }
+  },
+  "ask": {
+    "title": "Ask Wabi Insight",
+    "subtitle": "Ask a question about your authorized data in English or Arabic.",
+    "application": "Application",
+    "applicationPlaceholder": "Select an application",
+    "noApplications": "No applications are configured yet. Your organization administrator registers them in Phase 6; the built-in Platform Insights application arrives in Phase 7.",
+    "outputLanguage": "Answer language",
+    "sameAsInterface": "Same as interface",
+    "prompt": "Your question",
+    "promptPlaceholder": "For example: Which departments used Wabi Insight most this month?",
+    "submit": "Ask",
+    "examplesTitle": "Try asking",
+    "examples": {
+      "e1": "How many active users are registered in my organization?",
+      "e2": "Show a monthly chart of AI usage by department.",
+      "e3": "How many reports were shared internally last quarter?"
+    },
+    "engineComing": "The secure AI engine (query plans, authorization and SQL compilation) is delivered in Phase 8. Your question was not sent anywhere.",
+    "noAnswerYet": "Nothing to show yet"
+  },
+  "platform": {
+    "overview": {
+      "title": "Platform Overview",
+      "subtitle": "Operational visibility for the company operating Wabi Insight.",
+      "bootstrap": "Initialization status"
+    },
+    "settings": {
+      "title": "General Settings",
+      "bootstrapSection": "Bootstrap",
+      "status": "Initialization status",
+      "completed": "Completed",
+      "notCompleted": "Not completed"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welcome, {{name}}",
+    "subtitle": "Your organization workspace."
+  }
+}

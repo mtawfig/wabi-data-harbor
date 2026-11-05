@@ -75,9 +75,23 @@ CLI commands handled before the pipeline starts: `migrate` (apply migrations) an
 | `POST /api/bootstrap/initialize` | One-time first-administrator creation with the initialization secret. Rate-limited. |
 | `POST /api/platform/administrators/{id}/reset-password` | Platform administrators only: one-time temporary password for another administrator. |
 
-## Angular (P1.1)
+## Angular (P1.4)
 
-Standalone components with signals, `provideHttpClient(withFetch())`, `proxy.conf.json` forwarding `/api` and `/health` to the API on port 5080 during `ng serve`. Vitest unit tests, angular-eslint. The design system, Material theme, Transloco i18n and layout shells arrive in P1.4.
+Standalone components with signals; `provideHttpClient(withFetch(), withInterceptors([authInterceptor]))`; `proxy.conf.json` forwards `/api` and `/health` to port 5080 during `ng serve`.
+
+```
+src/app/core/auth        AuthService (session signal, csrf, login/logout/change-password, homeUrl), interceptor (X-XSRF-TOKEN, 401 → login), guards
+src/app/core/i18n        LanguageService (lang/dir, persistence), Transloco HTTP loader
+src/app/shared/layout    AppShellComponent (header, sidebar, user menu)
+src/app/shared/ui        BrandLogo, LanguageSwitcher, PagePlaceholder
+src/app/features/public  landing, login, bootstrap
+src/app/features/auth    change-password
+src/app/features/organization  shell + navigation, ask workspace, user dashboard
+src/app/features/platform      shell + navigation, overview, general settings (bootstrap status)
+public/i18n              en.json, ar.json
+```
+
+Startup: `provideAppInitializer` initializes the language and calls `GET /api/auth/csrf` + `GET /api/auth/me` to restore a session. Guards are UX only; the API enforces authorization. Routes whose feature belongs to a later phase render `PagePlaceholderComponent` with the phase number.
 
 ## Tenant model, security, data model
 

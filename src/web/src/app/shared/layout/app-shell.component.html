@@ -1,0 +1,42 @@
+<mat-toolbar class="shell-header" [class.shell-header--platform]="accent() === 'platform'">
+  <button mat-icon-button type="button" (click)="toggle()" aria-label="Menu" class="shell-header__menu">
+    <mat-icon>menu</mat-icon>
+  </button>
+  <a [routerLink]="auth.homeUrl()" class="shell-header__brand"><app-brand-logo [variant]="accent() === 'platform' ? 'light' : 'dark'" [size]="32" /></a>
+  <span class="shell-header__context">{{ contextLabelKey() | transloco }}</span>
+  <span class="wi-ms-auto"></span>
+  <app-language-switcher [variant]="accent() === 'platform' ? 'light' : 'dark'" />
+  <button mat-button type="button" [matMenuTriggerFor]="userMenu" class="shell-header__user" data-testid="user-menu">
+    <mat-icon>account_circle</mat-icon>
+    <span class="shell-header__user-name">{{ auth.session()?.displayName }}</span>
+    <mat-icon>expand_more</mat-icon>
+  </button>
+  <mat-menu #userMenu="matMenu">
+    <button mat-menu-item routerLink="/change-password"><mat-icon>lock_reset</mat-icon>{{ 'common.changePassword' | transloco }}</button>
+    <mat-divider />
+    <button mat-menu-item (click)="auth.logout()" data-testid="sign-out"><mat-icon>logout</mat-icon>{{ 'common.signOut' | transloco }}</button>
+  </mat-menu>
+</mat-toolbar>
+
+<mat-sidenav-container class="shell-body">
+  <mat-sidenav [mode]="isHandset() ? 'over' : 'side'" [opened]="opened()" class="shell-sidenav" (closedStart)="opened.set(false)">
+    <nav class="shell-nav">
+      @for (section of sections(); track $index) {
+        @if (section.titleKey) {
+          <div class="shell-nav__title">{{ section.titleKey | transloco }}</div>
+        }
+        <mat-nav-list>
+          @for (item of section.items; track item.link) {
+            <a mat-list-item [routerLink]="item.link" routerLinkActive="shell-nav__item--active" (click)="closeOnHandset()" [attr.data-testid]="'nav-' + item.link.split('/').pop()">
+              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+              <span matListItemTitle>{{ item.labelKey | transloco }}</span>
+            </a>
+          }
+        </mat-nav-list>
+      }
+    </nav>
+  </mat-sidenav>
+  <mat-sidenav-content class="shell-content">
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>
