@@ -21,7 +21,24 @@ Wabi Insight (platform code AP-AIR) is a bilingual (EN/AR), multi-organization e
 - Branches: one PR per branch, titled `P<phase>.<n> — <description>`; `main` is merged by the owner only.
 
 ## Essential commands
-_To be filled in P1.1 (scaffolding) with the exact build, test, migration, bootstrap and screenshot commands._
+```bash
+# .NET SDK (cloud/agent containers without a system install)
+./scripts/install-dotnet.sh && export PATH=$HOME/.dotnet:$PATH
+
+# Local SQL Server 2022
+docker compose -f docker-compose.dev.yml up -d
+
+# API
+dotnet build WabiInsight.slnx -c Release
+dotnet test WabiInsight.slnx -c Release
+dotnet run --project src/WabiInsight.Api          # http://localhost:5080
+
+# Web (from src/web)
+npm ci
+npm run lint && npm test && npm run build -- --configuration production
+npm start                                          # http://localhost:4200, proxies /api to 5080
+```
+Migrations (`dotnet ef`) and the `bootstrap` command are added in P1.2 / P1.3; the screenshot script in P11.2.
 
 ## Verification before pushing
 1. `dotnet build` + `dotnet test` green.
