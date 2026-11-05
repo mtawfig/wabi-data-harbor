@@ -10,6 +10,10 @@ using WabiInsight.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Local, git-ignored overrides (connection strings, bootstrap secrets). Never commit real values to
+// appsettings.json; use appsettings.Local.json, user secrets or environment variables instead.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 builder.Services
     .AddControllers(options => options.Filters.Add<AntiforgeryValidationFilter>())
     .AddJsonOptions(options =>

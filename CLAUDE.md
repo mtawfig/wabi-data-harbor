@@ -20,6 +20,9 @@ Wabi Insight (platform code AP-AIR) is a bilingual (EN/AR), multi-organization e
 - Tests: xUnit (unit + SQL Server integration via Testcontainers / CI service container), Vitest for Angular, Playwright for screenshots. Multi-tenant tests always use at least two organizations.
 - Branches: one PR per branch, titled `P<phase>.<n> — <description>`; `main` is merged by the owner only.
 
+## Secrets and local configuration
+Never put real connection strings, passwords or secrets in `appsettings.json` or `appsettings.Development.json`. Use the git-ignored `src/WabiInsight.Api/appsettings.Local.json` (see `appsettings.Local.example.json`), `dotnet user-secrets`, or environment variables such as `ConnectionStrings__ConfigurationDatabase`. CI validates `appsettings.json` and a committed secret breaks every PR.
+
 ## Essential commands
 ```bash
 # .NET SDK (cloud/agent containers without a system install)
