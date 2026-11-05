@@ -6,7 +6,9 @@ using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Security;
+using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Tenancy;
+using WabiInsight.Core.Usage;
 using WabiInsight.Infrastructure.Persistence;
 
 namespace WabiInsight.Infrastructure.Authentication;
@@ -23,6 +25,7 @@ public sealed class AuthenticationService : IAuthenticationService
     private readonly ITenantContext _tenantContext;
     private readonly IClock _clock;
     private readonly SecurityOptions _options;
+    private readonly IUsageEventWriter _usage;
 
     public AuthenticationService(
         ConfigurationDbContext context,
@@ -30,7 +33,8 @@ public sealed class AuthenticationService : IAuthenticationService
         IAuditWriter audit,
         ITenantContext tenantContext,
         IClock clock,
-        IOptions<SecurityOptions> options)
+        IOptions<SecurityOptions> options,
+        IUsageEventWriter usage)
     {
         _context = context;
         _hasher = hasher;
@@ -38,6 +42,7 @@ public sealed class AuthenticationService : IAuthenticationService
         _tenantContext = tenantContext;
         _clock = clock;
         _options = options.Value;
+        _usage = usage;
     }
 
     public async Task<LoginResult> LoginAsync(string email, string password, string? ipAddress, CancellationToken cancellationToken = default)
@@ -81,7 +86,8 @@ public sealed class AuthenticationService : IAuthenticationService
 
     public Task RecordLogoutAsync(CancellationToken cancellationToken = default)
     {
-        return _audit.AppendAndSaveAsync(AuditEvents.Logout, cancellationToken: cancellationToken);
+        _audit.Append(AuditEvents.Logout);
+        return _usage.AppendAndSaveAsync(UsageEventTypes.Logout, cancellationToken: cancellationToken);
     }
 
     private async Task<LoginResult> LoginAdministratorAsync(Guid id, string normalizedEmail, string password, CancellationToken cancellationToken)
@@ -106,6 +112,7 @@ public sealed class AuthenticationService : IAuthenticationService
             admin.FailedLoginCount = locked ? 0 : count;
             admin.LockoutEnd = locked ? _clock.UtcNow.AddMinutes(_options.LockoutMinutes) : null;
             _audit.Append(locked ? AuditEvents.AccountLockedOut : AuditEvents.LoginFailed, "Administrator", id.ToString(), new { email = normalizedEmail, failedAttempts = count });
+            _usage.Append(UsageEventTypes.LoginFailed, "Administrator", id.ToString(), succeeded: false, metadata: new { locked }, actorType: PrincipalType.PlatformAdministrator, actorId: id);
             await _context.SaveChangesAsync(cancellationToken);
             return locked ? LoginResult.Failed(LoginOutcome.LockedOut, admin.LockoutEnd) : LoginResult.Failed(LoginOutcome.InvalidCredentials);
         }
@@ -125,6 +132,7 @@ public sealed class AuthenticationService : IAuthenticationService
         admin.LockoutEnd = null;
         admin.LastLoginAt = _clock.UtcNow;
         _audit.Append(AuditEvents.LoginSucceeded, "Administrator", id.ToString(), new { email = normalizedEmail });
+        _usage.Append(UsageEventTypes.Login, "Administrator", id.ToString(), actorType: PrincipalType.PlatformAdministrator, actorId: id);
         await _context.SaveChangesAsync(cancellationToken);
 
         return new LoginResult(LoginOutcome.Success, AccountResolver.ToAccount(admin));
@@ -153,6 +161,7 @@ public sealed class AuthenticationService : IAuthenticationService
             user.FailedLoginCount = locked ? 0 : count;
             user.LockoutEnd = locked ? _clock.UtcNow.AddMinutes(_options.LockoutMinutes) : null;
             _audit.Append(locked ? AuditEvents.AccountLockedOut : AuditEvents.LoginFailed, "OrganizationUser", id.ToString(), new { email = normalizedEmail, failedAttempts = count }, user.OrganizationId);
+            _usage.Append(UsageEventTypes.LoginFailed, "OrganizationUser", id.ToString(), succeeded: false, metadata: new { locked }, organizationId: user.OrganizationId, actorType: PrincipalType.OrganizationUser, actorId: id, departmentId: user.DepartmentId);
             await SaveWithSystemScopeAsync(cancellationToken);
             return locked ? LoginResult.Failed(LoginOutcome.LockedOut, user.LockoutEnd) : LoginResult.Failed(LoginOutcome.InvalidCredentials);
         }
@@ -182,6 +191,7 @@ public sealed class AuthenticationService : IAuthenticationService
         user.LockoutEnd = null;
         user.LastLoginAt = _clock.UtcNow;
         _audit.Append(AuditEvents.LoginSucceeded, "OrganizationUser", id.ToString(), new { email = normalizedEmail }, user.OrganizationId);
+        _usage.Append(UsageEventTypes.Login, "OrganizationUser", id.ToString(), organizationId: user.OrganizationId, actorType: PrincipalType.OrganizationUser, actorId: id, departmentId: user.DepartmentId);
         await SaveWithSystemScopeAsync(cancellationToken);
 
         var roles = await AccountResolver.RoleCodesAsync(_context, user, cancellationToken);
@@ -212,6 +222,7 @@ public sealed class AuthenticationService : IAuthenticationService
         admin.MustChangePassword = false;
         admin.PasswordChangedAt = _clock.UtcNow;
         _audit.Append(AuditEvents.PasswordChanged, "Administrator", id.ToString());
+        _usage.Append(UsageEventTypes.PasswordChanged, "Administrator", id.ToString());
         await _context.SaveChangesAsync(cancellationToken);
 
         return new ChangePasswordResult(ChangePasswordOutcome.Success, [], AccountResolver.ToAccount(admin));
@@ -241,6 +252,7 @@ public sealed class AuthenticationService : IAuthenticationService
         user.MustChangePassword = false;
         user.PasswordChangedAt = _clock.UtcNow;
         _audit.Append(AuditEvents.PasswordChanged, "OrganizationUser", id.ToString());
+        _usage.Append(UsageEventTypes.PasswordChanged, "OrganizationUser", id.ToString());
         await _context.SaveChangesAsync(cancellationToken);
 
         var roles = await AccountResolver.RoleCodesAsync(_context, user, cancellationToken);

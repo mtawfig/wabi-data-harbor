@@ -6,7 +6,9 @@ using Microsoft.Extensions.Options;
 using WabiInsight.Core.Common;
 using WabiInsight.Core.Email;
 using WabiInsight.Core.Entities.Email;
+using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Tenancy;
+using WabiInsight.Core.Usage;
 using WabiInsight.Infrastructure.Persistence;
 
 namespace WabiInsight.Infrastructure.Email;
@@ -27,13 +29,16 @@ public sealed class EmailOutbox : IEmailOutbox
     private readonly IRequestContext _request;
     private readonly IClock _clock;
 
-    public EmailOutbox(ConfigurationDbContext context, EmailDeliveryChannel queue, ITenantContext tenantContext, IRequestContext request, IClock clock)
+    private readonly IUsageEventWriter _usage;
+
+    public EmailOutbox(ConfigurationDbContext context, EmailDeliveryChannel queue, ITenantContext tenantContext, IRequestContext request, IClock clock, IUsageEventWriter usage)
     {
         _context = context;
         _queue = queue;
         _tenantContext = tenantContext;
         _request = request;
         _clock = clock;
+        _usage = usage;
     }
 
     public async Task<Guid> EnqueueAsync(EmailMessage message, string templateCode, Guid? organizationId = null, CancellationToken cancellationToken = default)
@@ -56,6 +61,7 @@ public sealed class EmailOutbox : IEmailOutbox
         };
 
         _context.EmailMessages.Add(record);
+        _usage.Append(UsageEventTypes.EmailQueued, "EmailMessage", record.EmailMessageId.ToString(), metadata: new { templateCode }, organizationId: record.OrganizationId);
         await _context.SaveChangesAsync(cancellationToken);
         await _queue.Channel.Writer.WriteAsync((record.EmailMessageId, message), cancellationToken);
         return record.EmailMessageId;
@@ -130,6 +136,21 @@ public sealed partial class EmailOutboxWorker : BackgroundService
         record.Status = status;
         record.LastError = error is null ? null : error[..Math.Min(error.Length, 1000)];
         record.SentAt = status == EmailDeliveryStatus.Sent ? _clock.UtcNow : null;
+
+        // Verified delivery outcome for metrics (sent vs failed), attributed to the requesting principal.
+        if (status != EmailDeliveryStatus.Queued)
+        {
+            var usage = scope.ServiceProvider.GetRequiredService<IUsageEventWriter>();
+            usage.Append(
+                status == EmailDeliveryStatus.Sent ? UsageEventTypes.EmailSent : UsageEventTypes.EmailFailed,
+                "EmailMessage",
+                id.ToString(),
+                succeeded: status == EmailDeliveryStatus.Sent,
+                metadata: new { record.TemplateCode, attempts, error = error is null ? null : error[..Math.Min(error.Length, 200)] },
+                organizationId: record.OrganizationId,
+                actorType: record.RequestedByType,
+                actorId: record.RequestedById);
+        }
         await context.SaveChangesAsync(cancellationToken);
     }
 

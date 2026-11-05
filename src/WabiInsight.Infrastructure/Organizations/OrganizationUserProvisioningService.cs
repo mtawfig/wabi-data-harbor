@@ -7,7 +7,9 @@ using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Security;
+using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Tenancy;
+using WabiInsight.Core.Usage;
 using WabiInsight.Infrastructure.Authentication;
 using WabiInsight.Infrastructure.Persistence;
 
@@ -28,6 +30,7 @@ public sealed class OrganizationUserProvisioningService : IOrganizationUserProvi
     private readonly IClock _clock;
     private readonly EmailOptions _email;
     private readonly PlatformUrlOptions _urls;
+    private readonly IUsageEventWriter _usage;
 
     public OrganizationUserProvisioningService(
         ConfigurationDbContext context,
@@ -37,7 +40,8 @@ public sealed class OrganizationUserProvisioningService : IOrganizationUserProvi
         ITenantContext tenantContext,
         IClock clock,
         IOptions<EmailOptions> email,
-        IOptions<PlatformUrlOptions> urls)
+        IOptions<PlatformUrlOptions> urls,
+        IUsageEventWriter usage)
     {
         _context = context;
         _hasher = hasher;
@@ -47,6 +51,7 @@ public sealed class OrganizationUserProvisioningService : IOrganizationUserProvi
         _clock = clock;
         _email = email.Value;
         _urls = urls.Value;
+        _usage = usage;
     }
 
     public async Task<ProvisionedUser> ProvisionAsync(Guid organizationId, string email, string fullName, string preferredLanguage, IReadOnlyCollection<string> roleCodes, CancellationToken cancellationToken = default)
@@ -114,6 +119,7 @@ public sealed class OrganizationUserProvisioningService : IOrganizationUserProvi
         }
 
         _audit.Append(AuditEvents.OrganizationUserCreated, "OrganizationUser", user.UserId.ToString(), new { email = normalized, roles = roles.Select(r => r.RoleCode) }, organizationId);
+        _usage.Append(UsageEventTypes.UserCreated, "OrganizationUser", user.UserId.ToString(), organizationId: organizationId);
 
         using (_context.BeginSystemScope())
         {
