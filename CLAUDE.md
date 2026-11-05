@@ -33,6 +33,7 @@ dotnet build WabiInsight.slnx -c Release
 dotnet test WabiInsight.slnx -c Release
 dotnet run --project src/WabiInsight.Api          # http://localhost:5080
 dotnet run --project src/WabiInsight.Api -- migrate   # apply pending migrations (deployment step)
+dotnet run --project src/WabiInsight.Api -- bootstrap # create the first Platform Administrator from Bootstrap:* settings (once)
 dotnet tool restore && dotnet ef migrations add <Name> --project src/WabiInsight.Infrastructure --startup-project src/WabiInsight.Infrastructure --output-dir Persistence/Migrations
 
 # Integration tests need SQL Server: either Docker (Testcontainers) or
@@ -43,7 +44,7 @@ npm ci
 npm run lint && npm test && npm run build -- --configuration production
 npm start                                          # http://localhost:4200, proxies /api to 5080
 ```
-The `bootstrap` command is added in P1.3; the screenshot script in P11.2.
+The screenshot script is added in P11.2. Development uses the sample bootstrap values in `appsettings.Development.json`; any other environment must supply `Bootstrap__AdministratorPassword` and `Bootstrap__InitializationSecret` through secrets.
 
 ## Verification before pushing
 1. `dotnet build` + `dotnet test` green.

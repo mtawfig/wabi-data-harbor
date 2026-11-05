@@ -3,19 +3,45 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace WabiInsight.IntegrationTests.Api;
 
-/// <summary>Hosts the API in-process against the shared SQL Server test database.</summary>
+/// <summary>
+/// Hosts the API in-process against a SQL Server test database. The Testing environment is not
+/// Development, so the sample bootstrap password is rejected exactly as in production.
+/// </summary>
 public sealed class ApiFactory : WebApplicationFactory<Program>
 {
-    private readonly string _connectionString;
+    public const string BootstrapEmail = "bootstrap@wabitex.test";
+    public const string BootstrapPassword = "Bootstrap#Strong#Pass#2026";
+    public const string BootstrapSecret = "test-initialization-secret-0123456789";
 
-    public ApiFactory(string connectionString)
+    private readonly string _connectionString;
+    private readonly IReadOnlyDictionary<string, string?> _settings;
+
+    public ApiFactory(string connectionString, IReadOnlyDictionary<string, string?>? settings = null)
     {
         _connectionString = connectionString;
+        _settings = settings ?? new Dictionary<string, string?>();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:ConfigurationDatabase", _connectionString);
+
+        // Generous limits so unrelated tests never trip the per-client limiter; dedicated tests lower them.
+        builder.UseSetting("Security:LoginRateLimitPerMinute", "1000");
+        builder.UseSetting("Security:BootstrapRateLimitPerMinute", "1000");
+        // Re-validate the security stamp on every request so session-invalidation tests are deterministic.
+        builder.UseSetting("Security:SecurityStampValidationMinutes", "0");
+
+        builder.UseSetting("Bootstrap:Enabled", "true");
+        builder.UseSetting("Bootstrap:AdministratorEmail", BootstrapEmail);
+        builder.UseSetting("Bootstrap:AdministratorFullName", "Bootstrap Administrator");
+        builder.UseSetting("Bootstrap:AdministratorPassword", BootstrapPassword);
+        builder.UseSetting("Bootstrap:InitializationSecret", BootstrapSecret);
+
+        foreach (var (key, value) in _settings)
+        {
+            builder.UseSetting(key, value);
+        }
     }
 }

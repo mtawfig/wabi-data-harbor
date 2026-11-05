@@ -1,6 +1,6 @@
 # Wabi Insight — Architecture
 
-Status: P1.1 skeleton, P1.2 adds the configuration database and tenant core; each phase extends the relevant section.
+Status: P1.1 skeleton, P1.2 configuration database and tenant core, P1.3 authentication and bootstrap; each phase extends the relevant section.
 
 ## Three logical layers
 
@@ -53,11 +53,11 @@ Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC 
 
 Integration tests run against a real SQL Server: `WI_TEST_SQLSERVER_CONNECTION` (CI service container or a local instance) or, when absent, a Testcontainers SQL Server 2022 container. A fresh database is migrated per run and seeded with two organizations, one user each, and one administrator. SQLite or in-memory providers are never used because constraints, filtered indexes and `rowversion` must be verified on the real engine.
 
-## Request pipeline (P1.1)
+## Request pipeline (P1.3)
 
-`UseExceptionHandler` (RFC 9457 problem details) → `UseStatusCodePages` → HSTS (non-development) → HTTPS redirection → health endpoints (`/health/live`, `/health/ready`) → controllers.
+`UseExceptionHandler` (RFC 9457 problem details) → `UseStatusCodePages` → HSTS (non-development) → HTTPS redirection → rate limiter → cookie authentication (with security-stamp revalidation) → `TenantContextMiddleware` (claims → `TenantPrincipal`) → `PasswordChangeRequiredMiddleware` → authorization (fallback: authenticated) → MVC with the `AntiforgeryValidationFilter` → controllers. Health endpoints are mapped with `AllowAnonymous`.
 
-Authentication, antiforgery, tenant context resolution, rate limiting and authorization middleware are added in P1.3.
+CLI commands handled before the pipeline starts: `migrate` (apply migrations) and `bootstrap` (create the first Platform Administrator). See `docs/SECURITY.md` for the authentication design.
 
 ## Endpoints (P1.1)
 
@@ -66,6 +66,14 @@ Authentication, antiforgery, tenant context resolution, rate limiting and author
 | `GET /health/live` | Process liveness; JSON with per-check status. |
 | `GET /health/ready` | Readiness: API self-check plus configuration-database connectivity (P1.2). Storage, email and AI provider checks follow in later phases. |
 | `GET /api/platform/info` | Public product identity (name, code, tagline, version, languages). Never exposes configuration or bootstrap state. |
+| `GET /api/auth/csrf` | Antiforgery cookie + request token (anonymous). |
+| `POST /api/auth/login` | Email/password login for both account categories; sets the `wi.session` cookie. Rate-limited. |
+| `POST /api/auth/logout` | Ends the session (audited). |
+| `GET /api/auth/me` | Current session: principal type, organization, roles, must-change-password flag. |
+| `POST /api/auth/change-password` | Changes the password, rotates the security stamp, clears must-change-password. |
+| `GET /api/bootstrap/status` | Bootstrap completion state (anonymous, non-sensitive). |
+| `POST /api/bootstrap/initialize` | One-time first-administrator creation with the initialization secret. Rate-limited. |
+| `POST /api/platform/administrators/{id}/reset-password` | Platform administrators only: one-time temporary password for another administrator. |
 
 ## Angular (P1.1)
 
