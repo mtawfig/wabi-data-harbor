@@ -1,5 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using WabiInsight.Core.Email;
+using WabiInsight.IntegrationTests.Email;
 
 namespace WabiInsight.IntegrationTests.Api;
 
@@ -15,6 +20,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 
     private readonly string _connectionString;
     private readonly IReadOnlyDictionary<string, string?> _settings;
+
+    /// <summary>Every email the API sends during the test lands here instead of SMTP.</summary>
+    public RecordingEmailSender Emails { get; } = new();
 
     public ApiFactory(string connectionString, IReadOnlyDictionary<string, string?>? settings = null)
     {
@@ -33,6 +41,12 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         // Re-validate the security stamp on every request so session-invalidation tests are deterministic.
         builder.UseSetting("Security:SecurityStampValidationMinutes", "0");
 
+        // Email: the outbox worker runs for real, delivery is captured in memory.
+        builder.UseSetting("Email:Provider", "Test");
+        builder.UseSetting("Email:FromEmail", "no-reply@wabitex.test");
+        builder.UseSetting("Email:RetryDelaySeconds", "1");
+        builder.UseSetting("Email:MaxAttempts", "2");
+
         builder.UseSetting("Bootstrap:Enabled", "true");
         builder.UseSetting("Bootstrap:AdministratorEmail", BootstrapEmail);
         builder.UseSetting("Bootstrap:AdministratorFullName", "Bootstrap Administrator");
@@ -43,5 +57,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         {
             builder.UseSetting(key, value);
         }
+
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(Emails);
+        });
     }
 }

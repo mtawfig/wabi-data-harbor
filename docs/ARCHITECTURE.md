@@ -39,6 +39,7 @@ One SQL Server database, EF Core 10, migrations in `src/WabiInsight.Infrastructu
 | `SystemInitialization` | Bootstrap state | singleton (`Id = 1` check constraint) |
 | `PlatformSettings` | Key/value platform settings | primary key `Key` |
 | `AuditLogs` | Append-only security events | application guard rejects UPDATE/DELETE; `scripts/sql/create-runtime-login.sql` denies them at the database |
+| `EmailMessages` | Transactional email outbox/log (metadata only, no bodies) | `Status` check (`Queued`, `Sent`, `Failed`); indexes on organization, status and template |
 
 Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC timestamps stamped by the context, `rowversion` concurrency tokens on editable aggregates, enum codes stored as strings with check constraints.
 
@@ -57,6 +58,8 @@ Integration tests run against a real SQL Server: `WI_TEST_SQLSERVER_CONNECTION` 
 
 `UseExceptionHandler` (RFC 9457 problem details) → `UseStatusCodePages` → HSTS (non-development) → HTTPS redirection → rate limiter → cookie authentication (with security-stamp revalidation) → `TenantContextMiddleware` (claims → `TenantPrincipal`) → `PasswordChangeRequiredMiddleware` → authorization (fallback: authenticated) → MVC with the `AntiforgeryValidationFilter` → controllers. Health endpoints are mapped with `AllowAnonymous`.
 
+Background work: `EmailOutboxWorker` (hosted service) consumes an in-process bounded channel fed by `EmailOutbox`, sends through the configured `IEmailSender` (`SmtpEmailSender`, `FileEmailSender`, `NullEmailSender`) and records the outcome on the `EmailMessages` row.
+
 CLI commands handled before the pipeline starts: `migrate` (apply migrations) and `bootstrap` (create the first Platform Administrator). See `docs/SECURITY.md` for the authentication design.
 
 ## Endpoints (P1.1)
@@ -73,7 +76,8 @@ CLI commands handled before the pipeline starts: `migrate` (apply migrations) an
 | `POST /api/auth/change-password` | Changes the password, rotates the security stamp, clears must-change-password. |
 | `GET /api/bootstrap/status` | Bootstrap completion state (anonymous, non-sensitive). |
 | `POST /api/bootstrap/initialize` | One-time first-administrator creation with the initialization secret. Rate-limited. |
-| `POST /api/platform/administrators/{id}/reset-password` | Platform administrators only: one-time temporary password for another administrator. |
+| `POST /api/platform/administrators` | Platform administrators only: create an administrator; the temporary password is emailed. |
+| `POST /api/platform/administrators/{id}/reset-password` | Platform administrators only: reset another administrator; the temporary password is emailed. |
 
 ## Angular (P1.4)
 

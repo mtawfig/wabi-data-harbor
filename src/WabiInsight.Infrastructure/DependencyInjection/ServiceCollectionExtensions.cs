@@ -6,11 +6,13 @@ using WabiInsight.Core.Audit;
 using WabiInsight.Core.Authentication;
 using WabiInsight.Core.Bootstrap;
 using WabiInsight.Core.Common;
+using WabiInsight.Core.Email;
 using WabiInsight.Core.Security;
 using WabiInsight.Core.Tenancy;
 using WabiInsight.Infrastructure.Audit;
 using WabiInsight.Infrastructure.Authentication;
 using WabiInsight.Infrastructure.Bootstrap;
+using WabiInsight.Infrastructure.Email;
 using WabiInsight.Infrastructure.Health;
 using WabiInsight.Infrastructure.Persistence;
 using WabiInsight.Infrastructure.Security;
@@ -45,7 +47,32 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuditWriter, AuditWriter>();
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
-        services.AddScoped<IAdministratorPasswordService, AdministratorPasswordService>();
+        services.AddScoped<IAdministratorAccountService, AdministratorAccountService>();
+
+        services.AddOptions<EmailOptions>()
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<PlatformUrlOptions>()
+            .Bind(configuration.GetSection(PlatformUrlOptions.SectionName));
+
+        var provider = configuration.GetSection(EmailOptions.SectionName)["Provider"] ?? "None";
+        switch (provider.Trim().ToUpperInvariant())
+        {
+            case "SMTP":
+                services.TryAddSingleton<IEmailSender, SmtpEmailSender>();
+                break;
+            case "FILE":
+                services.TryAddSingleton<IEmailSender, FileEmailSender>();
+                break;
+            default:
+                services.TryAddSingleton<IEmailSender, NullEmailSender>();
+                break;
+        }
+
+        services.AddSingleton<EmailDeliveryChannel>();
+        services.AddScoped<IEmailOutbox, EmailOutbox>();
+        services.AddHostedService<EmailOutboxWorker>();
         services.AddScoped<IBootstrapService, BootstrapService>();
 
         services.AddScoped<TenantContext>();

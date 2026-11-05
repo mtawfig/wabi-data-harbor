@@ -18,9 +18,3 @@ public interface IAccountResolver
     Task<ResolvedAccount> ResolveAsync(PrincipalType principalType, Guid principalId, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Administrator-assisted reset of another Platform Administrator's password (specification §8).</summary>
-public interface IAdministratorPasswordService
-{
-    /// <summary>Returns the one-time temporary password exactly once; it is never stored or logged in plain text.</summary>
-    Task<string?> ResetPasswordAsync(Guid targetAdministratorId, CancellationToken cancellationToken = default);
-}

@@ -34,4 +34,10 @@ public sealed record BootstrapInitializeRequest([Required, MaxLength(512)] strin
 
 public sealed record BootstrapInitializeResponse(Guid AdministratorId, string Email);
 
-public sealed record TemporaryPasswordResponse(string TemporaryPassword, bool MustChangePassword);
+public sealed record CreateAdministratorRequest(
+    [Required, EmailAddress, MaxLength(256)] string Email,
+    [Required, MaxLength(200)] string FullName,
+    [RegularExpression("^(en|ar)$")] string? PreferredLanguage);
+
+/// <summary>The temporary password is emailed, never returned; DeliveredTo is the masked recipient address.</summary>
+public sealed record AccountProvisioningResponse(Guid Id, string DeliveredTo, bool MustChangePassword, Guid? EmailMessageId);
