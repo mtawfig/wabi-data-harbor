@@ -1,9 +1,9 @@
-# Query Harbor — Claude Code Guide
+# Wabi Insight — Claude Code Guide
 
-Query Harbor (platform code AP-AIR) is a bilingual (EN/AR), multi-organization enterprise AI intelligence platform. Read `docs/QUERY_HARBOR_SPECIFICATION.md` for requirements and `docs/IMPLEMENTATION_PLAN.md` for the phase/PR order. Keep `docs/PROGRESS.md` current in every PR.
+Wabi Insight (platform code AP-AIR) is a bilingual (EN/AR), multi-organization enterprise AI intelligence platform. Read `docs/WABI_INSIGHT_SPECIFICATION.md` for requirements and `docs/IMPLEMENTATION_PLAN.md` for the phase/PR order. Keep `docs/PROGRESS.md` current in every PR.
 
 ## Architectural invariants (never weaken)
-- Exactly three logical layers: Angular app (`src/web`), one ASP.NET Core Web API (`src/QueryHarbor.Api` + `Core` + `Infrastructure` libraries), data/integrations (one SQL Server config DB, tenant SQL Server/Oracle sources, LLM, email, Drive/OneDrive, artifact storage). No microservices, brokers, or separate Python apps.
+- Exactly three logical layers: Angular app (`src/web`), one ASP.NET Core Web API (`src/WabiInsight.Api` + `Core` + `Infrastructure` libraries), data/integrations (one SQL Server config DB, tenant SQL Server/Oracle sources, LLM, email, Drive/OneDrive, artifact storage). No microservices, brokers, or separate Python apps.
 - Platform Administrators live in `Administrators` and have **no** `OrganizationId`. Organization users live in `OrganizationUsers` with a **required** `OrganizationId`. `LoginIdentities` makes login emails globally unique.
 - `OrganizationId` always comes from `ITenantContext` (authenticated principal), never from the request body, route, query string, or AI output.
 - Every tenant-owned query is scoped by EF tenant filters **and** explicit ownership checks in services. Platform-wide reads use dedicated admin query paths with field restrictions.

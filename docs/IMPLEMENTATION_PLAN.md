@@ -1,7 +1,7 @@
-# Query Harbor — Implementation Plan (Phases and Pull Requests)
+# Wabi Insight — Implementation Plan (Phases and Pull Requests)
 
 **Status:** Proposed — awaiting owner approval before coding starts.
-**Specification:** [`docs/QUERY_HARBOR_SPECIFICATION.md`](./QUERY_HARBOR_SPECIFICATION.md) (revised v1.1).
+**Specification:** [`docs/WABI_INSIGHT_SPECIFICATION.md`](./WABI_INSIGHT_SPECIFICATION.md) (revised v1.1).
 **Review of the original prompt:** [`docs/SPEC_REVIEW.md`](./SPEC_REVIEW.md).
 
 ## Working agreement
@@ -10,7 +10,7 @@
 - Every PR lives on its own branch and must be green in CI (build + tests for API and Angular) before the owner merges it.
 - PRs are ordered; each PR assumes every earlier PR is merged. A PR is kept small enough to review in one sitting (target: < 3,000 changed lines excluding generated files and lock files).
 - Every PR updates `docs/PROGRESS.md` and, when behaviour changes, the relevant doc under `docs/`.
-- Branch naming: `qh/p<phase>-<nn>-<short-name>` (for example `qh/p01-02-config-db`). Sessions started from the Claude app receive a generated branch name; the PR title carries the `P1.2` identifier either way.
+- Branch naming: `wi/p<phase>-<nn>-<short-name>` (for example `wi/p01-02-config-db`). Sessions started from the Claude app receive a generated branch name; the PR title carries the `P1.2` identifier either way.
 - PR title format: `P<phase>.<n> — <short description>`.
 
 ## Verified toolchain (checked 2026-11-05)
@@ -36,7 +36,7 @@
 
 | PR | Scope |
 |---|---|
-| P1.1 — Repository scaffolding and CI | Solution layout (`src/QueryHarbor.Api`, `src/QueryHarbor.Core`, `src/QueryHarbor.Infrastructure`, `src/web` Angular 22), health endpoint, GitHub Actions workflow (dotnet build/test + ng build/test with a SQL Server service container), `docker-compose.dev.yml` for local SQL Server, `CLAUDE.md`, `ARCHITECTURE.md` skeleton. |
+| P1.1 — Repository scaffolding and CI | Solution layout (`src/WabiInsight.Api`, `src/WabiInsight.Core`, `src/WabiInsight.Infrastructure`, `src/web` Angular 22), health endpoint, GitHub Actions workflow (dotnet build/test + ng build/test with a SQL Server service container), `docker-compose.dev.yml` for local SQL Server, `CLAUDE.md`, `ARCHITECTURE.md` skeleton. |
 | P1.2 — Configuration database and tenant core | EF Core 10 model and first migration: `Organizations`, `Administrators`, `OrganizationUsers`, `LoginIdentities`, `SystemInitialization`, `PlatformSettings`, `AuditLogs`. UUIDv7 keys, scoped unique constraints, `ITenantContext`, tenant query filters, integration-test harness (Testcontainers locally, service container in CI) with a two-organization fixture. |
 | P1.3 — Authentication and bootstrap | Bootstrap configuration + `bootstrap` CLI command + protected `/api/bootstrap`; cookie authentication with antiforgery; login/logout, password change, forced first-login change, lockout, inactive/suspended denial, security-stamp session invalidation; authorization policies (`PlatformAdministrator`, `OrganizationUser`, `OrganizationAdmin`); rate limiting on auth endpoints; production rejection of the sample password. |
 | P1.4 — Angular design system, i18n, and auth UI | Brand theme (tokens, Angular Material M3 theme), Inter / IBM Plex Sans Arabic, Transloco EN/AR with RTL switching and persistence, three layout shells (public, organization, platform), login, bootstrap page, forced password change, profile basics, route guards and HTTP interceptors, first real screenshots. |
@@ -62,7 +62,7 @@
 
 | PR | Scope |
 |---|---|
-| P4.1 — Support desk backend | `SupportTickets`, `SupportTicketEvents`, `SupportTicketComments`, `SupportTicketAttachments`, `TicketSequences` (concurrency-safe yearly reference `QH-YYYY-NNNNNN`), status state machine, first-open tracking, assignment, comments, attachment storage via `IArtifactStorage`, `Notifications` table + service, visibility rules per role. |
+| P4.1 — Support desk backend | `SupportTickets`, `SupportTicketEvents`, `SupportTicketComments`, `SupportTicketAttachments`, `TicketSequences` (concurrency-safe yearly reference `WI-YYYY-NNNNNN`), status state machine, first-open tracking, assignment, comments, attachment storage via `IArtifactStorage`, `Notifications` table + service, visibility rules per role. |
 | P4.2 — Support desk UI | New ticket, My Tickets, organization ticket list (OrgAdmin), platform queue with filters/search/pagination, ticket details with Overview / Conversation / Activity Timeline / Attachments tabs, notification centre, dashboard ticket widgets. |
 
 ### Phase 5 — Authorized Support Access
@@ -86,7 +86,7 @@
 
 | PR | Scope |
 |---|---|
-| P7.1 — Platform Insights data source | `insights` schema of tenant-scoped SQL views in the configuration DB, dedicated read-only DB login, global `QH-INSIGHTS` catalog (objects, columns, metric definitions), per-organization built-in application row provisioned on onboarding, mandatory `OrganizationId` predicate, platform-side Platform Insights Configuration page. |
+| P7.1 — Platform Insights data source | `insights` schema of tenant-scoped SQL views in the configuration DB, dedicated read-only DB login, global `WI-INSIGHTS` catalog (objects, columns, metric definitions), per-organization built-in application row provisioned on onboarding, mandatory `OrganizationId` predicate, platform-side Platform Insights Configuration page. |
 | P7.2 — Organization dashboard and Organization Insights | `/app/admin/dashboard` with organization-scoped KPIs, charts and filters; Organization Insights page; default OrgAdmin access and per-role metric grants. Natural-language questions against Platform Insights become available in Phase 8. |
 
 ### Phase 8 — Secure AI Engine

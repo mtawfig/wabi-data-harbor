@@ -1,9 +1,9 @@
-# QUERY HARBOR — Enterprise AI Intelligence Platform
+# WABI INSIGHT — Enterprise AI Intelligence Platform
 ## Product Specification v1.1 (Multi-Organization Edition, revised)
 
 | | |
 |---|---|
-| **Product** | Query Harbor |
+| **Product** | Wabi Insight |
 | **Tagline** | Ask Your Data. Trust the Answer. · اسأل بياناتك. وثق بالإجابة. |
 | **Platform code** | AP-AIR |
 | **Languages** | English (LTR), Arabic (RTL) |
@@ -20,7 +20,7 @@ This document is the revised master specification. Paragraphs tagged **[Revised]
 
 ## 1. Mission
 
-Query Harbor lets multiple customer organizations use one shared application while keeping their users, configuration, permissions, business data, analyses, reports and support activity isolated. Employees ask natural-language questions about data they are authorized to see, get verified results, charts and reports, and share them under control. The company operating Query Harbor (the "platform company") has a separate administration and support environment that lets it operate, monitor, onboard and support without access to customer business data.
+Wabi Insight lets multiple customer organizations use one shared application while keeping their users, configuration, permissions, business data, analyses, reports and support activity isolated. Employees ask natural-language questions about data they are authorized to see, get verified results, charts and reports, and share them under control. The company operating Wabi Insight (the "platform company") has a separate administration and support environment that lets it operate, monitor, onboard and support without access to customer business data.
 
 Priorities, in order: security and tenant isolation; correctness and authorization; working end-to-end functionality; simplicity and maintainability; professional responsive UI; performance and extensibility.
 
@@ -46,7 +46,7 @@ Priorities, in order: security and tenant isolation; correctness and authorizati
 ### Layer 2 — ASP.NET Core Web API (one deployable)
 Internal services (interfaces + DI, async): Authentication, Bootstrap, Organization, PlatformAdministrator, OrganizationUser, Role, Permission, TenantContext, Application, Metadata, Database, AI, Analysis, History, Report, Sharing, ExternalStorage, Email, SupportTicket, SupportAccess, Notification, PlatformMetrics, Audit, Settings.
 
-**[Decision]** Source is organized as `QueryHarbor.Api` (host, controllers, middleware), `QueryHarbor.Core` (entities, service interfaces and implementations, query-plan model, compilers) and `QueryHarbor.Infrastructure` (EF Core, SQL Server/Oracle adapters, AI/email/storage providers). These are build-time projects inside Layer 2, not extra logical layers. Background work uses in-process hosted services fed by bounded channels; no brokers.
+**[Decision]** Source is organized as `WabiInsight.Api` (host, controllers, middleware), `WabiInsight.Core` (entities, service interfaces and implementations, query-plan model, compilers) and `WabiInsight.Infrastructure` (EF Core, SQL Server/Oracle adapters, AI/email/storage providers). These are build-time projects inside Layer 2, not extra logical layers. Background work uses in-process hosted services fed by bounded channels; no brokers.
 
 ### Layer 3 — Data and integrations
 One SQL Server configuration database; organization-owned SQL Server and Oracle connections; cloud LLM endpoints and future on-premises OpenAI-compatible endpoints; SMTP email; Google Drive; OneDrive (Microsoft Graph); secure artifact storage. No microservices, message brokers, agent frameworks or separate Python applications.
@@ -122,7 +122,7 @@ The password `my_default_password_change_it` is accepted **only** in the `Develo
 
 ### 7.2 Execution **[Revised]**
 Two entry points share one `BootstrapService`:
-- `dotnet QueryHarbor.Api.dll bootstrap` (CLI, for headless deployment), and
+- `dotnet WabiInsight.Api.dll bootstrap` (CLI, for headless deployment), and
 - `POST /api/bootstrap` requiring the `InitializationSecret`, active only while `SystemInitialization.BootstrapCompleted = false`, rate-limited.
 
 Both: verify authorization and bootstrap state → verify the schema is at the current migration (migrations are applied beforehand by `dotnet ef database update` or the `migrate` CLI command, never by the web request) → create the administrator with hashed password, `IsBootstrapAdministrator = true`, `MustChangePassword = true` → register the login identity → write `SystemInitialization` (`BootstrapCompleted`, `BootstrapCompletedAt`, `BootstrapAdministratorId`, `SchemaVersion`) → audit. A unique constraint on the single `SystemInitialization` row makes repeated or concurrent attempts fail atomically.
@@ -183,15 +183,15 @@ Organization-scoped tables: `Roles` (`RoleId`, `OrganizationId`, `RoleCode`, `Na
 
 ---
 
-## 12. Built-in Query Harbor Platform Insights application
+## 12. Built-in Platform Insights application
 
-Code `QH-INSIGHTS`, `DatabaseType = PLATFORM_INSIGHTS`, one row per organization. Data comes from the configuration database through approved, read-only, tenant-scoped SQL views.
+Code `WI-INSIGHTS`, `DatabaseType = PLATFORM_INSIGHTS`, one row per organization. Data comes from the configuration database through approved, read-only, tenant-scoped SQL views.
 
 ### 12.1 Security **[Decision]**
 - Views live in an `insights` schema; every view exposes `OrganizationId`; they never expose password hashes, secrets, prompt text, raw configuration tables, other organizations, or protected administration data.
 - A dedicated SQL login with SELECT on `insights` only executes insights queries.
 - The compiler injects `OrganizationId = @tenant` as a mandatory predicate from `ITenantContext`; no user input can change it.
-- The object/column catalog for `QH-INSIGHTS` is global (`OrganizationId` null on catalog rows is allowed **only** for this catalog, which is marked `IsGlobalCatalog = true`), maintained by Platform Administrators.
+- The object/column catalog for `WI-INSIGHTS` is global (`OrganizationId` null on catalog rows is allowed **only** for this catalog, which is marked `IsGlobalCatalog = true`), maintained by Platform Administrators.
 - Per-user detail is limited to counts per user; prompt content is never exposed through insights (owner may relax, see review C5).
 
 ### 12.2 Default permissions
@@ -239,7 +239,7 @@ Codes: `NEW`, `READ`, `STARTED`, `PENDING_USER_RESPONSE`, `CANCELLED`, `RESOLVED
 
 Any other transition is rejected with a validation error; nothing fails silently.
 
-### 15.4 Reference — `QH-YYYY-NNNNNN` from `TicketSequences(Year, NextValue)` updated atomically inside the create transaction. No MAX+1.
+### 15.4 Reference — `WI-YYYY-NNNNNN` from `TicketSequences(Year, NextValue)` updated atomically inside the create transaction. No MAX+1.
 ### 15.5 `SupportTickets`
 `TicketId`, `ReferenceNumber` (unique), `OrganizationId`, `CreatedByUserId`, `TicketType`, `Impact`, `Category`, `Subject`, `Description`, `Status`, `AssignedAdministratorId`, `FirstOpenedByAdministratorId`, `FirstOpenedAt`, `StartedAt`, `PendingResponseAt`, `ResolvedAt`, `CancelledAt`, `ReopenedCount`, `CreatedAt`, `UpdatedAt`, `LastActivityAt`, `ResolutionSummary`, `RequiresSupportAccess`, `RowVersion`. Indexes on `(OrganizationId, Status)`, `(AssignedAdministratorId, Status)`, `LastActivityAt`.
 ### 15.6 Create (`/app/support/new`) — type, impact, category, subject, description, optional attachments; reference, organization, creator, timestamp and `NEW` set by the server. Requester identity and organization come from the tenant context.
@@ -300,7 +300,7 @@ Landing page theme "From Data Chaos to Confident Decisions" with two contrasting
 
 ## 22. Application UI and navigation
 One design system (Angular Material M3 theme + custom components), three shells.
-Organization user: Dashboard, Ask Query Harbor, My History, My Reports, Favorites, Shared With Me, Shared By Me, Support Desk, Notifications, Profile.
+Organization user: Dashboard, Ask Wabi Insight, My History, My Reports, Favorites, Shared With Me, Shared By Me, Support Desk, Notifications, Profile.
 Organization administrator adds: Organization Administration (dashboard), Users, Departments, Sections, Roles, Applications, Metadata, Permissions, Organization Insights, Integrations, Organization Settings, reached through a visible Administration entry.
 Platform administrator shell: Platform Overview, Organizations, Platform Administrators, System Health, Support Desk, Support Access, Global Role Templates, Platform Insights Configuration, General Settings, Audit Logs.
 Post-login routing: Platform Administrator → `/platform/dashboard`; Organization Administrator → `/app/dashboard` with Administration entry; Organization User → `/app/dashboard`. `MustChangePassword` forces the password screen first.
@@ -357,7 +357,7 @@ Local authentication; separate administrator identity; mandatory `OrganizationId
 ---
 
 ## 30. Automated testing
-Unit: compilers (snapshot per dialect), plan validator, permission resolver, ticket state machine, grant scope checks, password/bootstrap rules. Integration (real SQL Server, two-organization fixture always): everything in the original §30 list — platform administration, organization isolation, user management, permissions, Platform Insights tenant scoping, support desk, support access, history and sharing, localization (API resources and export files). Angular: Vitest unit tests for guards, interceptors, i18n/RTL, key components; Playwright for screenshots and smoke flows. Oracle live tests gated by `QH_TEST_ORACLE_CONNECTION`. Providers (AI, email, Drive, OneDrive) are tested through fakes; live checks are manual and documented.
+Unit: compilers (snapshot per dialect), plan validator, permission resolver, ticket state machine, grant scope checks, password/bootstrap rules. Integration (real SQL Server, two-organization fixture always): everything in the original §30 list — platform administration, organization isolation, user management, permissions, Platform Insights tenant scoping, support desk, support access, history and sharing, localization (API resources and export files). Angular: Vitest unit tests for guards, interceptors, i18n/RTL, key components; Playwright for screenshots and smoke flows. Oracle live tests gated by `WI_TEST_ORACLE_CONNECTION`. Providers (AI, email, Drive, OneDrive) are tested through fakes; live checks are manual and documented.
 
 ---
 
