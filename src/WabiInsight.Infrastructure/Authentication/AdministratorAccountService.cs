@@ -6,7 +6,9 @@ using WabiInsight.Core.Common;
 using WabiInsight.Core.Email;
 using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Security;
+using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Tenancy;
+using WabiInsight.Core.Usage;
 using WabiInsight.Infrastructure.Persistence;
 
 namespace WabiInsight.Infrastructure.Authentication;
@@ -25,6 +27,7 @@ public sealed class AdministratorAccountService : IAdministratorAccountService
     private readonly IClock _clock;
     private readonly EmailOptions _email;
     private readonly PlatformUrlOptions _urls;
+    private readonly IUsageEventWriter _usage;
 
     public AdministratorAccountService(
         ConfigurationDbContext context,
@@ -34,7 +37,8 @@ public sealed class AdministratorAccountService : IAdministratorAccountService
         ITenantContext tenantContext,
         IClock clock,
         IOptions<EmailOptions> email,
-        IOptions<PlatformUrlOptions> urls)
+        IOptions<PlatformUrlOptions> urls,
+        IUsageEventWriter usage)
     {
         _context = context;
         _hasher = hasher;
@@ -44,6 +48,7 @@ public sealed class AdministratorAccountService : IAdministratorAccountService
         _clock = clock;
         _email = email.Value;
         _urls = urls.Value;
+        _usage = usage;
     }
 
     public async Task<AdministratorAccountResult> CreateAsync(string email, string fullName, string preferredLanguage, CancellationToken cancellationToken = default)
@@ -87,6 +92,7 @@ public sealed class AdministratorAccountService : IAdministratorAccountService
             CreatedAt = now,
         });
         _audit.Append(AuditEvents.AdministratorCreated, "Administrator", administrator.AdministratorId.ToString(), new { email = normalized, fullName = administrator.FullName });
+        _usage.Append(UsageEventTypes.AdministratorCreated, "Administrator", administrator.AdministratorId.ToString());
         await _context.SaveChangesAsync(cancellationToken);
 
         var messageId = await QueueTemporaryPasswordAsync(administrator, temporary, isNewAccount: true, cancellationToken);

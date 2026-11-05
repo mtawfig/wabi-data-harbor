@@ -44,6 +44,7 @@ One SQL Server database, EF Core 10, migrations in `src/WabiInsight.Infrastructu
 | `UserRoles` | Role assignments | composite FKs `(OrganizationId, UserId)` and `(OrganizationId, RoleId)` so a user of A can never hold a role of B |
 | `Departments` / `Sections` | Organization structure | unique codes per organization (sections per department); composite FKs keep a section inside its department's organization, and a user's `(OrganizationId, DepartmentId, SectionId)` inside one section of one department |
 | `DefaultRoleTemplates` | Platform-managed role templates (seeded: OrganizationAdmin, Management, Analyst) | unique `RoleCode`; copied into new organizations only |
+| `UsageEvents` | Append-only verified event stream feeding platform and organization metrics (logins, failures, provisioning, email delivery, API errors; AI/report/support codes arrive with their phases) | application guard rejects UPDATE/DELETE; runtime login denied; indexes on organization/type/date |
 | `Applications` | Business applications; one built-in `WI-INSIGHTS` row per organization | unique `(OrganizationId, ApplicationCode)`, unique built-in code per organization, globally unique `ConnectionFingerprint`, built-in rows cannot carry a connection string (check constraint) |
 
 Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC timestamps stamped by the context, `rowversion` concurrency tokens on editable aggregates, enum codes stored as strings with check constraints.
@@ -55,6 +56,10 @@ Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC 
 ### Organization administration (P2.2)
 
 `OrganizationUserService`, `OrganizationStructureService`, `RoleService` and `RoleTemplateService` throw `DomainException` with a stable outcome and error codes; `DomainExceptionHandler` maps them to problem responses (404/409/400) and `TenantContextException` to 403, so controllers stay thin and the Angular `problemMessage` helper localizes the codes. Guards: an administrator cannot deactivate themselves or drop their own admin role, and the organization always keeps at least one active administrator. Role changes rotate the user's security stamp so open sessions pick up the new roles.
+
+### Usage metrics (P3.1)
+
+`IUsageEventWriter` appends `UsageEvents` inside the same unit of work as the business change (login, failed login, logout, password change, organization created/status changed, user and administrator created, email queued/sent/failed, unhandled API errors). `PlatformMetricsService` aggregates per day in SQL (`GROUP BY CAST(CreatedAt AS date)`) and buckets by day/week/month in memory; it reads identity tables and the event stream only, so application names, prompts and business data never reach the platform dashboard. Organization-scoped metrics for the organization dashboard (P7.2) reuse the same stream through the tenant filter.
 
 ### Tenant core
 
@@ -97,6 +102,9 @@ CLI commands handled before the pipeline starts: `migrate` (apply migrations) an
 | `GET/POST /api/roles`, `PUT/DELETE …/{id}` | Organization roles (`OrganizationAdmin`); system roles are protected. |
 | `GET/POST /api/users`, `GET/PUT …/{id}`, `POST …/{id}/status`, `POST …/{id}/reset-password` | Organization user management (`OrganizationAdmin`); temporary passwords are emailed. |
 | `GET/POST /api/platform/role-templates`, `PUT …/{id}` | Platform-managed default role templates (Platform Administrators). |
+| `GET /api/platform/dashboard?from&to&bucket&organizationId` | KPI cards, time series, per-organization usage aggregates and recent errors from `UsageEvents`. Metrics of later phases carry `collected = false`. |
+| `GET /api/platform/health` | Detailed on-demand health report (API, configuration database, email provider configuration, outbox backlog). |
+| `GET /api/platform/audit`, `GET …/event-types` | Paged, filtered audit trail for Platform Administrators. |
 
 ## Angular (P1.4)
 

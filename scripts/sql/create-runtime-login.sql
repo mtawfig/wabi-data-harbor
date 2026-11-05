@@ -15,5 +15,6 @@ ALTER ROLE db_datawriter ADD MEMBER [wabi_insight_app];
 GO
 -- Append-only tables: the API may INSERT and SELECT only.
 DENY UPDATE, DELETE ON dbo.AuditLogs TO [wabi_insight_app];
--- Later phases add: DENY UPDATE, DELETE ON dbo.UsageEvents / dbo.SupportTicketEvents.
+DENY UPDATE, DELETE ON dbo.UsageEvents TO [wabi_insight_app];
+-- Later phases add: DENY UPDATE, DELETE ON dbo.SupportTicketEvents.
 GO

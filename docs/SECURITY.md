@@ -57,6 +57,9 @@ Settings live under `Email` (`Provider` = `Smtp` | `File` | `None`). SMTP uses M
 ## Configuration database connection string
 By owner decision G (see `docs/SPEC_REVIEW.md`), the connection string is committed in `appsettings.json` for this private repository. Treat repository read access as database access.
 
+## Platform operations data
+Platform Administrators read aggregates (`/api/platform/dashboard`), health (`/api/platform/health`) and the audit trail (`/api/platform/audit`). The dashboard counts applications but never returns their names or connection details; audit details never contain secrets or business data; unhandled exceptions are recorded as `Api.Error` usage events with the exception type only, never its message. `UsageEvents` and `AuditLogs` are both append-only.
+
 ## Audit
 `AuditLogs` is append-only (application guard plus `scripts/sql/create-runtime-login.sql`). Records carry actor type/id, event code, entity, JSON details without secrets, correlation id and client IP.
 

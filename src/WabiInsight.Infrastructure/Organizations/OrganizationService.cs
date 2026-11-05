@@ -6,7 +6,9 @@ using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Security;
+using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Tenancy;
+using WabiInsight.Core.Usage;
 using WabiInsight.Infrastructure.Persistence;
 
 namespace WabiInsight.Infrastructure.Organizations;
@@ -23,8 +25,9 @@ public sealed partial class OrganizationService : IOrganizationService
     private readonly IAuditWriter _audit;
     private readonly ITenantContext _tenantContext;
     private readonly IClock _clock;
+    private readonly IUsageEventWriter _usage;
 
-    public OrganizationService(ConfigurationDbContext context, IOrganizationUserProvisioningService provisioning, IRoleTemplateService templates, IAuditWriter audit, ITenantContext tenantContext, IClock clock)
+    public OrganizationService(ConfigurationDbContext context, IOrganizationUserProvisioningService provisioning, IRoleTemplateService templates, IAuditWriter audit, ITenantContext tenantContext, IClock clock, IUsageEventWriter usage)
     {
         _context = context;
         _provisioning = provisioning;
@@ -32,6 +35,7 @@ public sealed partial class OrganizationService : IOrganizationService
         _audit = audit;
         _tenantContext = tenantContext;
         _clock = clock;
+        _usage = usage;
     }
 
     public async Task<OrganizationOperationResult> CreateAsync(CreateOrganizationCommand command, CancellationToken cancellationToken = default)
@@ -133,6 +137,7 @@ public sealed partial class OrganizationService : IOrganizationService
                 });
 
                 _audit.Append(AuditEvents.OrganizationCreated, "Organization", organization.OrganizationId.ToString(), new { code, name = organization.OrganizationName }, organization.OrganizationId);
+                _usage.Append(UsageEventTypes.OrganizationCreated, "Organization", organization.OrganizationId.ToString(), organizationId: organization.OrganizationId);
 
                 using (_context.BeginSystemScope())
                 {
@@ -215,6 +220,7 @@ public sealed partial class OrganizationService : IOrganizationService
         organization.Status = status;
         organization.UpdatedByAdministratorId = _tenantContext.Principal.AdministratorId;
         _audit.Append(AuditEvents.OrganizationStatusChanged, "Organization", organizationId.ToString(), new { previous = previous.ToString(), status = status.ToString(), reason = Clean(reason) }, organizationId);
+        _usage.Append(UsageEventTypes.OrganizationStatusChanged, "Organization", organizationId.ToString(), metadata: new { status = status.ToString() }, organizationId: organizationId);
         await _context.SaveChangesAsync(cancellationToken);
 
         return new OrganizationOperationResult(OrganizationOperationOutcome.Success, [], await GetAsync(organizationId, cancellationToken));

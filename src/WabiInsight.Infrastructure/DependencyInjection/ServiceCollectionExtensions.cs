@@ -14,7 +14,11 @@ using WabiInsight.Infrastructure.Audit;
 using WabiInsight.Infrastructure.Authentication;
 using WabiInsight.Infrastructure.Bootstrap;
 using WabiInsight.Infrastructure.Email;
+using WabiInsight.Core.Platform;
+using WabiInsight.Core.Usage;
 using WabiInsight.Infrastructure.Health;
+using WabiInsight.Infrastructure.Platform;
+using WabiInsight.Infrastructure.Usage;
 using WabiInsight.Infrastructure.Organizations;
 using WabiInsight.Infrastructure.Persistence;
 using WabiInsight.Infrastructure.Security;
@@ -105,7 +109,14 @@ public static class ServiceCollectionExtensions
 
         services.AddHealthChecks()
             .AddCheck<ApiSelfHealthCheck>("api", tags: ["live", "ready"])
-            .AddDbContextCheck<ConfigurationDbContext>("configuration-database", tags: ["ready"]);
+            .AddDbContextCheck<ConfigurationDbContext>("configuration-database", tags: ["ready"])
+            .AddCheck<EmailConfigurationHealthCheck>("email-provider", tags: ["ops"])
+            .AddCheck<EmailOutboxHealthCheck>("email-outbox", tags: ["ops"]);
+
+        services.AddScoped<IUsageEventWriter, UsageEventWriter>();
+        services.AddScoped<IPlatformMetricsService, PlatformMetricsService>();
+        services.AddScoped<IAuditQueryService, AuditQueryService>();
+        services.AddScoped<IPlatformHealthService, PlatformHealthService>();
 
         return services;
     }

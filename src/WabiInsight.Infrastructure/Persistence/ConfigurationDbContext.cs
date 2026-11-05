@@ -5,6 +5,7 @@ using WabiInsight.Core.Entities.Audit;
 using WabiInsight.Core.Entities.Email;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
+using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Tenancy;
 
 namespace WabiInsight.Infrastructure.Persistence;
@@ -55,6 +56,8 @@ public class ConfigurationDbContext : DbContext
     public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
 
     public DbSet<EmailMessageRecord> EmailMessages => Set<EmailMessageRecord>();
 
@@ -114,9 +117,9 @@ public class ConfigurationDbContext : DbContext
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog && entry.State is EntityState.Modified or EntityState.Deleted)
+            if (entry.Entity is AuditLog or UsageEvent && entry.State is EntityState.Modified or EntityState.Deleted)
             {
-                throw new InvalidOperationException("AuditLogs are append-only.");
+                throw new InvalidOperationException($"{entry.Metadata.ClrType.Name} rows are append-only.");
             }
 
             if (entry.Entity is ITenantOwned owned && entry.State is EntityState.Added or EntityState.Modified)
