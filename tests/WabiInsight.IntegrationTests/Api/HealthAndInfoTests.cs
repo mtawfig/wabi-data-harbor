@@ -1,16 +1,26 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using WabiInsight.IntegrationTests.Database;
 
 namespace WabiInsight.IntegrationTests.Api;
 
-public class HealthAndInfoTests : IClassFixture<ApiFactory>
+[Collection(DatabaseCollectionDefinition.Name)]
+public sealed class HealthAndInfoTests : IDisposable
 {
+    private readonly ApiFactory _factory;
     private readonly HttpClient _client;
 
-    public HealthAndInfoTests(ApiFactory factory)
+    public HealthAndInfoTests(SqlServerTestDatabase db)
     {
-        _client = factory.CreateClient();
+        _factory = new ApiFactory(db.ConnectionString);
+        _client = _factory.CreateClient();
+    }
+
+    public void Dispose()
+    {
+        _client.Dispose();
+        _factory.Dispose();
     }
 
     [Theory]
@@ -25,9 +35,14 @@ public class HealthAndInfoTests : IClassFixture<ApiFactory>
         using var document = JsonDocument.Parse(
             await response.Content.ReadAsStringAsync());
         Assert.Equal("Healthy", document.RootElement.GetProperty("status").GetString());
-        Assert.Contains(
-            document.RootElement.GetProperty("checks").EnumerateArray(),
-            check => check.GetProperty("name").GetString() == "api");
+        var checks = document.RootElement.GetProperty("checks").EnumerateArray()
+            .Select(check => check.GetProperty("name").GetString())
+            .ToList();
+        Assert.Contains("api", checks);
+        if (path == "/health/ready")
+        {
+            Assert.Contains("configuration-database", checks);
+        }
     }
 
     [Fact]
