@@ -32,7 +32,7 @@ public sealed class OrganizationController : ControllerBase
     public async Task<ActionResult<OrganizationProfile>> Update([FromBody] UpdateOrganizationProfileRequest request, CancellationToken cancellationToken)
     {
         var result = await _organizations.UpdateCurrentAsync(new UpdateOrganizationProfileCommand(
-            request.OrganizationName, request.OrganizationNameAr, request.Description, request.ContactEmail, request.ContactPhone, request.TimeZone, request.DefaultLanguage), cancellationToken);
+            request.OrganizationName, request.OrganizationNameAr, request.Description, request.ContactEmail, request.ContactPhone, request.TimeZone, request.DefaultLanguage, request.RequireSecondAdminApprovalForSupportAccess), cancellationToken);
 
         if (result.Outcome != OrganizationOperationOutcome.Success)
         {

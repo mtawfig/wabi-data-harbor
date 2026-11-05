@@ -124,6 +124,15 @@ public static class TicketEventTypes
     public const string CommentAdded = "CommentAdded";
     public const string AttachmentAdded = "AttachmentAdded";
     public const string SupportAccessFlagChanged = "SupportAccessFlagChanged";
+    public const string SupportAccessProposed = "SupportAccessProposed";
+    public const string SupportAccessApproved = "SupportAccessApproved";
+    public const string SupportAccessDeclined = "SupportAccessDeclined";
+    public const string SupportAccessRevoked = "SupportAccessRevoked";
+    public const string SupportAccessExpired = "SupportAccessExpired";
+    public const string SupportAccessCompleted = "SupportAccessCompleted";
+    public const string SupportSessionStarted = "SupportSessionStarted";
+    public const string SupportSessionEnded = "SupportSessionEnded";
+    public const string SupportOperationExecuted = "SupportOperationExecuted";
 }
 
 /// <summary>Conversation entry. Visible to everyone who can see the ticket.</summary>

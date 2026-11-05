@@ -33,7 +33,8 @@ public sealed record UpdateOrganizationProfileCommand(
     string? ContactEmail,
     string? ContactPhone,
     string TimeZone,
-    string DefaultLanguage);
+    string DefaultLanguage,
+    bool RequireSecondAdminApprovalForSupportAccess = false);
 
 public enum OrganizationOperationOutcome
 {
@@ -89,7 +90,8 @@ public sealed record OrganizationProfile(
     string TimeZone,
     string DefaultLanguage,
     OrganizationStatus Status,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    bool RequireSecondAdminApprovalForSupportAccess = false);
 
 public interface IOrganizationService
 {

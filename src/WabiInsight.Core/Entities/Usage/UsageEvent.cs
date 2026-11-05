@@ -59,4 +59,6 @@ public static class UsageEventTypes
     public const string TicketCancelled = "Support.TicketCancelled";
     public const string TicketCommentAdded = "Support.CommentAdded";
     public const string TicketAttachmentAdded = "Support.AttachmentAdded";
+    public const string SupportGrantApproved = "SupportAccess.GrantApproved";
+    public const string SupportOperationExecuted = "SupportAccess.OperationExecuted";
 }

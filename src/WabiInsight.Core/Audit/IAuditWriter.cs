@@ -36,6 +36,16 @@ public static class AuditEvents
     public const string TicketCommentAdded = "SupportTicket.CommentAdded";
     public const string TicketAttachmentAdded = "SupportTicket.AttachmentAdded";
     public const string TicketAttachmentDownloaded = "SupportTicket.AttachmentDownloaded";
+    public const string SupportAccessProposed = "SupportAccess.Proposed";
+    public const string SupportAccessApproved = "SupportAccess.Approved";
+    public const string SupportAccessDeclined = "SupportAccess.Declined";
+    public const string SupportAccessRevoked = "SupportAccess.Revoked";
+    public const string SupportAccessExpired = "SupportAccess.Expired";
+    public const string SupportAccessCompleted = "SupportAccess.Completed";
+    public const string SupportSessionStarted = "SupportAccess.SessionStarted";
+    public const string SupportSessionEnded = "SupportAccess.SessionEnded";
+    public const string SupportOperationExecuted = "SupportAccess.OperationExecuted";
+    public const string SupportOperationDenied = "SupportAccess.OperationDenied";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>

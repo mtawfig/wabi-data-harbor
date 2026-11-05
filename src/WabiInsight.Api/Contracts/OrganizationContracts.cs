@@ -32,7 +32,8 @@ public sealed record UpdateOrganizationProfileRequest(
     [MaxLength(256)] string? ContactEmail,
     [MaxLength(50)] string? ContactPhone,
     [Required, MaxLength(64)] string TimeZone,
-    [Required, RegularExpression("^(en|ar)$")] string DefaultLanguage);
+    [Required, RegularExpression("^(en|ar)$")] string DefaultLanguage,
+    bool RequireSecondAdminApprovalForSupportAccess = false);
 
 public sealed record SetOrganizationStatusRequest(
     [Required, RegularExpression("^(Active|Suspended|Deactivated)$")] string Status,
