@@ -4,6 +4,7 @@ using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Audit;
 using WabiInsight.Core.Entities.Email;
 using WabiInsight.Core.Entities.Metadata;
+using WabiInsight.Core.Entities.Ai;
 using WabiInsight.Core.Entities.Insights;
 using WabiInsight.Core.Entities.Permissions;
 using WabiInsight.Core.Entities.Organizations;
@@ -102,6 +103,8 @@ public class ConfigurationDbContext : DbContext
     public DbSet<InsightsMetric> InsightsMetrics => Set<InsightsMetric>();
 
     public DbSet<RoleMetricGrant> RoleMetricGrants => Set<RoleMetricGrant>();
+
+    public DbSet<AiProviderConfiguration> AiProviderConfigurations => Set<AiProviderConfiguration>();
 
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;

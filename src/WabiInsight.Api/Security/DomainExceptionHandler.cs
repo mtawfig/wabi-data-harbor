@@ -32,6 +32,7 @@ public sealed class DomainExceptionHandler : IExceptionHandler
             },
             SupportAccessDeniedException s => (StatusCodes.Status403Forbidden, "Support access denied", "support-access-denied", s.Code),
             TenantContextException t => (StatusCodes.Status403Forbidden, "Forbidden", "forbidden", t.Message),
+            Core.Ai.AiProviderException a => (StatusCodes.Status502BadGateway, "AI provider error", "ai-provider", a.Code),
             _ => (0, string.Empty, string.Empty, string.Empty),
         };
 

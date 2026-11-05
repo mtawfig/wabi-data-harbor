@@ -1,0 +1,53 @@
+namespace WabiInsight.Core.Ai;
+
+public sealed record PlanRequest(Guid ApplicationId, string Question, string Language);
+
+public sealed record PlanUsage(string Provider, string Model, long InputTokens, long OutputTokens, long CachedInputTokens, decimal EstimatedCost, double DurationMs);
+
+/// <summary>Validated and authorized plan ready for the compiler (P8.2). Nothing here has touched the business database.</summary>
+public sealed record PlanResponse(QueryPlan Plan, AuthorizedPlan Authorized, PlanUsage Usage);
+
+/// <summary>Thrown when the model's plan is rejected: shape errors or authorization errors, with stable codes for the UI.</summary>
+public sealed class PlanRejectedException : Exception
+{
+    public PlanRejectedException(string stage, IReadOnlyList<PlanError> errors)
+        : base($"{stage}: {string.Join("; ", errors.Select(e => e.Code))}")
+    {
+        Stage = stage;
+        Errors = errors;
+    }
+
+    public PlanRejectedException()
+    {
+        Stage = "unknown";
+        Errors = [];
+    }
+
+    public PlanRejectedException(string message)
+        : base(message)
+    {
+        Stage = "unknown";
+        Errors = [];
+    }
+
+    public PlanRejectedException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+        Stage = "unknown";
+        Errors = [];
+    }
+
+    /// <summary>"shape", "authorization" or "format".</summary>
+    public string Stage { get; }
+
+    public IReadOnlyList<PlanError> Errors { get; }
+}
+
+/// <summary>Steps 1-10 of the secure workflow (specification §19): authorized snapshot, provider call, validation, authorization.</summary>
+public interface IQueryPlanner
+{
+    Task<PlanResponse> PlanAsync(PlanRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>The snapshot the planner would send for an application: what this user may ask about.</summary>
+    Task<MetadataSnapshot> GetSnapshotAsync(Guid applicationId, CancellationToken cancellationToken = default);
+}

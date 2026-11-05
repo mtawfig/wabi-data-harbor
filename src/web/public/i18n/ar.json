@@ -193,7 +193,8 @@
       "roleTemplates": "قوالب الأدوار العامة",
       "insights": "إعدادات تحليلات المنصة",
       "settings": "الإعدادات العامة",
-      "audit": "سجلات التدقيق"
+      "audit": "سجلات التدقيق",
+      "aiProviders": "مزوّدو الذكاء الاصطناعي"
     }
   },
   "ask": {
@@ -527,7 +528,28 @@
       "insights_query_failed": "فشل استعلام الرؤى.",
       "insights_login_not_configured": "حساب الرؤى المخصص غير مضبوط.",
       "insights_login_not_confined": "يستطيع حساب الرؤى قراءة الجداول الخام.",
-      "organization_admin_metrics_automatic": "يحصل مديرو المؤسسة على كل مقياس معتمد تلقائيًا؛ لا يمكن تعديل منحهم."
+      "organization_admin_metrics_automatic": "يحصل مديرو المؤسسة على كل مقياس معتمد تلقائيًا؛ لا يمكن تعديل منحهم.",
+      "ai_provider_not_found": "مزوّد الذكاء الاصطناعي غير موجود.",
+      "ai_provider_not_approved": "يجب أن يكون المزوّد معتمدًا ونشطًا ليكون الافتراضي.",
+      "ai_provider_type_not_allowed": "هذا النوع غير مسموح للمؤسسات.",
+      "ai_provider_invalid": "الاسم والنموذج مطلوبان.",
+      "ai_provider_endpoint_invalid": "يجب أن تكون نقطة النهاية عنوان https (http فقط لـ localhost).",
+      "ai_provider_not_configured": "لا يوجد مزوّد ذكاء اصطناعي معتمد. اطلب من فريق المنصة.",
+      "ai_provider_key_missing": "لا يملك المزوّد مفتاح API.",
+      "ai_provider_unreachable": "تعذّر الوصول إلى المزوّد.",
+      "ai_provider_timeout": "لم يجب المزوّد في الوقت المحدد.",
+      "ai_provider_unauthorized": "رفض المزوّد مفتاح API.",
+      "ai_provider_model_not_found": "اسم النموذج غير موجود لدى المزوّد.",
+      "ai_provider_rate_limited": "يحدّ المزوّد من الطلبات؛ حاول بعد قليل.",
+      "ai_provider_unavailable": "المزوّد غير متاح.",
+      "ai_provider_rejected_request": "رفض المزوّد الطلب.",
+      "ai_provider_invalid_response": "أعاد المزوّد استجابة غير مقروءة.",
+      "ai_provider_refused": "رفض النموذج الطلب.",
+      "ai_provider_response_too_large": "استجابة المزوّد كبيرة جدًا.",
+      "ai_provider_type_unsupported": "نوع مزوّد غير مدعوم.",
+      "ai_application_unsupported": "الأسئلة بلغة طبيعية فوق رؤى المنصة تصل مع الإصدار التالي.",
+      "ai_application_not_approved": "التطبيق غير معتمد أو غير نشط.",
+      "ai_no_permitted_objects": "لا تملك كائنات معتمدة في هذا التطبيق. اطلب الصلاحيات من مديرك."
     },
     "applications": {
       "title": "التطبيقات",
@@ -1202,5 +1224,65 @@
       "tokens": "رموز",
       "bytes": "بايت"
     }
+  },
+  "aiProviders": {
+    "title": "مزوّدو الذكاء الاصطناعي",
+    "subtitle": "نقاط النماذج المعتمدة لمحرك الذكاء الاصطناعي الآمن. تُشفَّر المفاتيح ولا تُعرض مجددًا. تستخدم المؤسسات المزوّد الافتراضي للمنصة ما لم تختر مزوّدًا معتمدًا آخر أو تضبط مزوّدها الخاص على نوع مسموح؛ ولا يوجد أي تحويل إلى نقطة غير معتمدة.",
+    "new": "مزوّد جديد",
+    "edit": "تعديل المزوّد",
+    "delete": "حذف المزوّد",
+    "saved": "تم حفظ المزوّد.",
+    "empty": "لا يوجد مزوّدون بعد. أضف واحدًا أو اضبط Ai:Anthropic:ApiKey في appsettings.json لإنشاء الافتراضي.",
+    "default": "افتراضي المنصة",
+    "notApproved": "غير معتمد",
+    "makeDefault": "تعيين كافتراضي",
+    "test": "اختبار",
+    "testOk": "متصل: أجاب {{model}} خلال {{ms}} مللي ثانية.",
+    "lastTest": "آخر اختبار",
+    "pricing": "السعر لكل مليون رمز (إدخال / إخراج / مخزّن)",
+    "tokens": "حد رموز الإخراج",
+    "keyConfigured": "مضبوط ({{hint}})",
+    "keyMissing": "غير مضبوط",
+    "keyHint": "يُحفظ مشفّرًا ولا يُعرض مجددًا.",
+    "keyKeepHint": "اتركه فارغًا للإبقاء على المفتاح المحفوظ ({{hint}}).",
+    "endpointHint": "اختياري. عنوان الأساس لخوادم OpenAI المتوافقة (مثل https://api.mistral.ai/v1 أو http://localhost:11434/v1)؛ اتركه فارغًا للافتراضي.",
+    "fields": {
+      "type": "نوع المزوّد",
+      "name": "الاسم",
+      "model": "النموذج",
+      "endpoint": "نقطة النهاية",
+      "apiKey": "مفتاح API",
+      "inputPrice": "الإدخال $/م",
+      "outputPrice": "الإخراج $/م",
+      "cachedPrice": "الإدخال المخزّن $/م",
+      "maxOutputTokens": "حد رموز الإخراج",
+      "effort": "جهد الاستدلال",
+      "approved": "معتمد لبيانات المؤسسات"
+    },
+    "types": {
+      "Anthropic": "Anthropic (Claude)",
+      "OpenAiCompatible": "متوافق مع OpenAI",
+      "Gemini": "Google Gemini"
+    },
+    "modelHint": {
+      "Anthropic": "مثل claude-opus-5-5",
+      "OpenAiCompatible": "مثل gpt-5 أو mistral-large-latest أو llama3",
+      "Gemini": "مثل gemini-2.5-pro"
+    },
+    "efforts": {
+      "low": "منخفض",
+      "medium": "متوسط",
+      "high": "مرتفع"
+    },
+    "allowList": "أنواع المزوّدين التي يمكن للمؤسسات ضبطها بنفسها",
+    "allowListHint": "يمكن للمؤسسات إضافة مفاتيحها فقط لهذه الأنواع. إزالة نوع توقف استخدام أي مزوّد مؤسسي من ذلك النوع؛ وتذهب الطلبات إلى افتراضي المنصة.",
+    "orgTitle": "مزوّد الذكاء الاصطناعي",
+    "orgHint": "النموذج الذي يجيب عن أسئلة هذه المؤسسة. يُستخدم افتراضي المنصة ما لم تختر مزوّدًا معتمدًا آخر أو تضف مفتاحك الخاص على نوع مسموح.",
+    "selected": "المزوّد المستخدم",
+    "platformDefault": "افتراضي المنصة",
+    "own": "خاص",
+    "ownProviders": "المزوّدون الخاصون",
+    "noneAllowed": "لا تسمح المنصة حاليًا بمزوّدين خاصين بالمؤسسات.",
+    "selectionSaved": "تم حفظ اختيار المزوّد."
   }
 }

@@ -59,6 +59,7 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'overview' },
       { path: 'overview', loadComponent: () => import('./features/platform/dashboard/platform-dashboard.component').then((m) => m.PlatformDashboardComponent) },
+      { path: 'ai-providers', loadComponent: () => import('./features/platform/ai-providers/ai-providers.component').then((m) => m.AiProvidersComponent) },
       { path: 'settings', loadComponent: () => import('./features/platform/settings/general-settings.component').then((m) => m.GeneralSettingsComponent) },
       { path: 'organizations', loadComponent: () => import('./features/platform/organizations/organizations-list.component').then((m) => m.OrganizationsListComponent) },
       { path: 'organizations/new', loadComponent: () => import('./features/platform/organizations/organization-create.component').then((m) => m.OrganizationCreateComponent) },

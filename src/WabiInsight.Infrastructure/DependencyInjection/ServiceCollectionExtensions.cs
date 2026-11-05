@@ -40,6 +40,8 @@ using WabiInsight.Core.Permissions;
 using WabiInsight.Infrastructure.Permissions;
 using WabiInsight.Core.Insights;
 using WabiInsight.Infrastructure.Insights;
+using WabiInsight.Core.Ai;
+using WabiInsight.Infrastructure.Ai;
 
 namespace WabiInsight.Infrastructure.DependencyInjection;
 
@@ -168,6 +170,22 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IInsightsCatalogService, InsightsCatalogService>();
         services.AddScoped<IInsightsQueryService, InsightsQueryService>();
         services.AddScoped<IMetricGrantService, MetricGrantService>();
+        services.AddOptions<AiOptions>().Bind(configuration.GetSection(AiOptions.SectionName));
+        services.AddHttpClient(HttpAiProvider.HttpClientName, (sp, client) =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(Math.Clamp(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiOptions>>().Value.RequestTimeoutSeconds, 10, 600));
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("WabiInsight/1.0");
+        });
+        services.AddSingleton<AiCredentialProtector>();
+        services.AddSingleton<IAiProvider, AnthropicProvider>();
+        services.AddSingleton<IAiProvider, OpenAiCompatibleProvider>();
+        services.AddSingleton<IAiProvider, GeminiProvider>();
+        services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
+        services.AddScoped<AiProviderService>();
+        services.AddScoped<IAiProviderService>(sp => sp.GetRequiredService<AiProviderService>());
+        services.AddScoped<IAiProviderResolver>(sp => sp.GetRequiredService<AiProviderService>());
+        services.AddScoped<IQueryPlanner, QueryPlanner>();
+        services.AddHostedService<AiProviderSeeder>();
         services.AddSingleton<IDatabaseAdapterFactory, DatabaseAdapterFactory>();
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IMetadataService, MetadataService>();

@@ -83,3 +83,10 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 
 ## Screenshots (P7.2)
 `docs/screenshots/p7-2-*.png`: organization dashboard EN (viewport and full page) and AR, Organization Insights with grouping EN and AR, metric grants tab.
+
+## AI providers (P8.1)
+- Platform *AI Providers* page: provider cards (name with *Platform default* / *Not approved* chips, type · model · endpoint, key status with hint, prices, effort and token cap, last test with green/red icon), actions *Test*, *Make default*, edit, delete; a shared create/edit form (`app-ai-provider-form`, write-only key field with a keep-hint on edit); the allow-list checkboxes below.
+- Organization Settings gains an *AI provider* card: a select (platform default, approved platform providers, own providers) and the organization's own providers with test/edit/delete using the same form restricted to allow-listed types.
+
+## Screenshots (P8.1)
+`docs/screenshots/p8-1-*.png`: platform providers list after a test EN/AR, provider form, organization AI settings with the own-provider form EN and the saved state EN/AR.
