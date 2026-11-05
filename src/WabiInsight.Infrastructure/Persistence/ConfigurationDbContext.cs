@@ -74,6 +74,10 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    public DbSet<SupportAccessGrant> SupportAccessGrants => Set<SupportAccessGrant>();
+
+    public DbSet<SupportSession> SupportSessions => Set<SupportSession>();
+
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;
 

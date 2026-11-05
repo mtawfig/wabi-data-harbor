@@ -294,7 +294,7 @@ public sealed partial class OrganizationService : IOrganizationService
         var organizationId = _tenantContext.RequireOrganizationId();
         return await _context.Organizations.AsNoTracking()
             .Where(o => o.OrganizationId == organizationId)
-            .Select(o => new OrganizationProfile(o.OrganizationId, o.OrganizationCode, o.OrganizationName, o.OrganizationNameAr, o.Description, o.ContactEmail, o.ContactPhone, o.CountryCode, o.TimeZone, o.DefaultLanguage, o.Status, o.CreatedAt))
+            .Select(o => new OrganizationProfile(o.OrganizationId, o.OrganizationCode, o.OrganizationName, o.OrganizationNameAr, o.Description, o.ContactEmail, o.ContactPhone, o.CountryCode, o.TimeZone, o.DefaultLanguage, o.Status, o.CreatedAt, o.RequireSecondAdminApprovalForSupportAccess))
             .SingleAsync(cancellationToken);
     }
 
@@ -322,7 +322,8 @@ public sealed partial class OrganizationService : IOrganizationService
         organization.ContactPhone = Clean(command.ContactPhone);
         organization.TimeZone = command.TimeZone.Trim();
         organization.DefaultLanguage = command.DefaultLanguage;
-        _audit.Append(AuditEvents.OrganizationUpdated, "Organization", organizationId.ToString(), new { before, after = Snapshot(organization) }, organizationId);
+        organization.RequireSecondAdminApprovalForSupportAccess = command.RequireSecondAdminApprovalForSupportAccess;
+        _audit.Append(AuditEvents.OrganizationUpdated, "Organization", organizationId.ToString(), new { before, after = Snapshot(organization), requireSecondAdminApproval = command.RequireSecondAdminApprovalForSupportAccess }, organizationId);
         await _context.SaveChangesAsync(cancellationToken);
 
         return new OrganizationOperationResult(OrganizationOperationOutcome.Success, []);

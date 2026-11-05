@@ -38,4 +38,10 @@ public static class NotificationTypes
     public const string TicketAssigned = "Ticket.Assigned";
     public const string TicketCommentAdded = "Ticket.CommentAdded";
     public const string TicketAttachmentAdded = "Ticket.AttachmentAdded";
+    public const string SupportAccessProposed = "SupportAccess.Proposed";
+    public const string SupportAccessApproved = "SupportAccess.Approved";
+    public const string SupportAccessDeclined = "SupportAccess.Declined";
+    public const string SupportAccessRevoked = "SupportAccess.Revoked";
+    public const string SupportAccessExpired = "SupportAccess.Expired";
+    public const string SupportOperationExecuted = "SupportAccess.OperationExecuted";
 }

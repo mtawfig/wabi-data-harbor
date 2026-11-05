@@ -35,6 +35,9 @@ public class Organization : AuditableEntity
 
     public OrganizationStatus Status { get; set; } = OrganizationStatus.Active;
 
+    /// <summary>When true, a requester who is an OrganizationAdmin cannot approve their own support-access grant (review A12).</summary>
+    public bool RequireSecondAdminApprovalForSupportAccess { get; set; }
+
     public Guid? CreatedByAdministratorId { get; set; }
 
     public Guid? UpdatedByAdministratorId { get; set; }

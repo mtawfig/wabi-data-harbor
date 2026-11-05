@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using WabiInsight.Core.Organizations;
+using WabiInsight.Core.SupportAccess;
 using WabiInsight.Core.Tenancy;
 
 namespace WabiInsight.Api.Security;
@@ -29,6 +30,7 @@ public sealed class DomainExceptionHandler : IExceptionHandler
                 OrganizationOperationOutcome.EmailAlreadyRegistered => (StatusCodes.Status409Conflict, "Email already registered", "email-already-registered", v.Message),
                 _ => (StatusCodes.Status400BadRequest, "Validation failed", "validation", v.Message),
             },
+            SupportAccessDeniedException s => (StatusCodes.Status403Forbidden, "Support access denied", "support-access-denied", s.Code),
             TenantContextException t => (StatusCodes.Status403Forbidden, "Forbidden", "forbidden", t.Message),
             _ => (0, string.Empty, string.Empty, string.Empty),
         };

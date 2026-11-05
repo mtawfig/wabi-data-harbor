@@ -819,6 +819,9 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<bool>("RequireSecondAdminApprovalForSupportAccess")
+                        .HasColumnType("bit");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -968,6 +971,151 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.HasIndex("RecipientType", "RecipientId", "ReadAt", "CreatedAt");
 
                     b.ToTable("Notifications", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Support.SupportAccessGrant", b =>
+                {
+                    b.Property<Guid>("GrantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AllowedOperationsJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ApprovedByOrganizationAdminUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApprovedObjectReferences")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid>("AssignedPlatformAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProposedByAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("RevokedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RevokedByType")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("ScopeType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("GrantId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("ProposedByAdministratorId");
+
+                    b.HasIndex("AssignedPlatformAdministratorId", "Status");
+
+                    b.HasIndex("OrganizationId", "RequestedByUserId");
+
+                    b.HasIndex("OrganizationId", "Status");
+
+                    b.HasIndex("OrganizationId", "TicketId");
+
+                    b.HasIndex("TicketId", "CreatedAt");
+
+                    b.ToTable("SupportAccessGrants", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SupportAccessGrants_Status", "[Status] IN ('Proposed','Approved','Active','Expired','Revoked','Completed','Declined')");
+                        });
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Support.SupportSession", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EndReason")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("GrantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("OperationsExecuted")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("SessionId");
+
+                    b.HasIndex("AdministratorId", "EndedAt");
+
+                    b.HasIndex("GrantId", "StartedAt");
+
+                    b.HasIndex("OrganizationId", "GrantId");
+
+                    b.ToTable("SupportSessions", (string)null);
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Support.SupportTicket", b =>
@@ -1441,6 +1589,57 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("BootstrapAdministratorId")
                         .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Support.SupportAccessGrant", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Administrator", null)
+                        .WithMany()
+                        .HasForeignKey("AssignedPlatformAdministratorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Administrator", null)
+                        .WithMany()
+                        .HasForeignKey("ProposedByAdministratorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RequestedByUserId")
+                        .HasPrincipalKey("OrganizationId", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Support.SupportTicket", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "TicketId")
+                        .HasPrincipalKey("OrganizationId", "TicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Support.SupportSession", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Administrator", null)
+                        .WithMany()
+                        .HasForeignKey("AdministratorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Support.SupportAccessGrant", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "GrantId")
+                        .HasPrincipalKey("OrganizationId", "GrantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Support.SupportTicket", b =>

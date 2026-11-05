@@ -28,6 +28,8 @@ using WabiInsight.Core.Support;
 using WabiInsight.Infrastructure.Notifications;
 using WabiInsight.Infrastructure.Storage;
 using WabiInsight.Infrastructure.Support;
+using WabiInsight.Core.SupportAccess;
+using WabiInsight.Infrastructure.SupportAccess;
 
 namespace WabiInsight.Infrastructure.DependencyInjection;
 
@@ -131,6 +133,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISupportTicketService, SupportTicketService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
+
+        services.AddOptions<SupportAccessOptions>().Bind(configuration.GetSection(SupportAccessOptions.SectionName));
+        services.AddScoped<ISupportAccessService, SupportAccessService>();
+        services.AddScoped<ISupportAccessAuthorizer, SupportAccessAuthorizer>();
+        services.AddScoped<ISupportOperationExecutor, SupportOperationExecutor>();
+        services.AddHostedService<SupportAccessExpiryWorker>();
 
         return services;
     }
