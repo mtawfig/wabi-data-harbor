@@ -27,7 +27,9 @@ public sealed class SupportAccessScopeTests
         Assert.Null(SupportAccessScope.Validate(Allowed(), SupportOperations.ConfigureRole, "NEW"));
         Assert.Equal("support_operation_not_granted", SupportAccessScope.Validate(Allowed(), SupportOperations.UpdateOrganizationSettings, null));
         Assert.Equal("support_operation_unknown", SupportAccessScope.Validate(Allowed(), "DropDatabase", null));
-        Assert.Equal("support_operation_not_available", SupportAccessScope.Validate(Allowed(), SupportOperations.UpdateTablePermissions, Allowed()[3].TargetReferences[0]));
+        var allowed = Allowed();
+        Assert.Null(SupportAccessScope.Validate(allowed, SupportOperations.UpdateTablePermissions, allowed[3].TargetReferences[0]));
+        Assert.Equal("support_target_not_granted", SupportAccessScope.Validate(allowed, SupportOperations.UpdateTablePermissions, Guid.NewGuid().ToString()));
     }
 
     [Fact]
@@ -54,11 +56,11 @@ public sealed class SupportAccessScopeTests
     }
 
     [Fact]
-    public void Catalog_HasNoGlobalGrant_AndMarksLaterPhaseOperationsNotExecutable()
+    public void Catalog_HasNoGlobalGrant_AndEveryOperationIsExecutable()
     {
         Assert.Equal(7, SupportOperations.Catalog.Count);
         Assert.DoesNotContain(SupportOperations.Catalog, o => o.Code.Contains("All", StringComparison.Ordinal) || o.Code.Contains("Admin", StringComparison.Ordinal));
-        Assert.False(SupportOperations.Find(SupportOperations.UpdateTablePermissions)!.Executable); // P6.2
+        Assert.All(SupportOperations.Catalog, o => Assert.True(o.Executable));
         Assert.True(SupportOperations.Find(SupportOperations.RefreshMetadata)!.Executable);
         Assert.True(SupportOperations.Find(SupportOperations.DiagnoseApplicationConnection)!.Executable);
     }

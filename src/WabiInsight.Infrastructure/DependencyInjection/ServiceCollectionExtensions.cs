@@ -36,6 +36,8 @@ using WabiInsight.Core.Metadata;
 using WabiInsight.Infrastructure.Applications;
 using WabiInsight.Infrastructure.Databases;
 using WabiInsight.Infrastructure.Metadata;
+using WabiInsight.Core.Permissions;
+using WabiInsight.Infrastructure.Permissions;
 
 namespace WabiInsight.Infrastructure.DependencyInjection;
 
@@ -162,6 +164,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IMetadataService, MetadataService>();
         services.AddScoped<MetadataService>();
+        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<PermissionService>();
+        services.AddScoped<IPermissionResolver, PermissionResolver>();
 
         return services;
     }

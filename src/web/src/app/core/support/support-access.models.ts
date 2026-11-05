@@ -72,9 +72,17 @@ export interface SupportTargetRole {
   isActive: boolean;
 }
 
+export interface SupportTargetObject {
+  objectId: string;
+  applicationCode: string;
+  schemaName: string;
+  objectName: string;
+}
+
 export interface SupportTargets {
   users: SupportTargetUser[];
   roles: SupportTargetRole[];
+  objects: SupportTargetObject[];
 }
 
 export interface SupportOperationResult {

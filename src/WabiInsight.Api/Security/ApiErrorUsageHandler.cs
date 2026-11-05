@@ -17,6 +17,13 @@ public sealed partial class ApiErrorUsageHandler : IExceptionHandler
         _logger = logger;
     }
 
+    /// <summary>UsageEvents.EntityId is 64 characters; long paths keep their full value in the metadata only.</summary>
+    private static string EntityId(PathString path)
+    {
+        var value = path.Value ?? "/";
+        return value.Length <= 64 ? value : value[..64];
+    }
+
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         try
@@ -25,7 +32,7 @@ public sealed partial class ApiErrorUsageHandler : IExceptionHandler
             await usage.AppendAndSaveAsync(
                 UsageEventTypes.ApiError,
                 "Request",
-                httpContext.Request.Path,
+                EntityId(httpContext.Request.Path),
                 succeeded: false,
                 metadata: new { method = httpContext.Request.Method, path = httpContext.Request.Path.Value, exception = exception.GetType().Name },
                 cancellationToken: cancellationToken);

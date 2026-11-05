@@ -47,7 +47,10 @@ public sealed record SupportTargetUser(Guid UserId, string FullName, string Emai
 
 public sealed record SupportTargetRole(Guid RoleId, string RoleCode, string NameEn, string NameAr, bool IsSystem, bool IsActive);
 
-public sealed record SupportTargetsDto(IReadOnlyList<SupportTargetUser> Users, IReadOnlyList<SupportTargetRole> Roles);
+/// <summary>Approved, present object of an approved application: configuration metadata only (names), never rows.</summary>
+public sealed record SupportTargetObject(Guid ObjectId, string ApplicationCode, string SchemaName, string ObjectName);
+
+public sealed record SupportTargetsDto(IReadOnlyList<SupportTargetUser> Users, IReadOnlyList<SupportTargetRole> Roles, IReadOnlyList<SupportTargetObject> Objects);
 
 public sealed record SupportSessionDto(Guid SessionId, SupportAccessGrantDto Grant, DateTimeOffset StartedAt, DateTimeOffset ExpiresAt, IReadOnlyList<SupportOperationEntry> Operations);
 

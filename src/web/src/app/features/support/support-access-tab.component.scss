@@ -6,7 +6,7 @@
 .op--off { opacity: 0.75; }
 .wide { width: 100%; margin-bottom: 8px; }
 .hours { width: 180px; }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-top: 12px; .span { grid-column: 1 / -1; } }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-top: 12px; .span { grid-column: 1 / -1; } .checks { display: flex; flex-direction: column; gap: 4px; padding-bottom: 16px; } .object-field { margin-bottom: 16px; } }
 .actions { display: flex; justify-content: flex-end; gap: 12px; }
 .grant { border: 1px solid var(--wi-border); border-radius: var(--wi-radius); padding: 16px; margin-top: 12px; header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; } }
 .small { font-size: 12px; }

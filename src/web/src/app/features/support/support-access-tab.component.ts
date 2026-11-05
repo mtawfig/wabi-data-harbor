@@ -14,6 +14,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { Observable } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { LanguageService } from '../../core/i18n/language.service';
+import { ROW_SCOPES } from '../../core/organizations/permissions.models';
 import { problemMessage } from '../../core/problem-message';
 import { GrantAction, SupportAccessGrant, SupportOperationCode, SupportOperationDefinition, SupportOperationEntry, SupportTargets } from '../../core/support/support-access.models';
 import { SupportAccessService } from '../../core/support/support-access.service';
@@ -65,6 +66,7 @@ export class SupportAccessTabComponent {
   readonly runOperation = signal<SupportOperationCode | null>(null);
   readonly runTarget = signal<string | null>(null);
   readonly runPayload = signal<Record<string, string | boolean>>({});
+  readonly rowScopes = ROW_SCOPES;
   readonly runRoleCodes = signal<string[]>([]);
   readonly lastResult = signal<string | null>(null);
 
@@ -154,9 +156,12 @@ export class SupportAccessTabComponent {
   selectOperation(code: SupportOperationCode | null): void {
     this.runOperation.set(code);
     this.runTarget.set(this.runTargets().length === 1 ? this.runTargets()[0] : null);
-    this.runPayload.set({});
+    this.runPayload.set(code === 'UpdateTablePermissions' ? { granted: true, allColumns: true, rowScope: 'All' } : {});
     this.runRoleCodes.set([]);
     this.lastResult.set(null);
+    if (code === 'UpdateTablePermissions' && !this.targets()) {
+      this.access.targets(this.ticket().summary.ticketId).subscribe((t) => this.targets.set(t));
+    }
   }
 
   setField(name: string, value: string | boolean): void {

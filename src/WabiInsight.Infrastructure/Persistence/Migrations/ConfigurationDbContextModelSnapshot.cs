@@ -801,6 +801,133 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.ToTable("UserRoles", (string)null);
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Permissions.RoleColumnGrant", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ColumnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RoleId", "ColumnId");
+
+                    b.HasIndex("OrganizationId", "ColumnId");
+
+                    b.HasIndex("OrganizationId", "RoleId");
+
+                    b.HasIndex("RoleId", "ObjectId");
+
+                    b.ToTable("RoleColumnPermissions", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Permissions.RoleRowGrant", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("RoleId", "ObjectId");
+
+                    b.HasIndex("OrganizationId", "ObjectId");
+
+                    b.HasIndex("OrganizationId", "RoleId");
+
+                    b.ToTable("RoleRowPermissions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_RoleRowPermissions_Scope", "[Scope] IN ('All','Department','Section','Self')");
+                        });
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Permissions.RoleTableGrant", b =>
+                {
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AllColumns")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("GrantedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("GrantedByAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("GrantedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PermissionId");
+
+                    b.HasIndex("OrganizationId", "ObjectId");
+
+                    b.HasIndex("OrganizationId", "RoleId");
+
+                    b.HasIndex("RoleId", "ObjectId")
+                        .IsUnique();
+
+                    b.ToTable("RoleTablePermissions", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Permissions.RowScopeColumnMapping", b =>
+                {
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("DepartmentColumnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("EmployeeColumnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SectionColumnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ObjectId");
+
+                    b.HasIndex("OrganizationId", "DepartmentColumnId");
+
+                    b.HasIndex("OrganizationId", "EmployeeColumnId");
+
+                    b.HasIndex("OrganizationId", "ObjectId");
+
+                    b.HasIndex("OrganizationId", "SectionColumnId");
+
+                    b.ToTable("RowScopeColumnMappings", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Platform.Administrator", b =>
                 {
                     b.Property<Guid>("AdministratorId")
@@ -1877,6 +2004,85 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("OrganizationId", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Permissions.RoleColumnGrant", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseColumn", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ColumnId")
+                        .HasPrincipalKey("OrganizationId", "ColumnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Role", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RoleId")
+                        .HasPrincipalKey("OrganizationId", "RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Permissions.RoleRowGrant", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseObject", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ObjectId")
+                        .HasPrincipalKey("OrganizationId", "ObjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Role", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RoleId")
+                        .HasPrincipalKey("OrganizationId", "RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Permissions.RoleTableGrant", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseObject", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ObjectId")
+                        .HasPrincipalKey("OrganizationId", "ObjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Role", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RoleId")
+                        .HasPrincipalKey("OrganizationId", "RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Permissions.RowScopeColumnMapping", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseColumn", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DepartmentColumnId")
+                        .HasPrincipalKey("OrganizationId", "ColumnId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseColumn", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "EmployeeColumnId")
+                        .HasPrincipalKey("OrganizationId", "ColumnId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseObject", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ObjectId")
+                        .HasPrincipalKey("OrganizationId", "ObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Metadata.DatabaseColumn", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SectionColumnId")
+                        .HasPrincipalKey("OrganizationId", "ColumnId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Platform.Administrator", b =>

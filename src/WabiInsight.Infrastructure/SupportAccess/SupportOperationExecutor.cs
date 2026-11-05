@@ -13,7 +13,10 @@ using WabiInsight.Core.Security;
 using WabiInsight.Core.SupportAccess;
 using WabiInsight.Core.Tenancy;
 using WabiInsight.Core.Usage;
+using WabiInsight.Core.Entities.Permissions;
+using WabiInsight.Core.Permissions;
 using WabiInsight.Infrastructure.Metadata;
+using WabiInsight.Infrastructure.Permissions;
 using WabiInsight.Infrastructure.Persistence;
 
 namespace WabiInsight.Infrastructure.SupportAccess;
@@ -37,9 +40,11 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
     private readonly MetadataService _metadata;
     private readonly IConnectionStringProtector _protector;
     private readonly IDatabaseAdapterFactory _adapters;
+    private readonly PermissionService _permissions;
 
-    public SupportOperationExecutor(ConfigurationDbContext context, ISupportAccessAuthorizer authorizer, IOrganizationUserProvisioningService provisioning, ITenantContext tenantContext, IClock clock, IAuditWriter audit, IUsageEventWriter usage, INotificationDispatcher notifications, MetadataService metadata, IConnectionStringProtector protector, IDatabaseAdapterFactory adapters)
+    public SupportOperationExecutor(ConfigurationDbContext context, ISupportAccessAuthorizer authorizer, IOrganizationUserProvisioningService provisioning, ITenantContext tenantContext, IClock clock, IAuditWriter audit, IUsageEventWriter usage, INotificationDispatcher notifications, MetadataService metadata, IConnectionStringProtector protector, IDatabaseAdapterFactory adapters, PermissionService permissions)
     {
+        _permissions = permissions;
         _metadata = metadata;
         _protector = protector;
         _adapters = adapters;
@@ -67,6 +72,7 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
                 SupportOperations.UpdateOrganizationSettings => await UpdateSettingsAsync(context, command.Payload, cancellationToken),
                 SupportOperations.RefreshMetadata => await RefreshMetadataAsync(context, cancellationToken),
                 SupportOperations.DiagnoseApplicationConnection => await DiagnoseAsync(context, cancellationToken),
+                SupportOperations.UpdateTablePermissions => await UpdatePermissionsAsync(context, command.Payload, cancellationToken),
                 _ => throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "support_operation_not_available"),
             };
 
@@ -194,6 +200,24 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
         _audit.Append(AuditEvents.OrganizationUpdated, "Organization", organization.OrganizationId.ToString(), new { viaSupportGrant = context.GrantId, before, after }, context.OrganizationId);
         await _context.SaveChangesAsync(cancellationToken);
         return (after, null, new { before, after });
+    }
+
+    /// <summary>Payload: objectId, granted, allColumns, columnIds[], rowScope. The role is the grant target.</summary>
+    private async Task<(object Result, string? DeliveredTo, object Summary)> UpdatePermissionsAsync(SupportExecutionContext context, JsonElement? payload, CancellationToken cancellationToken)
+    {
+        var p = Require(payload);
+        var roleId = Guid.Parse(context.TargetReference!);
+        if (!Guid.TryParse(Text(p, "objectId"), out var objectId))
+        {
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "object_not_found");
+        }
+
+        var granted = !p.TryGetProperty("granted", out var g) || g.ValueKind != JsonValueKind.False;
+        var allColumns = p.TryGetProperty("allColumns", out var a) && a.ValueKind == JsonValueKind.True;
+        var columnIds = p.TryGetProperty("columnIds", out var c) && c.ValueKind == JsonValueKind.Array ? c.EnumerateArray().Select(x => Guid.TryParse(x.GetString(), out var id) ? id : Guid.Empty).Where(id => id != Guid.Empty).ToList() : [];
+        RowScope? scope = Enum.TryParse<RowScope>(Text(p, "rowScope"), true, out var parsed) ? parsed : null;
+        var result = await _permissions.SetObjectGrantForOrganizationAsync(context.OrganizationId, roleId, objectId, new SetObjectGrantCommand(granted, allColumns, columnIds, scope), cancellationToken);
+        return (result, null, new { roleId, objectId, granted, allColumns, columns = columnIds.Count, scope });
     }
 
     private async Task<(object Result, string? DeliveredTo, object Summary)> RefreshMetadataAsync(SupportExecutionContext context, CancellationToken cancellationToken)
