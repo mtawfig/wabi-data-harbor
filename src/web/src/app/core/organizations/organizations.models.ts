@@ -57,6 +57,7 @@ export interface OrganizationProfile {
   defaultLanguage: 'en' | 'ar';
   status: OrganizationStatus;
   createdAt: string;
+  requireSecondAdminApprovalForSupportAccess: boolean;
 }
 
 export type UpdateOrganizationProfileRequest = Omit<OrganizationProfile, 'organizationId' | 'organizationCode' | 'countryCode' | 'status' | 'createdAt'>;

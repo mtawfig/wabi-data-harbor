@@ -70,6 +70,12 @@ public sealed class SupportAccessTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await platform.GetAsync("/api/platform/support/session")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = "x@org-a.test", fullName = "X" })).StatusCode);
 
+        var targets = await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync();
+        Assert.Contains(targets.GetProperty("users").EnumerateArray(), u => u.GetProperty("userId").GetGuid() == _db.Data.UserAChangerId);
+        Assert.DoesNotContain(targets.GetProperty("users").EnumerateArray(), u => u.GetProperty("userId").GetGuid() == _db.Data.UserB1Id);
+        Assert.Contains(targets.GetProperty("roles").EnumerateArray(), r => r.GetProperty("roleCode").GetString() == "Analyst");
+        Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).StatusCode);
+
         var grant = await ProposeAsync(platform, ticketId, new object[]
         {
             new { operation = "CreateOrganizationUser", targetReferences = Array.Empty<string>() },

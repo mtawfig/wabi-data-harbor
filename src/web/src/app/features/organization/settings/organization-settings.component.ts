@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -13,10 +14,10 @@ import { ProblemDetails } from '../../../core/auth/session.model';
 import { OrganizationProfile, TIME_ZONES } from '../../../core/organizations/organizations.models';
 import { OrganizationProfileService } from '../../../core/organizations/organizations.service';
 
-/** Organization Settings (P2.1 scope: profile). Role/security, integrations and defaults arrive in later phases. */
+/** Organization Settings: profile (P2.1) and the support-access approval policy (P5.2). Integrations and defaults arrive in later phases. */
 @Component({
   selector: 'app-organization-settings',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule],
   templateUrl: './organization-settings.component.html',
   styles: `
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
@@ -45,6 +46,7 @@ export class OrganizationSettingsComponent {
     contactPhone: [''],
     timeZone: ['UTC', Validators.required],
     defaultLanguage: ['en' as 'en' | 'ar', Validators.required],
+    requireSecondAdminApprovalForSupportAccess: [false],
   });
 
   constructor() {
@@ -58,6 +60,7 @@ export class OrganizationSettingsComponent {
         contactPhone: p.contactPhone ?? '',
         timeZone: p.timeZone,
         defaultLanguage: p.defaultLanguage,
+        requireSecondAdminApprovalForSupportAccess: p.requireSecondAdminApprovalForSupportAccess ?? false,
       });
     });
   }

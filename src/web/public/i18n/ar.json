@@ -179,7 +179,8 @@
         "permissions": "الصلاحيات",
         "insights": "تحليلات المؤسسة",
         "integrations": "التكاملات",
-        "settings": "إعدادات المؤسسة"
+        "settings": "إعدادات المؤسسة",
+        "supportAccess": "وصول الدعم"
       }
     },
     "platform": {
@@ -308,6 +309,11 @@
       "organization-status-transition": "تغيير الحالة هذا غير مسموح.",
       "organization_code_invalid": "استخدم من 2 إلى 31 حرفًا إنجليزيًا كبيرًا أو رقمًا أو شرطة.",
       "unknown": "فشلت العملية."
+    },
+    "settings": {
+      "supportAccessTitle": "سياسة وصول الدعم",
+      "requireSecondAdmin": "اشتراط اعتماد مدير مؤسسة آخر لوصول الدعم الذي يطلبه مدير",
+      "requireSecondAdminHint": "افتراضيًا يمكن للمدير اعتماد وصول الدعم على تذكرته. فعّل هذا الخيار لاشتراط مدير ثانٍ دائمًا."
     }
   },
   "admin": {
@@ -445,7 +451,31 @@
       "administrator_not_found": "المدير غير موجود أو غير نشط.",
       "attachment_type_not_allowed": "نوع الملف غير مسموح.",
       "attachment_too_large": "حجم الملف يتجاوز 10 ميغابايت.",
-      "attachment_rejected_by_scan": "رُفض الملف بواسطة الفحص الأمني."
+      "attachment_rejected_by_scan": "رُفض الملف بواسطة الفحص الأمني.",
+      "support_grant_not_found": "طلب وصول الدعم غير موجود.",
+      "support_grant_not_pending": "لم يعد هذا الطلب بانتظار الاعتماد.",
+      "support_second_admin_required": "تشترط مؤسستك اعتماد مدير آخر لوصول الدعم على تذكرتك.",
+      "support_grant_not_revocable": "لم يعد بالإمكان إلغاء هذه الصلاحية.",
+      "support_grant_not_assigned_to_you": "هذه الصلاحية مسندة إلى مدير آخر.",
+      "support_grant_not_approved": "لم تعتمد المؤسسة هذه الصلاحية بعد.",
+      "support_grant_not_usable": "لم تعد هذه الصلاحية صالحة.",
+      "support_grant_already_open": "لهذه التذكرة طلب وصول دعم مفتوح بالفعل.",
+      "support_operations_required": "اختر عملية واحدة على الأقل.",
+      "support_operations_duplicate": "يمكن إدراج كل عملية مرة واحدة.",
+      "support_operation_unknown": "عملية غير معروفة.",
+      "support_target_required": "حدد الأهداف لكل عملية تحتاجها.",
+      "support_target_not_applicable": "هذه العملية لا تأخذ أهدافًا.",
+      "support_expiry_out_of_range": "يجب أن تكون الصلاحية بين 1 و72 ساعة.",
+      "support_reason_required": "السبب مطلوب.",
+      "support_target_not_in_organization": "أحد الأهداف المحددة لا ينتمي إلى مؤسسة التذكرة.",
+      "support_session_required": "ادخل في وضع الدعم أولًا.",
+      "support_grant_expired": "انتهت الصلاحية.",
+      "support_operation_not_granted": "هذه العملية ليست ضمن الصلاحية المعتمدة.",
+      "support_operation_not_available": "تصبح هذه العملية قابلة للتنفيذ في مرحلة لاحقة.",
+      "support_target_not_granted": "لم يُعتمد هذا الهدف.",
+      "support_payload_required": "املأ حقول العملية.",
+      "organization_profile_invalid": "تحقق من حقول المؤسسة.",
+      "support_access_denied": "رُفض وصول الدعم."
     }
   },
   "platformDashboard": {
@@ -604,7 +634,7 @@
       "lastActivity": "آخر نشاط",
       "comments": "الردود",
       "attachments": "المرفقات",
-      "requiresSupportAccess": "يحتاج هذا الطلب إلى أن يغيّر فريق المنصة إعداداتنا (وصول دعم معتمد، المرحلة 5)",
+      "requiresSupportAccess": "يحتاج هذا الطلب إلى أن يغيّر فريق المنصة إعداداتنا (وصول دعم معتمد)",
       "resolution": "ملخص الحل",
       "reopened": "أُعيد فتحها",
       "firstOpened": "أول فتح",
@@ -636,7 +666,8 @@
       "overview": "نظرة عامة",
       "conversation": "المحادثة",
       "timeline": "الجدول الزمني",
-      "attachments": "المرفقات"
+      "attachments": "المرفقات",
+      "supportAccess": "وصول الدعم"
     },
     "actions": {
       "title": "الإجراءات",
@@ -680,7 +711,16 @@
       },
       "from": "من",
       "to": "إلى",
-      "autoReply": "تلقائيًا: ردّ مقدّم الطلب"
+      "autoReply": "تلقائيًا: ردّ مقدّم الطلب",
+      "SupportAccessProposed": "اقتراح وصول الدعم",
+      "SupportAccessApproved": "اعتماد وصول الدعم",
+      "SupportAccessDeclined": "رفض وصول الدعم",
+      "SupportAccessRevoked": "إلغاء وصول الدعم",
+      "SupportAccessExpired": "انتهاء وصول الدعم",
+      "SupportAccessCompleted": "إكمال وصول الدعم",
+      "SupportSessionStarted": "بدء وضع الدعم",
+      "SupportSessionEnded": "إنهاء وضع الدعم",
+      "SupportOperationExecuted": "تنفيذ عملية دعم"
     },
     "attachments": {
       "upload": "إضافة مرفق",
@@ -716,7 +756,112 @@
       "Ticket.StatusChanged": "انتقلت التذكرة {{reference}} إلى {{newStatus}}",
       "Ticket.Assigned": "أسند {{actorName}} إليك التذكرة {{reference}}",
       "Ticket.CommentAdded": "رد {{actorName}} على التذكرة {{reference}}",
-      "Ticket.AttachmentAdded": "أرفق {{actorName}} ملفًا بالتذكرة {{reference}}"
+      "Ticket.AttachmentAdded": "أرفق {{actorName}} ملفًا بالتذكرة {{reference}}",
+      "SupportAccess.Proposed": "يطلب {{actorName}} وصول دعم على التذكرة {{reference}}: مطلوب الاعتماد",
+      "SupportAccess.Approved": "اعتمد {{actorName}} وصول الدعم على التذكرة {{reference}}",
+      "SupportAccess.Declined": "رفض {{actorName}} وصول الدعم على التذكرة {{reference}}",
+      "SupportAccess.Revoked": "ألغى {{actorName}} وصول الدعم على التذكرة {{reference}}",
+      "SupportAccess.Expired": "انتهى وصول الدعم على التذكرة {{reference}}",
+      "SupportAccess.OperationExecuted": "نفّذ {{actorName}} \"{{operation}}\" على التذكرة {{reference}} ({{outcome}})"
+    }
+  },
+  "supportAccess": {
+    "title": "وصول الدعم",
+    "subtitlePlatform": "صلاحيات محدودة النطاق والوقت لتغيير إعدادات مؤسسة. لا يتغير شيء دون اعتماد المؤسسة.",
+    "subtitleOrganization": "طلبات فريق المنصة لتغيير إعدادات مؤسستك. ما تعتمده فقط، وللمدة التي تعتمدها.",
+    "intro": "لا يغيّر فريق المنصة مستخدمي مؤسستك أو أدوارها أو إعداداتها دون صلاحية معتمدة ومحدودة الوقت تذكر العمليات بدقة. التذكرة وحدها لا تمنح شيئًا.",
+    "propose": "اقتراح وصول الدعم",
+    "proposalTitle": "العمليات المقترحة",
+    "proposalHint": "اختر ما تحتاجه هذه التذكرة فقط وحدد الأهداف بدقة. يجب أن يعتمدها مدير المؤسسة قبل تنفيذ أي شيء.",
+    "laterPhase": "قابلة للتنفيذ من المرحلة 6",
+    "targetUsers": "المستخدمون",
+    "targetRoles": "الأدوار",
+    "newRole": "دور جديد",
+    "targetApplications": "معرّفات التطبيقات",
+    "targetApplicationsHint": "معرّفات التطبيقات مفصولة بفواصل (المرحلة 6).",
+    "reason": "السبب",
+    "expiryHours": "الصلاحية (ساعات)",
+    "expiryHint": "من 1 إلى 72 ساعة بعد الاعتماد",
+    "asProposed": "كما اقتُرح",
+    "submitProposal": "إرسال للاعتماد",
+    "none": "لم يُطلب وصول دعم على هذه التذكرة.",
+    "grantBy": "اقترحه {{name}}",
+    "expiresAt": "صالحة حتى",
+    "sessionActive": "وضع الدعم نشط",
+    "assignedTo": "المدير المسؤول",
+    "requestedBy": "مقدّم الطلب",
+    "approvedBy": "اعتمده",
+    "note": "ملاحظة",
+    "operationsExecuted": "العمليات المنفّذة",
+    "proposedBy": "اقترحه",
+    "operationsColumn": "العمليات",
+    "actions": {
+      "approve": "اعتماد",
+      "decline": "رفض",
+      "enter": "الدخول في وضع الدعم",
+      "exit": "الخروج من وضع الدعم",
+      "complete": "تعليم كمكتمل",
+      "revoke": "إلغاء"
+    },
+    "done": {
+      "approve": "تم اعتماد وصول الدعم.",
+      "decline": "تم رفض الاقتراح.",
+      "enter": "تم الدخول في وضع الدعم.",
+      "exit": "انتهى وضع الدعم.",
+      "complete": "اكتملت الصلاحية.",
+      "revoke": "تم إلغاء وصول الدعم."
+    },
+    "proposed": "أُرسل الاقتراح إلى مديري المؤسسة.",
+    "executed": "نُفّذت العملية وسُجّلت على التذكرة.",
+    "executedDelivered": "نُفّذت العملية؛ أُرسلت كلمة المرور المؤقتة إلى {{email}}.",
+    "runTitle": "تنفيذ عملية مسموح بها",
+    "runHint": "تتاح فقط العمليات والأهداف المعتمدة في هذه الصلاحية. يُسجَّل كل تنفيذ في الجدول الزمني للتذكرة وسجل التدقيق.",
+    "operation": "العملية",
+    "target": "الهدف",
+    "run": "تنفيذ",
+    "settingsHint": "اترك الحقل فارغًا للإبقاء على قيمته الحالية.",
+    "pending": "بانتظار الاعتماد",
+    "all": "الكل",
+    "empty": "لا توجد صلاحيات مطابقة.",
+    "statuses": {
+      "Proposed": "بانتظار الاعتماد",
+      "Approved": "معتمدة",
+      "Active": "في وضع الدعم",
+      "Expired": "منتهية",
+      "Revoked": "ملغاة",
+      "Completed": "مكتملة",
+      "Declined": "مرفوضة"
+    },
+    "operations": {
+      "CreateOrganizationUser": "إنشاء مستخدم مؤسسة",
+      "ResetOrganizationUserPassword": "إعادة تعيين كلمة مرور مستخدم",
+      "ConfigureRole": "تهيئة دور",
+      "UpdateTablePermissions": "تحديث صلاحيات الجداول",
+      "RefreshMetadata": "تحديث البيانات الوصفية",
+      "DiagnoseApplicationConnection": "تشخيص اتصال تطبيق",
+      "UpdateOrganizationSettings": "تحديث إعدادات المؤسسة"
+    },
+    "operationHints": {
+      "CreateOrganizationUser": "ينشئ مستخدمًا بالأدوار المختارة؛ تُرسل كلمة المرور المؤقتة إلى ذلك المستخدم.",
+      "ResetOrganizationUserPassword": "يرسل كلمة مرور مؤقتة جديدة إلى المستخدم (المستخدمين) المحددين.",
+      "ConfigureRole": "ينشئ أو يعدّل الدور (الأدوار) المحددة: الرمز والأسماء والوصف وحالة التفعيل.",
+      "UpdateTablePermissions": "يغيّر صلاحيات الجداول أو الأعمدة أو الصفوف للأدوار المحددة.",
+      "RefreshMetadata": "يحدّث فهرس البيانات الوصفية للتطبيقات المحددة.",
+      "DiagnoseApplicationConnection": "فحوصات الاتصال ووجود الكائنات فقط؛ لا يقرأ صفوف الأعمال أبدًا.",
+      "UpdateOrganizationSettings": "الأسماء والوصف وجهات الاتصال والمنطقة الزمنية واللغة الافتراضية."
+    },
+    "endReasons": {
+      "Exit": "غادر المدير",
+      "Expired": "انتهت الصلاحية",
+      "Revoked": "أُلغيت",
+      "Completed": "اكتملت",
+      "Superseded": "استُبدلت بجلسة أخرى"
+    },
+    "banner": {
+      "title": "وضع الدعم",
+      "detail": "{{organization}} · التذكرة {{reference}}",
+      "remaining": "متبقٍ {{minutes}} دقيقة",
+      "openTicket": "فتح التذكرة"
     }
   }
 }

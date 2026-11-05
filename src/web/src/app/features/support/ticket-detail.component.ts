@@ -21,6 +21,7 @@ import { problemMessage } from '../../core/problem-message';
 import { ALLOWED_ATTACHMENT_EXTENSIONS, SupportArea, TicketAttachment, TicketComment, TicketDetail, TicketEvent, TicketStatus } from '../../core/support/support.models';
 import { SupportService } from '../../core/support/support.service';
 import { TicketImpactComponent, TicketStatusComponent, TicketTypeComponent } from './ticket-chips.component';
+import { SupportAccessTabComponent } from './support-access-tab.component';
 
 const EVENT_ICONS: Record<string, string> = {
   TicketCreated: 'add_comment',
@@ -32,12 +33,21 @@ const EVENT_ICONS: Record<string, string> = {
   CommentAdded: 'forum',
   AttachmentAdded: 'attach_file',
   SupportAccessFlagChanged: 'key',
+  SupportAccessProposed: 'key',
+  SupportAccessApproved: 'verified',
+  SupportAccessDeclined: 'block',
+  SupportAccessRevoked: 'cancel',
+  SupportAccessExpired: 'timer_off',
+  SupportAccessCompleted: 'task_alt',
+  SupportSessionStarted: 'login',
+  SupportSessionEnded: 'logout',
+  SupportOperationExecuted: 'terminal',
 };
 
 /** Ticket details (specification §15.8): header plus Overview, Conversation, Activity Timeline and Attachments tabs. */
 @Component({
   selector: 'app-ticket-detail',
-  imports: [DatePipe, DecimalPipe, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTabsModule, RouterLink, TranslocoModule, TicketStatusComponent, TicketImpactComponent, TicketTypeComponent],
+  imports: [DatePipe, DecimalPipe, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTabsModule, RouterLink, TranslocoModule, TicketStatusComponent, TicketImpactComponent, TicketTypeComponent, SupportAccessTabComponent],
   templateUrl: './ticket-detail.component.html',
   styleUrl: './ticket-detail.component.scss',
 })
@@ -51,6 +61,8 @@ export class TicketDetailComponent {
 
   readonly area = input<SupportArea>('app');
   readonly id = input.required<string>();
+  /** Deep link from the Support Access lists: ?tab=access opens tab 5. */
+  readonly tab = input<string | undefined>(undefined);
   readonly isPlatform = computed(() => this.area() === 'platform');
   readonly accept = ALLOWED_ATTACHMENT_EXTENSIONS.map((e) => '.' + e).join(',');
 
@@ -65,7 +77,7 @@ export class TicketDetailComponent {
   readonly targetStatus = signal<TicketStatus | null>(null);
   readonly note = signal('');
   readonly assignee = signal<string | null>(null);
-  readonly tab = signal(0);
+  readonly selectedTab = signal(0);
 
   readonly summary = computed(() => this.ticket()?.summary ?? null);
   readonly listLink = computed(() => (this.isPlatform() ? '/platform/support' : '/app/support'));
@@ -88,6 +100,9 @@ export class TicketDetailComponent {
     this.support.get(this.area(), this.id()).subscribe({
       next: (t) => {
         this.ticket.set(t);
+        if (this.tab() === 'access' && t.summary.requiresSupportAccess && this.selectedTab() === 0) {
+          this.selectedTab.set(4);
+        }
         this.assignee.set(t.summary.assignedAdministratorId ?? null);
         this.targetStatus.set(t.allowedTransitions[0] ?? null);
         if (t.canAssign && this.administrators().length === 0) {
@@ -178,6 +193,15 @@ export class TicketDetailComponent {
       }
       if (event.eventType === 'AttachmentAdded' && typeof d['fileName'] === 'string') {
         return d['fileName'];
+      }
+      if (event.eventType === 'SupportOperationExecuted' && typeof d['operation'] === 'string') {
+        return `${this.transloco.translate('supportAccess.operations.' + d['operation'])} · ${String(d['outcome'] ?? '')}`;
+      }
+      if (event.eventType === 'SupportAccessProposed' && Array.isArray(d['operations'])) {
+        return (d['operations'] as { operation: string }[]).map((o) => this.transloco.translate('supportAccess.operations.' + o.operation)).join(', ');
+      }
+      if (event.eventType === 'SupportSessionEnded' && typeof d['reason'] === 'string') {
+        return this.transloco.translate('supportAccess.endReasons.' + d['reason']);
       }
       return null;
     } catch {

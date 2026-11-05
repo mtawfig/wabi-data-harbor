@@ -49,5 +49,12 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 ## Screenshots (P3.2)
 `docs/screenshots/p3-2-*.png`: platform dashboard EN/AR (full page), System Health, Audit Logs EN/AR, Platform Administrators list and create form.
 
+## Support access (P5.2)
+- `app-support-access-tab` is ticket tab 5, shown only when the ticket is flagged as needing support access. The same component serves both areas: the platform side gets the proposal form and the green "Run a permitted operation" panel while its session is active; the organization side gets approve / decline / revoke. Grant statuses use `app-grant-status` chips (amber awaiting approval, blue approved, green in support mode, red declined/revoked).
+- `app-support-mode-banner` sits under the platform header (amber band) while a session is active, with the organization, ticket reference, remaining minutes and an explicit exit button. It is driven by the `session` signal of `SupportAccessService`, refreshed on load, every minute and after every grant action.
+
 ## Screenshots (P4.2)
 `docs/screenshots/p4-2-*.png`: new ticket, My Tickets, platform queue, ticket overview (requester and platform), conversation, timeline EN/AR, attachments AR, notification centre (platform EN, organization AR), user dashboard widget AR, platform dashboard with ticket KPIs, chart and open-tickets widget.
+
+## Screenshots (P5.2)
+`docs/screenshots/p5-2-*.png`: proposal form (platform), proposed grant, organization approval list, pending grant on the organization side, approved grant AR, platform Support Access page, support mode with the operation panel before and after a run, support-mode banner EN/AR, timeline with grant events.

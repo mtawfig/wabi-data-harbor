@@ -21,6 +21,7 @@
   </mat-menu>
 </mat-toolbar>
 
+@if (accent() === 'platform') { <app-support-mode-banner /> }
 <mat-sidenav-container class="shell-body">
   <mat-sidenav [mode]="isHandset() ? 'over' : 'side'" [opened]="opened()" class="shell-sidenav" (closedStart)="opened.set(false)">
     <nav class="shell-nav">

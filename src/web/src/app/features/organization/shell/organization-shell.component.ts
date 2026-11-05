@@ -28,6 +28,7 @@ const ADMIN_NAV: NavSection = {
     { labelKey: 'nav.org.admin.departments', icon: 'account_tree', link: '/app/admin/departments' },
     { labelKey: 'nav.org.admin.sections', icon: 'segment', link: '/app/admin/sections' },
     { labelKey: 'nav.org.admin.roles', icon: 'admin_panel_settings', link: '/app/admin/roles' },
+    { labelKey: 'nav.org.admin.supportAccess', icon: 'key', link: '/app/admin/support-access' },
     { labelKey: 'nav.org.admin.applications', icon: 'storage', link: '/app/admin/applications' },
     { labelKey: 'nav.org.admin.metadata', icon: 'schema', link: '/app/admin/metadata' },
     { labelKey: 'nav.org.admin.permissions', icon: 'lock', link: '/app/admin/permissions' },

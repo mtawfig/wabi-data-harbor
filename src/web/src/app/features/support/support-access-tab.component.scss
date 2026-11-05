@@ -1,0 +1,23 @@
+.pane { padding: 24px; }
+.hint { font-size: 13px; color: var(--wi-slate); margin: 0 0 12px; }
+.error { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: var(--wi-radius-sm); background: #fef2f2; color: #991b1b; font-size: 14px; margin-bottom: 12px; }
+.proposal { background: #f8fafc; border: 1px solid var(--wi-border); border-radius: var(--wi-radius); padding: 16px; margin: 12px 0 20px; h3 { margin-top: 0; } }
+.op { padding: 8px 0; border-top: 1px solid var(--wi-border); .later { margin-inline-start: 8px; font-size: 12px; color: #92400e; background: #fef3c7; padding: 1px 8px; border-radius: 999px; } .hint { margin: 0 0 6px 40px; } }
+.op--off { opacity: 0.75; }
+.wide { width: 100%; margin-bottom: 8px; }
+.hours { width: 180px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-top: 12px; .span { grid-column: 1 / -1; } }
+.actions { display: flex; justify-content: flex-end; gap: 12px; }
+.grant { border: 1px solid var(--wi-border); border-radius: var(--wi-radius); padding: 16px; margin-top: 12px; header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; } }
+.small { font-size: 12px; }
+.expires, .live { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+.expires { color: #92400e; }
+.live { color: #166534; font-weight: 600; }
+.reason { margin: 0 0 8px; white-space: pre-wrap; }
+.ops { list-style: none; margin: 0 0 8px; padding: 0; li { display: flex; align-items: flex-start; gap: 6px; padding: 2px 0; mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--wi-ocean); } } }
+.target { display: inline-block; background: #f1f5f9; border-radius: 999px; padding: 0 8px; margin-inline-end: 4px; font-size: 12px; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0 0 8px; font-size: 13px; dt { color: var(--wi-slate); } dd { margin: 0; } }
+.decide { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 8px; .wide { flex: 1 1 280px; margin: 0; } .buttons { display: flex; flex-wrap: wrap; gap: 8px; } }
+.runner { margin-top: 16px; padding: 16px; border-radius: var(--wi-radius); background: #f0fdf4; border: 1px solid #bbf7d0; h3 { display: flex; align-items: center; gap: 8px; margin-top: 0; } }
+.result { display: flex; align-items: center; gap: 6px; color: #166534; font-weight: 600; margin: 12px 0 0; }
+@media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .facts { grid-template-columns: 1fr; } }

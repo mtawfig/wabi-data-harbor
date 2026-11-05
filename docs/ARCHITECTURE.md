@@ -147,6 +147,9 @@ public/i18n              en.json, ar.json
 
 Startup: `provideAppInitializer` initializes the language and calls `GET /api/auth/csrf` + `GET /api/auth/me` to restore a session. Guards are UX only; the API enforces authorization. Routes whose feature belongs to a later phase render `PagePlaceholderComponent` with the phase number.
 
+### Support access UI (P5.2)
+`SupportAccessService` (Angular) wraps the grant endpoints and holds the support-mode `session` signal; `features/support/support-access-tab`, `grant-list` (platform page and organization approval list, parameterised by `area`) and `support-mode-banner` (platform shell). Routes: `/platform/support-access`, `/app/admin/support-access`, and `?tab=access` on a ticket opens tab 5. `GET /api/platform/support/tickets/{id}/targets` lists users (name, email) and roles of the ticket's organization for the proposal form; the grant DTO carries `targetLabels` so both sides render names instead of ids.
+
 ### Support desk and notifications (P4.2)
 `SupportService` and `NotificationsService` in `core/`; `features/support/` holds the ticket list, form, detail (tabs), notification centre and dashboard widget, each parameterised by `area` so one component serves `/app/support…` and `/platform/support…`. Routes: `/app/support`, `/app/support/new`, `/app/support/:id`, `/app/notifications`, `/platform/support`, `/platform/support/:id`, `/platform/notifications`.
 

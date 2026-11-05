@@ -37,6 +37,10 @@ public sealed class PlatformSupportAccessController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<SupportAccessGrantDto>>> ForTicket(Guid ticketId, CancellationToken cancellationToken)
         => Ok(await _grants.ListForTicketAsync(ticketId, cancellationToken));
 
+    [HttpGet("tickets/{ticketId:guid}/targets")]
+    public async Task<ActionResult<SupportTargetsDto>> Targets(Guid ticketId, CancellationToken cancellationToken)
+        => Ok(await _grants.ListTargetsAsync(ticketId, cancellationToken));
+
     [HttpGet("access-grants")]
     public async Task<ActionResult<PagedResult<SupportAccessGrantDto>>> List([FromQuery] int page = 1, [FromQuery] int pageSize = 25, [FromQuery] SupportAccessGrantStatus? status = null, [FromQuery] Guid? organizationId = null, [FromQuery] bool? pending = null, CancellationToken cancellationToken = default)
         => Ok(await _grants.ListAsync(new GrantListQuery(page, pageSize, status, organizationId, null, pending), cancellationToken));

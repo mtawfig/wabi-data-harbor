@@ -48,6 +48,26 @@ public sealed class SupportAccessService : ISupportAccessService
 
     public IReadOnlyList<SupportOperationDefinition> Catalog => SupportOperations.Catalog;
 
+    public async Task<SupportTargetsDto> ListTargetsAsync(Guid ticketId, CancellationToken cancellationToken = default)
+    {
+        RequirePlatformAdministrator();
+        var ticket = await _context.SupportTickets.AsPlatformScope(_tenantContext).AsNoTracking().SingleOrDefaultAsync(t => t.TicketId == ticketId, cancellationToken)
+            ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "ticket_not_found");
+        var users = await _context.OrganizationUsers.AsPlatformScope(_tenantContext).AsNoTracking()
+            .Where(u => u.OrganizationId == ticket.OrganizationId)
+            .OrderBy(u => u.FullName)
+            .Select(u => new SupportTargetUser(u.UserId, u.FullName, u.Email, u.Status == OrganizationUserStatus.Active))
+            .ToListAsync(cancellationToken);
+        var roles = await _context.Roles.AsPlatformScope(_tenantContext).AsNoTracking()
+            .Where(r => r.OrganizationId == ticket.OrganizationId)
+            .OrderByDescending(r => r.IsSystem).ThenBy(r => r.RoleCode)
+            .Select(r => new SupportTargetRole(r.RoleId, r.RoleCode, r.NameEn, r.NameAr, r.IsSystem, r.IsActive))
+            .ToListAsync(cancellationToken);
+        _audit.Append(AuditEvents.TicketViewedByPlatform, "SupportTicket", ticket.TicketId.ToString(), new { ticket.ReferenceNumber, targets = true }, ticket.OrganizationId);
+        await _context.SaveChangesAsync(cancellationToken);
+        return new SupportTargetsDto(users, roles);
+    }
+
     public async Task<SupportAccessGrantDto> ProposeAsync(Guid ticketId, ProposeGrantCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -596,12 +616,29 @@ public sealed class SupportAccessService : ISupportAccessService
         var adminMap = await _context.Administrators.AsNoTracking().Where(a => adminIds.Contains(a.AdministratorId)).Select(a => new { a.AdministratorId, a.FullName }).ToDictionaryAsync(a => a.AdministratorId, a => a.FullName, cancellationToken);
         var sessions = await sessionsQuery.AsNoTracking().Where(s => grantIds.Contains(s.GrantId)).Select(s => new { s.GrantId, Active = s.EndedAt == null, s.OperationsExecuted }).ToListAsync(cancellationToken);
 
+        var parsed = grants.ToDictionary(g => g.GrantId, g => JsonSerializer.Deserialize<List<SupportOperationEntry>>(g.AllowedOperationsJson, JsonOptions) ?? []);
+        var targetIds = parsed.Values.SelectMany(e => e).SelectMany(e => e.TargetReferences).Select(t => Guid.TryParse(t, out var id) ? id : (Guid?)null).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        var targetUsers = await users.AsNoTracking().Where(u => targetIds.Contains(u.UserId)).Select(u => new { u.UserId, u.FullName, u.Email }).ToListAsync(cancellationToken);
+        var roles = _tenantContext.IsPlatformAdministrator ? _context.Roles.AsPlatformScope(_tenantContext) : _context.Roles;
+        var targetRoles = await roles.AsNoTracking().Where(r => targetIds.Contains(r.RoleId)).Select(r => new { r.RoleId, r.NameEn, r.RoleCode }).ToListAsync(cancellationToken);
+        var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [SupportAccessScope.NewRoleReference] = SupportAccessScope.NewRoleReference };
+        foreach (var u in targetUsers)
+        {
+            labels[u.UserId.ToString()] = $"{u.FullName} ({u.Email})";
+        }
+
+        foreach (var r in targetRoles)
+        {
+            labels[r.RoleId.ToString()] = $"{r.NameEn} ({r.RoleCode})";
+        }
+
         var principal = _tenantContext.Principal;
         return grants.Select(g =>
         {
             var ticket = ticketMap[g.TicketId];
             var organization = organizationMap[g.OrganizationId];
-            var operations = JsonSerializer.Deserialize<List<SupportOperationEntry>>(g.AllowedOperationsJson, JsonOptions) ?? [];
+            var operations = parsed[g.GrantId];
+            var grantLabels = operations.SelectMany(o => o.TargetReferences).Distinct(StringComparer.OrdinalIgnoreCase).ToDictionary(t => t, t => labels.GetValueOrDefault(t, t), StringComparer.OrdinalIgnoreCase);
             var active = sessions.Any(s => s.GrantId == g.GrantId && s.Active) && g.Status == SupportAccessGrantStatus.Active;
             var executed = sessions.Where(s => s.GrantId == g.GrantId).Sum(s => s.OperationsExecuted);
             var usable = SupportAccessScope.IsUsable(g.Status, g.ExpiresAt, now);
@@ -626,7 +663,7 @@ public sealed class SupportAccessService : ISupportAccessService
 
             return new SupportAccessGrantDto(
                 g.GrantId, g.TicketId, ticket.ReferenceNumber, ticket.Subject, g.OrganizationId, organization.OrganizationName, organization.OrganizationNameAr,
-                g.Status, operations, g.Reason, g.DecisionNote,
+                g.Status, operations, grantLabels, g.Reason, g.DecisionNote,
                 g.RequestedByUserId, userMap.GetValueOrDefault(g.RequestedByUserId, string.Empty),
                 g.ProposedByAdministratorId, adminMap.GetValueOrDefault(g.ProposedByAdministratorId, string.Empty),
                 g.ApprovedByOrganizationAdminUserId, g.ApprovedByOrganizationAdminUserId is { } a ? userMap.GetValueOrDefault(a) : null,

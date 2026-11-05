@@ -1,0 +1,182 @@
+<div class="pane" data-testid="support-access-tab">
+  <p class="hint">{{ 'supportAccess.intro' | transloco }}</p>
+  @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (error(); as e) { <div class="error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  @if (canPropose() && !proposing()) {
+    <button mat-flat-button type="button" (click)="startProposal()" data-testid="grant-propose"><mat-icon>key</mat-icon>{{ 'supportAccess.propose' | transloco }}</button>
+  }
+
+  @if (proposing()) {
+    <section class="proposal" data-testid="grant-proposal">
+      <h3>{{ 'supportAccess.proposalTitle' | transloco }}</h3>
+      <p class="hint">{{ 'supportAccess.proposalHint' | transloco }}</p>
+      @for (row of rows(); track row.definition.code) {
+        <div class="op" [class.op--off]="!row.definition.executable">
+          <mat-checkbox [checked]="row.selected" (change)="toggleRow(row, $event.checked)" [attr.data-testid]="'op-' + row.definition.code">
+            <strong>{{ operationLabel(row.definition.code) }}</strong>
+            @if (!row.definition.executable) { <span class="later">{{ 'supportAccess.laterPhase' | transloco }}</span> }
+          </mat-checkbox>
+          <p class="hint">{{ 'supportAccess.operationHints.' + row.definition.code | transloco }}</p>
+          @if (row.selected && row.definition.targetType !== 'None') {
+            @if (row.definition.targetType === 'OrganizationUser') {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                <mat-label>{{ 'supportAccess.targetUsers' | transloco }}</mat-label>
+                <mat-select multiple [value]="row.targets" (valueChange)="setTargets(row, $event)" [attr.data-testid]="'targets-' + row.definition.code">
+                  @for (u of targets()?.users ?? []; track u.userId) { <mat-option [value]="u.userId">{{ u.fullName }} · <span class="wi-ltr">{{ u.email }}</span></mat-option> }
+                </mat-select>
+              </mat-form-field>
+            } @else if (row.definition.targetType === 'Role' || row.definition.targetType === 'RoleOrNew') {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                <mat-label>{{ 'supportAccess.targetRoles' | transloco }}</mat-label>
+                <mat-select multiple [value]="row.targets" (valueChange)="setTargets(row, $event)" [attr.data-testid]="'targets-' + row.definition.code">
+                  @if (row.definition.targetType === 'RoleOrNew') { <mat-option value="new">{{ 'supportAccess.newRole' | transloco }}</mat-option> }
+                  @for (r of targets()?.roles ?? []; track r.roleId) { <mat-option [value]="r.roleId">{{ language.current() === 'ar' ? r.nameAr : r.nameEn }} <span class="wi-ltr wi-muted">({{ r.roleCode }})</span></mat-option> }
+                </mat-select>
+              </mat-form-field>
+            } @else {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                <mat-label>{{ 'supportAccess.targetApplications' | transloco }}</mat-label>
+                <input matInput [ngModel]="row.manual" (ngModelChange)="setManual(row, $event)" />
+                <mat-hint>{{ 'supportAccess.targetApplicationsHint' | transloco }}</mat-hint>
+              </mat-form-field>
+            }
+          }
+        </div>
+      }
+      <div class="grid">
+        <mat-form-field appearance="outline" class="span">
+          <mat-label>{{ 'supportAccess.reason' | transloco }}</mat-label>
+          <textarea matInput rows="3" [ngModel]="reason()" (ngModelChange)="reason.set($event)" maxlength="2000" data-testid="grant-reason"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'supportAccess.expiryHours' | transloco }}</mat-label>
+          <input matInput type="number" min="1" max="72" [ngModel]="expiryHours()" (ngModelChange)="expiryHours.set($event)" />
+          <mat-hint>{{ 'supportAccess.expiryHint' | transloco }}</mat-hint>
+        </mat-form-field>
+      </div>
+      <div class="actions">
+        <button mat-button type="button" (click)="proposing.set(false)">{{ 'common.cancel' | transloco }}</button>
+        <button mat-flat-button type="button" (click)="submitProposal()" [disabled]="busy() || !reason().trim()" data-testid="grant-submit"><mat-icon>send</mat-icon>{{ 'supportAccess.submitProposal' | transloco }}</button>
+      </div>
+    </section>
+  }
+
+  @if (grants().length === 0 && !proposing()) { <p class="wi-muted" style="margin-top: 16px">{{ 'supportAccess.none' | transloco }}</p> }
+
+  @for (g of grants(); track g.grantId) {
+    <article class="grant" [attr.data-testid]="'grant-' + g.status">
+      <header>
+        <app-grant-status [status]="g.status" />
+        <strong>{{ 'supportAccess.grantBy' | transloco: { name: g.proposedByName } }}</strong>
+        <span class="wi-muted small">{{ g.createdAt | date: 'medium' }}</span>
+        @if (g.expiresAt && (g.status === 'Approved' || g.status === 'Active')) { <span class="expires"><mat-icon>schedule</mat-icon>{{ 'supportAccess.expiresAt' | transloco }} {{ g.expiresAt | date: 'medium' }}</span> }
+        @if (g.sessionActive) { <span class="live"><mat-icon>radio_button_checked</mat-icon>{{ 'supportAccess.sessionActive' | transloco }}</span> }
+      </header>
+      <p class="reason">{{ g.reason }}</p>
+      <ul class="ops">
+        @for (o of g.operations; track o.operation) {
+          <li><mat-icon>check_circle</mat-icon><span><strong>{{ operationLabel(o.operation) }}</strong>@if (o.targetReferences.length > 0) { <span class="wi-muted"> · @for (t of o.targetReferences; track t) { <span class="target">{{ targetLabel(t, g) }}</span> }</span> }</span></li>
+        }
+      </ul>
+      <dl class="facts">
+        <div><dt>{{ 'supportAccess.assignedTo' | transloco }}</dt><dd>{{ g.assignedAdministratorName }}</dd></div>
+        <div><dt>{{ 'supportAccess.requestedBy' | transloco }}</dt><dd>{{ g.requestedByName }}</dd></div>
+        @if (g.approvedByName) { <div><dt>{{ 'supportAccess.approvedBy' | transloco }}</dt><dd>{{ g.approvedByName }} · {{ g.approvedAt | date: 'medium' }}</dd></div> }
+        @if (g.decisionNote) { <div><dt>{{ 'supportAccess.note' | transloco }}</dt><dd>{{ g.decisionNote }}</dd></div> }
+        <div><dt>{{ 'supportAccess.operationsExecuted' | transloco }}</dt><dd>{{ g.operationsExecuted }}</dd></div>
+      </dl>
+
+      @if (g.allowedActions.length > 0) {
+        <div class="decide">
+          @if (g.allowedActions.includes('approve') || g.allowedActions.includes('decline') || g.allowedActions.includes('revoke') || g.allowedActions.includes('complete')) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+              <mat-label>{{ 'supportAccess.note' | transloco }}</mat-label>
+              <input matInput [ngModel]="note()" (ngModelChange)="note.set($event)" maxlength="2000" data-testid="grant-note" />
+            </mat-form-field>
+          }
+          @if (g.allowedActions.includes('approve')) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="hours">
+              <mat-label>{{ 'supportAccess.expiryHours' | transloco }}</mat-label>
+              <input matInput type="number" min="1" max="72" [ngModel]="approveHours()" (ngModelChange)="approveHours.set($event)" [placeholder]="'supportAccess.asProposed' | transloco" />
+            </mat-form-field>
+          }
+          <div class="buttons">
+            @if (g.allowedActions.includes('approve')) { <button mat-flat-button type="button" (click)="act(g, 'approve')" [disabled]="busy()" data-testid="grant-approve"><mat-icon>verified</mat-icon>{{ 'supportAccess.actions.approve' | transloco }}</button> }
+            @if (g.allowedActions.includes('decline')) { <button mat-stroked-button type="button" (click)="act(g, 'decline')" [disabled]="busy()" data-testid="grant-decline"><mat-icon>block</mat-icon>{{ 'supportAccess.actions.decline' | transloco }}</button> }
+            @if (g.allowedActions.includes('enter')) { <button mat-flat-button type="button" (click)="act(g, 'enter')" [disabled]="busy()" data-testid="grant-enter"><mat-icon>login</mat-icon>{{ 'supportAccess.actions.enter' | transloco }}</button> }
+            @if (g.allowedActions.includes('exit')) { <button mat-stroked-button type="button" (click)="act(g, 'exit')" [disabled]="busy()" data-testid="grant-exit"><mat-icon>logout</mat-icon>{{ 'supportAccess.actions.exit' | transloco }}</button> }
+            @if (g.allowedActions.includes('complete')) { <button mat-stroked-button type="button" (click)="act(g, 'complete')" [disabled]="busy()" data-testid="grant-complete"><mat-icon>task_alt</mat-icon>{{ 'supportAccess.actions.complete' | transloco }}</button> }
+            @if (g.allowedActions.includes('revoke')) { <button mat-stroked-button color="warn" type="button" (click)="act(g, 'revoke')" [disabled]="busy()" data-testid="grant-revoke"><mat-icon>cancel</mat-icon>{{ 'supportAccess.actions.revoke' | transloco }}</button> }
+          </div>
+        </div>
+      }
+
+      @if (g.sessionActive && activeHere() && isPlatform()) {
+        <section class="runner" data-testid="operation-panel">
+          <h3><mat-icon>terminal</mat-icon>{{ 'supportAccess.runTitle' | transloco }}</h3>
+          <p class="hint">{{ 'supportAccess.runHint' | transloco }}</p>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+            <mat-label>{{ 'supportAccess.operation' | transloco }}</mat-label>
+            <mat-select [value]="runOperation()" (valueChange)="selectOperation($event); ensureTargets()" data-testid="run-operation">
+              @for (o of runnable(); track o.operation) { <mat-option [value]="o.operation">{{ operationLabel(o.operation) }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          @if (runDefinition(); as d) {
+            @if (d.targetType !== 'None') {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                <mat-label>{{ 'supportAccess.target' | transloco }}</mat-label>
+                <mat-select [value]="runTarget()" (valueChange)="runTarget.set($event)" data-testid="run-target">
+                  @for (t of runTargets(); track t) { <mat-option [value]="t">{{ targetLabel(t, g) }}</mat-option> }
+                </mat-select>
+              </mat-form-field>
+            }
+            @switch (d.code) {
+              @case ('CreateOrganizationUser') {
+                <div class="grid">
+                  <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.email' | transloco }}</mat-label><input matInput type="email" [ngModel]="runPayload()['email'] ?? ''" (ngModelChange)="setField('email', $event)" data-testid="run-email" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.fullName' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['fullName'] ?? ''" (ngModelChange)="setField('fullName', $event)" data-testid="run-fullname" /></mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'admin.fields.language' | transloco }}</mat-label>
+                    <mat-select [value]="runPayload()['preferredLanguage'] ?? 'en'" (valueChange)="setField('preferredLanguage', $event)">
+                      <mat-option value="en">{{ 'common.english' | transloco }}</mat-option>
+                      <mat-option value="ar">{{ 'common.arabic' | transloco }}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'admin.fields.roles' | transloco }}</mat-label>
+                    <mat-select multiple [value]="runRoleCodes()" (valueChange)="runRoleCodes.set($event)">
+                      @for (r of roleOptions(); track r.code) { <mat-option [value]="r.code">{{ r.label }}</mat-option> }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              }
+              @case ('ConfigureRole') {
+                <div class="grid">
+                  <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.code' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['roleCode'] ?? ''" (ngModelChange)="setField('roleCode', $event)" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameEn' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['nameEn'] ?? ''" (ngModelChange)="setField('nameEn', $event)" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameAr' | transloco }}</mat-label><input matInput dir="rtl" [ngModel]="runPayload()['nameAr'] ?? ''" (ngModelChange)="setField('nameAr', $event)" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.description' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['description'] ?? ''" (ngModelChange)="setField('description', $event)" /></mat-form-field>
+                  <mat-checkbox [checked]="runPayload()['isActive'] !== false" (change)="setField('isActive', $event.checked)">{{ 'admin.fields.active' | transloco }}</mat-checkbox>
+                </div>
+              }
+              @case ('UpdateOrganizationSettings') {
+                <div class="grid">
+                  <mat-form-field appearance="outline"><mat-label>{{ 'organizations.fields.name' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['organizationName'] ?? ''" (ngModelChange)="setField('organizationName', $event)" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ 'organizations.fields.nameAr' | transloco }}</mat-label><input matInput dir="rtl" [ngModel]="runPayload()['organizationNameAr'] ?? ''" (ngModelChange)="setField('organizationNameAr', $event)" /></mat-form-field>
+                  <mat-form-field appearance="outline" class="span"><mat-label>{{ 'organizations.fields.description' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['description'] ?? ''" (ngModelChange)="setField('description', $event)" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ 'organizations.fields.contactEmail' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['contactEmail'] ?? ''" (ngModelChange)="setField('contactEmail', $event)" /></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>{{ 'organizations.fields.contactPhone' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['contactPhone'] ?? ''" (ngModelChange)="setField('contactPhone', $event)" /></mat-form-field>
+                </div>
+                <p class="hint">{{ 'supportAccess.settingsHint' | transloco }}</p>
+              }
+              @default {}
+            }
+            <button mat-flat-button type="button" (click)="execute()" [disabled]="busy() || (d.targetType !== 'None' && !runTarget())" data-testid="run-execute"><mat-icon>play_arrow</mat-icon>{{ 'supportAccess.run' | transloco }}</button>
+          }
+          @if (lastResult(); as r) { <p class="result"><mat-icon>check_circle</mat-icon>{{ r }}</p> }
+        </section>
+      }
+    </article>
+  }
+</div>

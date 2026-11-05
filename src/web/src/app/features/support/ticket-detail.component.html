@@ -22,7 +22,7 @@
 
     @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
 
-    <mat-tab-group [selectedIndex]="tab()" (selectedIndexChange)="tab.set($event)" class="wi-card tabs" animationDuration="0ms">
+    <mat-tab-group [selectedIndex]="selectedTab()" (selectedIndexChange)="selectedTab.set($event)" class="wi-card tabs" animationDuration="0ms">
       <mat-tab [label]="'support.tabs.overview' | transloco">
         <div class="pane overview">
           <div>
@@ -125,7 +125,7 @@
         </div>
       </mat-tab>
 
-      <mat-tab [label]="('support.tabs.attachments' | transloco) + ' (' + attachments().length + ')'">
+      <mat-tab [label]="('support.tabs.attachments' | transloco) + ' (' + attachments().length + ')'" >
         <div class="pane">
           <p class="hint">{{ 'support.attachments.hint' | transloco }}</p>
           @if (ticket()!.canComment) {
@@ -149,6 +149,11 @@
           </ul>
         </div>
       </mat-tab>
+      @if (s.requiresSupportAccess) {
+        <mat-tab [label]="'support.tabs.supportAccess' | transloco">
+          <app-support-access-tab [area]="area()" [ticket]="ticket()!" (changed)="load()" />
+        </mat-tab>
+      }
     </mat-tab-group>
   }
 </section>
