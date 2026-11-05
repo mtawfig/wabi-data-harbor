@@ -61,3 +61,11 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 
 ## Screenshots (P6.1)
 `docs/screenshots/p6-1-*.png`: new application form with a readable connection error, applications list EN/AR (configured connection with hint, last test, metadata counts, approval), metadata after refresh, object detail with columns, classification chips and approval EN/AR.
+
+## Permissions (P6.2)
+- `app-permissions` under Organization Administration: a role and application selector above a plain table (object, access chip, columns summary, row-scope chip with an amber warning when the scope has no mapping, mapping availability). Clicking a row opens the sticky detail card: grant checkbox, row scope with inline hints, *all approved columns* or an explicit column picker (classification chips on sensitive columns), and the shared row-scope mapping editor. `Management` and `OrganizationAdmin` show an informational band instead of editable grants.
+- The *Preview as user* tab lists what one user can query after combining all roles: roles and row-scope context, then one block per object with scope chips (`All rows`, `Department`, …), unmapped warnings, a *no rows* chip and the column list.
+- Scope chips use purple (All), blue (Department), teal (Section) and slate (Self) so the same scope is recognizable in the matrix, the detail card, the preview and the support-mode run form.
+
+## Screenshots (P6.2)
+`docs/screenshots/p6-2-*.png`: matrix for a custom role, grant with selected columns and an unmapped Department scope warning, the same grant after mapping, matrix with two grants, Management (automatic), preview as user EN/AR, grant editor AR, and the platform-side support-mode run form for `UpdateTablePermissions` before and after execution.

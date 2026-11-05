@@ -43,7 +43,7 @@ export const routes: Routes = [
           { path: 'support-access', loadComponent: () => import('./features/support/grant-list.component').then((m) => m.GrantListComponent), data: { area: 'app' } },
           { path: 'applications', loadComponent: () => import('./features/organization/admin/applications.component').then((m) => m.ApplicationsComponent) },
           { path: 'metadata', loadComponent: () => import('./features/organization/admin/metadata.component').then((m) => m.MetadataComponent) },
-          placeholder('permissions', 'nav.org.admin.permissions', '6'),
+          { path: 'permissions', loadComponent: () => import('./features/organization/admin/permissions.component').then((m) => m.PermissionsComponent) },
           placeholder('insights', 'nav.org.admin.insights', '7'),
           placeholder('integrations', 'nav.org.admin.integrations', '10'),
           { path: 'settings', loadComponent: () => import('./features/organization/settings/organization-settings.component').then((m) => m.OrganizationSettingsComponent) },

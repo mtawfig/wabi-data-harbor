@@ -160,6 +160,28 @@
                   <mat-checkbox [checked]="runPayload()['isActive'] !== false" (change)="setField('isActive', $event.checked)">{{ 'admin.fields.active' | transloco }}</mat-checkbox>
                 </div>
               }
+              @case ('UpdateTablePermissions') {
+                <div class="grid">
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span object-field">
+                    <mat-label>{{ 'supportAccess.permissionObject' | transloco }}</mat-label>
+                    <mat-select [value]="runPayload()['objectId'] ?? ''" (valueChange)="setField('objectId', $event)" data-testid="run-object">
+                      @for (o of targets()?.objects ?? []; track o.objectId) { <mat-option [value]="o.objectId"><span class="wi-ltr">{{ o.applicationCode }} · {{ o.schemaName }}.{{ o.objectName }}</span></mat-option> }
+                    </mat-select>
+                    <mat-hint>{{ 'supportAccess.permissionObjectHint' | transloco }}</mat-hint>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'admin.permissions.rowScope' | transloco }}</mat-label>
+                    <mat-select [value]="runPayload()['rowScope'] ?? 'All'" (valueChange)="setField('rowScope', $event)" data-testid="run-scope">
+                      @for (s of rowScopes; track s) { <mat-option [value]="s">{{ 'admin.permissions.scopes.' + s | transloco }}</mat-option> }
+                    </mat-select>
+                  </mat-form-field>
+                  <div class="checks">
+                    <mat-checkbox [checked]="runPayload()['granted'] !== false" (change)="setField('granted', $event.checked)">{{ 'admin.permissions.grantObject' | transloco }}</mat-checkbox>
+                    <mat-checkbox [checked]="runPayload()['allColumns'] !== false" (change)="setField('allColumns', $event.checked)">{{ 'admin.permissions.allApprovedColumns' | transloco }}</mat-checkbox>
+                  </div>
+                </div>
+                <p class="hint">{{ 'supportAccess.permissionHint' | transloco }}</p>
+              }
               @case ('UpdateOrganizationSettings') {
                 <div class="grid">
                   <mat-form-field appearance="outline"><mat-label>{{ 'organizations.fields.name' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['organizationName'] ?? ''" (ngModelChange)="setField('organizationName', $event)" /></mat-form-field>
@@ -172,7 +194,7 @@
               }
               @default {}
             }
-            <button mat-flat-button type="button" (click)="execute()" [disabled]="busy() || (d.targetType !== 'None' && !runTarget())" data-testid="run-execute"><mat-icon>play_arrow</mat-icon>{{ 'supportAccess.run' | transloco }}</button>
+            <button mat-flat-button type="button" (click)="execute()" [disabled]="busy() || (d.targetType !== 'None' && !runTarget()) || (d.code === 'UpdateTablePermissions' && !runPayload()['objectId'])" data-testid="run-execute"><mat-icon>play_arrow</mat-icon>{{ 'supportAccess.run' | transloco }}</button>
           }
           @if (lastResult(); as r) { <p class="result"><mat-icon>check_circle</mat-icon>{{ r }}</p> }
         </section>

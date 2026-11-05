@@ -54,6 +54,8 @@ public static class AuditEvents
     public const string MetadataRefreshed = "Metadata.Refreshed";
     public const string MetadataObjectUpdated = "Metadata.ObjectUpdated";
     public const string MetadataColumnUpdated = "Metadata.ColumnUpdated";
+    public const string PermissionChanged = "Permission.Changed";
+    public const string RowMappingChanged = "Permission.RowMappingChanged";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>

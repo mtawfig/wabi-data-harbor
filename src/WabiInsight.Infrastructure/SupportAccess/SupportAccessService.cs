@@ -63,9 +63,21 @@ public sealed class SupportAccessService : ISupportAccessService
             .OrderByDescending(r => r.IsSystem).ThenBy(r => r.RoleCode)
             .Select(r => new SupportTargetRole(r.RoleId, r.RoleCode, r.NameEn, r.NameAr, r.IsSystem, r.IsActive))
             .ToListAsync(cancellationToken);
+        var applicationCodes = await _context.Applications.AsPlatformScope(_tenantContext).AsNoTracking()
+            .Where(a => a.OrganizationId == ticket.OrganizationId && a.IsApproved && a.IsActive && !a.IsBuiltIn)
+            .ToDictionaryAsync(a => a.ApplicationId, a => a.ApplicationCode, cancellationToken);
+        var applicationIds = applicationCodes.Keys.ToList();
+        var objectRows = await _context.DatabaseObjects.AsPlatformScope(_tenantContext).AsNoTracking()
+            .Where(o => o.OrganizationId == ticket.OrganizationId && o.IsApproved && o.IsPresent && applicationIds.Contains(o.ApplicationId))
+            .Select(o => new { o.ObjectId, o.ApplicationId, o.SchemaName, o.ObjectName })
+            .ToListAsync(cancellationToken);
+        var objects = objectRows
+            .Select(o => new SupportTargetObject(o.ObjectId, applicationCodes[o.ApplicationId], o.SchemaName, o.ObjectName))
+            .OrderBy(o => o.ApplicationCode, StringComparer.Ordinal).ThenBy(o => o.SchemaName, StringComparer.Ordinal).ThenBy(o => o.ObjectName, StringComparer.Ordinal)
+            .ToList();
         _audit.Append(AuditEvents.TicketViewedByPlatform, "SupportTicket", ticket.TicketId.ToString(), new { ticket.ReferenceNumber, targets = true }, ticket.OrganizationId);
         await _context.SaveChangesAsync(cancellationToken);
-        return new SupportTargetsDto(users, roles);
+        return new SupportTargetsDto(users, roles, objects);
     }
 
     public async Task<SupportAccessGrantDto> ProposeAsync(Guid ticketId, ProposeGrantCommand command, CancellationToken cancellationToken = default)

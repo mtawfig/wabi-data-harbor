@@ -480,7 +480,7 @@
       "application_code_exists": "This application code already exists.",
       "application_not_found": "Application not found.",
       "application_type_reserved": "This type is reserved for the built-in application.",
-      "application_builtin_protected": "The built-in application cannot be changed.",
+      "application_builtin_protected": "The built-in application cannot be granted.",
       "application_connection_missing": "Configure a connection first.",
       "connection_string_required": "A connection string is required.",
       "connection_string_invalid": "The connection string could not be parsed.",
@@ -502,7 +502,13 @@
       "login_failed": "Login failed: check the user id and password.",
       "server_unreachable": "The server could not be reached: check the host, port and firewall.",
       "connection_timeout": "The connection timed out.",
-      "permission_denied": "The account lacks permission to read the catalog."
+      "permission_denied": "The account lacks permission to read the catalog.",
+      "management_role_automatic": "Management permissions are automatic and cannot be edited.",
+      "object_not_approved": "Approve the object in Metadata before granting it.",
+      "row_scope_required": "Choose a row scope.",
+      "column_not_approved": "One or more selected columns are not approved.",
+      "columns_required": "Select at least one column or grant all approved columns.",
+      "mapping_column_invalid": "A mapped column does not belong to this object."
     },
     "applications": {
       "title": "Applications",
@@ -591,6 +597,63 @@
       "relationships": "Relationships",
       "empty": "No objects match the filters.",
       "neverRefreshed": "Nothing discovered yet. Refresh from source to load the catalog."
+    },
+    "permissions": {
+      "title": "Permissions",
+      "subtitle": "Decide, per role, which approved tables and views may be queried, which columns, and which rows. Users combine the permissions of all their roles; nothing here crosses your organization.",
+      "tabRoles": "Role permissions",
+      "tabPreview": "Preview as user",
+      "role": "Role",
+      "noApplications": "Add and approve an application, then refresh its metadata first.",
+      "onlyApproved": "Approved objects only",
+      "managementNote": "Management is automatic: every approved object and column of every approved application, all rows. It cannot be edited.",
+      "orgAdminNote": "The Organization Administrator role manages configuration only. Grant data access through other roles.",
+      "applicationNotApproved": "This application is not approved yet; its grants have no effect until it is.",
+      "summary": "{{granted}} of {{total}} objects granted to this role.",
+      "access": "Access",
+      "columns": "Columns",
+      "rows": "Rows",
+      "mapping": "Row mapping available",
+      "granted": "Granted",
+      "notGranted": "Not granted",
+      "allColumns": "All approved columns",
+      "someColumns": "{{count}} of {{total}} columns",
+      "empty": "No objects match.",
+      "grantTitle": "Grant for this role",
+      "grantObject": "This role may query this object",
+      "rowScope": "Row scope",
+      "scopes": {
+        "All": "All rows",
+        "Department": "Department",
+        "Section": "Section",
+        "Self": "Self"
+      },
+      "scopeHints": {
+        "All": "every row of the object",
+        "Department": "rows of the user's department",
+        "Section": "rows of the user's section",
+        "Self": "rows of the user's own employee number"
+      },
+      "unmapped": "The {{scope}} scope has no mapped column on this object; users with this role will see the columns but no rows until you map it below.",
+      "unmappedShort": "no mapping",
+      "allApprovedColumns": "All approved columns (including columns approved later)",
+      "noApprovedColumns": "No approved columns. Approve columns in Metadata first.",
+      "saved": "Permission saved.",
+      "mappingTitle": "Row-scope mapping",
+      "mappingHint": "Which columns of this object hold the employee number, department code and section code. Shared by all roles; required for the Self, Department and Section scopes.",
+      "employeeColumn": "Employee number column (Self)",
+      "departmentColumn": "Department code column",
+      "sectionColumn": "Section code column",
+      "saveMapping": "Save mapping",
+      "mappingSaved": "Mapping saved.",
+      "managementObject": "Management sees this object, all approved columns and all rows automatically.",
+      "objectNotApproved": "This object is not approved for querying. Approve it in Metadata first.",
+      "previewUser": "User",
+      "previewHint": "Choose a user to see what they can query after combining all their roles.",
+      "previewContext": "Roles: {{roles}} · Employee: {{employee}} · Department: {{department}} · Section: {{section}}",
+      "previewEmpty": "This user cannot query any object.",
+      "via": "via",
+      "noRows": "no rows"
     }
   },
   "platformDashboard": {
@@ -960,7 +1023,7 @@
       "CreateOrganizationUser": "Creates a user with the chosen roles; the temporary password is emailed to that user.",
       "ResetOrganizationUserPassword": "Emails a new temporary password to the selected user(s).",
       "ConfigureRole": "Creates or edits the selected role(s): code, names, description, active flag.",
-      "UpdateTablePermissions": "Changes table, column or row permissions of the selected role(s).",
+      "UpdateTablePermissions": "Changes table, column and row permissions of the selected role(s) on one object at a time.",
       "RefreshMetadata": "Refreshes the metadata catalog of the selected application(s).",
       "DiagnoseApplicationConnection": "Connectivity, version and read-only checks only; never reads business rows.",
       "UpdateOrganizationSettings": "Names, description, contacts, time zone and default language."
@@ -977,6 +1040,9 @@
       "detail": "{{organization}} · ticket {{reference}}",
       "remaining": "{{minutes}} min left",
       "openTicket": "Open ticket"
-    }
+    },
+    "permissionObject": "Object",
+    "permissionObjectHint": "Approved objects of approved applications. Names only; business rows are never read.",
+    "permissionHint": "All approved columns are granted unless the organization administrator narrows them afterwards in Permissions."
   }
 }

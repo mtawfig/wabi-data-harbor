@@ -1,0 +1,148 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'nav.org.admin.title' | transloco }}</p>
+      <h1>{{ 'admin.permissions.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'admin.permissions.subtitle' | transloco }}</p>
+    </div>
+  </header>
+
+  @if (error(); as e) { <div class="wi-card catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+  @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+
+  <mat-tab-group animationDuration="0ms" data-testid="perm-tabs">
+    <mat-tab [label]="'admin.permissions.tabRoles' | transloco">
+      @if (selectable().length === 0) {
+        <div class="wi-card wi-muted tab-body">{{ 'admin.permissions.noApplications' | transloco }}</div>
+      } @else {
+        <div class="tab-body">
+          <div class="selectors">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'admin.permissions.role' | transloco }}</mat-label>
+              <mat-select [value]="selectedRole()" (valueChange)="selectRole($event)" data-testid="perm-role">
+                @for (r of editableRoles(); track r.roleId) { <mat-option [value]="r.roleId">{{ roleName(r) }} <span class="wi-ltr wi-muted">({{ r.roleCode }})</span></mat-option> }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'admin.applications.application' | transloco }}</mat-label>
+              <mat-select [value]="selectedApp()" (valueChange)="selectApp($event)" data-testid="perm-app">
+                @for (a of selectable(); track a.applicationId) { <mat-option [value]="a.applicationId">{{ appName(a) }} <span class="wi-ltr wi-muted">({{ a.applicationCode }})</span></mat-option> }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search"><mat-label>{{ 'admin.metadata.search' | transloco }}</mat-label><input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" data-testid="perm-search" /><mat-icon matSuffix>search</mat-icon></mat-form-field>
+            <mat-checkbox [checked]="onlyApproved()" (change)="onlyApproved.set($event.checked)">{{ 'admin.permissions.onlyApproved' | transloco }}</mat-checkbox>
+          </div>
+
+          @if (isManagement()) { <div class="note note--info" data-testid="perm-management"><mat-icon>verified_user</mat-icon><span>{{ 'admin.permissions.managementNote' | transloco }}</span></div> }
+          @if (isOrganizationAdmin()) { <div class="note note--info"><mat-icon>info</mat-icon><span>{{ 'admin.permissions.orgAdminNote' | transloco }}</span></div> }
+          @if (app() && !app()!.isApproved) { <div class="note note--warn"><mat-icon>warning_amber</mat-icon><span>{{ 'admin.permissions.applicationNotApproved' | transloco }}</span></div> }
+
+          <div class="layout" [class.layout--detail]="editing()">
+            <div class="wi-card">
+              <p class="wi-muted small">{{ 'admin.permissions.summary' | transloco: { granted: grantedCount(), total: matrix()?.objects?.length ?? 0 } }}</p>
+              @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+              <table class="matrix" data-testid="perm-matrix">
+                <thead><tr><th>{{ 'admin.metadata.object' | transloco }}</th><th>{{ 'admin.permissions.access' | transloco }}</th><th>{{ 'admin.permissions.columns' | transloco }}</th><th>{{ 'admin.permissions.rows' | transloco }}</th><th>{{ 'admin.permissions.mapping' | transloco }}</th></tr></thead>
+                <tbody>
+                  @for (o of rows(); track o.objectId) {
+                    <tr class="row" [class.row--active]="editing()?.objectId === o.objectId" [class.row--off]="!o.isApproved" (click)="edit(o)" [attr.data-testid]="'perm-row-' + o.objectName">
+                      <td><span class="wi-ltr"><span class="wi-muted">{{ o.schemaName }}.</span><strong>{{ o.objectName }}</strong></span>@if (objectLabel(o)) { <span class="wi-muted small label">{{ objectLabel(o) }}</span> }@if (!o.isApproved) { <span class="chip pending">{{ 'admin.metadata.pending' | transloco }}</span> }</td>
+                      <td><span class="chip" [attr.data-on]="o.granted">{{ (o.granted ? 'admin.permissions.granted' : 'admin.permissions.notGranted') | transloco }}</span></td>
+                      <td>@if (o.granted) { {{ o.allColumns ? ('admin.permissions.allColumns' | transloco) : ('admin.permissions.someColumns' | transloco: { count: grantedColumns(o), total: o.columns.length }) }} } @else { — }</td>
+                      <td>@if (o.granted && o.rowScope) { <span class="chip scope" [attr.data-scope]="o.rowScope">{{ 'admin.permissions.scopes.' + o.rowScope | transloco }}</span>@if (scopeUnmapped(o)) { <mat-icon class="warn" [title]="'admin.permissions.unmappedShort' | transloco">warning_amber</mat-icon> } } @else { — }</td>
+                      <td class="small">{{ mappingSummary(o) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              @if (!loading() && rows().length === 0) { <p class="empty wi-muted">{{ 'admin.permissions.empty' | transloco }}</p> }
+            </div>
+
+            @if (editing(); as o) {
+              <aside class="wi-card detail" data-testid="perm-detail">
+                <header class="detail__head">
+                  <div>
+                    <p class="wi-eyebrow">{{ role() ? roleName(role()!) : '' }}</p>
+                    <h2 class="wi-ltr">{{ o.schemaName }}.{{ o.objectName }}</h2>
+                    @if (objectLabel(o)) { <p class="wi-muted small">{{ objectLabel(o) }}</p> }
+                  </div>
+                  <button mat-icon-button type="button" (click)="close()" [attr.aria-label]="'common.cancel' | transloco"><mat-icon>close</mat-icon></button>
+                </header>
+
+                @if (isManagement()) {
+                  <p class="wi-muted">{{ 'admin.permissions.managementObject' | transloco }}</p>
+                } @else if (!o.isApproved) {
+                  <div class="note note--warn"><mat-icon>block</mat-icon><span>{{ 'admin.permissions.objectNotApproved' | transloco }}</span></div>
+                } @else {
+                  <h3>{{ 'admin.permissions.grantTitle' | transloco }}</h3>
+                  <mat-checkbox [checked]="draft().granted" (change)="patch({ granted: $event.checked })" data-testid="perm-granted">{{ 'admin.permissions.grantObject' | transloco }}</mat-checkbox>
+                  @if (draft().granted) {
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+                      <mat-label>{{ 'admin.permissions.rowScope' | transloco }}</mat-label>
+                      <mat-select [value]="draft().rowScope" (valueChange)="patch({ rowScope: $event })" data-testid="perm-scope">
+                        @for (s of scopes; track s) { <mat-option [value]="s">{{ 'admin.permissions.scopes.' + s | transloco }} — <span class="wi-muted">{{ 'admin.permissions.scopeHints.' + s | transloco }}</span></mat-option> }
+                      </mat-select>
+                    </mat-form-field>
+                    @if (draftScopeUnmapped()) { <div class="note note--warn small"><mat-icon>warning_amber</mat-icon><span>{{ 'admin.permissions.unmapped' | transloco: { scope: ('admin.permissions.scopes.' + draft().rowScope | transloco) } }}</span></div> }
+                    <mat-checkbox [checked]="draft().allColumns" (change)="patch({ allColumns: $event.checked })" data-testid="perm-all-columns">{{ 'admin.permissions.allApprovedColumns' | transloco }}</mat-checkbox>
+                    @if (!draft().allColumns) {
+                      <ul class="cols">
+                        @for (c of approvedColumns(); track c.columnId) {
+                          <li><mat-checkbox [checked]="draft().columnIds.has(c.columnId)" (change)="toggleColumn(c.columnId, $event.checked)" [attr.data-testid]="'perm-col-' + c.columnName"><span class="wi-ltr col-name">{{ c.columnName }}</span><span class="wi-muted small wi-ltr col-type">{{ c.dataType }}</span>@if (c.classification !== 'Internal') { <span class="chip cls" [attr.data-cls]="c.classification">{{ 'admin.metadata.classifications.' + c.classification | transloco }}</span> }</mat-checkbox></li>
+                        }
+                      </ul>
+                      @if (approvedColumns().length === 0) { <p class="wi-muted small">{{ 'admin.permissions.noApprovedColumns' | transloco }}</p> }
+                    }
+                  }
+                  <div class="detail__actions"><button mat-flat-button type="button" (click)="saveGrant()" [disabled]="busy() || (draft().granted && (!draft().rowScope || (!draft().allColumns && draft().columnIds.size === 0)))" data-testid="perm-save">{{ 'common.save' | transloco }}</button></div>
+                }
+
+                <h3>{{ 'admin.permissions.mappingTitle' | transloco }}</h3>
+                <p class="wi-muted small">{{ 'admin.permissions.mappingHint' | transloco }}</p>
+                @if (mapping(); as m) {
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full"><mat-label>{{ 'admin.permissions.employeeColumn' | transloco }}</mat-label><mat-select [value]="mappingDraft().employeeColumnId" (valueChange)="mappingDraft.set({ ...mappingDraft(), employeeColumnId: $event })" data-testid="perm-map-employee"><mat-option [value]="null">—</mat-option>@for (c of m.columns; track c.columnId) { <mat-option [value]="c.columnId"><span class="wi-ltr">{{ c.columnName }}</span></mat-option> }</mat-select></mat-form-field>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full"><mat-label>{{ 'admin.permissions.departmentColumn' | transloco }}</mat-label><mat-select [value]="mappingDraft().departmentColumnId" (valueChange)="mappingDraft.set({ ...mappingDraft(), departmentColumnId: $event })" data-testid="perm-map-department"><mat-option [value]="null">—</mat-option>@for (c of m.columns; track c.columnId) { <mat-option [value]="c.columnId"><span class="wi-ltr">{{ c.columnName }}</span></mat-option> }</mat-select></mat-form-field>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full"><mat-label>{{ 'admin.permissions.sectionColumn' | transloco }}</mat-label><mat-select [value]="mappingDraft().sectionColumnId" (valueChange)="mappingDraft.set({ ...mappingDraft(), sectionColumnId: $event })" data-testid="perm-map-section"><mat-option [value]="null">—</mat-option>@for (c of m.columns; track c.columnId) { <mat-option [value]="c.columnId"><span class="wi-ltr">{{ c.columnName }}</span></mat-option> }</mat-select></mat-form-field>
+                  <div class="detail__actions"><button mat-stroked-button type="button" (click)="saveMapping()" [disabled]="busy()" data-testid="perm-map-save">{{ 'admin.permissions.saveMapping' | transloco }}</button></div>
+                } @else { <mat-progress-bar mode="indeterminate" /> }
+              </aside>
+            }
+          </div>
+        </div>
+      }
+    </mat-tab>
+
+    <mat-tab [label]="'admin.permissions.tabPreview' | transloco">
+      <div class="tab-body">
+        <div class="selectors">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="user-select">
+            <mat-label>{{ 'admin.permissions.previewUser' | transloco }}</mat-label>
+            <mat-select [value]="previewUser()" (valueChange)="selectPreviewUser($event)" data-testid="perm-preview-user">
+              @for (u of users(); track u.userId) { <mat-option [value]="u.userId">{{ u.fullName }} <span class="wi-ltr wi-muted">({{ u.email }})</span></mat-option> }
+            </mat-select>
+          </mat-form-field>
+        </div>
+        @if (previewLoading()) { <mat-progress-bar mode="indeterminate" /> }
+        @if (preview(); as p) {
+          <div class="wi-card" data-testid="perm-preview">
+            <p class="wi-muted small">{{ 'admin.permissions.previewContext' | transloco: { roles: p.roles.join(', ') || '—', employee: p.context.employeeNumber || '—', department: p.context.departmentCode || '—', section: p.context.sectionCode || '—' } }}</p>
+            @if (p.objects.length === 0) { <p class="empty wi-muted">{{ 'admin.permissions.previewEmpty' | transloco }}</p> }
+            <ul class="effective">
+              @for (o of p.objects; track o.objectId) {
+                <li>
+                  <div class="effective__head"><span class="wi-ltr"><span class="wi-muted">{{ o.applicationCode }} · {{ o.schemaName }}.</span><strong>{{ o.objectName }}</strong></span>@if (objectLabel(o)) { <span class="wi-muted small">{{ objectLabel(o) }}</span> }<span class="wi-muted small">{{ 'admin.permissions.via' | transloco }} {{ o.viaRoles.join(', ') }}</span></div>
+                  <div class="effective__scopes">
+                    @for (s of o.rowScopes; track s) { <span class="chip scope" [attr.data-scope]="s">{{ 'admin.permissions.scopes.' + s | transloco }}</span> }
+                    @for (s of o.unmappedScopes; track s) { <span class="chip pending"><mat-icon>warning_amber</mat-icon>{{ 'admin.permissions.scopes.' + s | transloco }} · {{ 'admin.permissions.unmappedShort' | transloco }}</span> }
+                    @if (!o.yieldsRows) { <span class="chip off">{{ 'admin.permissions.noRows' | transloco }}</span> }
+                  </div>
+                  <p class="small wi-ltr effective__cols">{{ columnNames(o) }}</p>
+                </li>
+              }
+            </ul>
+          </div>
+        } @else if (!previewLoading()) { <div class="wi-card wi-muted">{{ 'admin.permissions.previewHint' | transloco }}</div> }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</section>

@@ -4,6 +4,7 @@ using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Audit;
 using WabiInsight.Core.Entities.Email;
 using WabiInsight.Core.Entities.Metadata;
+using WabiInsight.Core.Entities.Permissions;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Entities.Support;
@@ -84,6 +85,14 @@ public class ConfigurationDbContext : DbContext
     public DbSet<DatabaseColumn> DatabaseColumns => Set<DatabaseColumn>();
 
     public DbSet<DatabaseRelationship> DatabaseRelationships => Set<DatabaseRelationship>();
+
+    public DbSet<RoleTableGrant> RoleTablePermissions => Set<RoleTableGrant>();
+
+    public DbSet<RoleColumnGrant> RoleColumnPermissions => Set<RoleColumnGrant>();
+
+    public DbSet<RoleRowGrant> RoleRowPermissions => Set<RoleRowGrant>();
+
+    public DbSet<RowScopeColumnMapping> RowScopeColumnMappings => Set<RowScopeColumnMapping>();
 
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;
