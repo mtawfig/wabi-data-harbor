@@ -1,0 +1,12 @@
+/* Global baseline for P1.1. The full design system (tokens, Material theme, fonts, RTL) arrives in P1.4. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
