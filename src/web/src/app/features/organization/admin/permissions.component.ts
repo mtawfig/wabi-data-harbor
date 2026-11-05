@@ -18,6 +18,8 @@ import { Application } from '../../../core/organizations/applications.models';
 import { ApplicationsService } from '../../../core/organizations/applications.service';
 import { EffectiveObjectAccess, EffectivePermissions, ObjectGrant, ROW_SCOPES, RoleMatrix, RowMapping, RowScope } from '../../../core/organizations/permissions.models';
 import { PermissionsService } from '../../../core/organizations/permissions.service';
+import { RoleMetricGrants } from '../../../core/platform/insights.models';
+import { InsightsService } from '../../../core/platform/insights.service';
 import { problemMessage } from '../../../core/problem-message';
 
 interface GrantDraft {
@@ -38,6 +40,7 @@ export class PermissionsComponent {
   private readonly permissions = inject(PermissionsService);
   private readonly applications = inject(ApplicationsService);
   private readonly admin = inject(OrganizationAdminService);
+  private readonly insights = inject(InsightsService);
   private readonly snack = inject(MatSnackBar);
   private readonly transloco = inject(TranslocoService);
   readonly language = inject(LanguageService);
@@ -61,6 +64,9 @@ export class PermissionsComponent {
   readonly previewUser = signal<string | null>(null);
   readonly preview = signal<EffectivePermissions | null>(null);
   readonly previewLoading = signal(false);
+  readonly metricGrants = signal<RoleMetricGrants | null>(null);
+  readonly metricDraft = signal<Set<string>>(new Set());
+  readonly metricsLoading = signal(false);
 
   readonly selectable = computed(() => this.apps().filter((a) => !a.isBuiltIn));
   readonly editableRoles = computed(() => this.roles().filter((r) => r.isActive));
@@ -99,6 +105,7 @@ export class PermissionsComponent {
         if (first) {
           this.selectedRole.set(first.roleId);
           this.load();
+          this.loadMetricGrants();
         }
       });
       this.admin.listUsers(1, 200, '', 'Active', null, null).subscribe((page) => this.users.set(page.items));
@@ -155,6 +162,64 @@ export class PermissionsComponent {
   selectRole(roleId: string): void {
     this.selectedRole.set(roleId);
     this.load();
+    this.loadMetricGrants();
+  }
+
+  loadMetricGrants(): void {
+    const roleId = this.selectedRole();
+    if (!roleId) {
+      this.metricGrants.set(null);
+      return;
+    }
+    this.metricsLoading.set(true);
+    this.insights.roleMetrics(roleId).subscribe({
+      next: (g) => {
+        this.metricGrants.set(g);
+        this.metricDraft.set(new Set(g.grantedMetricIds));
+        this.metricsLoading.set(false);
+      },
+      error: (e: HttpErrorResponse) => {
+        this.error.set(problemMessage(e, this.transloco));
+        this.metricsLoading.set(false);
+      },
+    });
+  }
+
+  toggleMetric(metricId: string, checked: boolean): void {
+    this.metricDraft.update((d) => {
+      const next = new Set(d);
+      if (checked) {
+        next.add(metricId);
+      } else {
+        next.delete(metricId);
+      }
+      return next;
+    });
+  }
+
+  saveMetricGrants(): void {
+    const roleId = this.selectedRole();
+    if (!roleId) {
+      return;
+    }
+    this.busy.set(true);
+    this.error.set(null);
+    this.insights.setRoleMetrics(roleId, [...this.metricDraft()]).subscribe({
+      next: (g) => {
+        this.metricGrants.set(g);
+        this.metricDraft.set(new Set(g.grantedMetricIds));
+        this.busy.set(false);
+        this.snack.open(this.transloco.translate('admin.permissions.metricsSaved'), undefined, { duration: 2500 });
+      },
+      error: (e: HttpErrorResponse) => {
+        this.error.set(problemMessage(e, this.transloco));
+        this.busy.set(false);
+      },
+    });
+  }
+
+  metricName(m: { displayNameEn: string; displayNameAr: string }): string {
+    return this.language.current() === 'ar' ? m.displayNameAr : m.displayNameEn;
   }
 
   load(): void {

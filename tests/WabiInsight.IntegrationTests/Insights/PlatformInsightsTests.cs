@@ -116,7 +116,7 @@ public sealed class PlatformInsightsTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, (await platform.PostJsonAsync("/api/insights/metrics/users.total/query", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await platform.GetAsync("/api/insights/catalog")).StatusCode);
         using var bob = await LoginAsync(TestData.BobEmail);
-        Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/insights/catalog")).StatusCode);
+        Assert.Empty((await (await bob.GetAsync("/api/insights/catalog")).ReadJsonAsync()).GetProperty("metrics").EnumerateArray()); // no role grants
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync("/api/platform/insights-catalog")).StatusCode);
     }
 

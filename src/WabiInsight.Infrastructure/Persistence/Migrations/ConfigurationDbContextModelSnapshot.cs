@@ -335,6 +335,34 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.ToTable("InsightsObjects", (string)null);
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Insights.RoleMetricGrant", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("InsightsMetricId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("GrantedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("GrantedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RoleId", "InsightsMetricId");
+
+                    b.HasIndex("InsightsMetricId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "RoleId");
+
+                    b.ToTable("RoleMetricPermissions", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Metadata.DatabaseColumn", b =>
                 {
                     b.Property<Guid>("ColumnId")
@@ -2041,6 +2069,22 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.HasOne("WabiInsight.Core.Entities.Insights.InsightsObject", null)
                         .WithMany()
                         .HasForeignKey("InsightsObjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Insights.RoleMetricGrant", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Insights.InsightsMetric", null)
+                        .WithMany()
+                        .HasForeignKey("InsightsMetricId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Role", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RoleId")
+                        .HasPrincipalKey("OrganizationId", "RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

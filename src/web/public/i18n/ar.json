@@ -526,7 +526,8 @@
       "insights_view_invalid": "اسم عرض غير صالح.",
       "insights_query_failed": "فشل استعلام الرؤى.",
       "insights_login_not_configured": "حساب الرؤى المخصص غير مضبوط.",
-      "insights_login_not_confined": "يستطيع حساب الرؤى قراءة الجداول الخام."
+      "insights_login_not_confined": "يستطيع حساب الرؤى قراءة الجداول الخام.",
+      "organization_admin_metrics_automatic": "يحصل مديرو المؤسسة على كل مقياس معتمد تلقائيًا؛ لا يمكن تعديل منحهم."
     },
     "applications": {
       "title": "التطبيقات",
@@ -671,7 +672,12 @@
       "previewContext": "الأدوار: {{roles}} · الرقم الوظيفي: {{employee}} · الإدارة: {{department}} · القسم: {{section}}",
       "previewEmpty": "لا يمكن لهذا المستخدم الاستعلام عن أي كائن.",
       "via": "عبر",
-      "noRows": "بلا صفوف"
+      "noRows": "بلا صفوف",
+      "tabMetrics": "مقاييس رؤى المنصة",
+      "metricsHint": "المقاييس التي يمكن لهذا الدور تشغيلها في رؤى المؤسسة (ومن المرحلة 8 السؤال عنها بلغة طبيعية). يحصل مديرو المؤسسة على كل المقاييس المعتمدة تلقائيًا.",
+      "metricsAutomatic": "يحصل دور مدير المؤسسة على كل مقياس معتمد تلقائيًا.",
+      "noMetrics": "لا توجد مقاييس معتمدة بعد.",
+      "metricsSaved": "تم حفظ منح المقاييس."
     }
   },
   "platformDashboard": {
@@ -1121,5 +1127,80 @@
     "values": "القيم",
     "removeFilter": "إزالة المرشّح",
     "previewSql": "معاينة SQL"
+  },
+  "orgDashboard": {
+    "title": "لوحة المؤسسة",
+    "subtitle": "مؤسستك فقط: المستخدمون والنشاط والدعم وإعدادات البيانات، مقروءة عبر عروض رؤى المنصة.",
+    "kpis": {
+      "totalUsers": "المستخدمون",
+      "activeUsers": "المستخدمون النشطون",
+      "usersSignedIn": "المستخدمون الذين سجّلوا الدخول",
+      "departments": "الإدارات النشطة",
+      "configuredApplications": "التطبيقات",
+      "approvedObjects": "الكائنات المعتمدة",
+      "logins": "تسجيلات الدخول",
+      "failedLogins": "محاولات الدخول الفاشلة",
+      "failedOperations": "العمليات الفاشلة",
+      "ticketsCreated": "التذاكر المنشأة",
+      "openTickets": "التذاكر المفتوحة",
+      "avgFirstResponseMinutes": "متوسط أول استجابة",
+      "avgResolutionMinutes": "متوسط الحل",
+      "supportGrants": "منح وصول الدعم",
+      "emailsSent": "الرسائل المرسلة",
+      "emailsFailed": "الرسائل الفاشلة",
+      "analysesCompleted": "التحليلات المكتملة",
+      "analysesFailed": "التحليلات الفاشلة",
+      "reportsGenerated": "التقارير المنشأة",
+      "aiTokens": "رموز الذكاء الاصطناعي",
+      "internalShares": "المشاركات الداخلية",
+      "externalShares": "المشاركات الخارجية"
+    },
+    "series": {
+      "activeUsers": "المستخدمون الذين سجّلوا الدخول",
+      "logins": "تسجيلات الدخول",
+      "failedLogins": "محاولات الدخول الفاشلة",
+      "ticketsCreated": "التذاكر المنشأة",
+      "emailsSent": "الرسائل المرسلة",
+      "emailsFailed": "الرسائل الفاشلة",
+      "failedOperations": "العمليات الفاشلة"
+    },
+    "charts": {
+      "users": "المستخدمون وتسجيلات الدخول",
+      "tickets": "تذاكر الدعم",
+      "emails": "تسليم البريد",
+      "failures": "الإخفاقات"
+    },
+    "pendingNote": "تظهر هذه المؤشرات عندما تسجّل مراحل محرك الذكاء الاصطناعي والتقارير والمشاركة أحداثها. لا شيء مُقدَّر.",
+    "departmentUsage": "الاستخدام حسب الإدارة",
+    "noDepartment": "بلا إدارة",
+    "events": "الأحداث",
+    "ticketsByStatus": "التذاكر حسب الحالة",
+    "tickets": "التذاكر",
+    "applications": "التطبيقات",
+    "objects": "الكائنات المعتمدة / المكتشفة",
+    "lastRefresh": "آخر تحديث للبيانات الوصفية",
+    "noData": "لا توجد بيانات في هذه الفترة."
+  },
+  "orgInsights": {
+    "title": "رؤى المؤسسة",
+    "subtitle": "شغّل مقاييس رؤى المنصة الممنوحة لك. كل نتيجة تخص مؤسستك فقط.",
+    "noMetrics": "لم تُمنح أدوارك أي مقاييس بعد. اطلب ذلك من مدير مؤسستك.",
+    "metrics": "المقاييس",
+    "last90": "آخر 90 يومًا",
+    "lastYear": "آخر سنة",
+    "allTime": "كل الوقت",
+    "noBucket": "الإجمالي",
+    "groupBy": "تجميع حسب",
+    "noGroup": "بلا تجميع",
+    "run": "تشغيل",
+    "rows": "{{count}} صفًا",
+    "bucket": "الفترة",
+    "value": "القيمة",
+    "units": {
+      "count": "عدد",
+      "minutes": "دقائق",
+      "tokens": "رموز",
+      "bytes": "بايت"
+    }
   }
 }

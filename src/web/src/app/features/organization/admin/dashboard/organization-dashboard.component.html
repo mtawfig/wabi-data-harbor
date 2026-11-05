@@ -1,0 +1,97 @@
+<section class="wi-page dash">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'nav.org.admin.title' | transloco }}</p>
+      <h1>{{ 'orgDashboard.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'orgDashboard.subtitle' | transloco }}</p>
+    </div>
+  </header>
+
+  <div class="wi-card dash__filters">
+    <mat-button-toggle-group [value]="preset()" (change)="setPreset($event.value)" hideSingleSelectionIndicator data-testid="odash-presets">
+      <mat-button-toggle value="today">{{ 'platformDashboard.presets.today' | transloco }}</mat-button-toggle>
+      <mat-button-toggle value="7d">{{ 'platformDashboard.presets.last7' | transloco }}</mat-button-toggle>
+      <mat-button-toggle value="30d">{{ 'platformDashboard.presets.last30' | transloco }}</mat-button-toggle>
+      <mat-button-toggle value="month">{{ 'platformDashboard.presets.thisMonth' | transloco }}</mat-button-toggle>
+      <mat-button-toggle value="custom">{{ 'platformDashboard.presets.custom' | transloco }}</mat-button-toggle>
+    </mat-button-toggle-group>
+    @if (preset() === 'custom') {
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'platformDashboard.from' | transloco }}</mat-label><input matInput type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" /></mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'platformDashboard.to' | transloco }}</mat-label><input matInput type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" /></mat-form-field>
+    }
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>{{ 'platformDashboard.bucket' | transloco }}</mat-label>
+      <mat-select [value]="bucket()" (valueChange)="bucket.set($event); load()">
+        <mat-select-trigger>{{ 'platformDashboard.buckets.' + bucket() | transloco }}</mat-select-trigger>
+        <mat-option value="Day">{{ 'platformDashboard.buckets.Day' | transloco }}</mat-option>
+        <mat-option value="Week">{{ 'platformDashboard.buckets.Week' | transloco }}</mat-option>
+        <mat-option value="Month">{{ 'platformDashboard.buckets.Month' | transloco }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <button mat-flat-button type="button" (click)="load()" data-testid="odash-apply"><mat-icon>refresh</mat-icon>{{ 'platformDashboard.apply' | transloco }}</button>
+    <a mat-stroked-button routerLink="/app/admin/insights" data-testid="odash-insights"><mat-icon>query_stats</mat-icon>{{ 'nav.org.admin.insights' | transloco }}</a>
+  </div>
+
+  @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+
+  @if (data(); as d) {
+    <p class="wi-muted dash__period">{{ 'platformDashboard.period' | transloco }}: {{ d.period.from | date: 'mediumDate' }} – {{ d.period.to | date: 'mediumDate' }}</p>
+
+    <div class="kpis" data-testid="odash-kpis">
+      @for (code of primaryKpis(); track code) {
+        <div class="kpi wi-card" [attr.data-kpi]="code">
+          <span class="kpi__value">{{ kpi(code) | number }}@if (code.endsWith('Minutes')) { <small>{{ 'platformDashboard.minutes' | transloco }}</small> }</span>
+          <span class="kpi__label">{{ 'orgDashboard.kpis.' + code | transloco }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="charts">
+      <div class="wi-card chart-card"><h3>{{ 'orgDashboard.charts.users' | transloco }}</h3><div echarts [options]="usersChart()" class="chart"></div></div>
+      <div class="wi-card chart-card"><h3>{{ 'orgDashboard.charts.tickets' | transloco }}</h3><div echarts [options]="ticketsChart()" class="chart"></div></div>
+      <div class="wi-card chart-card"><h3>{{ 'orgDashboard.charts.emails' | transloco }}</h3><div echarts [options]="emailsChart()" class="chart"></div></div>
+      <div class="wi-card chart-card"><h3>{{ 'orgDashboard.charts.failures' | transloco }}</h3><div echarts [options]="failuresChart()" class="chart"></div></div>
+    </div>
+
+    @if (pendingKpis().length > 0) {
+      <div class="wi-card pending">
+        <h3>{{ 'platformDashboard.pendingTitle' | transloco }}</h3>
+        <p class="wi-muted">{{ 'orgDashboard.pendingNote' | transloco }}</p>
+        <div class="pending__list">@for (code of pendingKpis(); track code) { <span class="chip">{{ 'orgDashboard.kpis.' + code | transloco }}</span> }</div>
+      </div>
+    }
+
+    <div class="tables">
+      <div class="wi-card">
+        <h3>{{ 'orgDashboard.departmentUsage' | transloco }}</h3>
+        @if (d.departmentUsage.length === 0) { <p class="wi-muted">{{ 'orgDashboard.noData' | transloco }}</p> } @else {
+          <table class="plain full" data-testid="odash-departments">
+            <thead><tr><th>{{ 'nav.org.admin.departments' | transloco }}</th><th class="num">{{ 'orgDashboard.events' | transloco }}</th></tr></thead>
+            <tbody>@for (r of d.departmentUsage; track r.key) { <tr><td>{{ rowLabel(r) }}</td><td class="num">{{ r.value | number }}</td></tr> }</tbody>
+          </table>
+        }
+      </div>
+      <div class="wi-card">
+        <h3>{{ 'orgDashboard.ticketsByStatus' | transloco }}</h3>
+        @if (d.ticketsByStatus.length === 0) { <p class="wi-muted">{{ 'orgDashboard.noData' | transloco }}</p> } @else {
+          <table class="plain full" data-testid="odash-tickets">
+            <thead><tr><th>{{ 'admin.fields.status' | transloco }}</th><th class="num">{{ 'orgDashboard.tickets' | transloco }}</th></tr></thead>
+            <tbody>@for (r of d.ticketsByStatus; track r.key) { <tr><td>{{ 'support.statuses.' + r.key | transloco }}</td><td class="num">{{ r.value | number }}</td></tr> }</tbody>
+          </table>
+        }
+      </div>
+      <div class="wi-card span2">
+        <h3>{{ 'orgDashboard.applications' | transloco }}</h3>
+        <table class="plain full" data-testid="odash-applications">
+          <thead><tr><th>{{ 'admin.applications.application' | transloco }}</th><th>{{ 'admin.applications.databaseType' | transloco }}</th><th>{{ 'admin.fields.status' | transloco }}</th><th class="num">{{ 'orgDashboard.objects' | transloco }}</th><th>{{ 'orgDashboard.lastRefresh' | transloco }}</th></tr></thead>
+          <tbody>
+            @for (a of d.applications; track a.applicationId) {
+              <tr><td>{{ appName(a) }} <span class="wi-muted wi-ltr">({{ a.applicationCode }})</span></td><td>{{ a.isBuiltIn ? ('admin.applications.builtIn' | transloco) : a.databaseType }}</td><td><span class="chip" [attr.data-on]="a.isApproved">{{ (a.isApproved ? 'admin.metadata.approved' : 'admin.metadata.pending') | transloco }}</span></td><td class="num">{{ a.approvedObjectCount }} / {{ a.objectCount }}</td><td>{{ a.lastMetadataRefreshAt ? (a.lastMetadataRefreshAt | date: 'medium') : '—' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-ticket-widget area="app" class="span2" />
+    </div>
+  }
+</section>

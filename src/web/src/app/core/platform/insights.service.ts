@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { InsightsCatalog, InsightsColumn, InsightsMetric, InsightsObject, InsightsSourceStatus, InsightsSyncResult, MetricQueryRequest, MetricResult, OrganizationInsightsCatalog, SaveInsightsMetricRequest, SqlPreview } from './insights.models';
+import { InsightsCatalog, InsightsColumn, InsightsMetric, InsightsObject, InsightsSourceStatus, InsightsSyncResult, MetricQueryRequest, MetricResult, OrganizationDashboard, OrganizationInsightsCatalog, RoleMetricGrants, SaveInsightsMetricRequest, SqlPreview } from './insights.models';
+import { MetricBucket } from './platform.models';
 
 /** Platform Insights Configuration (platform side) and the organization-side approved catalog and metric queries. */
 @Injectable({ providedIn: 'root' })
@@ -52,5 +53,18 @@ export class InsightsService {
 
   queryMetric(code: string, request: MetricQueryRequest): Observable<MetricResult> {
     return this.http.post<MetricResult>(`/api/insights/metrics/${encodeURIComponent(code)}/query`, request);
+  }
+
+  organizationDashboard(from: Date, to: Date, bucket: MetricBucket): Observable<OrganizationDashboard> {
+    const params = new HttpParams().set('from', from.toISOString()).set('to', to.toISOString()).set('bucket', bucket);
+    return this.http.get<OrganizationDashboard>('/api/insights/dashboard', { params });
+  }
+
+  roleMetrics(roleId: string): Observable<RoleMetricGrants> {
+    return this.http.get<RoleMetricGrants>(`/api/insights/roles/${roleId}/metrics`);
+  }
+
+  setRoleMetrics(roleId: string, metricIds: string[]): Observable<RoleMetricGrants> {
+    return this.http.put<RoleMetricGrants>(`/api/insights/roles/${roleId}/metrics`, { metricIds });
   }
 }

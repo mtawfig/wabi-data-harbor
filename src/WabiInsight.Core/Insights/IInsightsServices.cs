@@ -59,9 +59,13 @@ public sealed record MetricResult(string MetricCode, string Unit, IReadOnlyList<
 /// </summary>
 public interface IInsightsQueryService
 {
+    /// <summary>Approved metrics the signed-in user may run: all of them for Organization Administrators, otherwise those granted to the user's active roles.</summary>
     Task<OrganizationInsightsCatalog> GetApprovedCatalogAsync(CancellationToken cancellationToken = default);
 
     Task<MetricResult> QueryMetricAsync(string metricCode, MetricQueryRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Organization Administrators only.</summary>
+    Task<OrganizationDashboard> GetDashboardAsync(Platform.MetricPeriod period, Platform.MetricBucket bucket, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Opens connections for insights queries: the dedicated read-only login when configured.</summary>
@@ -72,4 +76,27 @@ public interface IInsightsConnectionFactory
     Task<System.Data.Common.DbConnection> OpenAsync(CancellationToken cancellationToken = default);
 
     Task<ConnectionTestResult> TestAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>Organization Administrator dashboard (specification §14): organization-only KPIs, series and tables, all read through the insights views.</summary>
+public sealed record DashboardTableRow(string Key, string Label, string? LabelAr, double Value, double? Secondary);
+
+public sealed record DashboardApplicationRow(Guid ApplicationId, string ApplicationCode, string ApplicationName, string ApplicationNameAr, string DatabaseType, bool IsBuiltIn, bool IsApproved, bool IsActive, long ObjectCount, long ApprovedObjectCount, DateTimeOffset? LastMetadataRefreshAt);
+
+public sealed record OrganizationDashboard(
+    Platform.MetricPeriod Period,
+    IReadOnlyList<Platform.MetricValue> Kpis,
+    IReadOnlyList<Platform.MetricSeries> Series,
+    IReadOnlyList<DashboardTableRow> DepartmentUsage,
+    IReadOnlyList<DashboardTableRow> TicketsByStatus,
+    IReadOnlyList<DashboardApplicationRow> Applications);
+
+public sealed record RoleMetricGrantsDto(Guid RoleId, string RoleCode, bool IsAutomatic, IReadOnlyList<InsightsMetricDto> Metrics, IReadOnlyList<Guid> GrantedMetricIds);
+
+/// <summary>Per-role metric grants, managed by Organization Administrators of the role's organization.</summary>
+public interface IMetricGrantService
+{
+    Task<RoleMetricGrantsDto> GetAsync(Guid roleId, CancellationToken cancellationToken = default);
+
+    Task<RoleMetricGrantsDto> SetAsync(Guid roleId, IReadOnlyCollection<Guid> metricIds, CancellationToken cancellationToken = default);
 }

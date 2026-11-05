@@ -129,7 +129,7 @@ public static partial class InsightsSqlBuilder
     private static string BucketExpression(MetricBucket bucket, string column) => bucket switch
     {
         MetricBucket.Day => $"CAST({column} AS date)",
-        MetricBucket.Week => $"DATEADD(week, DATEDIFF(week, 0, {column}), 0)",
+        MetricBucket.Week => $"DATEADD(day, -((DATEPART(weekday, {column}) + @@DATEFIRST - 2) % 7), CAST({column} AS date))",
         MetricBucket.Month => $"DATEFROMPARTS(YEAR({column}), MONTH({column}), 1)",
         _ => throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "insights_bucket_invalid"),
     };

@@ -1,0 +1,83 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'nav.org.admin.title' | transloco }}</p>
+      <h1>{{ 'orgInsights.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'orgInsights.subtitle' | transloco }}</p>
+    </div>
+  </header>
+
+  @if (error(); as e) { <div class="wi-card catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  @if (catalog() && metrics().length === 0) {
+    <div class="wi-card wi-muted" data-testid="oins-empty">{{ 'orgInsights.noMetrics' | transloco }}</div>
+  } @else if (catalog()) {
+    <div class="layout">
+      <aside class="wi-card metrics" data-testid="oins-metrics">
+        <h3>{{ 'orgInsights.metrics' | transloco }}</h3>
+        <ul>
+          @for (m of metrics(); track m.metricId) {
+            <li [class.active]="m.metricCode === selectedCode()"><button type="button" (click)="select(m.metricCode)" [attr.data-testid]="'oins-metric-' + m.metricCode"><strong>{{ name(m) }}</strong><span class="wi-muted small wi-ltr">{{ describe(m) }}</span></button></li>
+          }
+        </ul>
+      </aside>
+
+      <div class="main">
+        @if (metric(); as m) {
+          <div class="wi-card controls">
+            <div>
+              <h2>{{ name(m) }}</h2>
+              @if (m.description) { <p class="wi-muted small">{{ m.description }}</p> }
+            </div>
+            <div class="controls__row">
+              @if (hasDate()) {
+                <mat-button-toggle-group [value]="preset()" (change)="setPreset($event.value)" hideSingleSelectionIndicator data-testid="oins-presets">
+                  <mat-button-toggle value="7d">{{ 'platformDashboard.presets.last7' | transloco }}</mat-button-toggle>
+                  <mat-button-toggle value="30d">{{ 'platformDashboard.presets.last30' | transloco }}</mat-button-toggle>
+                  <mat-button-toggle value="90d">{{ 'orgInsights.last90' | transloco }}</mat-button-toggle>
+                  <mat-button-toggle value="year">{{ 'orgInsights.lastYear' | transloco }}</mat-button-toggle>
+                  <mat-button-toggle value="all">{{ 'orgInsights.allTime' | transloco }}</mat-button-toggle>
+                </mat-button-toggle-group>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>{{ 'platformDashboard.bucket' | transloco }}</mat-label>
+                  <mat-select [value]="bucket()" (valueChange)="bucket.set($event); run()" data-testid="oins-bucket">
+                    <mat-select-trigger>{{ (bucket() ? 'platformDashboard.buckets.' + bucket() : 'orgInsights.noBucket') | transloco }}</mat-select-trigger>
+                    <mat-option [value]="null">{{ 'orgInsights.noBucket' | transloco }}</mat-option>
+                    <mat-option value="Day">{{ 'platformDashboard.buckets.Day' | transloco }}</mat-option>
+                    <mat-option value="Week">{{ 'platformDashboard.buckets.Week' | transloco }}</mat-option>
+                    <mat-option value="Month">{{ 'platformDashboard.buckets.Month' | transloco }}</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              }
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="group">
+                <mat-label>{{ 'orgInsights.groupBy' | transloco }}</mat-label>
+                <mat-select [value]="groupBy()" (valueChange)="groupBy.set($event); run()" data-testid="oins-group">
+                  <mat-option [value]="null">{{ 'orgInsights.noGroup' | transloco }}</mat-option>
+                  @for (c of columns(); track c.columnId) { <mat-option [value]="c.columnName">{{ columnName(c) }} <span class="wi-muted wi-ltr">({{ c.columnName }})</span></mat-option> }
+                </mat-select>
+              </mat-form-field>
+              <button mat-flat-button type="button" (click)="run()" [disabled]="loading()" data-testid="oins-run"><mat-icon>play_arrow</mat-icon>{{ 'orgInsights.run' | transloco }}</button>
+            </div>
+          </div>
+
+          @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+          @if (result(); as r) {
+            <div class="wi-card result" data-testid="oins-result">
+              <div class="result__head">
+                <span class="total">{{ total() | number: '1.0-2' }} <small>{{ 'orgInsights.units.' + r.unit | transloco }}</small></span>
+                <span class="wi-muted small">{{ 'orgInsights.rows' | transloco: { count: r.rows.length } }} · {{ r.durationMs | number: '1.0-0' }} ms</span>
+              </div>
+              @if (chart(); as c) { <div echarts [options]="c" class="chart"></div> }
+              @if (r.rows.length === 0) { <p class="wi-muted">{{ 'orgDashboard.noData' | transloco }}</p> } @else {
+                <table class="plain full">
+                  <thead><tr>@if (r.rows[0].bucket) { <th>{{ 'orgInsights.bucket' | transloco }}</th> }@if (groupBy()) { <th>{{ groupBy() }}</th> }<th class="num">{{ 'orgInsights.value' | transloco }}</th></tr></thead>
+                  <tbody>@for (row of r.rows; track $index) { <tr>@if (row.bucket) { <td>{{ row.bucket | slice: 0 : 10 }}</td> }@if (groupBy()) { <td>{{ row.group ?? '—' }}</td> }<td class="num">{{ row.value | number: '1.0-2' }}</td></tr> }</tbody>
+                </table>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+</section>

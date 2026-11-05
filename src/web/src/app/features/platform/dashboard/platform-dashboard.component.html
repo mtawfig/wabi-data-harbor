@@ -22,6 +22,7 @@
     <mat-form-field appearance="outline" subscriptSizing="dynamic">
       <mat-label>{{ 'platformDashboard.bucket' | transloco }}</mat-label>
       <mat-select [value]="bucket()" (valueChange)="bucket.set($event); load()">
+        <mat-select-trigger>{{ 'platformDashboard.buckets.' + bucket() | transloco }}</mat-select-trigger>
         <mat-option value="Day">{{ 'platformDashboard.buckets.Day' | transloco }}</mat-option>
         <mat-option value="Week">{{ 'platformDashboard.buckets.Week' | transloco }}</mat-option>
         <mat-option value="Month">{{ 'platformDashboard.buckets.Month' | transloco }}</mat-option>

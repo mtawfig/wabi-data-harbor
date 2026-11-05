@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using WabiInsight.Api.Authorization;
 using WabiInsight.Api.Contracts;
 using WabiInsight.Core.Insights;
+using WabiInsight.Core.Platform;
 
 namespace WabiInsight.Api.Controllers;
 
@@ -64,17 +65,23 @@ public sealed class PlatformInsightsController : ControllerBase
     }
 }
 
-/// <summary>Organization side of Platform Insights: the approved catalog and metric queries, always scoped to the caller's organization.</summary>
+/// <summary>
+/// Organization side of Platform Insights: the metrics the signed-in user may run (all approved ones for
+/// Organization Administrators, granted ones otherwise), metric queries, the organization dashboard and
+/// per-role metric grants. Everything is scoped to the caller's organization by the services.
+/// </summary>
 [ApiController]
 [Route("api/insights")]
-[Authorize(Policy = Policies.OrganizationAdmin)]
+[Authorize(Policy = Policies.OrganizationUser)]
 public sealed class InsightsController : ControllerBase
 {
     private readonly IInsightsQueryService _queries;
+    private readonly IMetricGrantService _grants;
 
-    public InsightsController(IInsightsQueryService queries)
+    public InsightsController(IInsightsQueryService queries, IMetricGrantService grants)
     {
         _queries = queries;
+        _grants = grants;
     }
 
     [HttpGet("catalog")]
@@ -83,4 +90,23 @@ public sealed class InsightsController : ControllerBase
     [HttpPost("metrics/{code}/query")]
     public async Task<ActionResult<MetricResult>> Query(string code, [FromBody] MetricQueryRequestBody request, CancellationToken cancellationToken)
         => Ok(await _queries.QueryMetricAsync(code, request.ToRequest(), cancellationToken));
+
+    /// <summary>Organization Administrator dashboard (specification §14).</summary>
+    [HttpGet("dashboard")]
+    [Authorize(Policy = Policies.OrganizationAdmin)]
+    public async Task<ActionResult<OrganizationDashboard>> Dashboard([FromQuery] DateTimeOffset? from = null, [FromQuery] DateTimeOffset? to = null, [FromQuery] MetricBucket bucket = MetricBucket.Day, CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var period = new MetricPeriod(from ?? now.AddDays(-30).Date, to ?? now);
+        return Ok(await _queries.GetDashboardAsync(period, bucket, cancellationToken));
+    }
+
+    [HttpGet("roles/{roleId:guid}/metrics")]
+    [Authorize(Policy = Policies.OrganizationAdmin)]
+    public async Task<ActionResult<RoleMetricGrantsDto>> RoleMetrics(Guid roleId, CancellationToken cancellationToken) => Ok(await _grants.GetAsync(roleId, cancellationToken));
+
+    [HttpPut("roles/{roleId:guid}/metrics")]
+    [Authorize(Policy = Policies.OrganizationAdmin)]
+    public async Task<ActionResult<RoleMetricGrantsDto>> SetRoleMetrics(Guid roleId, [FromBody] SetRoleMetricsRequest request, CancellationToken cancellationToken)
+        => Ok(await _grants.SetAsync(roleId, request.MetricIds ?? [], cancellationToken));
 }

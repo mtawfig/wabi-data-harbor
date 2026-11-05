@@ -101,6 +101,8 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<InsightsMetric> InsightsMetrics => Set<InsightsMetric>();
 
+    public DbSet<RoleMetricGrant> RoleMetricGrants => Set<RoleMetricGrant>();
+
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;
 

@@ -526,7 +526,8 @@
       "insights_view_invalid": "Invalid view name.",
       "insights_query_failed": "The insights query failed.",
       "insights_login_not_configured": "Dedicated insights login not configured.",
-      "insights_login_not_confined": "The insights login can read raw tables."
+      "insights_login_not_confined": "The insights login can read raw tables.",
+      "organization_admin_metrics_automatic": "Organization Administrators receive every approved metric automatically; their grants cannot be edited."
     },
     "applications": {
       "title": "Applications",
@@ -671,7 +672,12 @@
       "previewContext": "Roles: {{roles}} · Employee: {{employee}} · Department: {{department}} · Section: {{section}}",
       "previewEmpty": "This user cannot query any object.",
       "via": "via",
-      "noRows": "no rows"
+      "noRows": "no rows",
+      "tabMetrics": "Platform Insights metrics",
+      "metricsHint": "Which Platform Insights metrics this role may run in Organization Insights (and, from Phase 8, ask about in natural language). Organization Administrators have all approved metrics automatically.",
+      "metricsAutomatic": "The Organization Administrator role has every approved metric automatically.",
+      "noMetrics": "No approved metrics yet.",
+      "metricsSaved": "Metric grants saved."
     }
   },
   "platformDashboard": {
@@ -1121,5 +1127,80 @@
     "values": "Values",
     "removeFilter": "Remove filter",
     "previewSql": "Preview SQL"
+  },
+  "orgDashboard": {
+    "title": "Organization Dashboard",
+    "subtitle": "Your organization only: users, activity, support and data configuration, read through the Platform Insights views.",
+    "kpis": {
+      "totalUsers": "Users",
+      "activeUsers": "Active users",
+      "usersSignedIn": "Users who signed in",
+      "departments": "Active departments",
+      "configuredApplications": "Applications",
+      "approvedObjects": "Approved objects",
+      "logins": "Sign-ins",
+      "failedLogins": "Failed sign-ins",
+      "failedOperations": "Failed operations",
+      "ticketsCreated": "Tickets created",
+      "openTickets": "Open tickets",
+      "avgFirstResponseMinutes": "Average first response",
+      "avgResolutionMinutes": "Average resolution",
+      "supportGrants": "Support access grants",
+      "emailsSent": "Emails sent",
+      "emailsFailed": "Email failures",
+      "analysesCompleted": "Completed analyses",
+      "analysesFailed": "Failed analyses",
+      "reportsGenerated": "Reports generated",
+      "aiTokens": "AI tokens",
+      "internalShares": "Internal shares",
+      "externalShares": "External shares"
+    },
+    "series": {
+      "activeUsers": "Users who signed in",
+      "logins": "Sign-ins",
+      "failedLogins": "Failed sign-ins",
+      "ticketsCreated": "Tickets created",
+      "emailsSent": "Emails sent",
+      "emailsFailed": "Email failures",
+      "failedOperations": "Failed operations"
+    },
+    "charts": {
+      "users": "Users and sign-ins",
+      "tickets": "Support tickets",
+      "emails": "E-mail delivery",
+      "failures": "Failures"
+    },
+    "pendingNote": "These indicators appear once the AI engine, reports and sharing phases record their events. Nothing is estimated.",
+    "departmentUsage": "Usage by department",
+    "noDepartment": "No department",
+    "events": "Events",
+    "ticketsByStatus": "Tickets by status",
+    "tickets": "Tickets",
+    "applications": "Applications",
+    "objects": "Approved / discovered objects",
+    "lastRefresh": "Last metadata refresh",
+    "noData": "No data in this period."
+  },
+  "orgInsights": {
+    "title": "Organization Insights",
+    "subtitle": "Run the Platform Insights metrics granted to you. Every result is about your organization only.",
+    "noMetrics": "No metrics are granted to your roles yet. Ask your organization administrator.",
+    "metrics": "Metrics",
+    "last90": "Last 90 days",
+    "lastYear": "Last year",
+    "allTime": "All time",
+    "noBucket": "Total",
+    "groupBy": "Group by",
+    "noGroup": "No grouping",
+    "run": "Run",
+    "rows": "{{count}} rows",
+    "bucket": "Period",
+    "value": "Value",
+    "units": {
+      "count": "count",
+      "minutes": "minutes",
+      "tokens": "tokens",
+      "bytes": "bytes"
+    }
   }
 }

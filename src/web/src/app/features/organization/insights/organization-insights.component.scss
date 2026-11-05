@@ -1,0 +1,11 @@
+@use '../admin/admin-catalog';
+.layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+.metrics { h3 { margin: 0 0 8px; font-size: 14px; } ul { list-style: none; margin: 0; padding: 0; max-height: calc(100vh - 220px); overflow: auto; } li { border-top: 1px solid var(--wi-border); &.active button { background: #e8f1fe; } } button { width: 100%; text-align: start; background: none; border: 0; padding: 10px 8px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; font: inherit; border-radius: var(--wi-radius-sm); &:hover { background: #f8fafc; } } }
+.main { display: flex; flex-direction: column; gap: 16px; }
+.controls { h2 { margin: 0; font-size: 20px; } &__row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; mat-form-field { min-width: 160px; } .group { min-width: 240px; } } }
+.result { &__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; } }
+.total { font-size: 32px; font-weight: 700; color: var(--wi-ocean); small { font-size: 14px; font-weight: 500; color: var(--wi-slate); margin-inline-start: 6px; } }
+.chart { height: 280px; width: 100%; }
+.small { font-size: 12px; }
+.plain { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 12px; th { text-align: start; font-size: 12px; color: var(--wi-muted); padding: 6px 8px; border-bottom: 1px solid var(--wi-border); } td { padding: 6px 8px; border-bottom: 1px solid var(--wi-border); } .num { text-align: end; } }
+@media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
