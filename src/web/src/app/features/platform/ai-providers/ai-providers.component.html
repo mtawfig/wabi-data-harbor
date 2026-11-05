@@ -1,0 +1,50 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'common.platform' | transloco }}</p>
+      <h1>{{ 'aiProviders.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'aiProviders.subtitle' | transloco }}</p>
+    </div>
+    <button mat-flat-button type="button" (click)="startCreate()" data-testid="ai-new"><mat-icon>add</mat-icon>{{ 'aiProviders.new' | transloco }}</button>
+  </header>
+
+  @if (error(); as e) { <div class="wi-card catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+  @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+
+  @if (showForm()) { <app-ai-provider-form mode="platform" [initial]="editing()" [busy]="busy()" (saved)="save($event)" (cancelled)="showForm.set(false)" /> }
+
+  <div class="wi-card providers" data-testid="ai-providers">
+    @for (p of items(); track p.providerId) {
+      <article class="provider" [class.provider--default]="p.isDefault" [attr.data-testid]="'ai-provider-' + p.name">
+        <div class="provider__head">
+          <div>
+            <h3>{{ p.name }} @if (p.isDefault) { <span class="chip default">{{ 'aiProviders.default' | transloco }}</span> }@if (!p.isApproved) { <span class="chip pending">{{ 'aiProviders.notApproved' | transloco }}</span> }@if (!p.isEnabled) { <span class="chip off">{{ 'admin.inactive' | transloco }}</span> }</h3>
+            <p class="wi-muted small wi-ltr">{{ 'aiProviders.types.' + p.providerType | transloco }} · {{ p.model }}@if (p.endpoint) { · {{ p.endpoint }} }</p>
+          </div>
+          <div class="provider__actions">
+            <button mat-stroked-button type="button" (click)="test(p)" [disabled]="busy() || !p.apiKeyConfigured" [attr.data-testid]="'ai-test-' + p.name"><mat-icon>network_check</mat-icon>{{ 'aiProviders.test' | transloco }}</button>
+            @if (!p.isDefault) { <button mat-stroked-button type="button" (click)="setDefault(p)" [disabled]="busy() || !p.isApproved || !p.isEnabled">{{ 'aiProviders.makeDefault' | transloco }}</button> }
+            <button mat-icon-button type="button" (click)="startEdit(p)" [attr.aria-label]="'aiProviders.edit' | transloco"><mat-icon>edit</mat-icon></button>
+            <button mat-icon-button type="button" (click)="remove(p)" [disabled]="busy() || p.isDefault" [attr.aria-label]="'aiProviders.delete' | transloco"><mat-icon>delete</mat-icon></button>
+          </div>
+        </div>
+        <dl class="facts">
+          <div><dt>{{ 'aiProviders.fields.apiKey' | transloco }}</dt><dd>{{ p.apiKeyConfigured ? ('aiProviders.keyConfigured' | transloco: { hint: p.apiKeyHint }) : ('aiProviders.keyMissing' | transloco) }}</dd></div>
+          <div><dt>{{ 'aiProviders.pricing' | transloco }}</dt><dd class="wi-ltr">${{ p.inputPricePerMillion }} / ${{ p.outputPricePerMillion }} / ${{ p.cachedInputPricePerMillion }}</dd></div>
+          <div><dt>{{ 'aiProviders.fields.effort' | transloco }}</dt><dd>{{ p.effort ? ('aiProviders.efforts.' + p.effort | transloco) : '—' }} · {{ p.maxOutputTokens }} {{ 'aiProviders.tokens' | transloco }}</dd></div>
+          <div><dt>{{ 'aiProviders.lastTest' | transloco }}</dt><dd>@if (p.lastTestAt) { <mat-icon class="inline" [class.ok]="p.lastTestSucceeded" [class.bad]="!p.lastTestSucceeded">{{ p.lastTestSucceeded ? 'check_circle' : 'error' }}</mat-icon> {{ p.lastTestAt | date: 'medium' }} @if (p.lastTestDetail) { <span class="wi-muted wi-ltr">· {{ p.lastTestDetail }}</span> } } @else { — }</dd></div>
+        </dl>
+        @if (testResults()[p.providerId]; as r) { <p class="test-result">{{ r }}</p> }
+      </article>
+    }
+    @if (items().length === 0) { <p class="wi-muted">{{ 'aiProviders.empty' | transloco }}</p> }
+  </div>
+
+  <div class="wi-card">
+    <h3>{{ 'aiProviders.allowList' | transloco }}</h3>
+    <p class="wi-muted small">{{ 'aiProviders.allowListHint' | transloco }}</p>
+    <div class="allow" data-testid="ai-allow-list">
+      @for (t of allTypes; track t) { <mat-checkbox [checked]="allowed().includes(t)" (change)="toggleAllowed(t, $event.checked)" [attr.data-testid]="'ai-allow-' + t">{{ 'aiProviders.types.' + t | transloco }}</mat-checkbox> }
+    </div>
+  </div>
+</section>

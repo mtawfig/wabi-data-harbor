@@ -193,7 +193,8 @@
       "roleTemplates": "Global Role Templates",
       "insights": "Platform Insights Configuration",
       "settings": "General Settings",
-      "audit": "Audit Logs"
+      "audit": "Audit Logs",
+      "aiProviders": "AI Providers"
     }
   },
   "ask": {
@@ -527,7 +528,28 @@
       "insights_query_failed": "The insights query failed.",
       "insights_login_not_configured": "Dedicated insights login not configured.",
       "insights_login_not_confined": "The insights login can read raw tables.",
-      "organization_admin_metrics_automatic": "Organization Administrators receive every approved metric automatically; their grants cannot be edited."
+      "organization_admin_metrics_automatic": "Organization Administrators receive every approved metric automatically; their grants cannot be edited.",
+      "ai_provider_not_found": "AI provider not found.",
+      "ai_provider_not_approved": "The provider must be approved and active to be the default.",
+      "ai_provider_type_not_allowed": "This provider type is not allowed for organizations.",
+      "ai_provider_invalid": "Name and model are required.",
+      "ai_provider_endpoint_invalid": "The endpoint must be an https URL (http only for localhost).",
+      "ai_provider_not_configured": "No approved AI provider is configured. Ask the platform team.",
+      "ai_provider_key_missing": "The provider has no API key.",
+      "ai_provider_unreachable": "The provider could not be reached.",
+      "ai_provider_timeout": "The provider did not answer in time.",
+      "ai_provider_unauthorized": "The provider rejected the API key.",
+      "ai_provider_model_not_found": "The model name was not found at the provider.",
+      "ai_provider_rate_limited": "The provider is rate limiting requests; try again shortly.",
+      "ai_provider_unavailable": "The provider is unavailable.",
+      "ai_provider_rejected_request": "The provider rejected the request.",
+      "ai_provider_invalid_response": "The provider returned an unreadable response.",
+      "ai_provider_refused": "The model declined the request.",
+      "ai_provider_response_too_large": "The provider response was too large.",
+      "ai_provider_type_unsupported": "Unsupported provider type.",
+      "ai_application_unsupported": "Natural-language questions over Platform Insights arrive with the next release.",
+      "ai_application_not_approved": "The application is not approved or not active.",
+      "ai_no_permitted_objects": "You have no approved objects in this application. Ask your administrator for permissions."
     },
     "applications": {
       "title": "Applications",
@@ -1202,5 +1224,65 @@
       "tokens": "tokens",
       "bytes": "bytes"
     }
+  },
+  "aiProviders": {
+    "title": "AI Providers",
+    "subtitle": "Approved model endpoints for the secure AI engine. Keys are encrypted and never shown again. Organizations use the platform default unless they select another approved provider or configure their own on an allow-listed type; there is never a fallback to an unapproved endpoint.",
+    "new": "New provider",
+    "edit": "Edit provider",
+    "delete": "Delete provider",
+    "saved": "Provider saved.",
+    "empty": "No providers yet. Add one or set Ai:Anthropic:ApiKey in appsettings.json to seed the platform default.",
+    "default": "Platform default",
+    "notApproved": "Not approved",
+    "makeDefault": "Make default",
+    "test": "Test",
+    "testOk": "Connected: {{model}} answered in {{ms}} ms.",
+    "lastTest": "Last test",
+    "pricing": "Price per million tokens (in / out / cached)",
+    "tokens": "max output tokens",
+    "keyConfigured": "Configured ({{hint}})",
+    "keyMissing": "Not configured",
+    "keyHint": "Stored encrypted; never displayed again.",
+    "keyKeepHint": "Leave empty to keep the stored key ({{hint}}).",
+    "endpointHint": "Optional. Base URL for OpenAI-compatible servers (e.g. https://api.mistral.ai/v1 or http://localhost:11434/v1); leave empty for the vendor default.",
+    "fields": {
+      "type": "Provider type",
+      "name": "Name",
+      "model": "Model",
+      "endpoint": "Endpoint",
+      "apiKey": "API key",
+      "inputPrice": "Input $/M",
+      "outputPrice": "Output $/M",
+      "cachedPrice": "Cached input $/M",
+      "maxOutputTokens": "Max output tokens",
+      "effort": "Reasoning effort",
+      "approved": "Approved for organization data"
+    },
+    "types": {
+      "Anthropic": "Anthropic (Claude)",
+      "OpenAiCompatible": "OpenAI-compatible",
+      "Gemini": "Google Gemini"
+    },
+    "modelHint": {
+      "Anthropic": "e.g. claude-opus-5-5",
+      "OpenAiCompatible": "e.g. gpt-5, mistral-large-latest, llama3",
+      "Gemini": "e.g. gemini-2.5-pro"
+    },
+    "efforts": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "allowList": "Provider types organizations may configure themselves",
+    "allowListHint": "Organizations may add their own keys only for these types. Removing a type stops any organization provider of that type from being used; requests go to the platform default instead.",
+    "orgTitle": "AI provider",
+    "orgHint": "Which model answers this organization's questions. The platform default is used unless you choose another approved provider or add your own key on an allowed type.",
+    "selected": "Provider in use",
+    "platformDefault": "Platform default",
+    "own": "Own",
+    "ownProviders": "Own providers",
+    "noneAllowed": "The platform does not allow organization-specific providers at the moment.",
+    "selectionSaved": "Provider selection saved."
   }
 }

@@ -34,4 +34,6 @@
     <p class="wi-muted span" style="font-size: 13px">{{ 'organizations.settings.requireSecondAdminHint' | transloco }}</p>
     <div class="actions span"><button mat-flat-button type="submit" [disabled]="busy()" data-testid="org-settings-save">{{ 'common.save' | transloco }}</button></div>
   </form>
+
+  <app-organization-ai-settings />
 </section>

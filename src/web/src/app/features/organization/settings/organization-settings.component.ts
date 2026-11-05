@@ -13,11 +13,12 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { ProblemDetails } from '../../../core/auth/session.model';
 import { OrganizationProfile, TIME_ZONES } from '../../../core/organizations/organizations.models';
 import { OrganizationProfileService } from '../../../core/organizations/organizations.service';
+import { OrganizationAiSettingsComponent } from './organization-ai-settings.component';
 
 /** Organization Settings: profile (P2.1) and the support-access approval policy (P5.2). Integrations and defaults arrive in later phases. */
 @Component({
   selector: 'app-organization-settings',
-  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, OrganizationAiSettingsComponent],
   templateUrl: './organization-settings.component.html',
   styles: `
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }

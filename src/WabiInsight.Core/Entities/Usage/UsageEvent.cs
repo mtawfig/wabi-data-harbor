@@ -65,4 +65,7 @@ public static class UsageEventTypes
     public const string ConnectionTested = "Application.ConnectionTested";
     public const string MetadataRefreshed = "Metadata.Refreshed";
     public const string InsightsQueried = "Insights.Queried";
+    public const string AiPlanGenerated = "Ai.PlanGenerated";
+    public const string AiPlanRejected = "Ai.PlanRejected";
+    public const string AiProviderTested = "Ai.ProviderTested";
 }

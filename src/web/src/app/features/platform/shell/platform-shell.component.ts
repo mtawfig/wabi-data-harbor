@@ -12,6 +12,7 @@ const PLATFORM_NAV: NavSection[] = [
       { labelKey: 'nav.platform.supportAccess', icon: 'key', link: '/platform/support-access' },
       { labelKey: 'nav.platform.roleTemplates', icon: 'rule', link: '/platform/role-templates' },
       { labelKey: 'nav.platform.insights', icon: 'query_stats', link: '/platform/insights' },
+      { labelKey: 'nav.platform.aiProviders', icon: 'smart_toy', link: '/platform/ai-providers' },
       { labelKey: 'nav.platform.settings', icon: 'settings', link: '/platform/settings' },
       { labelKey: 'nav.platform.audit', icon: 'policy', link: '/platform/audit' },
     ],
