@@ -1,4 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { LanguageService } from '../../../core/i18n/language.service';
+import { OrganizationProfile } from '../../../core/organizations/organizations.models';
+import { OrganizationProfileService } from '../../../core/organizations/organizations.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AppShellComponent, NavSection } from '../../../shared/layout/app-shell.component';
 
@@ -37,9 +40,21 @@ const ADMIN_NAV: NavSection = {
 @Component({
   selector: 'app-organization-shell',
   imports: [AppShellComponent],
-  template: '<app-shell [sections]="sections()" contextLabelKey="common.organization" accent="organization" />',
+  template: '<app-shell [sections]="sections()" contextLabelKey="common.organization" [contextText]="organizationName()" accent="organization" />',
 })
 export class OrganizationShellComponent {
   private readonly auth = inject(AuthService);
+  private readonly language = inject(LanguageService);
+  private readonly profiles = inject(OrganizationProfileService);
+
+  readonly profile = signal<OrganizationProfile | null>(null);
   readonly sections = computed<NavSection[]>(() => (this.auth.isOrganizationAdmin() ? [USER_NAV, ADMIN_NAV] : [USER_NAV]));
+  readonly organizationName = computed(() => {
+    const p = this.profile();
+    return p ? (this.language.current() === 'ar' ? p.organizationNameAr : p.organizationName) : null;
+  });
+
+  constructor() {
+    this.profiles.get().subscribe({ next: (p) => this.profile.set(p), error: () => this.profile.set(null) });
+  }
 }

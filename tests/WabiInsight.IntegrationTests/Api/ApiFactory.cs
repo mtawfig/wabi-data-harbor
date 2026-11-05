@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using WabiInsight.Core.Email;
@@ -57,6 +58,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         {
             builder.UseSetting(key, value);
         }
+
+        // Applied after Program.cs configuration so a developer's appsettings.Local.json can never redirect the tests.
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:ConfigurationDatabase"] = _connectionString,
+            ["Email:Provider"] = "Test",
+        }));
 
         builder.ConfigureTestServices(services =>
         {

@@ -36,6 +36,12 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<OrganizationUser> OrganizationUsers => Set<OrganizationUser>();
 
+    public DbSet<Role> Roles => Set<Role>();
+
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
+
+    public DbSet<Application> Applications => Set<Application>();
+
     public DbSet<LoginIdentity> LoginIdentities => Set<LoginIdentity>();
 
     public DbSet<SystemInitialization> SystemInitialization => Set<SystemInitialization>();
