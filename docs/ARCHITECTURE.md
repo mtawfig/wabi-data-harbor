@@ -42,6 +42,8 @@ One SQL Server database, EF Core 10, migrations in `src/WabiInsight.Infrastructu
 | `EmailMessages` | Transactional email outbox/log (metadata only, no bodies) | `Status` check (`Queued`, `Sent`, `Failed`); indexes on organization, status and template |
 | `Roles` | Organization-scoped roles; system roles `OrganizationAdmin`, `Management` (+ `Analyst` template) provisioned at onboarding | unique `(OrganizationId, RoleCode)`; alternate key `(OrganizationId, RoleId)` |
 | `UserRoles` | Role assignments | composite FKs `(OrganizationId, UserId)` and `(OrganizationId, RoleId)` so a user of A can never hold a role of B |
+| `Departments` / `Sections` | Organization structure | unique codes per organization (sections per department); composite FKs keep a section inside its department's organization, and a user's `(OrganizationId, DepartmentId, SectionId)` inside one section of one department |
+| `DefaultRoleTemplates` | Platform-managed role templates (seeded: OrganizationAdmin, Management, Analyst) | unique `RoleCode`; copied into new organizations only |
 | `Applications` | Business applications; one built-in `WI-INSIGHTS` row per organization | unique `(OrganizationId, ApplicationCode)`, unique built-in code per organization, globally unique `ConnectionFingerprint`, built-in rows cannot carry a connection string (check constraint) |
 
 Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC timestamps stamped by the context, `rowversion` concurrency tokens on editable aggregates, enum codes stored as strings with check constraints.
@@ -49,6 +51,10 @@ Conventions: UUID v7 keys generated in code (`Ids.New()`), `datetimeoffset` UTC 
 ### Onboarding (P2.1)
 
 `OrganizationService.CreateAsync` runs in one transaction: organization row → system roles from `SystemRoles.Templates` → built-in Platform Insights application → initial Organization Administrator through `OrganizationUserProvisioningService` (user, login identity, `OrganizationAdmin` role, audit) → temporary password emailed through the outbox. Role codes are loaded into the principal at login and on security-stamp revalidation, so the `OrganizationAdmin` policy and the admin navigation follow the stored assignments.
+
+### Organization administration (P2.2)
+
+`OrganizationUserService`, `OrganizationStructureService`, `RoleService` and `RoleTemplateService` throw `DomainException` with a stable outcome and error codes; `DomainExceptionHandler` maps them to problem responses (404/409/400) and `TenantContextException` to 403, so controllers stay thin and the Angular `problemMessage` helper localizes the codes. Guards: an administrator cannot deactivate themselves or drop their own admin role, and the organization always keeps at least one active administrator. Role changes rotate the user's security stamp so open sessions pick up the new roles.
 
 ### Tenant core
 
@@ -87,6 +93,10 @@ CLI commands handled before the pipeline starts: `migrate` (apply migrations) an
 | `POST /api/platform/administrators/{id}/reset-password` | Platform administrators only: reset another administrator; the temporary password is emailed. |
 | `GET/POST /api/platform/organizations`, `GET/PUT …/{id}`, `POST …/{id}/status`, `POST …/{id}/initial-administrator/resend` | Platform administrators only: organization lifecycle and onboarding. Responses carry counts, never application names. |
 | `GET /api/organization`, `PUT /api/organization` | The signed-in user's own organization (tenant context); PUT requires the `OrganizationAdmin` role. |
+| `GET/POST /api/departments`, `PUT …/{id}`; `GET/POST /api/sections`, `PUT …/{id}` | Organization structure (reads for organization users, writes for `OrganizationAdmin`). |
+| `GET/POST /api/roles`, `PUT/DELETE …/{id}` | Organization roles (`OrganizationAdmin`); system roles are protected. |
+| `GET/POST /api/users`, `GET/PUT …/{id}`, `POST …/{id}/status`, `POST …/{id}/reset-password` | Organization user management (`OrganizationAdmin`); temporary passwords are emailed. |
+| `GET/POST /api/platform/role-templates`, `PUT …/{id}` | Platform-managed default role templates (Platform Administrators). |
 
 ## Angular (P1.4)
 

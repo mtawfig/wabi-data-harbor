@@ -4,6 +4,6 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <!-- Test method names use Scenario_Expectation; CA1707 (underscores) and CA2007 do not apply to tests. -->
-    <NoWarn>$(NoWarn);CA1707;CA2007;CA1515</NoWarn>
+    <NoWarn>$(NoWarn);CA1707;CA2007;CA1515;CA1861</NoWarn>
   </PropertyGroup>
 </Project>

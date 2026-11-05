@@ -1,0 +1,71 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <a routerLink="/app/admin/users" class="back"><mat-icon class="wi-flip-rtl">arrow_back</mat-icon>{{ 'admin.users.title' | transloco }}</a>
+      <h1>{{ (isCreate() ? 'admin.users.new' : 'admin.users.edit') | transloco }}</h1>
+      @if (user(); as u) { <p class="wi-muted"><span class="wi-ltr">{{ u.email }}</span> · {{ 'admin.userStatus.' + u.status | transloco }}</p> }
+      @if (isCreate()) { <p class="wi-muted">{{ 'admin.users.createHint' | transloco }}</p> }
+    </div>
+    @if (user(); as u) {
+      <div class="catalog-form__actions">
+        <button mat-stroked-button type="button" (click)="resetPassword()" [disabled]="busy() || isSelf()" data-testid="user-reset"><mat-icon>forward_to_inbox</mat-icon>{{ 'admin.users.resetPassword' | transloco }}</button>
+        @if (u.status === 'Active') {
+          <button mat-stroked-button type="button" class="danger" (click)="setStatus('Inactive')" [disabled]="busy() || isSelf()" data-testid="user-deactivate">{{ 'admin.users.deactivate' | transloco }}</button>
+        } @else {
+          <button mat-flat-button type="button" (click)="setStatus('Active')" [disabled]="busy()" data-testid="user-activate">{{ 'admin.users.activate' | transloco }}</button>
+        }
+      </div>
+    }
+  </header>
+
+  @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (error(); as e) { <div class="wi-card catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  <form class="wi-card catalog-form" [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="user-form">
+    <div class="catalog-form__grid">
+      <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.email' | transloco }}</mat-label><input matInput type="email" formControlName="email" autocomplete="off" data-testid="user-email" /></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.fullName' | transloco }}</mat-label><input matInput formControlName="fullName" data-testid="user-fullname" /></mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'admin.fields.language' | transloco }}</mat-label>
+        <mat-select formControlName="preferredLanguage">
+          <mat-select-trigger>{{ (form.controls.preferredLanguage.value === 'ar' ? 'common.arabic' : 'common.english') | transloco }}</mat-select-trigger>
+          <mat-option value="en">{{ 'common.english' | transloco }}</mat-option>
+          <mat-option value="ar">{{ 'common.arabic' | transloco }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.employeeNumber' | transloco }}</mat-label><input matInput formControlName="employeeNumber" data-testid="user-employee" /></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.phone' | transloco }}</mat-label><input matInput formControlName="phoneNumber" /></mat-form-field>
+      <span></span>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'admin.fields.department' | transloco }}</mat-label>
+        <mat-select formControlName="departmentId" data-testid="user-department">
+          <mat-select-trigger>{{ departmentNames().get(form.controls.departmentId.value) || '' }}</mat-select-trigger>
+          <mat-option value="">—</mat-option>
+          @for (d of departments(); track d.departmentId) { <mat-option [value]="d.departmentId">{{ departmentNames().get(d.departmentId) }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'admin.fields.section' | transloco }}</mat-label>
+        <mat-select formControlName="sectionId" data-testid="user-section">
+          <mat-option value="">—</mat-option>
+          @for (s of sectionsOfDepartment(); track s.sectionId) { <mat-option [value]="s.sectionId">{{ language.current() === 'ar' ? s.sectionNameAr : s.sectionNameEn }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <h3>{{ 'admin.fields.roles' | transloco }}</h3>
+    <p class="wi-muted">{{ 'admin.users.rolesHint' | transloco }}</p>
+    <div class="roles">
+      @for (role of roles(); track role.roleId) {
+        <mat-checkbox [checked]="form.controls.roleCodes.value.includes(role.roleCode)" (change)="toggleRole(role.roleCode, $event.checked)" [attr.data-testid]="'user-role-' + role.roleCode">
+          {{ roleLabel(role) }} <span class="wi-muted">({{ role.roleCode }})</span>
+        </mat-checkbox>
+      }
+    </div>
+
+    <div class="catalog-form__actions">
+      <a mat-button routerLink="/app/admin/users">{{ 'common.cancel' | transloco }}</a>
+      <button mat-flat-button type="submit" [disabled]="busy()" data-testid="user-save">{{ (isCreate() ? 'admin.users.create' : 'common.save') | transloco }}</button>
+    </div>
+  </form>
+</section>

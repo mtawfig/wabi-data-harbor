@@ -47,6 +47,18 @@ internal sealed class OrganizationUserConfiguration : IEntityTypeConfiguration<O
         builder.HasIndex(u => new { u.OrganizationId, u.DepartmentId });
         builder.HasIndex(u => new { u.OrganizationId, u.SectionId });
 
+        // Department and section must belong to the user's organization, and the section to the user's department.
+        builder.HasOne<Department>()
+            .WithMany()
+            .HasForeignKey(u => new { u.OrganizationId, u.DepartmentId })
+            .HasPrincipalKey(d => new { d.OrganizationId, d.DepartmentId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Section>()
+            .WithMany()
+            .HasForeignKey(u => new { u.OrganizationId, u.DepartmentId, u.SectionId })
+            .HasPrincipalKey(s => new { s.OrganizationId, s.DepartmentId, s.SectionId })
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne<Administrator>()
             .WithMany()
             .HasForeignKey(u => u.CreatedByAdministratorId)

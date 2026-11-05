@@ -19,14 +19,16 @@ public sealed partial class OrganizationService : IOrganizationService
 {
     private readonly ConfigurationDbContext _context;
     private readonly IOrganizationUserProvisioningService _provisioning;
+    private readonly IRoleTemplateService _templates;
     private readonly IAuditWriter _audit;
     private readonly ITenantContext _tenantContext;
     private readonly IClock _clock;
 
-    public OrganizationService(ConfigurationDbContext context, IOrganizationUserProvisioningService provisioning, IAuditWriter audit, ITenantContext tenantContext, IClock clock)
+    public OrganizationService(ConfigurationDbContext context, IOrganizationUserProvisioningService provisioning, IRoleTemplateService templates, IAuditWriter audit, ITenantContext tenantContext, IClock clock)
     {
         _context = context;
         _provisioning = provisioning;
+        _templates = templates;
         _audit = audit;
         _tenantContext = tenantContext;
         _clock = clock;
@@ -89,6 +91,7 @@ public sealed partial class OrganizationService : IOrganizationService
         };
 
         string deliveredTo;
+        var templates = await _templates.GetProvisioningTemplatesAsync(cancellationToken);
         var strategy = _context.Database.CreateExecutionStrategy();
         try
         {
@@ -97,18 +100,18 @@ public sealed partial class OrganizationService : IOrganizationService
                 await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
                 _context.Organizations.Add(organization);
-                foreach (var template in SystemRoles.Templates)
+                foreach (var template in templates)
                 {
                     _context.Roles.Add(new Role
                     {
                         RoleId = Ids.New(),
                         OrganizationId = organization.OrganizationId,
-                        RoleCode = template.Code,
+                        RoleCode = template.RoleCode,
                         NameEn = template.NameEn,
                         NameAr = template.NameAr,
                         Description = template.Description,
                         IsSystem = template.IsSystem,
-                        TemplateVersion = SystemRoles.TemplateVersion,
+                        TemplateVersion = template.Version,
                         CreatedAt = now,
                     });
                 }

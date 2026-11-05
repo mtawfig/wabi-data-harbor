@@ -56,7 +56,8 @@ public sealed class OrganizationOnboardingTests : IDisposable
         await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
         {
             var roles = await context.Roles.IgnoreQueryFilters().Where(r => r.OrganizationId == organizationId).Select(r => r.RoleCode).OrderBy(c => c).ToListAsync();
-            Assert.Equal(["Analyst", "Management", "OrganizationAdmin"], roles);
+            // Other tests may add platform templates (e.g. Auditor); the three built-in templates are always provisioned.
+            Assert.Superset(new HashSet<string> { "Analyst", "Management", "OrganizationAdmin" }, roles.ToHashSet());
             var app = await context.Applications.IgnoreQueryFilters().SingleAsync(a => a.OrganizationId == organizationId);
             Assert.True(app.IsBuiltIn);
             Assert.Equal("WI-INSIGHTS", app.BuiltInCode);
