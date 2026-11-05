@@ -85,3 +85,11 @@ Unchanged: platform code `AP-AIR`, tagline "Ask Your Data. Trust the Answer." / 
 ## F. Post-login landing page (2026-11-05)
 
 The owner asked for organization users to land on the "Ask Wabi Insight" prompting page after sign-in. The original §22 routed Organization Users and Organization Administrators to their dashboards. Applied: `OrganizationUser → /app/ask`, with Dashboard one click away in the sidebar; `PlatformAdministrator → /platform/overview`. A `returnUrl` from a guarded deep link still takes precedence, and a `MustChangePassword` session always lands on `/change-password` first.
+
+## G. Committed configuration-database connection string (2026-11-05)
+
+The owner decided, after the risk was raised, that the configuration-database connection string (host, login and password) lives in `src/WabiInsight.Api/appsettings.json` because the repository is private and single-owner. Applied as instructed. Consequences recorded for the record: anyone with repository read access can reach the configuration database; the value also stays in git history after any later change; `appsettings.Local.json` (git-ignored) can still override it per machine. Every other secret (SMTP password, AI provider keys, OAuth tokens, bootstrap secret) stays out of source control: the committed SMTP password is the placeholder `REPLACE_WITH_REAL_PASSWORD` and must be supplied locally or through the deployment configuration.
+
+## H. Temporary passwords are delivered by email only (2026-11-05)
+
+When an administrator creates or resets an account, the temporary password is generated server-side, hashed, emailed to the account owner, and never shown to the administrator or returned by the API (the API returns the masked recipient address). The first sign-in forces a password change. Email delivery uses the outbox + background worker design from §B8; bodies are never persisted, only recipient, subject, template, status and attempts.

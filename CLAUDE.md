@@ -21,7 +21,10 @@ Wabi Insight (platform code AP-AIR) is a bilingual (EN/AR), multi-organization e
 - Branches: one PR per branch, titled `P<phase>.<n> — <description>`; `main` is merged by the owner only.
 
 ## Secrets and local configuration
-Never put real connection strings, passwords or secrets in `appsettings.json` or `appsettings.Development.json`. Use the git-ignored `src/WabiInsight.Api/appsettings.Local.json` (see `appsettings.Local.example.json`), `dotnet user-secrets`, or environment variables such as `ConnectionStrings__ConfigurationDatabase`. CI validates `appsettings.json` and a committed secret breaks every PR.
+- Owner decision G: the configuration-database connection string is committed in `src/WabiInsight.Api/appsettings.json` (private repository). Keep it valid JSON; CI loads the file.
+- Every other secret (SMTP password, AI keys, OAuth tokens, bootstrap secret) stays out of source control: use the git-ignored `appsettings.Local.json` (see `appsettings.Local.example.json`), `dotnet user-secrets`, or environment variables.
+- Temporary passwords are emailed to the account owner and never returned by the API or shown in the UI.
+- Local development against the docker-compose SQL Server and the File email sink: copy the example file to `appsettings.Local.json`.
 
 ## Essential commands
 ```bash

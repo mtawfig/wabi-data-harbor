@@ -11,6 +11,9 @@ public static class AuditEvents
     public const string Logout = "Auth.Logout";
     public const string PasswordChanged = "Auth.PasswordChanged";
     public const string AdministratorPasswordReset = "Administrator.PasswordReset";
+    public const string AdministratorCreated = "Administrator.Created";
+    public const string EmailQueued = "Email.Queued";
+    public const string EmailFailed = "Email.Failed";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>

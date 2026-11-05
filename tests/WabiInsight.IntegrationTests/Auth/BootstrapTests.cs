@@ -69,7 +69,7 @@ public sealed class BootstrapTests
         var after = await (await client.GetAsync("/api/bootstrap/status")).ReadJsonAsync();
         Assert.True(after.GetProperty("bootstrapCompleted").GetBoolean());
         Assert.Equal(ApiFactory.BootstrapEmail, after.GetProperty("bootstrapAdministratorEmail").GetString());
-        Assert.EndsWith("_InitialSchema", after.GetProperty("schemaVersion").GetString(), StringComparison.Ordinal);
+        Assert.Matches(@"^\d{14}_\w+$", after.GetProperty("schemaVersion").GetString());
 
         var login = await client.LoginAsync(ApiFactory.BootstrapEmail, ApiFactory.BootstrapPassword);
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);

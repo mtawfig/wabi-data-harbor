@@ -1,6 +1,7 @@
 using System.Net;
 using WabiInsight.IntegrationTests.Api;
 using WabiInsight.IntegrationTests.Database;
+using WabiInsight.IntegrationTests.Email;
 
 namespace WabiInsight.IntegrationTests.Auth;
 
@@ -191,17 +192,23 @@ public sealed class AuthenticationTests : IDisposable
     }
 
     [Fact]
-    public async Task Administrator_CanResetAnotherAdministrator_WhoMustThenChangePassword()
+    public async Task Administrator_CanResetAnotherAdministrator_TemporaryPasswordIsEmailedNotReturned()
     {
         using var admin = _factory.CreateClient();
         await admin.LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
 
         var self = await admin.PostJsonAsync($"/api/platform/administrators/{_db.Data.AdministratorId}/reset-password", new { });
-        Assert.Equal(HttpStatusCode.NotFound, self.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, self.StatusCode);
 
         var reset = await admin.PostJsonAsync($"/api/platform/administrators/{_db.Data.SecondAdministratorId}/reset-password", new { });
         Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
-        var temporary = (await reset.ReadJsonAsync()).GetProperty("temporaryPassword").GetString()!;
+        var body = await reset.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("temporaryPassword", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("s***d@wabitex.test", (await reset.ReadJsonAsync()).GetProperty("deliveredTo").GetString());
+
+        var email = await _factory.Emails.WaitForAsync(TestData.SecondAdminEmail);
+        var temporary = RecordingEmailSender.TemporaryPasswordOf(email);
+        Assert.DoesNotContain(temporary, body, StringComparison.Ordinal);
 
         using var second = _factory.CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await second.LoginAsync(TestData.SecondAdminEmail, TestData.AdminPassword)).StatusCode);

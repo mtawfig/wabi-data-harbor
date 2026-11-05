@@ -42,8 +42,14 @@ Double-submit pattern: `GET /api/auth/csrf` issues the `wi.xsrf` cookie and retu
 - Effects, in one transaction: administrator with `IsBootstrapAdministrator = true` and `MustChangePassword = true`, login identity, singleton initialization row, `Bootstrap.Completed` audit entry. The singleton check constraint and the filtered unique index make concurrent attempts fail atomically; the loser receives 409.
 - Migrations are never applied by the bootstrap request. Use the `migrate` command at deployment time.
 
-## Administrator-assisted password reset
-`POST /api/platform/administrators/{id}/reset-password` (platform administrators only) issues a cryptographically random 20-character temporary password that is returned once and never stored or logged. The target gets a new security stamp (existing sessions end), `MustChangePassword = true`, and cleared lockout. An administrator cannot reset their own account this way.
+## Account provisioning and temporary passwords
+`POST /api/platform/administrators` (create) and `POST /api/platform/administrators/{id}/reset-password` are restricted to platform administrators. Both generate a cryptographically random 20-character temporary password, store only its hash, and **email** it to the account owner (bilingual template, RTL for Arabic). The API response carries the masked recipient address and the outbox message id, never the password; the administrator who triggered the action does not see it. The target account gets a new security stamp (existing sessions end), `MustChangePassword = true` and cleared lockout; the first sign-in is forced through change-password. Self-reset is refused; use change-password.
+
+## Email delivery
+Settings live under `Email` (`Provider` = `Smtp` | `File` | `None`). SMTP uses MailKit with STARTTLS on port 587 (implicit TLS on 465); plain connections are refused when `EnableSsl` is true. Messages go through an outbox: the `EmailMessages` row stores recipient, subject, template code, language, status (`Queued`, `Sent`, `Failed`), attempts, last error and the requesting principal, and the body is kept only in memory until the background worker delivers it (bounded retries, configurable delay). Credentials therefore never reach the database or the logs. The committed SMTP password is a placeholder; supply the real one through `appsettings.Local.json` or the deployment configuration. `DkimSelector` is accepted for future DKIM signing but not applied in v1.
+
+## Configuration database connection string
+By owner decision G (see `docs/SPEC_REVIEW.md`), the connection string is committed in `appsettings.json` for this private repository. Treat repository read access as database access.
 
 ## Audit
 `AuditLogs` is append-only (application guard plus `scripts/sql/create-runtime-login.sql`). Records carry actor type/id, event code, entity, JSON details without secrets, correlation id and client IP.

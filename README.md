@@ -14,7 +14,7 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 
 ## Local configuration
 
-Copy `src/WabiInsight.Api/appsettings.Local.example.json` to `appsettings.Local.json` (git-ignored) and set your SQL Server connection string and bootstrap values there. Never commit real credentials to `appsettings.json`.
+`appsettings.json` carries the configuration-database connection string and the SMTP settings (owner decision for this private repository; the SMTP password is a placeholder). To override anything per machine (a local SQL Server, the File email sink, bootstrap values), copy `src/WabiInsight.Api/appsettings.Local.example.json` to `appsettings.Local.json` (git-ignored). Apply migrations to the configured database with `dotnet run --project src/WabiInsight.Api -- migrate` before the first run.
 
 ## Status
 
