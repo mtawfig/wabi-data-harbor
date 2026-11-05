@@ -1,6 +1,8 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, input, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +12,8 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
-import { map } from 'rxjs';
+import { map, startWith, switchMap, timer } from 'rxjs';
+import { NotificationsService } from '../../core/notifications/notifications.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { BrandLogoComponent } from '../ui/brand-logo.component';
 import { LanguageSwitcherComponent } from '../ui/language-switcher.component';
@@ -32,13 +35,15 @@ export interface NavSection {
  */
 @Component({
   selector: 'app-shell',
-  imports: [MatButtonModule, MatDividerModule, MatIconModule, MatListModule, MatMenuModule, MatSidenavModule, MatToolbarModule, RouterLink, RouterLinkActive, RouterOutlet, TranslocoModule, BrandLogoComponent, LanguageSwitcherComponent],
+  imports: [MatBadgeModule, MatButtonModule, MatDividerModule, MatIconModule, MatListModule, MatMenuModule, MatSidenavModule, MatToolbarModule, RouterLink, RouterLinkActive, RouterOutlet, TranslocoModule, BrandLogoComponent, LanguageSwitcherComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
 })
 export class AppShellComponent {
   readonly auth = inject(AuthService);
+  readonly notifications = inject(NotificationsService);
   private readonly breakpoints = inject(BreakpointObserver);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly sections = input.required<NavSection[]>();
   readonly contextLabelKey = input('common.organization');
@@ -52,6 +57,14 @@ export class AppShellComponent {
   constructor() {
     // Collapse the sidebar automatically on small screens; it then opens as an overlay from the menu button.
     effect(() => this.opened.set(!this.isHandset()));
+    // Unread badge: refreshed on load and every minute while the shell is open.
+    timer(0, 60_000)
+      .pipe(startWith(0), switchMap(() => this.notifications.refreshUnread()), takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => undefined });
+  }
+
+  notificationsLink(): string {
+    return this.accent() === 'platform' ? '/platform/notifications' : '/app/notifications';
   }
 
   toggle(): void {

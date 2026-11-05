@@ -14,6 +14,7 @@
   &__brand { display: inline-flex; }
   &__context { font-size: 14px; font-weight: 500; opacity: 0.8; padding-inline-start: 8px; border-inline-start: 1px solid currentColor; }
   &__user { color: inherit; &-name { font-weight: 500; margin: 0 4px; } }
+  &__bell { color: inherit; --mat-badge-background-color: #dc2626; --mat-badge-text-color: #fff; }
 }
 .shell-body { flex: 1; }
 .shell-sidenav { width: var(--wi-sidebar-width); border-inline-end: 1px solid var(--wi-border); background: var(--wi-white); }

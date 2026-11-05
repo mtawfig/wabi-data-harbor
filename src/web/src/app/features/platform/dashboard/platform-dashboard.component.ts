@@ -21,13 +21,14 @@ import { MetricBucket, MetricSeries, PlatformDashboard } from '../../../core/pla
 import { PlatformService } from '../../../core/platform/platform.service';
 import { baseChartOption } from '../../../shared/ui/chart-theme';
 import { BootstrapStatusComponent } from '../settings/bootstrap-status.component';
+import { TicketWidgetComponent } from '../../support/ticket-widget.component';
 
 type Preset = 'today' | '7d' | '30d' | 'month' | 'custom';
 
 /** Platform operations dashboard (specification §13): KPIs, trends, operational tables. Aggregates only. */
 @Component({
   selector: 'app-platform-dashboard',
-  imports: [DatePipe, DecimalPipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, NgxEchartsDirective, BootstrapStatusComponent],
+  imports: [DatePipe, DecimalPipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, NgxEchartsDirective, BootstrapStatusComponent, TicketWidgetComponent],
   templateUrl: './platform-dashboard.component.html',
   styleUrl: './platform-dashboard.component.scss',
 })
@@ -68,6 +69,7 @@ export class PlatformDashboardComponent {
   readonly usersChart = computed(() => this.chart(['activeUsers', 'logins', 'failedLogins'], 'line'));
   readonly emailsChart = computed(() => this.chart(['emailsSent', 'emailsFailed'], 'bar'));
   readonly errorsChart = computed(() => this.chart(['apiErrors', 'failedLogins'], 'line'));
+  readonly ticketsChart = computed(() => this.chart(['ticketsCreated', 'ticketsResolved'], 'bar'));
 
   constructor() {
     this.organizations.list(1, 200).subscribe((r) => this.organizationOptions.set(r.items));
