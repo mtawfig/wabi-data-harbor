@@ -48,8 +48,16 @@ export class PlatformDashboardComponent {
   /** Series labels as a signal so charts re-render once the active language file has loaded. */
   private readonly seriesLabels = toSignal(this.transloco.selectTranslateObject<Record<string, string>>('platformDashboard.series'), { initialValue: {} as Record<string, string> });
 
-  readonly primaryKpis = ['totalOrganizations', 'activeOrganizations', 'suspendedOrganizations', 'totalOrganizationUsers', 'activeUsersInPeriod', 'configuredApplications', 'logins', 'failedLogins', 'emailsSent', 'emailsFailed', 'apiErrors', 'platformAdministrators'];
-  readonly pendingKpis = ['aiRequests', 'analysesCompleted', 'analysesFailed', 'reportsGenerated', 'emailDraftsCreated', 'openTickets', 'criticalIncidents', 'avgFirstResponseMinutes', 'avgResolutionMinutes'];
+  /** Display order of the KPI cards; a code is shown only when the API reports it as collected. */
+  private readonly kpiOrder = ['totalOrganizations', 'activeOrganizations', 'suspendedOrganizations', 'totalOrganizationUsers', 'activeUsersInPeriod', 'configuredApplications', 'logins', 'failedLogins', 'emailsSent', 'emailsFailed', 'apiErrors', 'platformAdministrators', 'openTickets', 'criticalIncidents', 'ticketsCreatedInPeriod', 'avgFirstResponseMinutes', 'avgResolutionMinutes', 'aiRequests', 'analysesCompleted', 'analysesFailed', 'reportsGenerated', 'emailDraftsCreated'];
+  readonly primaryKpis = computed(() => {
+    const map = this.kpiMap();
+    return this.kpiOrder.filter((code) => map.get(code)?.collected);
+  });
+  readonly pendingKpis = computed(() => {
+    const map = this.kpiMap();
+    return this.kpiOrder.filter((code) => map.has(code) && !map.get(code)?.collected);
+  });
   readonly usageColumns = ['organization', 'status', 'users', 'activeUsers', 'logins', 'emails'];
   readonly errorColumns = ['at', 'eventType', 'organization', 'detail'];
 

@@ -473,7 +473,8 @@
       "openTickets": "Open support tickets",
       "criticalIncidents": "Critical incidents",
       "avgFirstResponseMinutes": "Average first response",
-      "avgResolutionMinutes": "Average resolution time"
+      "avgResolutionMinutes": "Average resolution time",
+      "ticketsCreatedInPeriod": "Tickets created (period)"
     },
     "series": {
       "organizationsRegistered": "Organizations registered",
@@ -483,7 +484,9 @@
       "emailsSent": "Emails sent",
       "emailsFailed": "Email failures",
       "usersCreated": "Users created",
-      "apiErrors": "API errors"
+      "apiErrors": "API errors",
+      "ticketsCreated": "Tickets created",
+      "ticketsResolved": "Tickets resolved"
     },
     "charts": {
       "organizations": "Organizations registered over time",
@@ -492,14 +495,15 @@
       "errors": "Errors"
     },
     "pendingTitle": "Metrics arriving with later phases",
-    "pendingNote": "These KPIs are shown once their feature ships (support desk in Phase 4, AI engine in Phase 8, reports in Phase 9). They are never displayed as fake zeros.",
+    "pendingNote": "These KPIs are shown once their feature ships (AI engine in Phase 8, reports in Phase 9). They are never displayed as fake zeros.",
     "usageTable": "Usage by organization",
     "emailsSentFailed": "Emails sent / failed",
     "errorsTable": "Recent errors",
     "noErrors": "No errors in this period.",
     "at": "Time",
     "eventType": "Event",
-    "detail": "Detail"
+    "detail": "Detail",
+    "minutes": "min"
   },
   "health": {
     "subtitle": "Live checks of the API, configuration database, email provider and outbox.",

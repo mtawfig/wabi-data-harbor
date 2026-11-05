@@ -5,6 +5,7 @@ using WabiInsight.Core.Entities.Audit;
 using WabiInsight.Core.Entities.Email;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
+using WabiInsight.Core.Entities.Support;
 using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Tenancy;
 
@@ -60,6 +61,18 @@ public class ConfigurationDbContext : DbContext
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
 
     public DbSet<EmailMessageRecord> EmailMessages => Set<EmailMessageRecord>();
+
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+
+    public DbSet<TicketSequence> TicketSequences => Set<TicketSequence>();
+
+    public DbSet<SupportTicketEvent> SupportTicketEvents => Set<SupportTicketEvent>();
+
+    public DbSet<SupportTicketComment> SupportTicketComments => Set<SupportTicketComment>();
+
+    public DbSet<SupportTicketAttachment> SupportTicketAttachments => Set<SupportTicketAttachment>();
+
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;
@@ -117,7 +130,7 @@ public class ConfigurationDbContext : DbContext
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog or UsageEvent && entry.State is EntityState.Modified or EntityState.Deleted)
+            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent && entry.State is EntityState.Modified or EntityState.Deleted)
             {
                 throw new InvalidOperationException($"{entry.Metadata.ClrType.Name} rows are append-only.");
             }

@@ -43,9 +43,9 @@
     <p class="wi-muted dash__period">{{ 'platformDashboard.period' | transloco }}: {{ d.period.from | date: 'mediumDate' }} – {{ d.period.to | date: 'mediumDate' }}</p>
 
     <div class="kpis" data-testid="dash-kpis">
-      @for (code of primaryKpis; track code) {
+      @for (code of primaryKpis(); track code) {
         <div class="kpi wi-card" [attr.data-kpi]="code">
-          <span class="kpi__value">{{ kpi(code) | number }}</span>
+          <span class="kpi__value">{{ kpi(code) | number }}@if (code.endsWith('Minutes')) { <small>{{ 'platformDashboard.minutes' | transloco }}</small> }</span>
           <span class="kpi__label">{{ 'platformDashboard.kpis.' + code | transloco }}</span>
         </div>
       }
@@ -58,13 +58,15 @@
       <div class="wi-card chart-card"><h3>{{ 'platformDashboard.charts.errors' | transloco }}</h3><div echarts [options]="errorsChart()" class="chart"></div></div>
     </div>
 
+    @if (pendingKpis().length > 0) {
     <div class="wi-card pending">
       <h3>{{ 'platformDashboard.pendingTitle' | transloco }}</h3>
       <p class="wi-muted">{{ 'platformDashboard.pendingNote' | transloco }}</p>
       <div class="pending__list">
-        @for (code of pendingKpis; track code) { <span class="chip">{{ 'platformDashboard.kpis.' + code | transloco }}</span> }
+        @for (code of pendingKpis(); track code) { <span class="chip">{{ 'platformDashboard.kpis.' + code | transloco }}</span> }
       </div>
     </div>
+    }
 
     <div class="tables">
       <div class="wi-card">
