@@ -1,0 +1,53 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'common.platform' | transloco }}</p>
+      <h1>{{ 'nav.platform.audit' | transloco }}</h1>
+      <p class="wi-muted">{{ 'audit.subtitle' | transloco }}</p>
+    </div>
+  </header>
+  <div class="wi-card">
+    <div class="filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search"><mat-label>{{ 'audit.search' | transloco }}</mat-label><input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" (keyup.enter)="apply()" data-testid="audit-search" /><mat-icon matSuffix>search</mat-icon></mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'platformDashboard.eventType' | transloco }}</mat-label>
+        <mat-select [value]="eventType()" (valueChange)="eventType.set($event); apply()" data-testid="audit-event-type">
+          <mat-option [value]="null">{{ 'audit.allEvents' | transloco }}</mat-option>
+          @for (t of eventTypes(); track t) { <mat-option [value]="t"><span class="wi-ltr">{{ t }}</span></mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'audit.actorType' | transloco }}</mat-label>
+        <mat-select [value]="actorType()" (valueChange)="actorType.set($event); apply()">
+          <mat-option [value]="null">{{ 'audit.allActors' | transloco }}</mat-option>
+          <mat-option value="PlatformAdministrator">{{ 'audit.actors.PlatformAdministrator' | transloco }}</mat-option>
+          <mat-option value="OrganizationUser">{{ 'audit.actors.OrganizationUser' | transloco }}</mat-option>
+          <mat-option value="Anonymous">{{ 'audit.actors.Anonymous' | transloco }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'platformDashboard.organization' | transloco }}</mat-label>
+        <mat-select [value]="organizationId()" (valueChange)="organizationId.set($event); apply()">
+          <mat-option [value]="null">{{ 'platformDashboard.allOrganizations' | transloco }}</mat-option>
+          @for (o of organizationOptions(); track o.organizationId) { <mat-option [value]="o.organizationId">{{ organizationNames().get(o.organizationId) }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'platformDashboard.from' | transloco }}</mat-label><input matInput type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" /></mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'platformDashboard.to' | transloco }}</mat-label><input matInput type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" /></mat-form-field>
+      <button mat-stroked-button type="button" (click)="apply()">{{ 'organizations.apply' | transloco }}</button>
+    </div>
+    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+    <table mat-table [dataSource]="items()" data-testid="audit-table">
+      <ng-container matColumnDef="createdAt"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.at' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.createdAt | date: 'medium' }}</td></ng-container>
+      <ng-container matColumnDef="eventType"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.eventType' | transloco }}</th><td mat-cell *matCellDef="let r"><span class="wi-ltr">{{ r.eventType }}</span></td></ng-container>
+      <ng-container matColumnDef="actor"><th mat-header-cell *matHeaderCellDef>{{ 'audit.actor' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.actorDisplayName }}<br /><span class="actor">{{ 'audit.actors.' + r.actorType | transloco }}@if (r.ipAddress) { · <span class="wi-ltr">{{ r.ipAddress }}</span> }</span></td></ng-container>
+      <ng-container matColumnDef="organization"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.organization' | transloco }}</th><td mat-cell *matCellDef="let r">{{ organizationLabel(r.organizationId) }}</td></ng-container>
+      <ng-container matColumnDef="entity"><th mat-header-cell *matHeaderCellDef>{{ 'audit.entity' | transloco }}</th><td mat-cell *matCellDef="let r">@if (r.entityType) { <span class="wi-ltr">{{ r.entityType }}</span><br /><span class="actor wi-ltr">{{ r.entityId }}</span> } @else { — }</td></ng-container>
+      <ng-container matColumnDef="details"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.detail' | transloco }}</th><td mat-cell *matCellDef="let r"><code class="details">{{ pretty(r.detailsJson) }}</code></td></ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+    @if (!loading() && items().length === 0) { <p class="wi-muted" style="padding: 24px; text-align: center">{{ 'audit.empty' | transloco }}</p> }
+    <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[25, 50, 100]" (page)="onPage($event)" />
+  </div>
+</section>

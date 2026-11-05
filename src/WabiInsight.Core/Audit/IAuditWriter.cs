@@ -12,6 +12,8 @@ public static class AuditEvents
     public const string PasswordChanged = "Auth.PasswordChanged";
     public const string AdministratorPasswordReset = "Administrator.PasswordReset";
     public const string AdministratorCreated = "Administrator.Created";
+    public const string AdministratorActivated = "Administrator.Activated";
+    public const string AdministratorDeactivated = "Administrator.Deactivated";
     public const string OrganizationCreated = "Organization.Created";
     public const string OrganizationUpdated = "Organization.Updated";
     public const string OrganizationStatusChanged = "Organization.StatusChanged";

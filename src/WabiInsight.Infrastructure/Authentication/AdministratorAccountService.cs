@@ -99,6 +99,45 @@ public sealed class AdministratorAccountService : IAdministratorAccountService
         return new AdministratorAccountResult(AdministratorAccountOutcome.Success, administrator.AdministratorId, Mask(administrator.Email), messageId);
     }
 
+    public async Task<IReadOnlyList<AdministratorDto>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        RequirePlatformAdministrator();
+        return await _context.Administrators.AsNoTracking()
+            .OrderBy(a => a.FullName)
+            .Select(a => new AdministratorDto(a.AdministratorId, a.Email, a.FullName, a.IsActive, a.MustChangePassword, a.IsBootstrapAdministrator, a.PreferredLanguage, a.LastLoginAt, a.CreatedAt))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<AdministratorAccountResult> SetActiveAsync(Guid targetAdministratorId, bool isActive, CancellationToken cancellationToken = default)
+    {
+        RequirePlatformAdministrator();
+        if (_tenantContext.Principal.AdministratorId == targetAdministratorId)
+        {
+            return new AdministratorAccountResult(AdministratorAccountOutcome.SelfResetNotAllowed, null, null, null);
+        }
+
+        var target = await _context.Administrators.SingleOrDefaultAsync(a => a.AdministratorId == targetAdministratorId, cancellationToken);
+        if (target is null)
+        {
+            return new AdministratorAccountResult(AdministratorAccountOutcome.NotFound, null, null, null);
+        }
+
+        if (!isActive && target.IsActive && !await _context.Administrators.AnyAsync(a => a.IsActive && a.AdministratorId != targetAdministratorId, cancellationToken))
+        {
+            return new AdministratorAccountResult(AdministratorAccountOutcome.LastActiveAdministrator, null, null, null);
+        }
+
+        if (target.IsActive != isActive)
+        {
+            target.IsActive = isActive;
+            target.SecurityStamp = TemporaryPasswordGenerator.NewSecurityStamp(); // ends existing sessions
+            _audit.Append(isActive ? AuditEvents.AdministratorActivated : AuditEvents.AdministratorDeactivated, "Administrator", targetAdministratorId.ToString());
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return new AdministratorAccountResult(AdministratorAccountOutcome.Success, target.AdministratorId, Mask(target.Email), null);
+    }
+
     public async Task<AdministratorAccountResult> ResetPasswordAsync(Guid targetAdministratorId, CancellationToken cancellationToken = default)
     {
         RequirePlatformAdministrator();

@@ -30,8 +30,16 @@ Interim logo: `BrandLogoComponent` (lighthouse over two data waves, dark and lig
 - Auth layouts (login, bootstrap, change password) share `login.component.scss`: gradient aside + card.
 - Utility classes: `.wi-card`, `.wi-page`, `.wi-page__header`, `.wi-eyebrow`, `.wi-muted`, `.wi-gradient`, `.wi-ms-auto`.
 
+## Charts (P3.2)
+- ECharts 6 through `ngx-echarts` (`provideEchartsCore` with a lazy `import('echarts')` so the chart runtime loads only with the dashboard chunk).
+- `shared/ui/chart-theme.ts` holds the palette (`CHART_COLORS`: ocean, aqua, navy, amber, red, grey) and `baseChartOption(rtl)`: brand fonts, navy tooltips, light grid lines, animation off (deterministic screenshots), and in RTL the category axis is inverted and the value axis moves to the right so time still reads in the writing direction.
+- KPI cards (`.kpi`) show counts in ocean; failure counters (failed sign-ins, email failures, API errors) in amber. Metrics the backend reports as `collected = false` are never drawn as zeros; they appear as chips under “Metrics arriving with later phases”.
+
 ## Translations
-Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped by area (`common`, `landing`, `login`, `changePassword`, `bootstrap`, `nav`, `ask`, `platform`, `dashboard`). Status codes and error codes from the API are mapped to keys (`login.errors.<code>`, `changePassword.errors.<code>`); codes themselves are never shown.
+Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped by area (`common`, `landing`, `login`, `changePassword`, `bootstrap`, `nav`, `ask`, `platform`, `platformDashboard`, `health`, `audit`, `platformAdmins`, `organizations`, `admin`). Status codes and error codes from the API are mapped to keys (`login.errors.<code>`, `changePassword.errors.<code>`); codes themselves are never shown.
 
 ## Screenshots (P1.4)
 `docs/screenshots/p1-4-*.png`: landing EN/AR (full page) and mobile, login EN/AR and mobile, bootstrap, change password, Ask workspace EN/AR, platform overview, platform placeholder. Demo recording: `docs/demo/p1-4-landing-login-ask.gif`.
+
+## Screenshots (P3.2)
+`docs/screenshots/p3-2-*.png`: platform dashboard EN/AR (full page), System Health, Audit Logs EN/AR, Platform Administrators list and create form.

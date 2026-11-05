@@ -94,7 +94,9 @@ CLI commands handled before the pipeline starts: `migrate` (apply migrations) an
 | `POST /api/auth/change-password` | Changes the password, rotates the security stamp, clears must-change-password. |
 | `GET /api/bootstrap/status` | Bootstrap completion state (anonymous, non-sensitive). |
 | `POST /api/bootstrap/initialize` | One-time first-administrator creation with the initialization secret. Rate-limited. |
+| `GET /api/platform/administrators` | Platform administrators only: list administrators (no hashes or stamps). |
 | `POST /api/platform/administrators` | Platform administrators only: create an administrator; the temporary password is emailed. |
+| `POST /api/platform/administrators/{id}/status` | Platform administrators only: activate/deactivate another administrator; refuses self-changes and deactivating the last active administrator; ends the target's sessions. |
 | `POST /api/platform/administrators/{id}/reset-password` | Platform administrators only: reset another administrator; the temporary password is emailed. |
 | `GET/POST /api/platform/organizations`, `GET/PUT …/{id}`, `POST …/{id}/status`, `POST …/{id}/initial-administrator/resend` | Platform administrators only: organization lifecycle and onboarding. Responses carry counts, never application names. |
 | `GET /api/organization`, `PUT /api/organization` | The signed-in user's own organization (tenant context); PUT requires the `OrganizationAdmin` role. |

@@ -23,6 +23,22 @@ public sealed class PlatformAdministratorsController : ControllerBase
         _accounts = accounts;
     }
 
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<AdministratorDto>>> List(CancellationToken cancellationToken) => Ok(await _accounts.ListAsync(cancellationToken));
+
+    [HttpPost("{id:guid}/status")]
+    public async Task<ActionResult<AccountProvisioningResponse>> SetStatus(Guid id, [FromBody] SetAdministratorStatusRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _accounts.SetActiveAsync(id, request.IsActive, cancellationToken);
+        return result.Outcome switch
+        {
+            AdministratorAccountOutcome.Success => Ok(new AccountProvisioningResponse(result.AdministratorId!.Value, result.DeliveredTo!, false, null)),
+            AdministratorAccountOutcome.SelfResetNotAllowed => Problem(statusCode: StatusCodes.Status409Conflict, title: "You cannot change your own status", detail: "cannot_change_own_status", type: "https://wabi-insight.dev/problems/invalid-transition"),
+            AdministratorAccountOutcome.LastActiveAdministrator => Problem(statusCode: StatusCodes.Status409Conflict, title: "At least one active platform administrator must remain", detail: "last_admin_protected", type: "https://wabi-insight.dev/problems/invalid-transition"),
+            _ => NotFound(),
+        };
+    }
+
     [HttpPost]
     [ProducesResponseType<AccountProvisioningResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
