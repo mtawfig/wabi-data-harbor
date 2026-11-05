@@ -1,0 +1,30 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ (area() === 'platform' ? 'common.platform' : 'common.organization') | transloco }}</p>
+      <h1>{{ 'notifications.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'notifications.subtitle' | transloco }}</p>
+    </div>
+    <button mat-stroked-button type="button" (click)="markAll()" [disabled]="unread() === 0" data-testid="notifications-mark-all"><mat-icon>done_all</mat-icon>{{ 'notifications.markAll' | transloco }}</button>
+  </header>
+  <div class="wi-card">
+    <div class="toolbar">
+      <mat-slide-toggle [checked]="unreadOnly()" (change)="toggleUnread($event.checked)">{{ 'notifications.unreadOnly' | transloco }}</mat-slide-toggle>
+    </div>
+    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+    @if (!loading() && items().length === 0) { <p class="empty wi-muted">{{ 'notifications.empty' | transloco }}</p> }
+    <ul class="list" data-testid="notification-list">
+      @for (n of items(); track n.notificationId) {
+        <li class="item" [class.item--unread]="!n.readAt" (click)="open(n)" tabindex="0" (keyup.enter)="open(n)">
+          <span class="icon"><mat-icon>{{ icon(n) }}</mat-icon></span>
+          <div class="body">
+            <p class="text">{{ text(n) }}</p>
+            <span class="wi-muted small">@if (organization(n); as o) { {{ o }} · }{{ n.createdAt | date: 'medium' }}</span>
+          </div>
+          @if (!n.readAt) { <span class="dot"></span> }
+        </li>
+      }
+    </ul>
+    <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50]" (page)="onPage($event)" />
+  </div>
+</section>

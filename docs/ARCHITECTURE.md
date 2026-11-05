@@ -138,6 +138,9 @@ public/i18n              en.json, ar.json
 
 Startup: `provideAppInitializer` initializes the language and calls `GET /api/auth/csrf` + `GET /api/auth/me` to restore a session. Guards are UX only; the API enforces authorization. Routes whose feature belongs to a later phase render `PagePlaceholderComponent` with the phase number.
 
+### Support desk and notifications (P4.2)
+`SupportService` and `NotificationsService` in `core/`; `features/support/` holds the ticket list, form, detail (tabs), notification centre and dashboard widget, each parameterised by `area` so one component serves `/app/support…` and `/platform/support…`. Routes: `/app/support`, `/app/support/new`, `/app/support/:id`, `/app/notifications`, `/platform/support`, `/platform/support/:id`, `/platform/notifications`.
+
 ## Tenant model, security, data model
 
 See `docs/WABI_INSIGHT_SPECIFICATION.md` §4, §10, §27 and `docs/SECURITY.md` (written in P1.3).

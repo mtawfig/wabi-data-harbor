@@ -1,0 +1,154 @@
+<section class="wi-page">
+  @if (error(); as e) { <div class="error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+  @if (summary(); as s) {
+    <header class="wi-page__header">
+      <div>
+        <p class="wi-eyebrow"><a [routerLink]="listLink()">{{ 'support.title' | transloco }}</a> · <span class="wi-ltr">{{ s.referenceNumber }}</span></p>
+        <h1 data-testid="ticket-subject">{{ s.subject }}</h1>
+        <div class="chips">
+          <app-ticket-status [status]="s.status" [adminView]="isPlatform()" />
+          <app-ticket-type [type]="s.ticketType" />
+          <app-ticket-impact [impact]="s.impact" />
+          @if (s.requiresSupportAccess) { <span class="flag"><mat-icon>key</mat-icon>{{ 'support.fields.requiresSupportAccess' | transloco }}</span> }
+        </div>
+      </div>
+      <dl class="meta">
+        <div><dt>{{ 'support.fields.organization' | transloco }}</dt><dd>{{ organizationName() }}</dd></div>
+        <div><dt>{{ 'support.fields.requester' | transloco }}</dt><dd>{{ s.createdByName }}</dd></div>
+        <div><dt>{{ 'support.fields.assigned' | transloco }}</dt><dd>{{ s.assignedAdministratorName || ('support.actions.unassigned' | transloco) }}</dd></div>
+        <div><dt>{{ 'support.fields.created' | transloco }}</dt><dd>{{ s.createdAt | date: 'medium' }}</dd></div>
+      </dl>
+    </header>
+
+    @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+
+    <mat-tab-group [selectedIndex]="tab()" (selectedIndexChange)="tab.set($event)" class="wi-card tabs" animationDuration="0ms">
+      <mat-tab [label]="'support.tabs.overview' | transloco">
+        <div class="pane overview">
+          <div>
+            <h3>{{ 'support.fields.description' | transloco }}</h3>
+            <p class="description" data-testid="ticket-description">{{ ticket()!.description }}</p>
+            @if (ticket()!.resolutionSummary; as r) {
+              <h3>{{ 'support.fields.resolution' | transloco }}</h3>
+              <p class="description resolution">{{ r }}</p>
+            }
+            <dl class="facts">
+              @if (s.category) { <div><dt>{{ 'support.fields.category' | transloco }}</dt><dd>{{ s.category }}</dd></div> }
+              <div><dt>{{ 'support.fields.lastActivity' | transloco }}</dt><dd>{{ s.lastActivityAt | date: 'medium' }}</dd></div>
+              @if (ticket()!.firstOpenedAt) { <div><dt>{{ 'support.fields.firstOpened' | transloco }}</dt><dd>{{ ticket()!.firstOpenedAt | date: 'medium' }}</dd></div> }
+              @if (ticket()!.startedAt) { <div><dt>{{ 'support.fields.startedAt' | transloco }}</dt><dd>{{ ticket()!.startedAt | date: 'medium' }}</dd></div> }
+              @if (s.status === 'PendingUserResponse' && ticket()!.pendingResponseAt) { <div><dt>{{ 'support.fields.pendingAt' | transloco }}</dt><dd>{{ ticket()!.pendingResponseAt | date: 'medium' }}</dd></div> }
+              @if (ticket()!.resolvedAt) { <div><dt>{{ 'support.fields.resolvedAt' | transloco }}</dt><dd>{{ ticket()!.resolvedAt | date: 'medium' }}</dd></div> }
+              @if (ticket()!.cancelledAt) { <div><dt>{{ 'support.fields.cancelledAt' | transloco }}</dt><dd>{{ ticket()!.cancelledAt | date: 'medium' }}</dd></div> }
+              @if (ticket()!.reopenedCount > 0) { <div><dt>{{ 'support.fields.reopened' | transloco }}</dt><dd>{{ ticket()!.reopenedCount }}</dd></div> }
+            </dl>
+          </div>
+          <aside class="actions" data-testid="ticket-actions">
+            <h3>{{ 'support.actions.title' | transloco }}</h3>
+            @if (ticket()!.allowedTransitions.length > 0) {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wi-full-width">
+                <mat-label>{{ 'support.actions.changeStatus' | transloco }}</mat-label>
+                <mat-select [value]="targetStatus()" (valueChange)="targetStatus.set($event)" data-testid="ticket-status-select">
+                  @for (t of ticket()!.allowedTransitions; track t) { <mat-option [value]="t">{{ actionLabel(t) }}</mat-option> }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="wi-full-width" subscriptSizing="dynamic">
+                <mat-label>{{ 'support.actions.note' | transloco }}</mat-label>
+                <textarea matInput rows="3" [ngModel]="note()" (ngModelChange)="note.set($event)" maxlength="4000" data-testid="ticket-note"></textarea>
+                <mat-hint>{{ 'support.actions.noteHint' | transloco }}</mat-hint>
+              </mat-form-field>
+              <button mat-flat-button type="button" (click)="changeStatus()" [disabled]="busy() || !targetStatus() || (noteRequired() && !note().trim())" data-testid="ticket-apply-status">{{ 'support.actions.apply' | transloco }}</button>
+            } @else {
+              <p class="wi-muted">{{ 'support.actions.noActions' | transloco }}</p>
+            }
+            @if (ticket()!.canAssign) {
+              <h3 class="assign-title">{{ 'support.actions.assign' | transloco }}</h3>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wi-full-width">
+                <mat-select [value]="assignee()" (valueChange)="assignee.set($event)" data-testid="ticket-assignee">
+                  <mat-option [value]="null">{{ 'support.actions.unassigned' | transloco }}</mat-option>
+                  @for (a of administrators(); track a.administratorId) { <mat-option [value]="a.administratorId">{{ a.fullName }}</mat-option> }
+                </mat-select>
+              </mat-form-field>
+              <button mat-stroked-button type="button" (click)="assign()" [disabled]="busy() || assignee() === (s.assignedAdministratorId ?? null)" data-testid="ticket-assign">{{ 'support.actions.assignButton' | transloco }}</button>
+            }
+          </aside>
+        </div>
+      </mat-tab>
+
+      <mat-tab [label]="('support.tabs.conversation' | transloco) + ' (' + comments().length + ')'">
+        <div class="pane">
+          @if (comments().length === 0) { <p class="wi-muted">{{ 'support.conversation.empty' | transloco }}</p> }
+          <div class="thread" data-testid="ticket-thread">
+            @for (c of comments(); track c.commentId) {
+              <article class="message" [class.message--mine]="isMine(c)" [class.message--platform]="c.authorType === 'PlatformAdministrator'">
+                <header><strong>{{ c.authorDisplayName }}</strong> <span class="wi-muted small">· {{ (c.authorType === 'PlatformAdministrator' ? 'support.conversation.platformTeam' : 'support.timeline.actor.OrganizationUser') | transloco }} · {{ c.createdAt | date: 'medium' }}</span></header>
+                <p>{{ c.body }}</p>
+              </article>
+            }
+          </div>
+          @if (ticket()!.canComment) {
+            <div class="reply">
+              <mat-form-field appearance="outline" class="wi-full-width" subscriptSizing="dynamic">
+                <mat-label>{{ 'support.conversation.reply' | transloco }}</mat-label>
+                <textarea matInput rows="3" [ngModel]="reply()" (ngModelChange)="reply.set($event)" [placeholder]="'support.conversation.placeholder' | transloco" maxlength="8000" data-testid="ticket-reply"></textarea>
+              </mat-form-field>
+              <button mat-flat-button type="button" (click)="sendReply()" [disabled]="busy() || !reply().trim()" data-testid="ticket-send"><mat-icon>send</mat-icon>{{ 'support.conversation.send' | transloco }}</button>
+            </div>
+          } @else {
+            <p class="wi-muted">{{ 'support.conversation.closed' | transloco }}</p>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab [label]="'support.tabs.timeline' | transloco">
+        <div class="pane">
+          <ol class="timeline" data-testid="ticket-timeline">
+            @for (e of events(); track e.eventId) {
+              <li class="timeline__item" [attr.data-event]="e.eventType">
+                <span class="timeline__icon"><mat-icon>{{ icon(e.eventType) }}</mat-icon></span>
+                <div class="timeline__body">
+                  <div class="timeline__title">
+                    <strong>{{ 'support.timeline.' + e.eventType | transloco }}</strong>
+                    @if (e.previousStatus && e.newStatus) {
+                      <span class="transition">
+                        <app-ticket-status [status]="e.previousStatus" [adminView]="isPlatform()" /><mat-icon class="wi-flip-rtl">arrow_forward</mat-icon><app-ticket-status [status]="e.newStatus" [adminView]="isPlatform()" />
+                      </span>
+                    } @else if (e.newStatus) { <app-ticket-status [status]="e.newStatus" [adminView]="isPlatform()" /> }
+                    @if (details(e); as d) { <span class="wi-muted">· {{ d }}</span> }
+                  </div>
+                  @if (e.note) { <p class="timeline__note">{{ e.note === 'auto_reply' ? ('support.timeline.autoReply' | transloco) : e.note }}</p> }
+                  <p class="wi-muted small">{{ e.actorDisplayName }} · {{ 'support.timeline.actor.' + e.actorType | transloco }} · {{ e.createdAt | date: 'medium' }}</p>
+                </div>
+              </li>
+            }
+          </ol>
+        </div>
+      </mat-tab>
+
+      <mat-tab [label]="('support.tabs.attachments' | transloco) + ' (' + attachments().length + ')'">
+        <div class="pane">
+          <p class="hint">{{ 'support.attachments.hint' | transloco }}</p>
+          @if (ticket()!.canComment) {
+            <input type="file" #picker [accept]="accept" (change)="upload($event)" hidden data-testid="ticket-attachment-input" />
+            <button mat-stroked-button type="button" (click)="picker.click()" [disabled]="busy()"><mat-icon>attach_file</mat-icon>{{ 'support.attachments.upload' | transloco }}</button>
+          } @else {
+            <p class="wi-muted">{{ 'support.attachments.closed' | transloco }}</p>
+          }
+          @if (attachments().length === 0) { <p class="wi-muted" style="margin-top: 16px">{{ 'support.attachments.empty' | transloco }}</p> }
+          <ul class="attachments" data-testid="ticket-attachments">
+            @for (a of attachments(); track a.attachmentId) {
+              <li>
+                <mat-icon>description</mat-icon>
+                <div>
+                  <strong>{{ a.fileName }}</strong><br />
+                  <span class="wi-muted small">{{ 'support.attachments.size' | transloco: { size: (a.sizeBytes / 1024 | number: '1.0-1') } }} · {{ a.uploadedByDisplayName }} · {{ a.createdAt | date: 'medium' }}</span>
+                </div>
+                <a mat-stroked-button [href]="downloadUrl(a)" target="_blank" rel="noopener"><mat-icon>download</mat-icon>{{ 'support.attachments.download' | transloco }}</a>
+              </li>
+            }
+          </ul>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  }
+</section>

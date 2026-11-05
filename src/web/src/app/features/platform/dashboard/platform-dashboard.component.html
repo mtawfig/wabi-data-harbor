@@ -56,6 +56,8 @@
       <div class="wi-card chart-card"><h3>{{ 'platformDashboard.charts.users' | transloco }}</h3><div echarts [options]="usersChart()" class="chart"></div></div>
       <div class="wi-card chart-card"><h3>{{ 'platformDashboard.charts.emails' | transloco }}</h3><div echarts [options]="emailsChart()" class="chart"></div></div>
       <div class="wi-card chart-card"><h3>{{ 'platformDashboard.charts.errors' | transloco }}</h3><div echarts [options]="errorsChart()" class="chart"></div></div>
+      <div class="wi-card chart-card"><h3>{{ 'platformDashboard.charts.tickets' | transloco }}</h3><div echarts [options]="ticketsChart()" class="chart"></div></div>
+      <app-ticket-widget area="platform" />
     </div>
 
     @if (pendingKpis().length > 0) {

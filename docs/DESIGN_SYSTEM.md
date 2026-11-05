@@ -35,11 +35,19 @@ Interim logo: `BrandLogoComponent` (lighthouse over two data waves, dark and lig
 - `shared/ui/chart-theme.ts` holds the palette (`CHART_COLORS`: ocean, aqua, navy, amber, red, grey) and `baseChartOption(rtl)`: brand fonts, navy tooltips, light grid lines, animation off (deterministic screenshots), and in RTL the category axis is inverted and the value axis moves to the right so time still reads in the writing direction.
 - KPI cards (`.kpi`) show counts in ocean; failure counters (failed sign-ins, email failures, API errors) in amber. Metrics the backend reports as `collected = false` are never drawn as zeros; they appear as chips under “Metrics arriving with later phases”.
 
+## Support desk (P4.2)
+- `features/support/` is shared by both areas: every page takes an `area` input (`app` | `platform`) from route data and calls the matching API prefix. Chips (`app-ticket-status`, `app-ticket-impact`, `app-ticket-type`) carry stable colours per code; the platform reads "Waiting for user" where the requester reads "Waiting for you".
+- Ticket details use `mat-tab-group` inside a `.wi-card` with zero padding; the Activity Timeline is a connected vertical list (`.timeline` with an inline-start rule and circular icon nodes) that mirrors correctly in RTL through logical properties.
+- The shell header shows a notification bell with a `matBadge` unread count (red), refreshed on load and every minute; clicking opens the area's notification centre.
+
 ## Translations
-Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped by area (`common`, `landing`, `login`, `changePassword`, `bootstrap`, `nav`, `ask`, `platform`, `platformDashboard`, `health`, `audit`, `platformAdmins`, `organizations`, `admin`). Status codes and error codes from the API are mapped to keys (`login.errors.<code>`, `changePassword.errors.<code>`); codes themselves are never shown.
+Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped by area (`common`, `landing`, `login`, `changePassword`, `bootstrap`, `nav`, `ask`, `platform`, `platformDashboard`, `health`, `audit`, `platformAdmins`, `organizations`, `admin`, `support`, `notifications`). Status codes and error codes from the API are mapped to keys (`login.errors.<code>`, `changePassword.errors.<code>`); codes themselves are never shown.
 
 ## Screenshots (P1.4)
 `docs/screenshots/p1-4-*.png`: landing EN/AR (full page) and mobile, login EN/AR and mobile, bootstrap, change password, Ask workspace EN/AR, platform overview, platform placeholder. Demo recording: `docs/demo/p1-4-landing-login-ask.gif`.
 
 ## Screenshots (P3.2)
 `docs/screenshots/p3-2-*.png`: platform dashboard EN/AR (full page), System Health, Audit Logs EN/AR, Platform Administrators list and create form.
+
+## Screenshots (P4.2)
+`docs/screenshots/p4-2-*.png`: new ticket, My Tickets, platform queue, ticket overview (requester and platform), conversation, timeline EN/AR, attachments AR, notification centre (platform EN, organization AR), user dashboard widget AR, platform dashboard with ticket KPIs, chart and open-tickets widget.

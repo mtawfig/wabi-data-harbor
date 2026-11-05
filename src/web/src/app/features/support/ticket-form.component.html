@@ -1,0 +1,64 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow"><a routerLink="/app/support">{{ 'support.title' | transloco }}</a></p>
+      <h1>{{ 'support.newTitle' | transloco }}</h1>
+      <p class="wi-muted">{{ 'support.newSubtitle' | transloco }}</p>
+    </div>
+  </header>
+
+  <form class="wi-card" [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="ticket-form">
+    @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+    @if (error(); as e) { <div class="error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'support.fields.type' | transloco }}</mat-label>
+        <mat-select formControlName="ticketType" data-testid="ticket-type">
+          <mat-select-trigger>{{ 'support.types.' + form.controls.ticketType.value | transloco }}</mat-select-trigger>
+          @for (t of types; track t) { <mat-option [value]="t">{{ 'support.types.' + t | transloco }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'support.fields.impact' | transloco }}</mat-label>
+        <mat-select formControlName="impact" data-testid="ticket-impact">
+          <mat-select-trigger>{{ 'support.impacts.' + form.controls.impact.value | transloco }}</mat-select-trigger>
+          @for (i of impacts; track i) { <mat-option [value]="i">{{ 'support.impacts.' + i | transloco }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'support.fields.category' | transloco }}</mat-label>
+        <input matInput formControlName="category" data-testid="ticket-category" />
+        <mat-hint>{{ 'support.fields.categoryHint' | transloco }}</mat-hint>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="span">
+        <mat-label>{{ 'support.fields.subject' | transloco }}</mat-label>
+        <input matInput formControlName="subject" maxlength="200" data-testid="ticket-subject" />
+        @if (form.controls.subject.touched && form.controls.subject.invalid) { <mat-error>{{ 'admin.errors.ticket_subject_invalid' | transloco }}</mat-error> }
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="span">
+        <mat-label>{{ 'support.fields.description' | transloco }}</mat-label>
+        <textarea matInput formControlName="description" rows="7" maxlength="8000" data-testid="ticket-description"></textarea>
+        @if (form.controls.description.touched && form.controls.description.invalid) { <mat-error>{{ 'admin.errors.ticket_description_invalid' | transloco }}</mat-error> }
+      </mat-form-field>
+      <mat-checkbox formControlName="requiresSupportAccess" class="span" data-testid="ticket-support-access">{{ 'support.fields.requiresSupportAccess' | transloco }}</mat-checkbox>
+    </div>
+
+    <h3>{{ 'support.fields.attachments' | transloco }}</h3>
+    <p class="hint">{{ 'support.attachments.hint' | transloco }}</p>
+    <input type="file" #picker multiple [accept]="accept" (change)="pick($event)" hidden data-testid="ticket-files" />
+    <button mat-stroked-button type="button" (click)="picker.click()"><mat-icon>attach_file</mat-icon>{{ 'support.chooseFiles' | transloco }}</button>
+    @if (files().length > 0) {
+      <p class="hint" style="margin-top: 8px">{{ 'support.pendingUploads' | transloco }}</p>
+      <div class="files">
+        @for (f of files(); track f.name + f.size) {
+          <span class="file"><mat-icon>description</mat-icon>{{ f.name }}<button mat-icon-button type="button" (click)="remove(f)" style="width: 24px; height: 24px; padding: 0"><mat-icon style="font-size: 16px; width: 16px; height: 16px">close</mat-icon></button></span>
+        }
+      </div>
+    }
+
+    <div class="form-actions">
+      <a mat-button routerLink="/app/support">{{ 'common.cancel' | transloco }}</a>
+      <button mat-flat-button type="submit" [disabled]="busy()" data-testid="ticket-submit"><mat-icon>send</mat-icon>{{ 'support.submit' | transloco }}</button>
+    </div>
+  </form>
+</section>

@@ -1,0 +1,85 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ (isPlatform() ? 'common.platform' : 'common.organization') | transloco }}</p>
+      <h1>{{ 'support.title' | transloco }}</h1>
+      <p class="wi-muted">{{ (isPlatform() ? 'support.subtitlePlatform' : auth.isOrganizationAdmin() ? 'support.subtitleAdmin' : 'support.subtitleUser') | transloco }}</p>
+    </div>
+    @if (!isPlatform()) {
+      <a mat-flat-button routerLink="/app/support/new" data-testid="ticket-new"><mat-icon>add_comment</mat-icon>{{ 'support.new' | transloco }}</a>
+    }
+  </header>
+
+  <div class="wi-card">
+    <div class="filters">
+      <mat-button-toggle-group [value]="openFilter()" (change)="openFilter.set($event.value); apply()" hideSingleSelectionIndicator data-testid="ticket-open-filter">
+        <mat-button-toggle value="open">{{ 'support.openOnly' | transloco }}</mat-button-toggle>
+        <mat-button-toggle value="closed">{{ 'support.closedOnly' | transloco }}</mat-button-toggle>
+        <mat-button-toggle value="all">{{ 'support.allStatuses' | transloco }}</mat-button-toggle>
+      </mat-button-toggle-group>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search">
+        <mat-label>{{ 'support.search' | transloco }}</mat-label>
+        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" (keyup.enter)="apply()" data-testid="ticket-search" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'support.fields.status' | transloco }}</mat-label>
+        <mat-select [value]="status()" (valueChange)="status.set($event); apply()">
+          <mat-option [value]="null">{{ 'support.allStatuses' | transloco }}</mat-option>
+          @for (s of statuses; track s) { <mat-option [value]="s">{{ 'support.statuses.' + (s === 'PendingUserResponse' && isPlatform() ? 'PendingUserResponseAdmin' : s) | transloco }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'support.fields.type' | transloco }}</mat-label>
+        <mat-select [value]="type()" (valueChange)="type.set($event); apply()">
+          <mat-option [value]="null">{{ 'support.allTypes' | transloco }}</mat-option>
+          @for (t of types; track t) { <mat-option [value]="t">{{ 'support.types.' + t | transloco }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'support.fields.impact' | transloco }}</mat-label>
+        <mat-select [value]="impact()" (valueChange)="impact.set($event); apply()">
+          <mat-option [value]="null">{{ 'support.allImpacts' | transloco }}</mat-option>
+          @for (i of impacts; track i) { <mat-option [value]="i">{{ 'support.impacts.' + i | transloco }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      @if (isPlatform()) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="org">
+          <mat-label>{{ 'support.fields.organization' | transloco }}</mat-label>
+          <mat-select [value]="organizationId()" (valueChange)="organizationId.set($event); apply()">
+            <mat-option [value]="null">{{ 'support.allOrganizations' | transloco }}</mat-option>
+            @for (o of organizationOptions(); track o.organizationId) { <mat-option [value]="o.organizationId">{{ organizationNames().get(o.organizationId) }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'support.fields.assigned' | transloco }}</mat-label>
+          <mat-select [value]="assignee()" (valueChange)="assignee.set($event); apply()" data-testid="ticket-assignee-filter">
+            <mat-select-trigger>{{ (assignee() === 'me' ? 'support.assignedToMe' : assignee() === 'unassigned' ? 'support.unassigned' : 'support.allAssignees') | transloco }}</mat-select-trigger>
+            <mat-option value="any">{{ 'support.allAssignees' | transloco }}</mat-option>
+            <mat-option value="me">{{ 'support.assignedToMe' | transloco }}</mat-option>
+            <mat-option value="unassigned">{{ 'support.unassigned' | transloco }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      }
+      <button mat-stroked-button type="button" (click)="apply()">{{ 'organizations.apply' | transloco }}</button>
+    </div>
+
+    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+
+    <table mat-table [dataSource]="items()" class="full" data-testid="ticket-table">
+      <ng-container matColumnDef="reference"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.reference' | transloco }}</th><td mat-cell *matCellDef="let t"><span class="wi-ltr ref">{{ t.referenceNumber }}</span></td></ng-container>
+      <ng-container matColumnDef="subject"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.subject' | transloco }}</th><td mat-cell *matCellDef="let t"><strong>{{ t.subject }}</strong>@if (t.category) { <br /><span class="wi-muted small">{{ t.category }}</span> }<span class="wi-muted small counts"><mat-icon>forum</mat-icon>{{ t.commentCount }} <mat-icon>attach_file</mat-icon>{{ t.attachmentCount }}</span></td></ng-container>
+      <ng-container matColumnDef="organization"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.organization' | transloco }}</th><td mat-cell *matCellDef="let t">{{ organizationLabel(t) }}<br /><span class="wi-muted small wi-ltr">{{ t.organizationCode }}</span></td></ng-container>
+      <ng-container matColumnDef="type"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.type' | transloco }}</th><td mat-cell *matCellDef="let t"><app-ticket-type [type]="t.ticketType" /></td></ng-container>
+      <ng-container matColumnDef="impact"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.impact' | transloco }}</th><td mat-cell *matCellDef="let t"><app-ticket-impact [impact]="t.impact" /></td></ng-container>
+      <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.status' | transloco }}</th><td mat-cell *matCellDef="let t"><app-ticket-status [status]="t.status" [adminView]="isPlatform()" /></td></ng-container>
+      <ng-container matColumnDef="requester"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.requester' | transloco }}</th><td mat-cell *matCellDef="let t">{{ t.createdByName }}</td></ng-container>
+      <ng-container matColumnDef="assigned"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.assigned' | transloco }}</th><td mat-cell *matCellDef="let t">{{ t.assignedAdministratorName || '—' }}</td></ng-container>
+      <ng-container matColumnDef="lastActivity"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.lastActivity' | transloco }}</th><td mat-cell *matCellDef="let t">{{ t.lastActivityAt | date: 'medium' }}</td></ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns()" class="row" (click)="open(row)" [attr.data-testid]="'ticket-row-' + row.referenceNumber"></tr>
+    </table>
+    @if (!loading() && items().length === 0) { <p class="empty wi-muted">{{ 'support.empty' | transloco }}</p> }
+    <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50]" (page)="onPage($event)" />
+  </div>
+</section>
