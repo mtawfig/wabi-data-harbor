@@ -15,7 +15,7 @@ import type { EChartsOption } from 'echarts';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { AuthService } from '../../../core/auth/auth.service';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { AskResponse, AskableApplication } from '../../../core/platform/ai.models';
+import { AnalysisPanel, AskResponse, AskableApplication } from '../../../core/platform/ai.models';
 import { AiService } from '../../../core/platform/ai.service';
 import { problemMessage } from '../../../core/problem-message';
 import { baseChartOption } from '../../../shared/ui/chart-theme';
@@ -25,10 +25,23 @@ interface Rejection {
   codes: string[];
 }
 
+interface KpiCard {
+  title: string;
+  value: string | number | boolean | null;
+  column: string;
+}
+
+interface ChartCard {
+  index: number;
+  title: string;
+  option: EChartsOption;
+}
+
 /**
- * "Ask Wabi Insight" (specification §19): question in, verified answer out. The page shows the narrative,
- * deterministic KPIs, the chart the plan suggested, the rows, and how the answer was computed (objective,
- * assumptions, the redacted SQL preview and the token cost). History and sharing arrive with P9.
+ * "Ask Wabi Insight" (specification §19): question in, verified answer out. An answer is one or more panels
+ * (KPI, chart, table), each the result of its own validated, authorized, read-only query. The page lays
+ * them out as a dashboard: narrative first, headline numbers, charts, then the detail tables, and
+ * "How this was computed" with the redacted SQL of every query. History and sharing arrive with P9.
  */
 @Component({
   selector: 'app-ask',
@@ -54,26 +67,41 @@ export class AskComponent {
   readonly examples = ['e1', 'e2', 'e3'];
 
   readonly application = computed(() => this.applications().find((a) => a.applicationId === this.selectedApplication()) ?? null);
-  readonly kpiValue = computed(() => {
+  readonly panels = computed<AnalysisPanel[]>(() => this.answer()?.panels ?? []);
+  readonly truncatedRows = computed(() => this.panels().filter((p) => p.result.truncated).reduce((n, p) => n + p.result.rowCount, 0));
+  readonly totalRows = computed(() => this.panels().reduce((n, p) => n + p.result.rowCount, 0));
+  readonly totalTokens = computed(() => {
     const a = this.answer();
-    if (!a || a.plan.visualization?.type !== 'kpi' || a.result.rows.length === 0) {
-      return null;
-    }
-    const numeric = a.result.columns.findIndex((c) => c.isNumeric);
-    return numeric >= 0 ? a.result.rows[0][numeric] : a.result.rows[0][0];
+    return a ? a.planUsage.inputTokens + a.planUsage.outputTokens + (a.interpretation?.usage?.inputTokens ?? 0) + (a.interpretation?.usage?.outputTokens ?? 0) : 0;
   });
-  readonly chart = computed<EChartsOption | null>(() => {
-    const a = this.answer();
-    const type = a?.plan.visualization?.type;
-    if (!a || !type || type === 'table' || type === 'kpi' || a.result.series.length === 0) {
-      return null;
+
+  /** Single-number panels become headline cards: the first numeric cell of the first row. */
+  readonly kpis = computed<KpiCard[]>(() =>
+    this.panels()
+      .filter((p) => p.plan.visualization?.type === 'kpi' && p.result.rows.length > 0)
+      .map((p) => {
+        const numeric = p.result.columns.findIndex((c) => c.isNumeric);
+        const column = numeric >= 0 ? numeric : 0;
+        return { title: p.title || p.plan.objective, value: p.result.rows[0][column], column: p.result.columns[column].name };
+      }),
+  );
+
+  /** Chart panels (bar, line, pie) with the series the server calculated. */
+  readonly charts = computed<ChartCard[]>(() => {
+    const rtl = this.language.isRtl();
+    return this.panels()
+      .map((p, index) => ({ p, index }))
+      .filter(({ p }) => this.chartType(p) !== null && p.result.series.length > 0)
+      .map(({ p, index }) => ({ index, title: p.title || p.plan.objective, option: this.chartOption(p, rtl) }));
+  });
+
+  /** Table panels, plus any panel that could not be drawn (no series) so its rows are never hidden; a single-panel answer always shows its rows. */
+  readonly tables = computed<AnalysisPanel[]>(() => {
+    const all = this.panels();
+    if (all.length === 1) {
+      return all[0].result.rows.length > 0 ? all : [];
     }
-    const base = baseChartOption(this.language.isRtl());
-    if (type === 'pie') {
-      const s = a.result.series[0];
-      return { ...base, xAxis: undefined, yAxis: undefined, grid: undefined, tooltip: { trigger: 'item', backgroundColor: '#0B1F3A', borderWidth: 0, textStyle: { color: '#F5F8FC' } }, series: [{ type: 'pie', radius: ['35%', '70%'], data: s.categories.map((c, i) => ({ name: c, value: s.values[i] })) }] };
-    }
-    return { ...base, xAxis: { ...(base.xAxis as object), data: a.result.series[0].categories }, series: a.result.series.map((s) => ({ name: s.name, type: type === 'line' ? 'line' : 'bar', smooth: type === 'line', showSymbol: false, areaStyle: type === 'line' ? { opacity: 0.08 } : undefined, barMaxWidth: 36, data: s.values })) };
+    return all.filter((p) => p.result.rows.length > 0 && ((p.plan.visualization?.type ?? 'table') === 'table' || (this.chartType(p) !== null && p.result.series.length === 0)));
   });
 
   constructor() {
@@ -117,7 +145,7 @@ export class AskComponent {
       error: (e: HttpErrorResponse) => {
         this.busy.set(false);
         if (e.status === 422 && e.error?.stage) {
-          this.rejection.set({ stage: e.error.stage, codes: (e.error.errors ?? []).map((x: { code: string }) => x.code) });
+          this.rejection.set({ stage: e.error.stage, codes: [...new Set<string>((e.error.errors ?? []).map((x: { code: string }) => x.code))] });
         } else if (e.status === 502 && e.error?.code) {
           this.error.set(this.transloco.translate('admin.errors.' + e.error.code));
         } else {
@@ -134,6 +162,40 @@ export class AskComponent {
     if (isNumeric && typeof value === 'number') {
       return value.toLocaleString(this.language.current() === 'ar' ? 'ar-EG' : 'en-US', { maximumFractionDigits: 2 });
     }
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T00:00:00(\.0+)?$/.test(value)) {
+      return value.slice(0, 10);
+    }
     return String(value);
+  }
+
+  /** Column aliases come from the plan (snake_case identifiers); show them as words. */
+  label(name: string): string {
+    const words = name.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim();
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  }
+
+  /** Month-truncated dates (YYYY-MM-01) read better as YYYY-MM on an axis. */
+  private axisLabel(category: string): string {
+    return /^\d{4}-\d{2}-01$/.test(category) ? category.slice(0, 7) : category;
+  }
+
+  private chartType(p: AnalysisPanel): 'bar' | 'line' | 'pie' | null {
+    const type = p.plan.visualization?.type;
+    return type === 'bar' || type === 'line' || type === 'pie' ? type : null;
+  }
+
+  private chartOption(p: AnalysisPanel, rtl: boolean): EChartsOption {
+    const base = baseChartOption(rtl);
+    const type = this.chartType(p);
+    if (type === 'pie') {
+      const s = p.result.series[0];
+      return { ...base, xAxis: undefined, yAxis: undefined, grid: undefined, tooltip: { trigger: 'item', backgroundColor: '#0B1F3A', borderWidth: 0, textStyle: { color: '#F5F8FC' } }, series: [{ type: 'pie', radius: ['35%', '70%'], data: s.categories.map((c, i) => ({ name: c, value: s.values[i] })) }] };
+    }
+    return {
+      ...base,
+      legend: p.result.series.length > 1 ? { bottom: 0, textStyle: { color: '#5B6B82' } } : undefined,
+      xAxis: { ...(base.xAxis as object), data: p.result.series[0].categories.map((c) => this.axisLabel(c)) },
+      series: p.result.series.map((s) => ({ name: s.name, type: type === 'line' ? 'line' : 'bar', smooth: type === 'line', showSymbol: false, areaStyle: type === 'line' ? { opacity: 0.08 } : undefined, barMaxWidth: 36, data: s.values })),
+    };
   }
 }

@@ -9,7 +9,7 @@ public sealed class AiOptions
 
     public string DefaultEffort { get; set; } = "medium";
 
-    public int MaxOutputTokens { get; set; } = 4096;
+    public int MaxOutputTokens { get; set; } = 16384;
 
     public int RequestTimeoutSeconds { get; set; } = 90;
 

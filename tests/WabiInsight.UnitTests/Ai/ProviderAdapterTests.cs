@@ -109,7 +109,12 @@ public sealed class ProviderAdapterTests
     public void Planner_ParsesFencedAndPaddedJson()
     {
         var plan = QueryPlanner.Parse("Here you go:\n```json\n{\"objective\":\"o\",\"source\":{\"schema\":\"dbo\",\"object\":\"T\",\"alias\":\"t\"},\"joins\":[],\"select\":[],\"filters\":null,\"groupBy\":[],\"orderBy\":[],\"limit\":null,\"visualization\":null,\"assumptions\":[]}\n```");
-        Assert.Equal("T", plan.Source.ObjectName);
+        Assert.Equal("T", Assert.Single(plan.Queries).Source.ObjectName);
+        Assert.Equal("o", plan.Objective);
+        var dashboard = QueryPlanner.Parse("""{"objective":"d","assumptions":["a"],"queries":[{"title":"Flights","source":{"schema":"dbo","object":"T","alias":"t"},"joins":[],"select":[],"filters":null,"groupBy":[],"orderBy":[],"limit":null,"visualization":{"type":"kpi","x":null,"y":[]}},{"title":"By month","source":{"schema":"dbo","object":"T","alias":"t"},"joins":[],"select":[],"filters":null,"groupBy":[],"orderBy":[],"limit":null,"visualization":null}]}""");
+        Assert.Equal(2, dashboard.Queries.Count);
+        Assert.Equal("Flights", dashboard.Queries[0].Title);
+        Assert.Equal("Flights", dashboard.Queries[0].Objective);
         Assert.Throws<JsonException>(() => QueryPlanner.Parse("no json here"));
     }
 }

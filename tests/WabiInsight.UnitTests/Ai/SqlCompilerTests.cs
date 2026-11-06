@@ -109,4 +109,27 @@ public sealed class SqlCompilerTests
         Assert.Equal(["New", "Read", "Started"], s.Categories);
         Assert.Equal([3, 6, 1], s.Values);
     }
+
+    [Fact]
+    public void ResultCalculator_PivotsASecondCategoryColumnIntoOneSeriesPerValue()
+    {
+        var columns = new[] { new ResultColumn("month", "datetime2", false, true), new ResultColumn("direction", "nvarchar", false, false), new ResultColumn("flights", "int", true, false) };
+        var rows = new List<IReadOnlyList<object?>>
+        {
+            new object?[] { new DateTime(2025, 1, 1), "Arrival", 10 }, new object?[] { new DateTime(2025, 1, 1), "Departure", 11 },
+            new object?[] { new DateTime(2025, 2, 1), "Arrival", 20 }, new object?[] { new DateTime(2025, 2, 1), "Departure", 21 },
+            new object?[] { new DateTime(2025, 3, 1), "Departure", 31 },
+        };
+        var (_, series) = ResultCalculator.Calculate(columns, rows, new PlanVisualization { Type = "line", X = "month", Y = ["flights"] });
+        Assert.Equal(2, series.Count);
+        Assert.Equal("Arrival", series[0].Name);
+        Assert.Equal(["2025-01-01", "2025-02-01", "2025-03-01"], series[0].Categories);
+        Assert.Equal([10, 20, 0], series[0].Values);
+        Assert.Equal([11, 21, 31], series[1].Values);
+
+        // Too many distinct values (a ranking) is still one series per measure.
+        var ranking = Enumerable.Range(0, 20).Select(i => (IReadOnlyList<object?>)new object?[] { new DateTime(2025, 1, 1).AddMonths(i), $"City{i}", i }).ToList();
+        var (_, flat) = ResultCalculator.Calculate(columns, ranking, new PlanVisualization { Type = "bar", X = "direction", Y = ["flights"] });
+        Assert.Equal("flights", Assert.Single(flat).Name);
+    }
 }

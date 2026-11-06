@@ -8,6 +8,10 @@ namespace WabiInsight.Core.Ai;
 /// </summary>
 public sealed class QueryPlan
 {
+    /// <summary>Panel title when the plan is one query of a multi-query answer (dashboard); empty for a single answer.</summary>
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
     [JsonPropertyName("objective")]
     public string Objective { get; set; } = string.Empty;
 
@@ -156,7 +160,20 @@ public static class QueryPlanSchema
     public static readonly string[] JoinTypes = ["inner", "left"];
     public static readonly string[] VisualizationTypes = ["table", "bar", "line", "pie", "kpi"];
 
-    public const string Json = """
+    /// <summary>Building blocks shared by the single-query and the analysis (multi-query) schemas.</summary>
+    public const string Defs = """
+        {
+            "objectRef": { "type": "object", "additionalProperties": false, "required": ["schema", "object", "alias"], "properties": { "schema": { "type": "string" }, "object": { "type": "string" }, "alias": { "type": "string" } } },
+            "join": { "type": "object", "additionalProperties": false, "required": ["schema", "object", "alias", "type", "on"], "properties": { "schema": { "type": "string" }, "object": { "type": "string" }, "alias": { "type": "string" }, "type": { "type": "string", "enum": ["inner", "left"] }, "on": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["left", "right"], "properties": { "left": { "type": "string" }, "right": { "type": "string" } } } } } },
+            "selectItem": { "type": "object", "additionalProperties": false, "required": ["alias", "column", "aggregate", "dateTrunc"], "properties": { "alias": { "type": "string" }, "column": { "anyOf": [ { "type": "string" }, { "type": "null" } ], "description": "alias.Column" }, "aggregate": { "anyOf": [ { "type": "string", "enum": ["count", "count_distinct", "sum", "avg", "min", "max"] }, { "type": "null" } ] }, "dateTrunc": { "anyOf": [ { "type": "string", "enum": ["day", "week", "month", "quarter", "year"] }, { "type": "null" } ] } } },
+            "condition": { "type": "object", "additionalProperties": false, "required": ["column", "operator", "values"], "properties": { "column": { "type": "string" }, "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "in", "not_in", "between", "contains", "starts_with", "is_null", "not_null"] }, "values": { "type": "array", "items": { "type": "string" } } } },
+            "filterGroup": { "type": "object", "additionalProperties": false, "required": ["logic", "conditions", "groups"], "properties": { "logic": { "type": "string", "enum": ["and", "or"] }, "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } }, "groups": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["logic", "conditions", "groups"], "properties": { "logic": { "type": "string", "enum": ["and", "or"] }, "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } }, "groups": { "type": "array", "items": { "type": "object", "additionalProperties": false, "properties": {} } } } } } } }
+          }
+        """;
+
+    public const string Json = JsonHead + Defs + "\n        }";
+
+    private const string JsonHead = """
         {
           "type": "object",
           "additionalProperties": false,
@@ -173,13 +190,68 @@ public static class QueryPlanSchema
             "visualization": { "anyOf": [ { "type": "object", "additionalProperties": false, "required": ["type", "x", "y"], "properties": { "type": { "type": "string", "enum": ["table", "bar", "line", "pie", "kpi"] }, "x": { "anyOf": [ { "type": "string" }, { "type": "null" } ] }, "y": { "type": "array", "items": { "type": "string" } } } }, { "type": "null" } ] },
             "assumptions": { "type": "array", "items": { "type": "string" }, "description": "Interpretation choices worth telling the user, in the user's language." }
           },
-          "$defs": {
-            "objectRef": { "type": "object", "additionalProperties": false, "required": ["schema", "object", "alias"], "properties": { "schema": { "type": "string" }, "object": { "type": "string" }, "alias": { "type": "string" } } },
-            "join": { "type": "object", "additionalProperties": false, "required": ["schema", "object", "alias", "type", "on"], "properties": { "schema": { "type": "string" }, "object": { "type": "string" }, "alias": { "type": "string" }, "type": { "type": "string", "enum": ["inner", "left"] }, "on": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["left", "right"], "properties": { "left": { "type": "string" }, "right": { "type": "string" } } } } } },
-            "selectItem": { "type": "object", "additionalProperties": false, "required": ["alias", "column", "aggregate", "dateTrunc"], "properties": { "alias": { "type": "string" }, "column": { "anyOf": [ { "type": "string" }, { "type": "null" } ], "description": "alias.Column" }, "aggregate": { "anyOf": [ { "type": "string", "enum": ["count", "count_distinct", "sum", "avg", "min", "max"] }, { "type": "null" } ] }, "dateTrunc": { "anyOf": [ { "type": "string", "enum": ["day", "week", "month", "quarter", "year"] }, { "type": "null" } ] } } },
-            "condition": { "type": "object", "additionalProperties": false, "required": ["column", "operator", "values"], "properties": { "column": { "type": "string" }, "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "in", "not_in", "between", "contains", "starts_with", "is_null", "not_null"] }, "values": { "type": "array", "items": { "type": "string" } } } },
-            "filterGroup": { "type": "object", "additionalProperties": false, "required": ["logic", "conditions", "groups"], "properties": { "logic": { "type": "string", "enum": ["and", "or"] }, "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } }, "groups": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["logic", "conditions", "groups"], "properties": { "logic": { "type": "string", "enum": ["and", "or"] }, "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } }, "groups": { "type": "array", "items": { "type": "object", "additionalProperties": false, "properties": {} } } } } } } }
-          }
-        }
+          "$defs": 
+        """;
+}
+
+/// <summary>
+/// What the planner actually returns: one objective answered by one to <see cref="AnalysisPlanSchema.MaxQueries"/>
+/// independent query plans. A simple question yields one query; a dashboard-style request yields KPI, chart
+/// and table queries that are each validated, authorized, compiled and executed on their own.
+/// </summary>
+public sealed class AnalysisPlan
+{
+    [JsonPropertyName("objective")]
+    public string Objective { get; set; } = string.Empty;
+
+    [JsonPropertyName("queries")]
+    public List<QueryPlan> Queries { get; set; } = [];
+
+    [JsonPropertyName("assumptions")]
+    public List<string> Assumptions { get; set; } = [];
+}
+
+/// <summary>Structured-output schema for the whole answer: the query definition of <see cref="QueryPlanSchema"/> inside a "queries" array.</summary>
+public static class AnalysisPlanSchema
+{
+    public const string Name = "wabi_analysis_plan";
+
+    public const int MaxQueries = 10;
+
+    /// <summary>A dashboard of eight strict-schema queries needs about 6,000 output tokens; the planning call never gets less than this, whatever the provider row says.</summary>
+    public const int MinPlanOutputTokens = 8192;
+
+    public const string Json = JsonHead + QueryPlanSchema.Defs + "\n        }";
+
+    private const string JsonHead = """
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["objective", "queries", "assumptions"],
+          "properties": {
+            "objective": { "type": "string", "description": "One sentence restating what is answered, in the user's language." },
+            "queries": {
+              "type": "array",
+              "description": "One query for a simple question. For a dashboard, overview or report: several queries, each one panel (kpi for a headline number, bar/line/pie for a chart, table for a breakdown). Never more than ten.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["title", "source", "joins", "select", "filters", "groupBy", "orderBy", "limit", "visualization"],
+                "properties": {
+                  "title": { "type": "string", "description": "Short panel title in the user's language." },
+                  "source": { "$ref": "#/$defs/objectRef" },
+                  "joins": { "type": "array", "items": { "$ref": "#/$defs/join" } },
+                  "select": { "type": "array", "items": { "$ref": "#/$defs/selectItem" } },
+                  "filters": { "anyOf": [ { "$ref": "#/$defs/filterGroup" }, { "type": "null" } ] },
+                  "groupBy": { "type": "array", "items": { "type": "string" }, "description": "Aliases of non-aggregate select items." },
+                  "orderBy": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["alias", "direction"], "properties": { "alias": { "type": "string" }, "direction": { "type": "string", "enum": ["asc", "desc"] } } } },
+                  "limit": { "anyOf": [ { "type": "integer" }, { "type": "null" } ] },
+                  "visualization": { "anyOf": [ { "type": "object", "additionalProperties": false, "required": ["type", "x", "y"], "properties": { "type": { "type": "string", "enum": ["table", "bar", "line", "pie", "kpi"] }, "x": { "anyOf": [ { "type": "string" }, { "type": "null" } ] }, "y": { "type": "array", "items": { "type": "string" } } } }, { "type": "null" } ] }
+                }
+              }
+            },
+            "assumptions": { "type": "array", "items": { "type": "string" }, "description": "Interpretation choices worth telling the user, in the user's language." }
+          },
+          "$defs": 
         """;
 }

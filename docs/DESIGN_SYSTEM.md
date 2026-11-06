@@ -98,3 +98,10 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 
 ## Screenshots (P8.2)
 `docs/screenshots/p8-2-*.png`: empty Ask page, a live answer from Claude Opus 5.5 over the demo ERP (chart, rows, narrative), the *How this was computed* panel, an Arabic answer, and the outcome of an injection-style question.
+
+## Dashboard answers (P8.3)
+- An answer is one or more panels. The answer card keeps the narrative and highlight list on top, then a note with the number of read-only queries that ran, then: a row of KPI cards (`auto-fit`, minimum 180 px, 34 px ocean value, muted label = panel title), a two-column chart grid (one column under 900 px; a single chart takes the full width; a second category column becomes grouped bars or several lines with a bottom legend; month-truncated dates are shown as `YYYY-MM`), and the detail tables with the panel title and row count (column aliases rendered as words). A single-panel answer keeps the P8.2 layout (chart plus rows).
+- *How this was computed* lists the assumptions once and one redacted SQL block per query, titled with the panel name.
+
+## Screenshots (P8.3)
+`docs/screenshots/p8-3-*.png`: the dashboard prompt typed on the Ask page, the live dashboard answer from Claude Opus 5.5 over the Sharjah Airport 2025 demo source (KPI cards, four charts, two tables, narrative), the full page, and the *How this was computed* panel with the ten queries.

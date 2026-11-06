@@ -42,20 +42,61 @@ public static class ResultCalculator
         if (visualization is { } vis && vis.Type is "bar" or "line" or "pie" && rows.Count > 0)
         {
             var xIndex = vis.X is null ? -1 : columns.ToList().FindIndex(c => string.Equals(c.Name, vis.X, StringComparison.OrdinalIgnoreCase));
-            var categories = rows.Select((r, index) => xIndex >= 0 ? Format(r[xIndex]) : (index + 1).ToString(CultureInfo.InvariantCulture)).ToList();
-            foreach (var y in vis.Y)
+            var yIndexes = vis.Y.Select(y => columns.ToList().FindIndex(c => string.Equals(c.Name, y, StringComparison.OrdinalIgnoreCase))).Where(i => i >= 0 && columns[i].IsNumeric).Distinct().ToList();
+            var keyIndex = vis.Type == "pie" ? -1 : SeriesKeyIndex(columns, rows, xIndex, yIndexes);
+            if (keyIndex >= 0)
             {
-                var yIndex = columns.ToList().FindIndex(c => string.Equals(c.Name, y, StringComparison.OrdinalIgnoreCase));
-                if (yIndex < 0 || !columns[yIndex].IsNumeric)
+                // A second category column (direction, status, ...) becomes one series per value over the distinct x values.
+                var categories = rows.Select(r => xIndex >= 0 ? Format(r[xIndex]) : string.Empty).Distinct().ToList();
+                var keys = rows.Select(r => Format(r[keyIndex])).Distinct().ToList();
+                var lookup = new Dictionary<(string Key, string Category), IReadOnlyList<object?>>();
+                foreach (var row in rows)
                 {
-                    continue;
+                    lookup.TryAdd((Format(row[keyIndex]), xIndex >= 0 ? Format(row[xIndex]) : string.Empty), row);
                 }
 
-                series.Add(new ResultSeries(columns[yIndex].Name, categories, rows.Select(r => ToDouble(r[yIndex]) ?? 0d).ToList()));
+                foreach (var yIndex in yIndexes)
+                {
+                    foreach (var key in keys)
+                    {
+                        var name = yIndexes.Count == 1 ? key : $"{columns[yIndex].Name} · {key}";
+                        series.Add(new ResultSeries(name, categories, categories.Select(c => lookup.TryGetValue((key, c), out var row) ? ToDouble(row[yIndex]) ?? 0d : 0d).ToList()));
+                    }
+                }
+            }
+            else
+            {
+                var categories = rows.Select((r, index) => xIndex >= 0 ? Format(r[xIndex]) : (index + 1).ToString(CultureInfo.InvariantCulture)).ToList();
+                foreach (var yIndex in yIndexes)
+                {
+                    series.Add(new ResultSeries(columns[yIndex].Name, categories, rows.Select(r => ToDouble(r[yIndex]) ?? 0d).ToList()));
+                }
             }
         }
 
         return (kpis, series);
+    }
+
+    /// <summary>The first non-numeric column that is neither x nor a measure and has few distinct values; -1 when the rows are a plain one-series shape.</summary>
+    private static int SeriesKeyIndex(IReadOnlyList<ResultColumn> columns, IReadOnlyList<IReadOnlyList<object?>> rows, int xIndex, List<int> yIndexes)
+    {
+        const int maxKeys = 12;
+        for (var i = 0; i < columns.Count; i++)
+        {
+            if (i == xIndex || yIndexes.Contains(i) || columns[i].IsNumeric)
+            {
+                continue;
+            }
+
+            var distinct = rows.Select(r => Format(r[i])).Distinct().Count();
+            var xDistinct = xIndex >= 0 ? rows.Select(r => Format(r[xIndex])).Distinct().Count() : rows.Count;
+            if (distinct is > 1 and <= maxKeys && xDistinct < rows.Count)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     public static double? ToDouble(object? value) => value switch

@@ -91,17 +91,26 @@ export interface AnalysisResult {
 }
 
 export interface QueryPlanView {
+  title: string;
   objective: string;
   assumptions: string[];
   visualization?: { type: 'table' | 'bar' | 'line' | 'pie' | 'kpi'; x?: string | null; y: string[] } | null;
   limit?: number | null;
 }
 
-export interface AskResponse {
-  analysisId: string;
+/** One executed query of an answer: a KPI, a chart or a table with its own verified rows and redacted SQL. */
+export interface AnalysisPanel {
+  title: string;
   plan: QueryPlanView;
   compiledSqlPreview: string;
   result: AnalysisResult;
+}
+
+export interface AskResponse {
+  analysisId: string;
+  objective: string;
+  assumptions: string[];
+  panels: AnalysisPanel[];
   interpretation?: { narrative: string; highlights: string[]; usage: PlanUsage } | null;
   planUsage: PlanUsage;
   totalEstimatedCost: number;

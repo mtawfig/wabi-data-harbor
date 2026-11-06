@@ -19,6 +19,24 @@ public sealed class QueryPlanValidatorTests
         """;
 
     [Fact]
+    public void ValidateAnalysis_RequiresOneToEightQueries_AndNamesTheFailingQuery()
+    {
+        Assert.Contains(QueryPlanValidator.ValidateAnalysis(new AnalysisPlan()), e => e.Code == "plan_queries_invalid");
+        var tooMany = new AnalysisPlan { Queries = Enumerable.Range(0, AnalysisPlanSchema.MaxQueries + 1).Select(_ => Plan(Good)).ToList() };
+        Assert.Contains(QueryPlanValidator.ValidateAnalysis(tooMany), e => e.Code == "plan_too_many_queries");
+
+        var dashboard = new AnalysisPlan { Objective = "Dashboard", Queries = [Plan(Good), Plan(Good.Replace("\"operator\":\"in\"", "\"operator\":\"like\"", StringComparison.Ordinal))] };
+        dashboard.Queries[1].Title = new string('x', QueryPlanValidator.MaxTitleLength + 1);
+        var errors = QueryPlanValidator.ValidateAnalysis(dashboard);
+        Assert.Contains(errors, e => e.Code == "plan_operator_invalid" && e.Detail.StartsWith("query 2:", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.Code == "plan_query_title_invalid");
+        Assert.DoesNotContain(errors, e => e.Detail.StartsWith("query 1:", StringComparison.Ordinal));
+        Assert.Contains("\"queries\"", AnalysisPlanSchema.Json, StringComparison.Ordinal);
+        Assert.Contains(QueryPlanSchema.Defs, AnalysisPlanSchema.Json, StringComparison.Ordinal);
+        Assert.Contains(QueryPlanSchema.Defs, QueryPlanSchema.Json, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Validate_AcceptsAWellFormedPlan_AndListsItsColumns()
     {
         var plan = Plan(Good);

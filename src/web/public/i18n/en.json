@@ -211,7 +211,7 @@
     "examplesTitle": "Try asking",
     "examples": {
       "e1": "How many active users are registered in my organization?",
-      "e2": "Show a monthly chart of AI usage by department.",
+      "e2": "Build a dashboard of our support tickets: totals, by status, by month and by department.",
       "e3": "How many reports were shared internally last quarter?"
     },
     "engineComing": "The secure AI engine (query plans, authorization and SQL compilation) is delivered in Phase 8. Your question was not sent anywhere.",
@@ -266,8 +266,18 @@
       "plan_filter_value_type_mismatch": "A filter value does not match the column type.",
       "compiled_sql_rejected": "The compiled query failed the safety guard.",
       "plan_rejected": "The plan was rejected.",
-      "row_mapping_type_mismatch": "The row-scope mapping column cannot hold your department, section or employee code. Ask your administrator to map a code column."
-    }
+      "row_mapping_type_mismatch": "The row-scope mapping column cannot hold your department, section or employee code. Ask your administrator to map a code column.",
+      "plan_queries_invalid": "The plan contained no query.",
+      "plan_too_many_queries": "The plan asked for more than eight queries.",
+      "plan_query_title_invalid": "A panel title is too long.",
+      "plan_output_truncated": "The answer plan did not fit in the output budget. Ask for fewer panels, or raise the provider's max output tokens."
+    },
+    "kpis": "Headline numbers",
+    "charts": "Charts",
+    "tables": "Details",
+    "rowsOf": "{{count}} rows",
+    "queryOf": "Query — {{title}}",
+    "panelsNote": "{{count}} queries ran read-only on your data; every number below comes from them."
   },
   "platform": {
     "overview": {
