@@ -50,4 +50,7 @@ public interface IQueryPlanner
 
     /// <summary>The snapshot the planner would send for an application: what this user may ask about.</summary>
     Task<MetadataSnapshot> GetSnapshotAsync(Guid applicationId, CancellationToken cancellationToken = default);
+
+    /// <summary>Permitted-object counts per askable application for the current user, from one permission resolution (P12.2: the application list must not build a full snapshot per application).</summary>
+    Task<IReadOnlyDictionary<Guid, int>> CountPermittedObjectsAsync(CancellationToken cancellationToken = default);
 }

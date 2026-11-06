@@ -42,6 +42,20 @@ public sealed class QueryPlanner : IQueryPlanner
         return snapshot;
     }
 
+    public async Task<IReadOnlyDictionary<Guid, int>> CountPermittedObjectsAsync(CancellationToken cancellationToken = default)
+    {
+        var permissions = await _permissions.ResolveAsync(cancellationToken);
+        var counts = permissions.Objects.Where(o => o.YieldsRows).GroupBy(o => o.ApplicationId).ToDictionary(g => g.Key, g => g.Count());
+        var builtIn = await _context.Applications.AsNoTracking().Where(a => a.IsBuiltIn && a.IsActive && a.IsApproved).ToListAsync(cancellationToken);
+        foreach (var application in builtIn)
+        {
+            var (snapshot, _, _) = await BuildInsightsSnapshotAsync(application, cancellationToken);
+            counts[application.ApplicationId] = snapshot.Objects.Count;
+        }
+
+        return counts;
+    }
+
     public async Task<PlanResponse> PlanAsync(PlanRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);

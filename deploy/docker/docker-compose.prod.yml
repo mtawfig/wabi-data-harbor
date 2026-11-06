@@ -1,0 +1,79 @@
+# Production composition: nginx (web + reverse proxy), the API and SQL Server. TLS terminates in front of
+# this stack (your edge load balancer or a TLS-terminating proxy); set Platform__BaseUrl to the public https URL.
+# Secrets come from the environment (.env next to this file, never committed) — see docs/DEPLOYMENT.md.
+services:
+  web:
+    build:
+      context: ../../src/web
+      dockerfile: Dockerfile
+    image: wabi-insight-web:latest
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../..
+      dockerfile: src/WabiInsight.Api/Dockerfile
+    image: wabi-insight-api:latest
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__ConfigurationDatabase: ${WI_DB_CONNECTION}
+      Platform__BaseUrl: ${WI_BASE_URL}
+      Email__Provider: Smtp
+      Email__Host: ${WI_SMTP_HOST}
+      Email__Port: ${WI_SMTP_PORT:-465}
+      Email__EnableSsl: "true"
+      Email__UserName: ${WI_SMTP_USER}
+      Email__Password: ${WI_SMTP_PASSWORD}
+      Email__FromEmail: ${WI_SMTP_FROM}
+      Ai__Anthropic__ApiKey: ${WI_ANTHROPIC_API_KEY}
+      Bootstrap__Enabled: ${WI_BOOTSTRAP_ENABLED:-false}
+      Bootstrap__AdministratorEmail: ${WI_BOOTSTRAP_EMAIL:-}
+      Bootstrap__AdministratorPassword: ${WI_BOOTSTRAP_PASSWORD:-}
+      Bootstrap__InitializationSecret: ${WI_BOOTSTRAP_SECRET:-}
+      AttachmentScanning__Provider: ${WI_SCANNER:-None}
+      AttachmentScanning__Host: clamav
+      AttachmentScanning__Port: "3310"
+      Storage__RootPath: /var/lib/wabi-insight/artifacts
+      DataProtection__KeyRingPath: /var/lib/wabi-insight/keys
+    volumes:
+      - wabi-artifacts:/var/lib/wabi-insight/artifacts
+      - wabi-keys:/var/lib/wabi-insight/keys
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Optional: ClamAV daemon for attachment scanning (set WI_SCANNER=ClamAv).
+  clamav:
+    image: clamav/clamav:stable
+    profiles: ["scanner"]
+    volumes:
+      - wabi-clamav:/var/lib/clamav
+    restart: unless-stopped
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${WI_SA_PASSWORD}
+      MSSQL_PID: ${WI_MSSQL_EDITION:-Express}
+    volumes:
+      - wabi-mssql:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  wabi-artifacts:
+  wabi-keys:
+  wabi-mssql:
+  wabi-clamav:

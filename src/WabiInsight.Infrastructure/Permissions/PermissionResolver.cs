@@ -50,38 +50,45 @@ public sealed class PermissionResolver : IPermissionResolver
             throw new TenantContextException("Cross-organization permission resolution is not allowed.");
         }
 
+        // P12.2: one projection for the user and its structure codes, one join for the active roles, and dictionaries instead of
+        // repeated scans below — the resolver is on the path of every ask and of the application list.
         var users = Scoped(_context.OrganizationUsers);
-        var user = await users.AsNoTracking().SingleOrDefaultAsync(u => u.OrganizationId == organizationId && u.UserId == userId, cancellationToken)
+        var user = await users.AsNoTracking().Where(u => u.OrganizationId == organizationId && u.UserId == userId)
+            .Select(u => new
+            {
+                u.EmployeeNumber,
+                DepartmentCode = Scoped(_context.Departments).Where(x => x.DepartmentId == u.DepartmentId).Select(x => x.DepartmentCode).FirstOrDefault(),
+                SectionCode = Scoped(_context.Sections).Where(x => x.SectionId == u.SectionId).Select(x => x.SectionCode).FirstOrDefault(),
+            })
+            .SingleOrDefaultAsync(cancellationToken)
             ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "user_not_found");
+        var context = new RowScopeContext(user.EmployeeNumber, user.DepartmentCode, user.SectionCode);
 
-        var departmentCode = user.DepartmentId is { } d ? await Scoped(_context.Departments).AsNoTracking().Where(x => x.DepartmentId == d).Select(x => x.DepartmentCode).SingleOrDefaultAsync(cancellationToken) : null;
-        var sectionCode = user.SectionId is { } s ? await Scoped(_context.Sections).AsNoTracking().Where(x => x.SectionId == s).Select(x => x.SectionCode).SingleOrDefaultAsync(cancellationToken) : null;
-        var context = new RowScopeContext(user.EmployeeNumber, departmentCode, sectionCode);
-
-        var roleIds = await Scoped(_context.UserRoles).AsNoTracking().Where(ur => ur.UserId == userId).Select(ur => ur.RoleId).ToListAsync(cancellationToken);
-        var roles = await Scoped(_context.Roles).AsNoTracking().Where(r => roleIds.Contains(r.RoleId) && r.IsActive).ToListAsync(cancellationToken);
+        var roles = await Scoped(_context.UserRoles).AsNoTracking().Where(ur => ur.UserId == userId)
+            .Join(Scoped(_context.Roles).Where(r => r.IsActive), ur => ur.RoleId, r => r.RoleId, (ur, r) => r)
+            .ToListAsync(cancellationToken);
         var roleCodes = roles.Select(r => r.RoleCode).OrderBy(c => c, StringComparer.Ordinal).ToList();
         var activeRoleIds = roles.Select(r => r.RoleId).ToHashSet();
         var isManagement = roles.Any(r => r.IsSystem && r.RoleCode == SystemRoles.Management);
         var roleNames = roles.ToDictionary(r => r.RoleId, r => r.RoleCode);
 
-        var applications = await Scoped(_context.Applications).AsNoTracking().Where(a => a.OrganizationId == organizationId && a.IsActive && a.IsApproved && !a.IsBuiltIn).ToListAsync(cancellationToken);
-        var applicationIds = applications.Select(a => a.ApplicationId).ToList();
+        var applications = await Scoped(_context.Applications).AsNoTracking().Where(a => a.OrganizationId == organizationId && a.IsActive && a.IsApproved && !a.IsBuiltIn).ToDictionaryAsync(a => a.ApplicationId, cancellationToken);
+        var applicationIds = applications.Keys.ToList();
         var objects = await Scoped(_context.DatabaseObjects).AsNoTracking().Where(o => applicationIds.Contains(o.ApplicationId) && o.IsApproved && o.IsPresent).OrderBy(o => o.SchemaName).ThenBy(o => o.ObjectName).ToListAsync(cancellationToken);
         var objectIds = objects.Select(o => o.ObjectId).ToList();
-        var columns = await Scoped(_context.DatabaseColumns).AsNoTracking().Where(c => objectIds.Contains(c.ObjectId) && c.IsApproved && c.IsPresent).OrderBy(c => c.OrdinalPosition).ToListAsync(cancellationToken);
-        var tables = await Scoped(_context.RoleTablePermissions).AsNoTracking().Where(p => activeRoleIds.Contains(p.RoleId) && objectIds.Contains(p.ObjectId)).ToListAsync(cancellationToken);
-        var columnGrants = await Scoped(_context.RoleColumnPermissions).AsNoTracking().Where(p => activeRoleIds.Contains(p.RoleId) && objectIds.Contains(p.ObjectId)).ToListAsync(cancellationToken);
-        var rowGrants = await Scoped(_context.RoleRowPermissions).AsNoTracking().Where(p => activeRoleIds.Contains(p.RoleId) && objectIds.Contains(p.ObjectId)).ToListAsync(cancellationToken);
+        var columnsByObject = (await Scoped(_context.DatabaseColumns).AsNoTracking().Where(c => objectIds.Contains(c.ObjectId) && c.IsApproved && c.IsPresent).OrderBy(c => c.OrdinalPosition).ToListAsync(cancellationToken)).ToLookup(c => c.ObjectId);
+        var tablesByObject = (await Scoped(_context.RoleTablePermissions).AsNoTracking().Where(p => activeRoleIds.Contains(p.RoleId) && objectIds.Contains(p.ObjectId)).ToListAsync(cancellationToken)).ToLookup(t => t.ObjectId);
+        var columnGrants = (await Scoped(_context.RoleColumnPermissions).AsNoTracking().Where(p => activeRoleIds.Contains(p.RoleId) && objectIds.Contains(p.ObjectId)).ToListAsync(cancellationToken)).ToLookup(c => (c.ObjectId, c.RoleId), c => c.ColumnId);
+        var rowGrants = (await Scoped(_context.RoleRowPermissions).AsNoTracking().Where(p => activeRoleIds.Contains(p.RoleId) && objectIds.Contains(p.ObjectId)).ToListAsync(cancellationToken)).ToDictionary(r => (r.ObjectId, r.RoleId), r => r.Scope);
         var mappings = await Scoped(_context.RowScopeColumnMappings).AsNoTracking().Where(m => objectIds.Contains(m.ObjectId)).ToDictionaryAsync(m => m.ObjectId, cancellationToken);
 
         var result = new List<EffectiveObjectAccess>();
         foreach (var o in objects)
         {
-            var approvedColumns = columns.Where(c => c.ObjectId == o.ObjectId).ToList();
+            var approvedColumns = columnsByObject[o.ObjectId].ToList();
             var approvedIds = approvedColumns.Select(c => c.ColumnId).ToHashSet();
-            var grants = tables.Where(t => t.ObjectId == o.ObjectId)
-                .Select(t => new RoleObjectGrant(t.RoleId, t.AllColumns, columnGrants.Where(c => c.RoleId == t.RoleId && c.ObjectId == o.ObjectId).Select(c => c.ColumnId).ToHashSet(), rowGrants.FirstOrDefault(r => r.RoleId == t.RoleId && r.ObjectId == o.ObjectId)?.Scope))
+            var grants = tablesByObject[o.ObjectId]
+                .Select(t => new RoleObjectGrant(t.RoleId, t.AllColumns, columnGrants[(o.ObjectId, t.RoleId)].ToHashSet(), rowGrants.TryGetValue((o.ObjectId, t.RoleId), out var scope) ? scope : null))
                 .ToList();
             var via = grants.Select(g => roleNames[g.RoleId]).ToList();
             if (isManagement)
@@ -101,7 +108,7 @@ public sealed class PermissionResolver : IPermissionResolver
                 continue;
             }
 
-            var application = applications.Single(a => a.ApplicationId == o.ApplicationId);
+            var application = applications[o.ApplicationId];
             result.Add(new EffectiveObjectAccess(
                 o.ApplicationId, application.ApplicationCode, o.ObjectId, o.SchemaName, o.ObjectName, o.ObjectType, o.DisplayNameEn, o.DisplayNameAr,
                 approvedColumns.Where(c => combined.ColumnIds.Contains(c.ColumnId)).Select(c => new EffectiveColumn(c.ColumnId, c.ColumnName, c.DataType, c.DisplayNameEn, c.DisplayNameAr, c.Classification)).ToList(),

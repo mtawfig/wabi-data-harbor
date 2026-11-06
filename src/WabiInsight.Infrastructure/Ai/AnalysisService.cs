@@ -68,26 +68,11 @@ public sealed partial class AnalysisService : IAnalysisService
     {
         _tenantContext.RequireOrganizationId();
         var applications = await _context.Applications.AsNoTracking().Where(a => a.IsActive && a.IsApproved).OrderByDescending(a => a.IsBuiltIn).ThenBy(a => a.ApplicationCode).ToListAsync(cancellationToken);
-        var result = new List<AskableApplication>();
-        foreach (var application in applications)
-        {
-            int count;
-            try
-            {
-                count = (await _planner.GetSnapshotAsync(application.ApplicationId, cancellationToken)).Objects.Count;
-            }
-            catch (DomainException)
-            {
-                continue;
-            }
-
-            if (count > 0)
-            {
-                result.Add(new AskableApplication(application.ApplicationId, application.ApplicationCode, application.ApplicationName, application.ApplicationNameAr, application.DatabaseType.ToString(), application.IsBuiltIn, count));
-            }
-        }
-
-        return result;
+        var counts = await _planner.CountPermittedObjectsAsync(cancellationToken);
+        return applications
+            .Where(a => counts.GetValueOrDefault(a.ApplicationId) > 0)
+            .Select(a => new AskableApplication(a.ApplicationId, a.ApplicationCode, a.ApplicationName, a.ApplicationNameAr, a.DatabaseType.ToString(), a.IsBuiltIn, counts[a.ApplicationId]))
+            .ToList();
     }
 
     public async Task<AskResponse> AskAsync(AskRequest request, CancellationToken cancellationToken = default)

@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.angular/
+.git/
+docs/
+tests/
+.artifacts/
+**/appsettings.Local.json

@@ -10,6 +10,8 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 - [Review of the original prompt and owner decisions](docs/SPEC_REVIEW.md)
 - [Implementation plan: phases and pull requests](docs/IMPLEMENTATION_PLAN.md)
 - [Progress log](docs/PROGRESS.md)
+- [Deployment guide (Docker, Linux, IIS)](docs/DEPLOYMENT.md)
+- [Security](docs/SECURITY.md) · [Architecture](docs/ARCHITECTURE.md) · [Design system](docs/DESIGN_SYSTEM.md) · [Screens](docs/SCREENSHOTS.md) · [Performance](docs/PERFORMANCE.md)
 - [Guide for Claude Code sessions](CLAUDE.md)
 
 ## Local configuration
@@ -18,4 +20,4 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 
 ## Status
 
-Phase 0 (planning) complete. Application code starts with PR P1.1.
+Version 1 feature-complete: phases 1–12 of the implementation plan are merged or in review (see `docs/PROGRESS.md`). Google Drive / OneDrive publishing (P10.2) is deferred to the next version by owner decision. CI runs the .NET and Angular suites, the dependency audits and the container image builds on every pull request.

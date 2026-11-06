@@ -29,11 +29,12 @@ public static class CookieAuthenticationSetup
             .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme);
 
         services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme)
-            .Configure<IOptions<SecurityOptions>>((options, security) =>
+            .Configure<IOptions<SecurityOptions>, IHostEnvironment>((options, security, environment) =>
             {
                 options.Cookie.Name = CookieName;
                 options.Cookie.HttpOnly = true;
-                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                // Production always marks the session cookie Secure; development and tests run over plain HTTP.
+                options.Cookie.SecurePolicy = environment.IsDevelopment() || environment.IsEnvironment("Testing") ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
                 options.Cookie.SameSite = SameSiteMode.Lax;
                 options.Cookie.IsEssential = true;
                 options.SlidingExpiration = true;
