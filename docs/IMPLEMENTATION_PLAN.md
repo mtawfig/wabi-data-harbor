@@ -129,12 +129,13 @@
 | P12.1 — Security hardening | Cross-tenant penetration-style test suite, IDOR sweeps, security headers, request-size and rate limits review, error-handling review, audit-trail verification, dependency audit. |
 | P12.2 — Performance, deployment and final docs | Load checks on hot endpoints, index review, production Docker/IIS/Linux deployment guides, `SECURITY.md` and `ARCHITECTURE.md` final, Angular 23 upgrade if stable (not released as of 2026-11-06; stays on the backlog). |
 
-### Phase 13 — Sample Data
+### Phase 13 — Sample Data and Deployment Guides
 **Acceptance:** A new deployment can be populated with realistic source databases and a ready-to-use organization with users of every role, from SQL scripts alone plus the connection step in the UI.
 
 | PR | Scope |
 |---|---|
 | P13.1 — Sample source databases and WabiInsightDB seed | Flight operations, HR/payroll/attendance and procurement/stores SQL Server databases (one script each with database, owner and reader logins, tables and data) and a configuration seed with organization, structure, four users, applications, catalogue, classifications and permissions. |
+| P13.2 — Step-by-step deployment guides | Windows Server 2019 (IIS + ARR) and Ubuntu 24.04 (nginx + systemd) guides from a fresh server to the live site, with SQL Server Express, a check and a verification for every step; reverse-proxy fixes found along the way. |
 
 ## Milestone verification (every PR)
 

@@ -2,11 +2,18 @@
 
 Wabi Insight is three deployable parts: the **Angular build** (static files), the **ASP.NET Core API** (Kestrel) and **SQL Server** (the configuration database). Everything else is configuration: SMTP, the AI provider key, artifact storage, the Data Protection key ring and, optionally, a ClamAV daemon for attachment scanning. Three validated shapes are described here: Docker Compose, a Linux host with systemd + nginx, and Windows with IIS. Pick one; the configuration keys are the same everywhere.
 
+**Step-by-step guides** (every step has a *Check*, *Do* and *Verify* command, from a fresh server to the live site, including SQL Server Express):
+
+- [Ubuntu 24.04 LTS: nginx + systemd + SQL Server Express](DEPLOYMENT_LINUX.md)
+- [Windows Server 2019: IIS + ARR + SQL Server Express](DEPLOYMENT_WINDOWS_SERVER_2019.md)
+
+**SQL Server Express** 2019, 2022 and 2025 are supported. The full integration suite passes on each. Express limits are 10 GB per database (50 GB on 2025), a 1,410 MB buffer pool and no SQL Server Agent (schedule backups with cron or Task Scheduler); see the guides.
+
 ## 1. Before you start
 
 | Need | Notes |
 |---|---|
-| SQL Server 2019+ (2022 recommended) | One database for the platform. Create a login for the API with `db_owner` on that database only (migrations run under it), or run migrations with a stronger login once and give the runtime login `db_datareader`/`db_datawriter` plus `scripts/sql/create-runtime-login.sql` (append-only tables). |
+| SQL Server 2019+ (2022 or 2025 recommended; Express is fine) | One database for the platform. Create a login for the API with `db_owner` on that database only (migrations run under it), or run migrations with a stronger login once and give the runtime login `db_datareader`/`db_datawriter` plus `scripts/sql/create-runtime-login.sql` (append-only tables). |
 | A public HTTPS name | `Platform:BaseUrl` (e.g. `https://insight.example.com`) is used in every email link. TLS terminates at nginx / IIS / your load balancer; the API itself listens on plain HTTP behind it and emits HSTS when not in Development. |
 | SMTP account | Temporary passwords, notifications and shared reports go out through it. Port 465 (implicit TLS) or 587 (STARTTLS). |
 | AI provider key | `Ai:Anthropic:ApiKey` (Claude Opus 5.5 by default). Other providers are configured per organization in the UI after bootstrap. |
@@ -14,6 +21,10 @@ Wabi Insight is three deployable parts: the **Angular build** (static files), th
 | Optional ClamAV | `AttachmentScanning:Provider=ClamAv`, `Host`, `Port` (3310). The scanner fails closed: uploads are refused while clamd is unreachable unless `FailOpen=true`. |
 
 Configuration keys can be given as environment variables with `__` as the section separator (`Email__Password`), through `appsettings.Local.json` next to the API (git-ignored), or with `dotnet user-secrets` in development. Never put real secrets in `appsettings.json` in a public repository.
+
+### Reverse proxy and client addresses
+
+The API honours `X-Forwarded-For` and `X-Forwarded-Proto` from proxies on the same machine (loopback) only, so per-client rate limits and audit IP addresses see the real visitor behind nginx or IIS + ARR, and a forged header from anyone else is ignored. If the proxy runs on another host, list its address in `ReverseProxy:KnownProxies` (e.g. `ReverseProxy__KnownProxies__0=10.0.0.5`).
 
 ### Security settings worth knowing (P12.1)
 
@@ -50,6 +61,8 @@ Both images build from the repository as-is (`docker build -f src/WabiInsight.Ap
 
 ## 3. Linux host: systemd + nginx
 
+Full walkthrough: [DEPLOYMENT_LINUX.md](DEPLOYMENT_LINUX.md). Summary:
+
 Files: `deploy/systemd/wabi-insight-api.service`, `deploy/systemd/api.env.example`, `deploy/nginx/wabi-insight.conf`.
 
 ```bash
@@ -60,8 +73,8 @@ dotnet publish src/WabiInsight.Api -c Release -o /opt/wabi-insight/api
 sudo cp deploy/systemd/api.env.example /etc/wabi-insight/api.env && sudo chmod 600 /etc/wabi-insight/api.env   # edit the values
 sudo chown -R wabi-insight:wabi-insight /opt/wabi-insight /var/lib/wabi-insight
 sudo cp deploy/systemd/wabi-insight-api.service /etc/systemd/system/ && sudo systemctl daemon-reload
-sudo -u wabi-insight env $(grep -v '^#' /etc/wabi-insight/api.env | xargs) dotnet /opt/wabi-insight/api/WabiInsight.Api.dll migrate
-sudo -u wabi-insight env $(grep -v '^#' /etc/wabi-insight/api.env | xargs) Bootstrap__Enabled=true Bootstrap__AdministratorEmail=… Bootstrap__AdministratorPassword=… Bootstrap__InitializationSecret=… dotnet /opt/wabi-insight/api/WabiInsight.Api.dll bootstrap
+sudo systemd-run --wait --pipe --uid=wabi-insight --gid=wabi-insight --property=EnvironmentFile=/etc/wabi-insight/api.env --setenv=ASPNETCORE_ENVIRONMENT=Production --working-directory=/opt/wabi-insight/api /usr/bin/dotnet WabiInsight.Api.dll migrate
+# bootstrap: same command with a second, temporary EnvironmentFile holding Bootstrap__Enabled=true and the Bootstrap__* values, then `bootstrap`
 sudo systemctl enable --now wabi-insight-api
 
 # Web
@@ -75,13 +88,15 @@ The unit runs as an unprivileged user with `ProtectSystem=strict` and only `/var
 
 ## 4. Windows: IIS
 
-Files: `deploy/iis/web.config` (API), `deploy/iis/web.spa.config` (Angular site).
+Full walkthrough: [DEPLOYMENT_WINDOWS_SERVER_2019.md](DEPLOYMENT_WINDOWS_SERVER_2019.md). Files: `deploy/iis/web.config` (API), `deploy/iis/web.spa.config` (Angular site with the reverse-proxy rules).
 
-1. Install the .NET 10 Hosting Bundle and the IIS URL Rewrite module; restart IIS.
-2. API: `dotnet publish src/WabiInsight.Api -c Release -o C:\inetpub\wabi-insight\api`, copy `deploy/iis/web.config` there, create an application pool (No Managed Code, identity with read access to the folder and modify access to the artifacts and key-ring folders) and a site or application bound to it. Set the configuration as environment variables on the application pool (`Email__Password`, `ConnectionStrings__ConfigurationDatabase`, `Storage__RootPath=D:\wabi-insight\artifacts`, `DataProtection__KeyRingPath=D:\wabi-insight\keys`, …) or in `appsettings.Local.json` with restricted ACLs.
-3. Run migrations and the bootstrap once from an elevated prompt in that folder: `dotnet WabiInsight.Api.dll migrate`, then `dotnet WabiInsight.Api.dll bootstrap` with the `Bootstrap__*` variables set.
-4. Web: build with `npm run build -- --configuration production`, copy `dist/wabi-insight-web/browser` to `C:\inetpub\wabi-insight\web`, copy `deploy/iis/web.spa.config` there as `web.config`, and mount the API as an application named `api` under the same site (so `/api/...` and the session cookie stay first-party) or proxy it with ARR.
-5. Bind HTTPS with your certificate and enable HSTS on the site.
+1. Install IIS (with Application Initialization), the .NET 10 Hosting Bundle (after IIS), URL Rewrite 2.1 and Application Request Routing 3.0. Enable the ARR proxy with `timeout=00:10:00`, `preserveHostHeader=true`, and allow the server variable `HTTP_X_FORWARDED_PROTO`.
+2. API: `dotnet publish src/WabiInsight.Api -c Release -o C:\WabiInsight\api`, then copy `deploy/iis/web.config` over the generated one. Create the application pool `WabiInsightApi` (No Managed Code, `AlwaysRunning`, idle timeout 0, preload on) and a **site of its own bound to `127.0.0.1:5080`**. Server settings go in `C:\WabiInsight\api\appsettings.Local.json` (connection string, `Platform:BaseUrl`, `Storage:RootPath`, `DataProtection:KeyRingPath`), with read access for the pool only.
+3. Run `dotnet WabiInsight.Api.dll migrate`, then `bootstrap` with the `Bootstrap__*` environment variables, from that folder.
+4. Web: copy `dist/wabi-insight-web/browser` to `C:\WabiInsight\web` and `deploy/iis/web.spa.config` there as `web.config`. Create the public site `WabiInsight` (pool `WabiInsightWeb`) on 80/443 for your host name. Its rules redirect HTTP to HTTPS (except ACME challenges), proxy `/api` and `/health` to `http://127.0.0.1:5080` with `X-Forwarded-Proto: https`, and fall back to `index.html` for Angular routes.
+5. Bind the certificate (win-acme or a `.pfx`) with SNI.
+
+Don't mount the API as an IIS sub-application named `api`. IIS would remove `/api` from the request path (it becomes the path base) and every API route would return 404.
 
 ## 5. After every upgrade
 

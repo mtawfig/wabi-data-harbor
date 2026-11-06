@@ -1,6 +1,8 @@
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using WabiInsight.Api.Authentication;
 using WabiInsight.Api.Authorization;
@@ -45,6 +47,22 @@ builder.WebHost.ConfigureKestrel(kestrel =>
     kestrel.Limits.MaxRequestBodySize = builder.Configuration.GetValue<long?>("Security:MaxRequestBodyBytes") ?? 1024 * 1024;
 });
 
+// Behind nginx or IIS + ARR the connection comes from the proxy: take the client address and scheme from
+// X-Forwarded-For / X-Forwarded-Proto so per-client rate limits and audit IP addresses see the real caller.
+// Only proxies on this machine (loopback) are trusted by default; list others in ReverseProxy:KnownProxies.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    foreach (var proxy in builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [])
+    {
+        if (IPAddress.TryParse(proxy, out var address))
+        {
+            options.KnownProxies.Add(address);
+        }
+    }
+});
+
 builder.Services.AddWabiInsightInfrastructure(builder.Configuration);
 builder.Services.AddWabiAuthentication();
 builder.Services.AddWabiAuthorization();
@@ -70,6 +88,7 @@ if (args.Length > 0)
     }
 }
 
+app.UseForwardedHeaders();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
