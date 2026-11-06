@@ -1,0 +1,4 @@
+# actionlint configuration: custom label of the self-hosted deployment runners (docs/DEVOPS_LINUX.md, docs/DEVOPS_WINDOWS.md).
+self-hosted-runner:
+  labels:
+    - wabi-insight

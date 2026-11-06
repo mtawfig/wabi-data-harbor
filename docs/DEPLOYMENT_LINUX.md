@@ -770,6 +770,8 @@ Copy both folders off the server regularly (rsync, object storage). To restore: 
 
 ## 22. Updating to a new version
 
+With CI/CD set up ([DEVOPS_LINUX.md](DEVOPS_LINUX.md)), use **Actions → Deploy (Linux)** instead of these commands. The manual procedure:
+
 ```bash
 sudo -i; source /root/wabi-insight.vars
 cd /opt/wabi-insight/src && git fetch origin "$WI_BRANCH" && git checkout "$WI_BRANCH" && git pull --ff-only && git log -1 --oneline

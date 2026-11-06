@@ -1,0 +1,133 @@
+# Manual deployment to the Windows Server (IIS) (docs/DEVOPS_WINDOWS.md). Never runs automatically:
+# Actions → "Deploy (Windows)" → Run workflow → choose the branch, what to deploy and whether to migrate the database.
+# Build: GitHub-hosted runners. Install: the self-hosted runner service on the server (labels self-hosted, windows,
+# wabi-insight), which runs the administrator-installed C:\WabiInsight\deploy\Deploy-WabiInsight.ps1.
+name: Deploy (Windows)
+run-name: "Deploy ${{ inputs.component }} to Windows${{ inputs.migrate_database && ' + database migration' || '' }} (${{ inputs.ref || github.ref_name }}) by @${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "What to deploy"
+        type: choice
+        options:
+          - frontend+backend
+          - backend
+          - frontend
+        default: frontend+backend
+      migrate_database:
+        description: "Apply database migrations (with the backend only; a database backup runs first)"
+        type: boolean
+        default: false
+      run_tests:
+        description: "Run unit tests and web lint/tests before deploying"
+        type: boolean
+        default: true
+      ref:
+        description: "Optional commit SHA or tag to deploy instead of the selected branch (e.g. to roll back)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-windows
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/build-release.yml
+    with:
+      component: ${{ inputs.component }}
+      run_tests: ${{ inputs.run_tests }}
+      ref: ${{ inputs.ref }}
+
+  deploy:
+    name: Deploy to Windows server
+    needs: build
+    runs-on: [self-hosted, windows, wabi-insight]
+    environment:
+      name: production-windows
+      url: ${{ vars.WI_PUBLIC_URL }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: powershell
+    env:
+      COMPONENT: ${{ inputs.component }}
+      MIGRATE: ${{ inputs.migrate_database && 'yes' || 'no' }}
+      VERSION: ${{ needs.build.outputs.version }}
+      ACTOR: ${{ github.actor }}
+      DEPLOY_SCRIPT: C:\WabiInsight\deploy\Deploy-WabiInsight.ps1
+    steps:
+      - name: Clear the release folder
+        run: |
+          $release = Join-Path $env:RUNNER_TEMP 'wabi-insight-release'
+          if (Test-Path $release) { Remove-Item $release -Recurse -Force }
+
+      - name: Download the deploy scripts of this version
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-deploy-scripts
+          path: ${{ runner.temp }}\wabi-insight-release\scripts
+
+      - name: Check the server's deploy script
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path $env:DEPLOY_SCRIPT)) {
+            Write-Output "::error::$env:DEPLOY_SCRIPT is not installed. See docs/DEVOPS_WINDOWS.md step 4."
+            exit 1
+          }
+          $release = Join-Path $env:RUNNER_TEMP 'wabi-insight-release'
+          $repoHash = (Get-FileHash (Join-Path $release 'scripts\windows\Deploy-WabiInsight.ps1') -Algorithm SHA256).Hash
+          $installedHash = (Get-FileHash $env:DEPLOY_SCRIPT -Algorithm SHA256).Hash
+          if ($repoHash -ne $installedHash) {
+            Write-Output "::warning::The installed $env:DEPLOY_SCRIPT differs from deploy/cicd/windows/Deploy-WabiInsight.ps1 in this version. Reinstall it (docs/DEVOPS_WINDOWS.md step 4) to use the latest deploy logic."
+          }
+
+      - name: Download backend
+        if: contains(inputs.component, 'backend')
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-api
+          path: ${{ runner.temp }}\wabi-insight-release\api
+
+      - name: Download frontend
+        if: contains(inputs.component, 'frontend')
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-web
+          path: ${{ runner.temp }}\wabi-insight-release\web
+
+      - name: Install the release
+        run: |
+          $release = Join-Path $env:RUNNER_TEMP 'wabi-insight-release'
+          & $env:DEPLOY_SCRIPT -Component $env:COMPONENT -Migrate $env:MIGRATE `
+            -ApiDir (Join-Path $release 'api') -WebDir (Join-Path $release 'web') `
+            -Version $env:VERSION -Actor $env:ACTOR
+
+      - name: Summary
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+          COMMIT: ${{ needs.build.outputs.commit }}
+        run: |
+          $lines = @(
+            "### Wabi Insight -> Windows: $env:RESULT", '',
+            '| | |', '|---|---|',
+            "| Component | ``$env:COMPONENT`` |",
+            "| Database migration | $env:MIGRATE |",
+            "| Version | ``$env:VERSION`` ($env:COMMIT) |",
+            "| Started by | @$env:ACTOR |",
+            '| Server log | `C:\WabiInsight\logs\deploy.log` |'
+          )
+          $lines | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding UTF8
+
+      - name: Clean up
+        if: always()
+        run: |
+          $release = Join-Path $env:RUNNER_TEMP 'wabi-insight-release'
+          if (Test-Path $release) { Remove-Item $release -Recurse -Force }
