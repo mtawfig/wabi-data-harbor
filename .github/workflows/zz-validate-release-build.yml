@@ -1,0 +1,13 @@
+# TEMPORARY: proves build-release.yml on GitHub-hosted runners before the PR; removed before review.
+name: Validate release build (temporary)
+on:
+  push:
+    branches: [wi/p13-03-cicd]
+permissions:
+  contents: read
+jobs:
+  build:
+    uses: ./.github/workflows/build-release.yml
+    with:
+      component: frontend+backend
+      run_tests: true
