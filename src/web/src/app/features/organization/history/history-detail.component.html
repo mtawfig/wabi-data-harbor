@@ -35,6 +35,8 @@
           <button mat-menu-item (click)="exportAs('Xlsx')" data-testid="history-export-xlsx"><mat-icon>table_view</mat-icon>{{ 'reports.formats.Xlsx' | transloco }}</button>
           <button mat-menu-item (click)="openPrint()"><mat-icon>print</mat-icon>{{ 'history.print' | transloco }}</button>
         </mat-menu>
+        <button mat-stroked-button type="button" (click)="openShare()" data-testid="history-share"><mat-icon>share</mat-icon>{{ 'sharing.share.button' | transloco }}</button>
+        <button mat-stroked-button type="button" (click)="openEmail()" [disabled]="!version()?.hasResult" data-testid="history-email"><mat-icon>outgoing_mail</mat-icon>{{ 'sharing.email.button' | transloco }}</button>
         <button mat-stroked-button type="button" (click)="toggleArchive()"><mat-icon>{{ d.summary.isArchived ? 'unarchive' : 'archive' }}</mat-icon>{{ (d.summary.isArchived ? 'history.unarchive' : 'history.archive') | transloco }}</button>
         <button mat-stroked-button type="button" (click)="remove()" class="danger" data-testid="history-delete"><mat-icon>delete</mat-icon>{{ 'common.delete' | transloco }}</button>
         <button mat-flat-button type="button" (click)="rerun()" [disabled]="rerunning()" data-testid="history-rerun"><mat-icon>replay</mat-icon>{{ 'history.rerun' | transloco }}</button>

@@ -67,6 +67,10 @@ public static class AuditEvents
     public const string AiProviderChanged = "Ai.ProviderChanged";
     public const string AiProviderSelected = "Ai.ProviderSelected";
     public const string AiAllowListChanged = "Ai.AllowListChanged";
+    public const string ShareCreated = "Share.Created";
+    public const string ShareRevoked = "Share.Revoked";
+    public const string ShareEmailSent = "Share.EmailSent";
+    public const string ShareEmailBlocked = "Share.EmailBlocked";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>

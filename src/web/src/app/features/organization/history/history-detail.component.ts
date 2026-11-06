@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -18,6 +19,8 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { AskResponse } from '../../../core/platform/ai.models';
 import { problemMessage } from '../../../core/problem-message';
 import { AnalysisAnswerComponent } from '../../../shared/analysis/analysis-answer.component';
+import { EmailDialogComponent, EmailDialogData } from '../sharing/email-dialog.component';
+import { ShareDialogComponent, ShareDialogData } from '../sharing/share-dialog.component';
 
 interface Rejection {
   stage: string;
@@ -40,6 +43,7 @@ export class HistoryDetailComponent {
   private readonly history = inject(HistoryService);
   private readonly snack = inject(MatSnackBar);
   private readonly transloco = inject(TranslocoService);
+  private readonly dialog = inject(MatDialog);
   readonly language = inject(LanguageService);
 
   readonly historyId = this.route.snapshot.paramMap.get('id')!;
@@ -151,6 +155,29 @@ export class HistoryDetailComponent {
         this.error.set(problemMessage(e, this.transloco));
       },
     });
+  }
+
+  /** Share with colleagues (VIEW, expiry, revocation). */
+  openShare(): void {
+    const d = this.detail();
+    if (!d) return;
+    this.dialog.open<ShareDialogComponent, ShareDialogData, boolean>(ShareDialogComponent, { data: { historyId: this.historyId, title: d.summary.title }, autoFocus: 'input', width: '640px', maxWidth: '95vw' });
+  }
+
+  /** Email this version: owner's text (the AI draft when there is one), PDF attached, classification gate applied by the API. */
+  openEmail(): void {
+    const d = this.detail();
+    const version = this.version();
+    if (!d || !version?.hasResult) return;
+    const draft = this.answer()?.emailDraft;
+    this.dialog
+      .open<EmailDialogComponent, EmailDialogData>(EmailDialogComponent, { data: { historyId: this.historyId, versionNumber: version.versionNumber, title: d.summary.title, classification: d.summary.dataClassification, hasReport: version.hasReport, draft: draft ? { subject: draft.subject, body: draft.body } : null }, autoFocus: 'textarea', width: '700px', maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((result) => {
+        if (result) {
+          this.snack.open(this.transloco.translate('sharing.email.sent', { count: result.recipients, external: result.externalRecipients }), undefined, { duration: 5000 });
+        }
+      });
   }
 
   openPrint(): void {

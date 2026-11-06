@@ -10,7 +10,12 @@ public sealed record EmailMessage(
     string Language)
 {
     public string? ReplyTo { get; init; }
+
+    /// <summary>Files to attach (a shared report). Kept in memory with the message; never persisted by the outbox.</summary>
+    public IReadOnlyList<EmailAttachment> Attachments { get; init; } = [];
 }
+
+public sealed record EmailAttachment(string FileName, string ContentType, byte[] Content);
 
 public interface IEmailSender
 {
@@ -23,6 +28,8 @@ public static class EmailTemplateCodes
     public const string AccountCreated = "Account.Created";
     public const string PasswordReset = "Account.PasswordReset";
     public const string SupportNotification = "Support.Notification";
+    public const string AnalysisShared = "Analysis.Shared";
+    public const string AnalysisEmailed = "Analysis.Emailed";
 }
 
 /// <summary>

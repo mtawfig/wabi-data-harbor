@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Wabi Insight landing illustration B: "confident decisions" — one lighthouse beam, connected sources, verified dashboard. Text-free so it works in both languages. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 360" width="520" height="360" role="img" aria-label="Confident decisions">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B1F3A"/><stop offset=".7" stop-color="#087DF2"/><stop offset="1" stop-color="#22B8CF"/></linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#22B8CF" stop-opacity=".55"/><stop offset="1" stop-color="#22B8CF" stop-opacity="0"/></linearGradient>
+    <linearGradient id="wave2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#22B8CF"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22B8CF"/><stop offset="1" stop-color="#087DF2"/></linearGradient>
+    <filter id="soft2" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0B1F3A" flood-opacity=".25"/></filter>
+  </defs>
+  <rect width="520" height="360" rx="24" fill="url(#bg2)"/>
+  <!-- lighthouse -->
+  <g transform="translate(40 60)">
+    <path d="M44 60 L 300 10 L 300 110 Z" fill="url(#beam)"/>
+    <path d="M24 70 h28 l10 120 H14 Z" fill="#FFFFFF"/>
+    <rect x="17" y="100" width="42" height="7" fill="#22B8CF"/><rect x="13" y="130" width="50" height="7" fill="#22B8CF"/>
+    <rect x="22" y="48" width="32" height="22" rx="4" fill="#FFFFFF"/><rect x="28" y="53" width="20" height="12" rx="2" fill="#22B8CF"/>
+    <path d="M38 24 L 60 48 H 16 Z" fill="#FFFFFF"/><circle cx="38" cy="22" r="4" fill="#22B8CF"/>
+  </g>
+  <!-- waves -->
+  <g fill="none" stroke="url(#wave2)" stroke-width="5" stroke-linecap="round">
+    <path d="M20 270c18-14 34-14 52 0s34 14 52 0 34-14 52 0 34 14 52 0"/>
+    <path d="M20 296c18-14 34-14 52 0s34 14 52 0 34-14 52 0 34 14 52 0" opacity=".6"/>
+    <path d="M20 322c18-14 34-14 52 0s34 14 52 0 34-14 52 0 34 14 52 0" opacity=".3"/>
+  </g>
+  <!-- connected sources -->
+  <g stroke="#22B8CF" stroke-width="2" stroke-linecap="round" opacity=".9"><path d="M250 110 L 300 96 L 350 112 L 400 90"/><path d="M300 96 L 300 150"/><path d="M350 112 L 350 150"/></g>
+  <g fill="#FFFFFF"><circle cx="250" cy="110" r="5"/><circle cx="300" cy="96" r="5"/><circle cx="350" cy="112" r="5"/><circle cx="400" cy="90" r="5"/></g>
+  <g fill="#22B8CF"><circle cx="250" cy="110" r="2.2"/><circle cx="300" cy="96" r="2.2"/><circle cx="350" cy="112" r="2.2"/><circle cx="400" cy="90" r="2.2"/></g>
+  <!-- dashboard card -->
+  <g transform="translate(236 150)" filter="url(#soft2)">
+    <rect width="250" height="170" rx="14" fill="#FFFFFF"/>
+    <!-- KPI tiles -->
+    <rect x="14" y="14" width="68" height="44" rx="8" fill="#EEF4FB"/><rect x="22" y="22" width="30" height="6" rx="3" fill="#CBD5E1"/><rect x="22" y="36" width="44" height="12" rx="3" fill="#087DF2"/>
+    <rect x="91" y="14" width="68" height="44" rx="8" fill="#EEF4FB"/><rect x="99" y="22" width="30" height="6" rx="3" fill="#CBD5E1"/><rect x="99" y="36" width="36" height="12" rx="3" fill="#22B8CF"/>
+    <rect x="168" y="14" width="68" height="44" rx="8" fill="#ECFDF5"/><rect x="176" y="22" width="30" height="6" rx="3" fill="#CBD5E1"/><rect x="176" y="36" width="40" height="12" rx="3" fill="#16A34A"/>
+    <!-- bars -->
+    <g fill="url(#bar)"><rect x="18" y="118" width="16" height="36" rx="3"/><rect x="42" y="100" width="16" height="54" rx="3"/><rect x="66" y="108" width="16" height="46" rx="3"/><rect x="90" y="84" width="16" height="70" rx="3"/><rect x="114" y="92" width="16" height="62" rx="3"/></g>
+    <path d="M14 154h120" stroke="#E2E8F0" stroke-width="2"/>
+    <!-- trend line -->
+    <path d="M150 140 L 176 126 L 200 130 L 222 96 L 236 88" fill="none" stroke="#087DF2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="#FFFFFF" stroke="#087DF2" stroke-width="2.5"><circle cx="150" cy="140" r="3.5"/><circle cx="176" cy="126" r="3.5"/><circle cx="200" cy="130" r="3.5"/><circle cx="222" cy="96" r="3.5"/><circle cx="236" cy="88" r="3.5"/></g>
+    <path d="M150 86h86" stroke="#F1F5F9" stroke-width="1.5"/><path d="M150 112h86" stroke="#F1F5F9" stroke-width="1.5"/>
+    <!-- verified badge -->
+    <g transform="translate(198 60)"><circle cx="14" cy="14" r="14" fill="#16A34A"/><path d="M8 14.5 L12.5 19 L20.5 10" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+  </g>
+  <!-- report sheet -->
+  <g transform="translate(410 230) rotate(6)" filter="url(#soft2)">
+    <rect width="78" height="100" rx="8" fill="#FFFFFF"/>
+    <rect x="10" y="12" width="36" height="7" rx="3" fill="#0B1F3A"/>
+    <g fill="#CBD5E1"><rect x="10" y="28" width="58" height="4" rx="2"/><rect x="10" y="38" width="50" height="4" rx="2"/><rect x="10" y="48" width="56" height="4" rx="2"/><rect x="10" y="58" width="40" height="4" rx="2"/></g>
+    <rect x="10" y="70" width="58" height="18" rx="4" fill="#EEF4FB"/><g fill="#087DF2"><rect x="16" y="80" width="6" height="6" rx="1"/><rect x="26" y="76" width="6" height="10" rx="1"/><rect x="36" y="78" width="6" height="8" rx="1"/><rect x="46" y="74" width="6" height="12" rx="1"/></g>
+  </g>
+  <g fill="#FFFFFF" opacity=".5"><circle cx="470" cy="40" r="3"/><circle cx="430" cy="24" r="2"/><circle cx="500" cy="80" r="2"/></g>
+</svg>

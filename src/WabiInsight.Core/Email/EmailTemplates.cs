@@ -102,4 +102,39 @@ public static class EmailTemplates
         var text = $"{(ar ? $"مرحبًا {toName}،" : $"Hello {toName},")}\n\n{body}\n\n{open}: {linkUrl}\n\n{footer}\n";
         return new EmailMessage(toEmail, toName, subject, html, text, ar ? "ar" : "en") { ReplyTo = string.IsNullOrWhiteSpace(replyTo) ? null : replyTo };
     }
+
+    /// <summary>
+    /// An analysis the owner sends by email (specification §24): the owner's own subject and body, the analysis title,
+    /// an optional secure link for recipients who are users of the organization, and the report as an attachment.
+    /// </summary>
+    public static EmailMessage SharedAnalysis(string toEmail, string toName, string language, string subject, string body, string ownerName, string analysisTitle, string? linkUrl, string replyTo = "")
+    {
+        var ar = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase);
+        var greeting = ar ? $"مرحبًا {WebUtility.HtmlEncode(toName)}،" : $"Hello {WebUtility.HtmlEncode(toName)},";
+        var from = ar ? $"أرسل {WebUtility.HtmlEncode(ownerName)} هذا التحليل من وابي إنسايت: {WebUtility.HtmlEncode(analysisTitle)}" : $"{WebUtility.HtmlEncode(ownerName)} sent you this analysis from Wabi Insight: {WebUtility.HtmlEncode(analysisTitle)}";
+        var open = ar ? "فتح التحليل" : "Open the analysis";
+        var footer = ar ? "وابي إنسايت — اسأل بياناتك. وثق بالإجابة. أُرسلت هذه الرسالة بموافقة مالك التحليل؛ لا تُعد توجيهها دون إذن." : "Wabi Insight — Ask Your Data. Trust the Answer. Sent with the approval of the analysis owner; do not forward without permission.";
+        var dir = ar ? "rtl" : "ltr";
+        var font = ar ? "'IBM Plex Sans Arabic', Arial, sans-serif" : "Inter, Arial, sans-serif";
+        var paragraphs = string.Join(string.Empty, body.Split('\n').Select(line => $"<p style=\"font-size:15px;line-height:1.6;margin:0 0 10px;\">{WebUtility.HtmlEncode(line)}</p>"));
+        var link = linkUrl is null ? string.Empty : $"<p style=\"margin:16px 0 24px;\"><a href=\"{WebUtility.HtmlEncode(linkUrl)}\" style=\"display:inline-block;background:#087df2;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px;\">{open}</a></p>";
+        var html = $"""
+            <!doctype html>
+            <html lang="{(ar ? "ar" : "en")}" dir="{dir}">
+            <body style="margin:0;background:#f5f8fc;font-family:{font};color:#0b1f3a;">
+              <div style="max-width:640px;margin:24px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:32px;direction:{dir};text-align:start;">
+                <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#087df2;margin:0 0 12px;">Wabi Insight · AP-AIR</p>
+                <p style="font-size:16px;margin:0 0 12px;">{greeting}</p>
+                <p style="font-size:13px;color:#64748b;margin:0 0 16px;">{from}</p>
+                {paragraphs}
+                {link}
+                <p style="font-size:12px;color:#94a3b8;margin:16px 0 0;">{footer}</p>
+              </div>
+            </body>
+            </html>
+            """;
+        var textLink = linkUrl is null ? string.Empty : $"\n\n{open}: {linkUrl}";
+        var text = $"{(ar ? $"مرحبًا {toName}،" : $"Hello {toName},")}\n\n{(ar ? $"أرسل {ownerName} هذا التحليل من وابي إنسايت: {analysisTitle}" : $"{ownerName} sent you this analysis from Wabi Insight: {analysisTitle}")}\n\n{body}{textLink}\n\n{footer}\n";
+        return new EmailMessage(toEmail, toName, subject, html, text, ar ? "ar" : "en") { ReplyTo = string.IsNullOrWhiteSpace(replyTo) ? null : replyTo };
+    }
 }

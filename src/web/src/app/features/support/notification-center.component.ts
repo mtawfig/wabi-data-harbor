@@ -17,6 +17,8 @@ const ICONS: Record<string, string> = {
   'Ticket.Assigned': 'assignment_ind',
   'Ticket.CommentAdded': 'forum',
   'Ticket.AttachmentAdded': 'attach_file',
+  'Analysis.Shared': 'share',
+  'Analysis.ShareRevoked': 'link_off',
 };
 
 /** Notification centre: localized from codes and parameters; clicking opens the related ticket and marks the item read. */
@@ -106,6 +108,10 @@ export class NotificationCenterComponent {
     }
     if (n.entityType === 'SupportTicket' && n.entityId) {
       void this.router.navigate([this.area() === 'platform' ? '/platform/support' : '/app/support', n.entityId]);
+    } else if (n.notificationType === 'Analysis.Shared' && n.entityId) {
+      void this.router.navigate(['/app/shared-with-me', n.entityId]);
+    } else if (n.notificationType === 'Analysis.ShareRevoked') {
+      void this.router.navigate(['/app/shared-with-me']);
     }
   }
 }

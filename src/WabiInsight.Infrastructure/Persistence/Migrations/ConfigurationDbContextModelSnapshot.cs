@@ -529,6 +529,114 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.ToTable("AnalysisHistoryVersions", (string)null);
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Analysis.AnalysisShare", b =>
+                {
+                    b.Property<Guid>("ShareId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("HistoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("LastViewedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Permission")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("ShareId");
+
+                    b.HasIndex("HistoryId", "RecipientUserId");
+
+                    b.HasIndex("OrganizationId", "OwnerUserId", "CreatedAt");
+
+                    b.HasIndex("OrganizationId", "RecipientUserId", "RevokedAt", "ExpiresAt");
+
+                    b.ToTable("AnalysisShares", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Analysis.EmailDraftEvent", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AttachedReport")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("BlockReason")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DataClassification")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<bool>("DisclosureApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ExternalRecipientCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("HistoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("InternalRecipientCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Recipients")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("EventId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.HasIndex("OrganizationId", "HistoryId");
+
+                    b.ToTable("EmailDraftEvents", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Analysis.ReportGenerationEvent", b =>
                 {
                     b.Property<Guid>("EventId")
@@ -2711,6 +2819,37 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .WithMany("Versions")
                         .HasForeignKey("HistoryId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("History");
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Analysis.AnalysisShare", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Analysis.AnalysisHistory", "History")
+                        .WithMany()
+                        .HasForeignKey("HistoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OwnerUserId")
+                        .HasPrincipalKey("OrganizationId", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RecipientUserId")
+                        .HasPrincipalKey("OrganizationId", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("History");
