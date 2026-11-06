@@ -56,6 +56,7 @@ WI_HISTORY_ID=… WI_ORGANIZATION_ID=… WI_TICKET_ID=… node scripts/screensho
 node scripts/perf/load-check.js --base http://localhost:5080 --users 20 --logins 5 --seconds 30
 docker build -f src/WabiInsight.Api/Dockerfile -t wabi-insight-api . && docker build -f src/web/Dockerfile -t wabi-insight-web src/web
 ```
+Sample source databases and the WabiInsightDB seed (organization GAS, four users): run `scripts/sql/samples/01`–`04-*.sql` in order with sqlcmd after `migrate` (regenerate 01–03 with `python3 scripts/sql/samples/build_sample_sql.py`; see its README).
 Deployment shapes (Docker Compose, systemd + nginx, IIS) live under `deploy/` and are documented in `docs/DEPLOYMENT.md`; security controls and the cross-tenant sweep are in `docs/SECURITY.md`.
 Screenshots and the demo GIF are captured with Playwright from the running app (see `docs/DESIGN_SYSTEM.md`); the full 42-screen script arrives in P11.2. Development uses the sample bootstrap values in `appsettings.Development.json`; any other environment must supply `Bootstrap__AdministratorPassword` and `Bootstrap__InitializationSecret` through secrets.
 

@@ -18,6 +18,8 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 
 `appsettings.json` carries the configuration-database connection string and the SMTP settings (owner decision for this private repository; the SMTP password is a placeholder). To override anything per machine (a local SQL Server, the File email sink, bootstrap values), copy `src/WabiInsight.Api/appsettings.Local.example.json` to `appsettings.Local.json` (git-ignored). Apply migrations to the configured database with `dotnet run --project src/WabiInsight.Api -- migrate` before the first run.
 
+Sample data: `scripts/sql/samples` creates three realistic source databases (flight operations, HR/payroll/attendance, procurement/stores) and seeds a ready-to-use organization with an administrator, a management user and two role-scoped users into `WabiInsightDB`; see its [README](scripts/sql/samples/README.md).
+
 ## Status
 
-Version 1 feature-complete: phases 1–12 of the implementation plan are merged or in review (see `docs/PROGRESS.md`). Google Drive / OneDrive publishing (P10.2) is deferred to the next version by owner decision. CI runs the .NET and Angular suites, the dependency audits and the container image builds on every pull request.
+Version 1 feature-complete: phases 1–12 of the implementation plan are merged, with sample data (P13.1) in review (see `docs/PROGRESS.md`). Google Drive / OneDrive publishing (P10.2) is deferred to the next version by owner decision. CI runs the .NET and Angular suites, the dependency audits and the container image builds on every pull request.
