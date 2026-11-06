@@ -648,7 +648,11 @@
       "history_title_required": "العنوان مطلوب.",
       "collection_not_found": "المجموعة غير موجودة أو ليست لك.",
       "collection_name_required": "اسم المجموعة مطلوب.",
-      "collection_name_exists": "لديك مجموعة بهذا الاسم بالفعل."
+      "collection_name_exists": "لديك مجموعة بهذا الاسم بالفعل.",
+      "history_version_not_found": "هذا الإصدار غير موجود.",
+      "history_version_has_no_result": "لا توجد نتيجة مخزّنة لهذا الإصدار لتصديرها.",
+      "export_format_unsupported": "صيغة تصدير غير مدعومة.",
+      "export_failed": "تعذّر إنشاء الملف."
     },
     "applications": {
       "title": "التطبيقات",
@@ -1435,6 +1439,35 @@
     "versions": "الإصدارات",
     "versionsHint": "لا تُستبدل الإصدارات الأقدم أبدًا.",
     "versionMeta": "{{panels}} لوحات · {{rows}} صفًا · ${{cost}}",
-    "versionFailed": "فشل الإصدار {{version}}"
+    "versionFailed": "فشل الإصدار {{version}}",
+    "export": "تصدير",
+    "exporting": "جارٍ التصدير…",
+    "exported": "أُنشئ ملف {{format}} وحُفظ في تقاريري.",
+    "print": "نسخة للطباعة",
+    "printHint": "نسخة مهيّأة للطباعة من هذا التحليل. استخدم نافذة الطباعة في المتصفح للطباعة أو الحفظ كـ PDF."
+  },
+  "reports": {
+    "title": "تقاريري",
+    "subtitle": "كل تقرير PDF وتصدير أنشأته. تبقى الملفات مرتبطة بالتحليل والإصدار الذي جاءت منه.",
+    "search": "ابحث في الملف أو التحليل",
+    "format": "الصيغة",
+    "allFormats": "كل الصيغ",
+    "formats": {
+      "Pdf": "PDF",
+      "Docx": "Word (DOCX)",
+      "Xlsx": "Excel (XLSX)"
+    },
+    "columns": {
+      "file": "الملف",
+      "analysis": "التحليل",
+      "size": "الحجم",
+      "created": "تاريخ الإنشاء"
+    },
+    "kinds": {
+      "study": "دراسة",
+      "export": "تصدير"
+    },
+    "download": "تنزيل",
+    "empty": "لا توجد تقارير بعد. افتح تحليلًا في سجلّي واختر تصدير."
   }
 }

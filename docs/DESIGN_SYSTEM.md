@@ -113,6 +113,15 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 - `app-history-detail`: back link, editable title, type chip and metadata line, action bar (star, Collections menu with check boxes, Archive, Delete, filled *Re-run*), the original question card with the "stored result" note, the stored answer rendered by `app-analysis-answer` (identical to the Ask page), and a *Versions* sidebar (active version highlighted, failed versions in red, PDF marker).
 - `app-analysis-answer` is the shared renderer of an answer (report and email cards, narrative, KPI cards, charts, tables, *How this was computed*) used by the Ask page and by history; the Ask page adds a "Saved to My History · Open" line under a fresh answer.
 
+## My Reports, export and print (P9.2)
+- `app-reports-list`: search and format filter, a table of generated files (format icon in red/blue/green for PDF/Word/Excel, file name in LTR, analysis link with version and *Study*/*Export* tag, format chip, size, generation time, an outlined *Download* button) and the paginator.
+- Analysis detail gains an outlined *Export* menu button (PDF, Word, Excel, Print view) next to Archive; exporting shows "Exporting…" and ends with a snackbar "… saved to My Reports".
+- Print view (`/print/history/{id}/{version}`): a plain white page without the shell — dashed bar with the hint and a filled *Print view* button (hidden when printing), brand eyebrow, title, application · version · date, the question, then the answer rendered by `app-analysis-answer`; print CSS removes shadows, avoids page breaks inside cards and hides *How this was computed*.
+- Exported documents follow the PDF's visual language: ocean headings, light-blue summary box, brand palette charts, zebra tables, logo top-left, page x / y.
+
+## Screenshots (P9.2)
+`docs/screenshots/p9-2-*.png`: My Reports (EN), the Export menu on an analysis, and the print view.
+
 ## Screenshots (P9.1)
 `docs/screenshots/p9-1-*.png`: My History list, an analysis reopened from history with its versions, Favorites, and the Arabic history list.
 

@@ -117,3 +117,18 @@ public sealed record GeneratedReport(string Title, string Subtitle, string FileN
 public sealed record EmailDraft(string Subject, string Body, string? AttachmentFileName);
 
 public sealed record ReportDownload(Stream Content, string FileName, string ContentType);
+
+/// <summary>Everything an exporter needs to turn a stored answer into a file: the answer, the written report when the answer had one, the context and the branding.</summary>
+public sealed record ExportRequest(AskResponse Answer, ReportContent Content, string Language, string OrganizationName, string ApplicationName, string Prompt, ReportBranding Branding, DateTimeOffset GeneratedAt);
+
+/// <summary>Renders a stored answer to DOCX or XLSX (PDF goes through <see cref="IReportRenderer"/>). Charts are drawn from the panel series, tables from the panel rows.</summary>
+public interface IAnswerExporter
+{
+    Entities.Analysis.ExportFormat Format { get; }
+
+    string ContentType { get; }
+
+    string Extension { get; }
+
+    byte[] Export(ExportRequest request);
+}

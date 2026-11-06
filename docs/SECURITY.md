@@ -87,6 +87,8 @@ Report text and email drafts are model output over the verified rows, sanitized 
 ## History (P9.1)
 History entries, versions, artifacts and collections are tenant-owned; every service method filters by `OwnerUserId` on top of the tenant filter, so another user of the same organization sees 404 for an entry that is not theirs (sharing arrives in P10.1 as an explicit grant). Reopening a version streams the stored answer from artifact storage and never touches the business source; a re-run goes through the whole secure workflow again under the caller's current permissions, so a revoked column makes the re-run fail and the failure is recorded as a version instead of exposing the old rows as if fresh. Soft deletes keep the rows for audit and emit `History.Deleted`.
 
+Exports (P9.2) are produced from the stored answer only — never from a fresh query — so an export can never show more than its version did. Every generated file is an owner-scoped artifact (same tenant filter plus `OwnerUserId` check on download), its generation is recorded in append-only `ReportGenerationEvents`, and the exporters write only values from the panel rows: model text is sanitized before it reaches a document, and no user text is interpreted as markup, formulas (cells are typed values, never formulas) or file names (file names are ASCII slugs).
+
 ## Audit
 `AuditLogs` is append-only (application guard plus `scripts/sql/create-runtime-login.sql`). Records carry actor type/id, event code, entity, JSON details without secrets, correlation id and client IP.
 

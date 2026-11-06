@@ -65,6 +65,22 @@ internal sealed class AnalysisArtifactConfiguration : IEntityTypeConfiguration<A
     }
 }
 
+internal sealed class ReportGenerationEventConfiguration : IEntityTypeConfiguration<ReportGenerationEvent>
+{
+    public void Configure(EntityTypeBuilder<ReportGenerationEvent> builder)
+    {
+        builder.ToTable("ReportGenerationEvents");
+        builder.HasKey(e => e.EventId);
+        builder.Property(e => e.EventId).ValueGeneratedNever();
+        builder.Property(e => e.Format).HasConversion<string>().HasMaxLength(8).IsRequired();
+        builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(e => e.Language).HasMaxLength(2).IsRequired();
+        builder.Property(e => e.FailureCode).HasMaxLength(100);
+        builder.HasIndex(e => new { e.OrganizationId, e.CreatedAt });
+        builder.HasIndex(e => new { e.OrganizationId, e.HistoryId });
+    }
+}
+
 internal sealed class AnalysisCollectionConfiguration : IEntityTypeConfiguration<AnalysisCollectionRecord>
 {
     public void Configure(EntityTypeBuilder<AnalysisCollectionRecord> builder)

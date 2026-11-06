@@ -1,0 +1,43 @@
+<section class="wi-page reports">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'common.appName' | transloco }}</p>
+      <h1>{{ 'reports.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'reports.subtitle' | transloco }}</p>
+    </div>
+    <a mat-stroked-button routerLink="/app/history"><mat-icon>history</mat-icon>{{ 'nav.org.history' | transloco }}</a>
+  </header>
+
+  <div class="wi-card">
+    <div class="filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filters__search">
+        <mat-label>{{ 'reports.search' | transloco }}</mat-label>
+        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" (keyup.enter)="applyFilters()" data-testid="reports-search" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'reports.format' | transloco }}</mat-label>
+        <mat-select [value]="format()" (valueChange)="format.set($event); applyFilters()">
+          <mat-option [value]="null">{{ 'reports.allFormats' | transloco }}</mat-option>
+          @for (f of formats; track f) { <mat-option [value]="f">{{ 'reports.formats.' + f | transloco }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+    @if (error(); as e) { <p class="error" role="alert"><mat-icon>error_outline</mat-icon>{{ e }}</p> }
+
+    <table mat-table [dataSource]="items()" class="reports__table" data-testid="reports-table">
+      <ng-container matColumnDef="file"><th mat-header-cell *matHeaderCellDef>{{ 'reports.columns.file' | transloco }}</th><td mat-cell *matCellDef="let r"><div class="reports__file"><mat-icon [class]="'fmt fmt--' + r.format.toLowerCase()">{{ icon(r.format) }}</mat-icon><span class="wi-ltr">{{ r.fileName }}</span></div></td></ng-container>
+      <ng-container matColumnDef="analysis"><th mat-header-cell *matHeaderCellDef>{{ 'reports.columns.analysis' | transloco }}</th><td mat-cell *matCellDef="let r"><a [routerLink]="['/app/history', r.historyId]" class="reports__link">{{ r.historyTitle }}</a><br /><span class="wi-muted small">v{{ r.versionNumber }} · {{ (r.kind === 'ReportPdf' ? 'reports.kinds.study' : 'reports.kinds.export') | transloco }}</span></td></ng-container>
+      <ng-container matColumnDef="format"><th mat-header-cell *matHeaderCellDef>{{ 'reports.format' | transloco }}</th><td mat-cell *matCellDef="let r"><span class="chip">{{ 'reports.formats.' + r.format | transloco }}</span></td></ng-container>
+      <ng-container matColumnDef="size"><th mat-header-cell *matHeaderCellDef class="num">{{ 'reports.columns.size' | transloco }}</th><td mat-cell *matCellDef="let r" class="num">{{ r.sizeBytes / 1024 | number: '1.0-0' }} KB</td></ng-container>
+      <ng-container matColumnDef="created"><th mat-header-cell *matHeaderCellDef>{{ 'reports.columns.created' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.createdAt | date: 'medium' }}</td></ng-container>
+      <ng-container matColumnDef="download"><th mat-header-cell *matHeaderCellDef></th><td mat-cell *matCellDef="let r"><a mat-stroked-button [href]="history.artifactUrl(r.artifactId)" target="_blank" rel="noopener" [attr.data-testid]="'report-download-' + r.artifactId"><mat-icon>download</mat-icon>{{ 'reports.download' | transloco }}</a></td></ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+    @if (!loading() && items().length === 0) { <p class="empty wi-muted">{{ 'reports.empty' | transloco }}</p> }
+    <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50]" (page)="onPage($event)" />
+  </div>
+</section>

@@ -28,6 +28,13 @@
         <mat-menu #collectionsMenu="matMenu">
           @for (c of collections(); track c.collectionId) { <button mat-menu-item (click)="toggleCollection(c)"><mat-icon>{{ memberOf().has(c.collectionId) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>{{ c.name }}</button> } @empty { <button mat-menu-item disabled>{{ 'history.noCollections' | transloco }}</button> }
         </mat-menu>
+        <button mat-stroked-button type="button" [matMenuTriggerFor]="exportMenu" [disabled]="!version()?.hasResult || exporting()" data-testid="history-export"><mat-icon>download</mat-icon>{{ (exporting() ? 'history.exporting' : 'history.export') | transloco }}</button>
+        <mat-menu #exportMenu="matMenu">
+          <button mat-menu-item (click)="exportAs('Pdf')" data-testid="history-export-pdf"><mat-icon>picture_as_pdf</mat-icon>{{ 'reports.formats.Pdf' | transloco }}</button>
+          <button mat-menu-item (click)="exportAs('Docx')" data-testid="history-export-docx"><mat-icon>description</mat-icon>{{ 'reports.formats.Docx' | transloco }}</button>
+          <button mat-menu-item (click)="exportAs('Xlsx')" data-testid="history-export-xlsx"><mat-icon>table_view</mat-icon>{{ 'reports.formats.Xlsx' | transloco }}</button>
+          <button mat-menu-item (click)="openPrint()"><mat-icon>print</mat-icon>{{ 'history.print' | transloco }}</button>
+        </mat-menu>
         <button mat-stroked-button type="button" (click)="toggleArchive()"><mat-icon>{{ d.summary.isArchived ? 'unarchive' : 'archive' }}</mat-icon>{{ (d.summary.isArchived ? 'history.unarchive' : 'history.archive') | transloco }}</button>
         <button mat-stroked-button type="button" (click)="remove()" class="danger" data-testid="history-delete"><mat-icon>delete</mat-icon>{{ 'common.delete' | transloco }}</button>
         <button mat-flat-button type="button" (click)="rerun()" [disabled]="rerunning()" data-testid="history-rerun"><mat-icon>replay</mat-icon>{{ 'history.rerun' | transloco }}</button>

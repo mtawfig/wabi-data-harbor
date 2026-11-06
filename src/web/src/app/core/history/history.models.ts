@@ -77,3 +77,19 @@ export interface PagedResult<T> {
   pageSize: number;
   totalCount: number;
 }
+
+export type ExportFormat = 'Pdf' | 'Docx' | 'Xlsx';
+
+export interface ReportFile {
+  artifactId: string;
+  historyId: string;
+  versionNumber: number;
+  historyTitle: string;
+  kind: 'ReportPdf' | 'ExportPdf' | 'ExportDocx' | 'ExportXlsx';
+  format: ExportFormat;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  language: 'en' | 'ar';
+  createdAt: string;
+}
