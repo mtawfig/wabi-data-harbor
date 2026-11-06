@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WabiInsight.Api.Authorization;
+using WabiInsight.Api.Security;
 using WabiInsight.Api.Contracts;
 using WabiInsight.Core.Ai;
 using WabiInsight.Core.Entities.Ai;
@@ -114,6 +115,7 @@ public sealed class AiController : ControllerBase
 
     /// <summary>The full secure workflow: plan, compile, execute read-only, calculate, interpret.</summary>
     [HttpPost("ask")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(RateLimitingSetup.AiPolicy)]
     [ProducesResponseType(typeof(AskResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(PlanRejectedResponse), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Ask([FromBody] AskQuestionRequest request, CancellationToken cancellationToken)
@@ -151,6 +153,7 @@ public sealed class AiController : ControllerBase
     public async Task<ActionResult<MetadataSnapshot>> Snapshot(Guid applicationId, CancellationToken cancellationToken) => Ok(await _planner.GetSnapshotAsync(applicationId, cancellationToken));
 
     [HttpPost("plan")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(RateLimitingSetup.AiPolicy)]
     [ProducesResponseType(typeof(PlanResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(PlanRejectedResponse), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Plan([FromBody] PlanQuestionRequest request, CancellationToken cancellationToken)

@@ -1,0 +1,33 @@
+# /etc/systemd/system/wabi-insight-api.service — Kestrel behind nginx on a Linux host.
+# Secrets live in /etc/wabi-insight/api.env (chmod 600, owner wabi-insight), see docs/DEPLOYMENT.md.
+[Unit]
+Description=Wabi Insight API
+After=network.target
+
+[Service]
+Type=notify
+User=wabi-insight
+Group=wabi-insight
+WorkingDirectory=/opt/wabi-insight/api
+ExecStart=/usr/bin/dotnet /opt/wabi-insight/api/WabiInsight.Api.dll
+EnvironmentFile=/etc/wabi-insight/api.env
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5080
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/wabi-insight
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

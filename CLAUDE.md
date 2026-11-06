@@ -50,7 +50,13 @@ WI_TEST_SQLSERVER_CONNECTION="Server=localhost,1433;Database=master;User Id=sa;P
 npm ci
 npm run lint && npm test && npm run build -- --configuration production
 npm start                                          # http://localhost:4200, proxies /api to 5080
+
+# Screens, load check, container images (P11.2 / P12)
+WI_HISTORY_ID=… WI_ORGANIZATION_ID=… WI_TICKET_ID=… node scripts/screenshots/capture.js   # 42 screens EN/AR desktop+mobile
+node scripts/perf/load-check.js --base http://localhost:5080 --users 20 --logins 5 --seconds 30
+docker build -f src/WabiInsight.Api/Dockerfile -t wabi-insight-api . && docker build -f src/web/Dockerfile -t wabi-insight-web src/web
 ```
+Deployment shapes (Docker Compose, systemd + nginx, IIS) live under `deploy/` and are documented in `docs/DEPLOYMENT.md`; security controls and the cross-tenant sweep are in `docs/SECURITY.md`.
 Screenshots and the demo GIF are captured with Playwright from the running app (see `docs/DESIGN_SYSTEM.md`); the full 42-screen script arrives in P11.2. Development uses the sample bootstrap values in `appsettings.Development.json`; any other environment must supply `Bootstrap__AdministratorPassword` and `Bootstrap__InitializationSecret` through secrets.
 
 ## Verification before pushing

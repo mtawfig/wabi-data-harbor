@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using WabiInsight.Core.Audit;
 using WabiInsight.Core.Authentication;
 using WabiInsight.Core.Bootstrap;
@@ -141,7 +142,14 @@ public static class ServiceCollectionExtensions
         services.AddOptions<SupportDeskOptions>().Bind(configuration.GetSection(SupportDeskOptions.SectionName));
         services.AddOptions<StorageOptions>().Bind(configuration.GetSection(StorageOptions.SectionName));
         services.TryAddSingleton<IArtifactStorage, FileSystemArtifactStorage>();
-        services.TryAddSingleton<IAttachmentScanner, NoOpAttachmentScanner>();
+        services.AddOptions<AttachmentScanningOptions>().Bind(configuration.GetSection(AttachmentScanningOptions.SectionName));
+        services.TryAddSingleton<IAttachmentScanner>(sp =>
+        {
+            var scanning = sp.GetRequiredService<IOptions<AttachmentScanningOptions>>();
+            return string.Equals(scanning.Value.Provider, "ClamAv", StringComparison.OrdinalIgnoreCase)
+                ? ActivatorUtilities.CreateInstance<ClamAvAttachmentScanner>(sp)
+                : new NoOpAttachmentScanner();
+        });
         services.AddScoped<ISupportTicketService, SupportTicketService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();

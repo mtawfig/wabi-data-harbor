@@ -34,4 +34,16 @@ public sealed class SecurityOptions
 
     [Range(1, 100000)]
     public int BootstrapRateLimitPerMinute { get; set; } = 3;
+
+    /// <summary>Requests per minute per signed-in principal (or client address when anonymous) across the whole API.</summary>
+    [Range(1, 1000000)]
+    public int ApiRateLimitPerMinute { get; set; } = 600;
+
+    /// <summary>Analysis and planning requests per minute per user: each one costs model tokens and source queries.</summary>
+    [Range(1, 100000)]
+    public int AiRateLimitPerMinute { get; set; } = 30;
+
+    /// <summary>Default request body limit for endpoints that do not declare their own (uploads do).</summary>
+    [Range(1024, 1024L * 1024 * 1024)]
+    public long MaxRequestBodyBytes { get; set; } = 1024 * 1024;
 }

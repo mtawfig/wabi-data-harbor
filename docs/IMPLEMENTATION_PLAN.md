@@ -127,7 +127,7 @@
 | PR | Scope |
 |---|---|
 | P12.1 — Security hardening | Cross-tenant penetration-style test suite, IDOR sweeps, security headers, request-size and rate limits review, error-handling review, audit-trail verification, dependency audit. |
-| P12.2 — Performance, deployment and final docs | Load checks on hot endpoints, index review, production Docker/IIS/Linux deployment guides, `SECURITY.md` and `ARCHITECTURE.md` final, Angular 23 upgrade if stable. |
+| P12.2 — Performance, deployment and final docs | Load checks on hot endpoints, index review, production Docker/IIS/Linux deployment guides, `SECURITY.md` and `ARCHITECTURE.md` final, Angular 23 upgrade if stable (not released as of 2026-11-06; stays on the backlog). |
 
 ## Milestone verification (every PR)
 

@@ -38,6 +38,8 @@ public class ApiFactory : WebApplicationFactory<Program>
 
         // Generous limits so unrelated tests never trip the per-client limiter; dedicated tests lower them.
         builder.UseSetting("Security:LoginRateLimitPerMinute", "1000");
+        builder.UseSetting("Security:ApiRateLimitPerMinute", "1000000");
+        builder.UseSetting("Security:AiRateLimitPerMinute", "100000");
         builder.UseSetting("Security:BootstrapRateLimitPerMinute", "1000");
         // Re-validate the security stamp on every request so session-invalidation tests are deterministic.
         builder.UseSetting("Security:SecurityStampValidationMinutes", "0");

@@ -35,7 +35,14 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.Name = "wi.xsrf";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing") ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+});
+
+// Server-level body cap (defense in depth); the per-endpoint default and the upload exceptions are applied by RequestBodyLimitMiddleware.
+builder.WebHost.ConfigureKestrel(kestrel =>
+{
+    kestrel.AddServerHeader = false;
+    kestrel.Limits.MaxRequestBodySize = builder.Configuration.GetValue<long?>("Security:MaxRequestBodyBytes") ?? 1024 * 1024;
 });
 
 builder.Services.AddWabiInsightInfrastructure(builder.Configuration);
@@ -63,6 +70,7 @@ if (args.Length > 0)
     }
 }
 
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -77,6 +85,7 @@ app.UseAuthentication();
 app.UseMiddleware<TenantContextMiddleware>();
 app.UseMiddleware<PasswordChangeRequiredMiddleware>();
 app.UseAuthorization();
+app.UseMiddleware<RequestBodyLimitMiddleware>();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {

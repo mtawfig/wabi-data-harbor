@@ -139,6 +139,10 @@ Email delivery (`SendEmailAsync`) classifies each address as internal (an active
 
 `scripts/screenshots/capture.js` signs in with the demo accounts against the running API and dev server and captures the 42 screens of specification §32 in English and Arabic at desktop and mobile widths into `docs/screenshots/screens/`, with `capture-report.json` recording each shot and any horizontal overflow it detected. `docs/SCREENSHOTS.md` indexes them.
 
+### Hardening, performance and deployment (P12)
+
+Security controls added in P12.1 are described in `docs/SECURITY.md` (headers, body limits, rate limits, cookies, ClamAV scanner, dependency audit, the cross-tenant sweep). P12.2 reviewed the hot read paths with `scripts/perf/load-check.js` (`docs/PERFORMANCE.md`): the askable-application list now resolves permissions once (`IQueryPlanner.CountPermittedObjectsAsync`) instead of building a full metadata snapshot per application, and `PermissionResolver` loads the user with its structure codes and the active roles in single queries and indexes grants by object instead of scanning lists per object. The index review found every hot query covered (history by owner/state/updated, notifications by recipient/read/created, shares by recipient/revoked/expiry, audit and usage by organization/created, tickets by organization/status); no new migration was needed. Deployment shapes (Docker Compose, systemd + nginx, IIS) live under `deploy/` with `docs/DEPLOYMENT.md`; both container images are built by CI on every pull request. Angular 23 had not been released at the time of P12.2 (22.2.4 was current), so the upgrade stays on the backlog.
+
 ### Tenant core
 
 - `TenantPrincipal` is the trusted identity (type, organization, user/administrator id, roles, department, section). `TenantContext` is scoped per request, initialized once by the authentication middleware (P1.3) and read through `ITenantContext`.
@@ -152,7 +156,7 @@ Integration tests run against a real SQL Server: `WI_TEST_SQLSERVER_CONNECTION` 
 
 ## Request pipeline (P1.3)
 
-`UseExceptionHandler` (RFC 9457 problem details) → `UseStatusCodePages` → HSTS (non-development) → HTTPS redirection → rate limiter → cookie authentication (with security-stamp revalidation) → `TenantContextMiddleware` (claims → `TenantPrincipal`) → `PasswordChangeRequiredMiddleware` → authorization (fallback: authenticated) → MVC with the `AntiforgeryValidationFilter` → controllers. Health endpoints are mapped with `AllowAnonymous`.
+`SecurityHeadersMiddleware` (P12.1) → `UseExceptionHandler` (RFC 9457 problem details) → `UseStatusCodePages` → HSTS (non-development) → HTTPS redirection → rate limiter (global per-principal budget, login/bootstrap per address, AI per user) → cookie authentication (with security-stamp revalidation) → `TenantContextMiddleware` (claims → `TenantPrincipal`) → `PasswordChangeRequiredMiddleware` → authorization (fallback: authenticated) → `RequestBodyLimitMiddleware` (P12.1) → MVC with the `AntiforgeryValidationFilter` → controllers. Health endpoints are mapped with `AllowAnonymous`.
 
 Background work: `EmailOutboxWorker` (hosted service) consumes an in-process bounded channel fed by `EmailOutbox`, sends through the configured `IEmailSender` (`SmtpEmailSender`, `FileEmailSender`, `NullEmailSender`) and records the outcome on the `EmailMessages` row.
 

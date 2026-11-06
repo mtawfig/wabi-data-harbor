@@ -47,6 +47,11 @@ jobs:
         run: dotnet restore WabiInsight.slnx
       - name: Build
         run: dotnet build WabiInsight.slnx --configuration Release --no-restore
+      - name: Dependency audit (NuGet)
+        run: |
+          dotnet list WabiInsight.slnx package --vulnerable --include-transitive > nuget-audit.txt
+          cat nuget-audit.txt
+          ! grep -Eq "has the following vulnerable packages" nuget-audit.txt
       - name: Test
         run: >-
           dotnet test WabiInsight.slnx --configuration Release --no-build
@@ -76,7 +81,27 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Lint
         run: npm run lint
+      - name: Dependency audit (npm, production dependencies)
+        run: npm audit --omit=dev --audit-level=high
       - name: Test
         run: npm test
       - name: Build
         run: npm run build -- --configuration production
+
+  images:
+    name: Container images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -f src/WabiInsight.Api/Dockerfile -t wabi-insight-api:ci .
+      - name: Build web image
+        run: docker build -f src/web/Dockerfile -t wabi-insight-web:ci src/web
+      - name: Smoke-start the API image
+        run: |
+          docker run -d --name api -e ConnectionStrings__ConfigurationDatabase="Server=none;Database=x;User Id=x;Password=x;Encrypt=True;TrustServerCertificate=True;" -p 8080:8080 wabi-insight-api:ci
+          for i in $(seq 1 20); do curl -fsS http://localhost:8080/health/live && break || sleep 2; done
+          curl -fsS http://localhost:8080/health/live
+          docker logs api | tail -20
+          docker rm -f api
