@@ -6,6 +6,7 @@ using WabiInsight.Core.Ai;
 using WabiInsight.Core.Ai.Compilers;
 using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Ai;
+using WabiInsight.Core.Entities.Analysis;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Entities.Usage;
@@ -105,12 +106,12 @@ public sealed partial class AnalysisService : IAnalysisService
         }
         catch (PlanRejectedException ex)
         {
-            await FailAsync(metric, AnalysisStatus.Rejected, ex.Stage, ex.Errors.Count > 0 ? ex.Errors[0].Code : "plan_rejected", total, cancellationToken);
+            await FailAsync(metric, AnalysisStatus.Rejected, ex.Stage, ex.Errors.Count > 0 ? ex.Errors[0].Code : "plan_rejected", total, cancellationToken, request.HistoryId);
             throw;
         }
         catch (AiProviderException ex)
         {
-            await FailAsync(metric, AnalysisStatus.Failed, "provider", ex.Code, total, cancellationToken);
+            await FailAsync(metric, AnalysisStatus.Failed, "provider", ex.Code, total, cancellationToken, request.HistoryId);
             throw;
         }
 
@@ -137,13 +138,13 @@ public sealed partial class AnalysisService : IAnalysisService
         }
         catch (DomainException ex)
         {
-            await FailAsync(metric, AnalysisStatus.Rejected, "compile", ex.Message, total, cancellationToken);
+            await FailAsync(metric, AnalysisStatus.Rejected, "compile", ex.Message, total, cancellationToken, request.HistoryId);
             throw new PlanRejectedException("compile", [new PlanError(ex.Message, string.Empty)]);
         }
         catch (AnalysisExecutionException ex)
         {
             LogExecutionFailed(_logger, ex.Code, ex);
-            await FailAsync(metric, AnalysisStatus.Failed, "execute", ex.Code, total, cancellationToken);
+            await FailAsync(metric, AnalysisStatus.Failed, "execute", ex.Code, total, cancellationToken, request.HistoryId);
             throw;
         }
 
@@ -154,6 +155,7 @@ public sealed partial class AnalysisService : IAnalysisService
         Interpretation? interpretation = null;
         GeneratedReport? report = null;
         EmailDraft? emailDraft = null;
+        string? reportSha = null;
         if (planned.Plan.WantsReport || planned.Plan.WantsEmail)
         {
             // Steps 15-16 for a study: the model writes the text from the verified panels, the renderer draws the PDF from the panel data.
@@ -178,6 +180,7 @@ public sealed partial class AnalysisService : IAnalysisService
 
                 metric.ReportFileName = FileName(content.Title, _clock.UtcNow);
                 metric.ReportSizeBytes = pdf.LongLength;
+                reportSha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(pdf));
                 report = new GeneratedReport(content.Title, content.Subtitle, metric.ReportFileName, pdf.LongLength, content.Introduction, content.Sections, content.Summary, content.KeyFindings, content.Recommendations);
             }
 
@@ -205,12 +208,121 @@ public sealed partial class AnalysisService : IAnalysisService
         }
 
         metric.Status = AnalysisStatus.Completed;
+        var history = await PrepareHistoryAsync(request, application, planned, panels, report, language, cancellationToken);
         _context.AnalysisExecutionMetrics.Add(metric);
         _usage.Append(UsageEventTypes.AnalysisCompleted, "Application", request.ApplicationId.ToString(), quantity: metric.PlanInputTokens + metric.PlanOutputTokens + metric.InterpretInputTokens + metric.InterpretOutputTokens + metric.ReportInputTokens + metric.ReportOutputTokens,
             metadata: new { metric.MetricId, metric.Model, metric.RowCount, metric.Truncated, metric.EstimatedCost, planMs = metric.PlanMs, executeMs = metric.ExecuteMs, interpretMs = metric.InterpretMs, panels = panels.Count, report = report is not null, email = emailDraft is not null, language });
+        var version = history.Version;
+        var response = new AskResponse(metric.MetricId, history.Entry.HistoryId, version.VersionNumber, planned.Plan.Objective, planned.Plan.Assumptions, panels, interpretation, report, emailDraft, planned.Usage, metric.EstimatedCost, total.Elapsed.TotalMilliseconds);
+        await StoreVersionAsync(history.Entry, version, metric, planned, panels, interpretation, response, reportSha, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
+        return response;
+    }
 
-        return new AskResponse(metric.MetricId, planned.Plan.Objective, planned.Plan.Assumptions, panels, interpretation, report, emailDraft, planned.Usage, metric.EstimatedCost, total.Elapsed.TotalMilliseconds);
+    private sealed record HistoryWork(AnalysisHistory Entry, AnalysisHistoryVersion Version);
+
+    /// <summary>Step 17: a new history entry for a fresh question, or the next version of the saved analysis being re-run (owner only; history is never overwritten).</summary>
+    private async Task<HistoryWork> PrepareHistoryAsync(AskRequest request, Application application, PlanResponse planned, List<AnalysisPanel> panels, GeneratedReport? report, string language, CancellationToken cancellationToken)
+    {
+        var organizationId = _tenantContext.RequireOrganizationId();
+        var userId = _tenantContext.Principal.UserId!.Value;
+        var now = _clock.UtcNow;
+        AnalysisHistory entry;
+        if (request.HistoryId is { } historyId)
+        {
+            entry = await _context.AnalysisHistories.SingleOrDefaultAsync(h => h.HistoryId == historyId && h.OwnerUserId == userId && !h.IsDeleted, cancellationToken)
+                ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "history_not_found");
+            entry.CurrentVersionNumber += 1;
+            entry.UpdatedAt = now;
+            entry.Status = AnalysisHistoryStatus.Completed;
+            entry.IsArchived = false;
+        }
+        else
+        {
+            entry = new AnalysisHistory
+            {
+                HistoryId = Ids.New(),
+                OrganizationId = organizationId,
+                OwnerUserId = userId,
+                ApplicationId = application.ApplicationId,
+                Title = TitleFor(planned.Plan.Objective, request.Question),
+                OriginalPrompt = PromptBuilder.Sanitize(request.Question, PromptBuilder.MaxQuestionLength),
+                PromptLanguage = language,
+                OutputLanguage = language,
+                CurrentVersionNumber = 1,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+            _context.AnalysisHistories.Add(entry);
+        }
+
+        entry.AnalysisType = report is not null ? AnalysisType.Report : panels.Count > 1 ? AnalysisType.Dashboard : AnalysisType.Answer;
+        if (planned.Classification > entry.DataClassification)
+        {
+            entry.DataClassification = planned.Classification;
+        }
+
+        var version = new AnalysisHistoryVersion
+        {
+            VersionId = Ids.New(),
+            HistoryId = entry.HistoryId,
+            OrganizationId = organizationId,
+            VersionNumber = entry.CurrentVersionNumber,
+            RunByUserId = userId,
+            CreatedAt = now,
+            Status = AnalysisHistoryStatus.Completed,
+        };
+        _context.AnalysisHistoryVersions.Add(version);
+        return new HistoryWork(entry, version);
+    }
+
+    private async Task StoreVersionAsync(AnalysisHistory entry, AnalysisHistoryVersion version, AnalysisExecutionMetric metric, PlanResponse planned, List<AnalysisPanel> panels, Interpretation? interpretation, AskResponse response, string? reportSha, CancellationToken cancellationToken)
+    {
+        version.QueryPlanJson = JsonSerializer.Serialize(planned.Plan, JsonOptions);
+        version.CompiledSqlPreview = string.Join("\n\n", panels.Select(p => $"-- {p.Title}\n{p.CompiledSqlPreview}"));
+        version.ResultSummary = JsonSerializer.Serialize(new { narrative = interpretation?.Narrative ?? string.Empty, highlights = interpretation?.Highlights ?? [] }, JsonOptions);
+        version.MetricId = metric.MetricId;
+        version.ModelProviderId = metric.ProviderId;
+        version.ModelName = metric.Model;
+        version.InputTokens = metric.PlanInputTokens + metric.InterpretInputTokens + metric.ReportInputTokens;
+        version.OutputTokens = metric.PlanOutputTokens + metric.InterpretOutputTokens + metric.ReportOutputTokens;
+        version.EstimatedCost = metric.EstimatedCost;
+        version.DurationMs = response.TotalDurationMs;
+        version.PanelCount = panels.Count;
+        version.RowCount = metric.RowCount;
+        version.CompletedAt = _clock.UtcNow;
+
+        // The stored answer is exactly what the page showed; reopening it never touches the source (specification §23).
+        var resultBytes = JsonSerializer.SerializeToUtf8Bytes(response, JsonOptions);
+        string resultKey;
+        await using (var stream = new MemoryStream(resultBytes, writable: false))
+        {
+            resultKey = await _storage.SaveAsync("analysis-results", stream, cancellationToken);
+        }
+
+        var result = new AnalysisArtifact { ArtifactId = Ids.New(), OrganizationId = entry.OrganizationId, HistoryId = entry.HistoryId, VersionId = version.VersionId, Kind = AnalysisArtifactKind.ResultJson, StorageKey = resultKey, ContentType = "application/json", FileName = $"result-v{version.VersionNumber}.json", SizeBytes = resultBytes.LongLength, Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(resultBytes)), CreatedAt = _clock.UtcNow };
+        _context.AnalysisArtifacts.Add(result);
+        version.ResultArtifactId = result.ArtifactId;
+
+        if (metric.ReportArtifactKey is not null && response.Report is not null)
+        {
+            var pdf = new AnalysisArtifact { ArtifactId = Ids.New(), OrganizationId = entry.OrganizationId, HistoryId = entry.HistoryId, VersionId = version.VersionId, Kind = AnalysisArtifactKind.ReportPdf, StorageKey = metric.ReportArtifactKey, ContentType = "application/pdf", FileName = metric.ReportFileName ?? "report.pdf", SizeBytes = metric.ReportSizeBytes ?? 0, Sha256 = reportSha ?? string.Empty, CreatedAt = _clock.UtcNow };
+            _context.AnalysisArtifacts.Add(pdf);
+            version.ReportArtifactId = pdf.ArtifactId;
+        }
+    }
+
+
+    /// <summary>The objective makes a readable title; the prompt is the fallback. Always within the column length.</summary>
+    internal static string TitleFor(string objective, string question)
+    {
+        var text = PromptBuilder.Sanitize(string.IsNullOrWhiteSpace(objective) ? question : objective, 400).TrimEnd('.', '!', ' ');
+        if (text.Length == 0)
+        {
+            text = "Analysis";
+        }
+
+        return text.Length <= 200 ? text : text[..197].TrimEnd() + "…";
     }
 
     public async Task<ReportDownload?> OpenReportAsync(Guid analysisId, CancellationToken cancellationToken = default)
@@ -307,12 +419,26 @@ public sealed partial class AnalysisService : IAnalysisService
         }
     }
 
-    private async Task FailAsync(AnalysisExecutionMetric metric, AnalysisStatus status, string stage, string code, Stopwatch total, CancellationToken cancellationToken)
+    private async Task FailAsync(AnalysisExecutionMetric metric, AnalysisStatus status, string stage, string code, Stopwatch total, CancellationToken cancellationToken, Guid? historyId = null)
     {
         metric.Status = status;
         metric.FailureStage = stage;
         metric.FailureCode = code;
         _context.AnalysisExecutionMetrics.Add(metric);
+        if (historyId is { } id)
+        {
+            // A failed re-run is still a version: the owner sees that the question no longer answers under current permissions.
+            var userId = _tenantContext.Principal.UserId!.Value;
+            var entry = await _context.AnalysisHistories.SingleOrDefaultAsync(h => h.HistoryId == id && h.OwnerUserId == userId && !h.IsDeleted, cancellationToken);
+            if (entry is not null)
+            {
+                entry.CurrentVersionNumber += 1;
+                entry.UpdatedAt = _clock.UtcNow;
+                entry.Status = AnalysisHistoryStatus.Failed;
+                _context.AnalysisHistoryVersions.Add(new AnalysisHistoryVersion { VersionId = Ids.New(), HistoryId = entry.HistoryId, OrganizationId = entry.OrganizationId, VersionNumber = entry.CurrentVersionNumber, RunByUserId = userId, CreatedAt = _clock.UtcNow, CompletedAt = _clock.UtcNow, Status = AnalysisHistoryStatus.Failed, FailureStage = stage, FailureCode = code, MetricId = metric.MetricId, ModelName = metric.Model, InputTokens = metric.PlanInputTokens, OutputTokens = metric.PlanOutputTokens, EstimatedCost = metric.EstimatedCost, DurationMs = total.Elapsed.TotalMilliseconds });
+            }
+        }
+
         _usage.Append(UsageEventTypes.AnalysisFailed, "Application", metric.ApplicationId.ToString(), succeeded: false, metadata: new { metric.MetricId, stage, code, totalMs = total.Elapsed.TotalMilliseconds });
         await _context.SaveChangesAsync(cancellationToken);
     }

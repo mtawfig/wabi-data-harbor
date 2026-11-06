@@ -123,7 +123,32 @@ public sealed class QueryPlanner : IQueryPlanner
 
         await _usage.AppendAndSaveAsync(UsageEventTypes.AiPlanGenerated, "Application", request.ApplicationId.ToString(), quantity: usage.InputTokens + usage.OutputTokens,
             metadata: new { usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens, usage.CachedInputTokens, usage.EstimatedCost, usage.DurationMs, queries = plan.Queries.Count, objects = authorizedPlans.Sum(a => a.Objects.Count), language }, cancellationToken: cancellationToken);
-        return new PlanResponse(plan, authorizedPlans, usage);
+        return new PlanResponse(plan, authorizedPlans, usage, HighestClassification(plan, authorizedPlans, permissions));
+    }
+
+    /// <summary>The highest classification among the permitted columns the queries reference; stored on the history entry (specification §23).</summary>
+    internal static Core.Entities.Metadata.DataClassification HighestClassification(AnalysisPlan plan, IReadOnlyList<AuthorizedPlan> authorized, EffectivePermissions permissions)
+    {
+        var highest = Core.Entities.Metadata.DataClassification.Internal;
+        for (var i = 0; i < plan.Queries.Count && i < authorized.Count; i++)
+        {
+            var objects = authorized[i].Objects.ToDictionary(o => o.Alias, o => o.ObjectId, StringComparer.OrdinalIgnoreCase);
+            foreach (var reference in QueryPlanValidator.ReferencedColumns(plan.Queries[i]))
+            {
+                if (!objects.TryGetValue(reference.Alias, out var objectId))
+                {
+                    continue;
+                }
+
+                var column = permissions.Objects.FirstOrDefault(o => o.ObjectId == objectId)?.Columns.FirstOrDefault(c => string.Equals(c.ColumnName, reference.Column, StringComparison.OrdinalIgnoreCase));
+                if (column is not null && column.Classification > highest)
+                {
+                    highest = column.Classification;
+                }
+            }
+        }
+
+        return highest;
     }
 
     /// <summary>

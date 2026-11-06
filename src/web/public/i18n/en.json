@@ -22,7 +22,9 @@
     "platform": "Platform",
     "apiOffline": "The API is not reachable right now.",
     "requiredField": "This field is required.",
-    "invalidEmail": "Enter a valid email address."
+    "invalidEmail": "Enter a valid email address.",
+    "add": "Add",
+    "delete": "Delete"
   },
   "landing": {
     "nav": {
@@ -291,7 +293,9 @@
       "copy": "Copy email",
       "copied": "Copied",
       "subjectLabel": "Subject"
-    }
+    },
+    "savedToHistory": "Saved to My History.",
+    "openInHistory": "Open"
   },
   "platform": {
     "overview": {
@@ -639,7 +643,12 @@
       "query_failed": "The query failed at the source.",
       "connection_not_configured": "The application has no connection configured.",
       "logo_type_invalid": "The logo must be a PNG, JPEG or SVG image.",
-      "logo_too_large": "The logo must be 1 MB or smaller."
+      "logo_too_large": "The logo must be 1 MB or smaller.",
+      "history_not_found": "This analysis does not exist or is not yours.",
+      "history_title_required": "A title is required.",
+      "collection_not_found": "The collection does not exist or is not yours.",
+      "collection_name_required": "A collection name is required.",
+      "collection_name_exists": "You already have a collection with that name."
     },
     "applications": {
       "title": "Applications",
@@ -1374,5 +1383,58 @@
     "ownProviders": "Own providers",
     "noneAllowed": "The platform does not allow organization-specific providers at the moment.",
     "selectionSaved": "Provider selection saved."
+  },
+  "history": {
+    "title": "My History",
+    "subtitle": "Every analysis you ran, with its versions and stored results. Reopening never re-queries your data.",
+    "favoritesTitle": "Favorites",
+    "favoritesSubtitle": "The analyses you starred.",
+    "search": "Search title or prompt",
+    "allApplications": "All applications",
+    "type": "Type",
+    "allTypes": "All types",
+    "types": {
+      "Answer": "Answer",
+      "Dashboard": "Dashboard",
+      "Report": "Report"
+    },
+    "from": "From",
+    "to": "To",
+    "showArchived": "Show archived",
+    "columns": {
+      "title": "Analysis",
+      "version": "Version · cost",
+      "updated": "Last run"
+    },
+    "favorite": "Favorite",
+    "open": "Open",
+    "addToCollection": "Add to collection",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "archived": "Archived",
+    "statusFailed": "Last run failed",
+    "empty": "No analyses yet. Ask a question and it will be saved here.",
+    "emptyFavorites": "No favorites yet. Star an analysis in My History.",
+    "confirmDelete": "Delete \"{{title}}\"? It will disappear from your history.",
+    "deleted": "Analysis deleted.",
+    "addedToCollection": "Added to {{name}}.",
+    "collections": "Collections",
+    "collectionsHint": "Group analyses by topic. A collection is yours only.",
+    "allAnalyses": "All analyses",
+    "newCollection": "New collection",
+    "confirmDeleteCollection": "Delete the collection \"{{name}}\"? The analyses stay in your history.",
+    "noCollections": "No collections yet",
+    "notFound": "This analysis does not exist or is not yours.",
+    "rename": "Rename",
+    "versionsCount": "{{count}} versions",
+    "prompt": "Question",
+    "storedNote": "Stored result. Use Re-run to query the source again under your current permissions; the outcome becomes a new version.",
+    "rerun": "Re-run",
+    "rerunning": "Running the question again on your data under your current permissions…",
+    "rerunDone": "Saved as version {{version}}.",
+    "versions": "Versions",
+    "versionsHint": "Older versions are never overwritten.",
+    "versionMeta": "{{panels}} panels · {{rows}} rows · ${{cost}}",
+    "versionFailed": "Version {{version}} failed"
   }
 }

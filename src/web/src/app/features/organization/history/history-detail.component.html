@@ -1,0 +1,79 @@
+<section class="wi-page detail">
+  <header class="wi-page__header">
+    <div class="detail__heading">
+      <p class="wi-eyebrow"><a routerLink="/app/history" class="detail__back"><mat-icon>arrow_back</mat-icon>{{ 'history.title' | transloco }}</a></p>
+      @if (detail(); as d) {
+        @if (editingTitle()) {
+          <div class="detail__rename">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="detail__rename-field"><input matInput [ngModel]="titleDraft()" (ngModelChange)="titleDraft.set($event)" (keyup.enter)="saveTitle()" data-testid="history-title-input" /></mat-form-field>
+            <button mat-flat-button type="button" (click)="saveTitle()">{{ 'common.save' | transloco }}</button>
+            <button mat-button type="button" (click)="editingTitle.set(false)">{{ 'common.cancel' | transloco }}</button>
+          </div>
+        } @else {
+          <h1 data-testid="history-title">{{ d.summary.title }} <button mat-icon-button type="button" (click)="startRename()" [attr.aria-label]="'history.rename' | transloco"><mat-icon>edit</mat-icon></button></h1>
+        }
+        <p class="wi-muted detail__meta">
+          <span class="chip">{{ 'history.types.' + d.summary.analysisType | transloco }}</span>
+          <span>{{ language.current() === 'ar' ? d.summary.applicationNameAr : d.summary.applicationName }}</span> ·
+          <span>{{ 'history.versionsCount' | transloco: { count: d.versions.length } }}</span> ·
+          <span>{{ d.summary.createdAt | date: 'medium' }}</span>
+          @if (d.summary.isArchived) { · <span class="chip chip--muted">{{ 'history.archived' | transloco }}</span> }
+        </p>
+      }
+    </div>
+    @if (detail(); as d) {
+      <div class="detail__actions">
+        <button mat-icon-button type="button" (click)="toggleFavorite()" [attr.aria-label]="'history.favorite' | transloco" data-testid="history-favorite"><mat-icon [class.on]="d.summary.isFavorite" class="star">{{ d.summary.isFavorite ? 'star' : 'star_border' }}</mat-icon></button>
+        <button mat-stroked-button type="button" [matMenuTriggerFor]="collectionsMenu"><mat-icon>folder_special</mat-icon>{{ 'history.collections' | transloco }}</button>
+        <mat-menu #collectionsMenu="matMenu">
+          @for (c of collections(); track c.collectionId) { <button mat-menu-item (click)="toggleCollection(c)"><mat-icon>{{ memberOf().has(c.collectionId) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>{{ c.name }}</button> } @empty { <button mat-menu-item disabled>{{ 'history.noCollections' | transloco }}</button> }
+        </mat-menu>
+        <button mat-stroked-button type="button" (click)="toggleArchive()"><mat-icon>{{ d.summary.isArchived ? 'unarchive' : 'archive' }}</mat-icon>{{ (d.summary.isArchived ? 'history.unarchive' : 'history.archive') | transloco }}</button>
+        <button mat-stroked-button type="button" (click)="remove()" class="danger" data-testid="history-delete"><mat-icon>delete</mat-icon>{{ 'common.delete' | transloco }}</button>
+        <button mat-flat-button type="button" (click)="rerun()" [disabled]="rerunning()" data-testid="history-rerun"><mat-icon>replay</mat-icon>{{ 'history.rerun' | transloco }}</button>
+      </div>
+    }
+  </header>
+
+  @if (loading() || rerunning()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (rerunning()) { <p class="wi-muted small">{{ 'history.rerunning' | transloco }}</p> }
+  @if (error(); as e) { <div class="wi-card error" role="alert" data-testid="history-error"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+  @if (rejection(); as r) {
+    <div class="wi-card error" role="alert" data-testid="history-rejected"><mat-icon>block</mat-icon><div><strong>{{ 'ask.rejected.' + r.stage | transloco }}</strong><ul>@for (c of r.codes; track c) { <li>{{ 'ask.codes.' + c | transloco }}</li> }</ul></div></div>
+  }
+
+  @if (detail(); as d) {
+    <div class="detail__layout">
+      <div class="detail__main">
+        <div class="wi-card detail__prompt">
+          <p class="wi-eyebrow">{{ 'history.prompt' | transloco }}</p>
+          <p class="detail__prompt-text" data-testid="history-prompt">{{ d.originalPrompt }}</p>
+          <p class="wi-muted small"><mat-icon>lock</mat-icon>{{ 'history.storedNote' | transloco }}</p>
+        </div>
+        @if (loadingAnswer()) { <mat-progress-bar mode="indeterminate" /> }
+        @if (answer(); as a) {
+          <app-analysis-answer [answer]="a" [reportUrl]="reportUrl()" />
+        } @else if (version(); as v) {
+          @if (v.status === 'Failed') {
+            <div class="wi-card error"><mat-icon>block</mat-icon><div><strong>{{ 'history.versionFailed' | transloco: { version: v.versionNumber } }}</strong><br />{{ (v.failureCode ? 'ask.codes.' + v.failureCode : 'history.statusFailed') | transloco }}</div></div>
+          }
+        }
+      </div>
+      <aside class="wi-card detail__versions" data-testid="history-versions">
+        <h3>{{ 'history.versions' | transloco }}</h3>
+        <p class="wi-muted small">{{ 'history.versionsHint' | transloco }}</p>
+        <ul>
+          @for (v of d.versions; track v.versionId) {
+            <li [class.active]="v.versionNumber === versionNumber()" [class.failed]="v.status === 'Failed'">
+              <button type="button" (click)="selectVersion(v.versionNumber)" [attr.data-testid]="'history-version-' + v.versionNumber">
+                <strong>v{{ v.versionNumber }}</strong> · <span class="wi-muted">{{ v.createdAt | date: 'medium' }}</span><br />
+                @if (v.status === 'Failed') { <span class="chip chip--failed">{{ 'history.statusFailed' | transloco }}</span> } @else { <span class="wi-muted small">{{ 'history.versionMeta' | transloco: { panels: v.panelCount, rows: v.rowCount, cost: (v.estimatedCost | number: '1.2-2') } }}</span> }
+                @if (v.hasReport) { <mat-icon class="pdf" [title]="'ask.report.title' | transloco">picture_as_pdf</mat-icon> }
+              </button>
+            </li>
+          }
+        </ul>
+      </aside>
+    </div>
+  }
+</section>

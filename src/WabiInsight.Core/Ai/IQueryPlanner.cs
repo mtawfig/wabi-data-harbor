@@ -5,7 +5,7 @@ public sealed record PlanRequest(Guid ApplicationId, string Question, string Lan
 public sealed record PlanUsage(string Provider, string Model, long InputTokens, long OutputTokens, long CachedInputTokens, decimal EstimatedCost, double DurationMs);
 
 /// <summary>Validated and authorized answer plan ready for the compiler: one authorized plan per query, in order. Nothing here has touched the business database.</summary>
-public sealed record PlanResponse(AnalysisPlan Plan, IReadOnlyList<AuthorizedPlan> Authorized, PlanUsage Usage);
+public sealed record PlanResponse(AnalysisPlan Plan, IReadOnlyList<AuthorizedPlan> Authorized, PlanUsage Usage, Entities.Metadata.DataClassification Classification = Entities.Metadata.DataClassification.Internal);
 
 /// <summary>Thrown when the model's plan is rejected: shape errors or authorization errors, with stable codes for the UI.</summary>
 public sealed class PlanRejectedException : Exception

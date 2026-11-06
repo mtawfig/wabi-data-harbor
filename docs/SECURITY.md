@@ -84,6 +84,9 @@ The only SQL that reaches a business source is produced by the dialect compilers
 ## Reports, email drafts and logos (P8.3)
 Report text and email drafts are model output over the verified rows, sanitized (control characters, delimiter look-alikes, length caps) before rendering or display; the PDF's charts, tables and KPI boxes are drawn from the panel data in code, so no model text can change a figure. The PDF is stored outside the web root through `IArtifactStorage` and served by `GET /api/ai/analyses/{id}/report` only to the user who ran the analysis (tenant filter plus explicit `UserId` check); a report is never attached to an email by the platform — the user downloads it. Organization logos are accepted from Organization Administrators only, limited to PNG/JPEG/SVG and 1 MB, checked against magic bytes, and SVGs are refused when they contain scripts, event handlers or foreign objects; the logo endpoint is served with `nosniff` and a sandboxing Content-Security-Policy.
 
+## History (P9.1)
+History entries, versions, artifacts and collections are tenant-owned; every service method filters by `OwnerUserId` on top of the tenant filter, so another user of the same organization sees 404 for an entry that is not theirs (sharing arrives in P10.1 as an explicit grant). Reopening a version streams the stored answer from artifact storage and never touches the business source; a re-run goes through the whole secure workflow again under the caller's current permissions, so a revoked column makes the re-run fail and the failure is recorded as a version instead of exposing the old rows as if fresh. Soft deletes keep the rows for audit and emit `History.Deleted`.
+
 ## Audit
 `AuditLogs` is append-only (application guard plus `scripts/sql/create-runtime-login.sql`). Records carry actor type/id, event code, entity, JSON details without secrets, correlation id and client IP.
 
