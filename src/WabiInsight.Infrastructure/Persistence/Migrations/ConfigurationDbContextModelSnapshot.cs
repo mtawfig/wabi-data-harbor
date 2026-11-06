@@ -194,6 +194,23 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ProviderId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ReportArtifactKey")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<string>("ReportFileName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long>("ReportInputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ReportOutputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("ReportSizeBytes")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("RowCount")
                         .HasColumnType("int");
 
@@ -1581,6 +1598,14 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("LogoArtifactKey")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<string>("LogoContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("OrganizationCode")
                         .IsRequired()

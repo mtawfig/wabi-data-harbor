@@ -12,11 +12,24 @@
 .ask__narrative { font-size: 16px; line-height: 1.6; margin: 0 0 8px; }
 .ask__highlights { list-style: none; margin: 0 0 12px; padding: 0; li { display: flex; gap: 8px; align-items: center; font-size: 14px; mat-icon { color: #166534; font-size: 18px; width: 18px; height: 18px; } } }
 .ask__truncated { display: flex; gap: 6px; align-items: center; color: #92400e; background: #fef3c7; padding: 6px 10px; border-radius: var(--wi-radius-sm); font-size: 13px; mat-icon { font-size: 18px; width: 18px; height: 18px; } }
-.ask__kpi { display: flex; flex-direction: column; padding: 12px 0; &-value { font-size: 44px; font-weight: 700; color: var(--wi-ocean); line-height: 1.1; } }
-.ask__chart { height: 320px; width: 100%; margin: 8px 0 16px; }
+.ask__panels-note { display: flex; gap: 6px; align-items: center; margin: 0 0 12px; mat-icon { color: #166534; font-size: 18px; width: 18px; height: 18px; } }
+.ask__kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 4px 0 16px; }
+.ask__kpi { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border: 1px solid var(--wi-border); border-radius: var(--wi-radius-sm); background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%); &-value { font-size: 34px; font-weight: 700; color: var(--wi-ocean); line-height: 1.1; font-variant-numeric: tabular-nums; } &-label { font-size: 13px; color: var(--wi-muted); } }
+.ask__charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0 0 16px; &--single { grid-template-columns: minmax(0, 1fr); } }
+.ask__chart-card { border: 1px solid var(--wi-border); border-radius: var(--wi-radius-sm); padding: 12px 14px 4px; min-width: 0; h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; } }
+.ask__chart { height: 300px; width: 100%; margin: 0; }
+.ask__table-card { margin: 0 0 16px; h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; display: flex; gap: 8px; align-items: baseline; } }
 .ask__table-wrap { overflow: auto; max-height: 480px; border: 1px solid var(--wi-border); border-radius: var(--wi-radius-sm); }
 .ask__table { width: 100%; border-collapse: collapse; font-size: 14px; th { position: sticky; top: 0; background: #f8fafc; text-align: start; font-size: 12px; color: var(--wi-muted); padding: 8px 10px; border-bottom: 1px solid var(--wi-border); } td { padding: 6px 10px; border-bottom: 1px solid var(--wi-border); white-space: nowrap; } .num { text-align: end; font-variant-numeric: tabular-nums; } }
 .ask__how { margin-top: 16px; box-shadow: none; border: 1px solid var(--wi-border); h4 { margin: 12px 0 6px; font-size: 13px; } }
 .ask__sql { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: var(--wi-radius-sm); font-size: 12px; white-space: pre-wrap; direction: ltr; text-align: left; margin: 0 0 8px; }
 .small { font-size: 12px; }
+@media (max-width: 900px) { .ask__charts { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) { .ask__controls { grid-template-columns: 1fr; } }
+.ask__report, .ask__email { border-inline-start: 4px solid var(--wi-ocean); h2 { margin: 4px 0 4px; font-size: 20px; } }
+.ask__report-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.ask__report-meta { display: flex; gap: 6px; align-items: center; margin: 6px 0 8px; mat-icon { font-size: 18px; width: 18px; height: 18px; } }
+.ask__report-toc { margin: 0; padding-inline-start: 22px; columns: 2; column-gap: 24px; font-size: 14px; li { break-inside: avoid; padding: 2px 0; } }
+.ask__email-body { white-space: pre-wrap; font-family: inherit; font-size: 14.5px; line-height: 1.6; background: #f8fafc; border: 1px solid var(--wi-border); border-radius: var(--wi-radius-sm); padding: 14px 16px; margin: 8px 0; }
+.ask__attachment { display: inline-flex; gap: 6px; align-items: center; padding: 6px 12px; border: 1px solid var(--wi-border); border-radius: 999px; font-size: 13px; text-decoration: none; color: var(--wi-ocean); background: #fff; mat-icon { font-size: 18px; width: 18px; height: 18px; } }
+@media (max-width: 760px) { .ask__report-toc { columns: 1; } }

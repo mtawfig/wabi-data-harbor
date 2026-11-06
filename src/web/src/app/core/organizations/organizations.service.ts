@@ -61,4 +61,19 @@ export class OrganizationProfileService {
   update(request: UpdateOrganizationProfileRequest): Observable<OrganizationProfile> {
     return this.http.put<OrganizationProfile>('/api/organization', request);
   }
+
+  /** The logo stamped on report pages; the URL carries a version so a new upload is not served from cache. */
+  logoUrl(version: number): string {
+    return `/api/organization/logo?v=${version}`;
+  }
+
+  uploadLogo(file: File): Observable<void> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.put<void>('/api/organization/logo', form);
+  }
+
+  removeLogo(): Observable<void> {
+    return this.http.delete<void>('/api/organization/logo');
+  }
 }

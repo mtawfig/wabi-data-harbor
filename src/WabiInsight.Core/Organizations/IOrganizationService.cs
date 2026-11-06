@@ -91,7 +91,12 @@ public sealed record OrganizationProfile(
     string DefaultLanguage,
     OrganizationStatus Status,
     DateTimeOffset CreatedAt,
-    bool RequireSecondAdminApprovalForSupportAccess = false);
+    bool RequireSecondAdminApprovalForSupportAccess = false,
+    bool HasLogo = false);
+
+public sealed record LogoUpload(string FileName, string ContentType, long Length, Stream Content);
+
+public sealed record LogoDownload(Stream Content, string ContentType);
 
 public interface IOrganizationService
 {
@@ -111,6 +116,14 @@ public interface IOrganizationService
 
     /// <summary>The signed-in organization user's own organization (tenant context only).</summary>
     Task<OrganizationProfile> GetCurrentAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Organization Administrators: replaces the logo used on report pages (PNG, JPEG or SVG, at most 1 MB).</summary>
+    Task SetLogoAsync(LogoUpload upload, CancellationToken cancellationToken = default);
+
+    Task RemoveLogoAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>The current organization's logo, or null when none is uploaded.</summary>
+    Task<LogoDownload?> OpenLogoAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Organization administrators only; updates the profile of the signed-in user's organization.</summary>
     Task<OrganizationOperationResult> UpdateCurrentAsync(UpdateOrganizationProfileCommand command, CancellationToken cancellationToken = default);

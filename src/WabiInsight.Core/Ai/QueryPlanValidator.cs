@@ -20,6 +20,45 @@ public sealed record PlanLimits(int MaxRows = 1000, int DefaultRows = 100, int M
 /// </summary>
 public static partial class QueryPlanValidator
 {
+    public const int MaxTitleLength = 120;
+
+    /// <summary>Validates the whole answer: one to <see cref="AnalysisPlanSchema.MaxQueries"/> queries, each validated on its own; details name the query.</summary>
+    public static IReadOnlyList<PlanError> ValidateAnalysis(AnalysisPlan plan, PlanLimits? limits = null)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var errors = new List<PlanError>();
+        if (plan.Queries.Count == 0)
+        {
+            errors.Add(new PlanError("plan_queries_invalid", "0"));
+            return errors;
+        }
+
+        if (plan.Queries.Count > AnalysisPlanSchema.MaxQueries)
+        {
+            errors.Add(new PlanError("plan_too_many_queries", plan.Queries.Count.ToString(CultureInfo.InvariantCulture)));
+            return errors;
+        }
+
+        for (var i = 0; i < plan.Queries.Count; i++)
+        {
+            var query = plan.Queries[i];
+            if (query is null)
+            {
+                errors.Add(new PlanError("plan_queries_invalid", $"query {i + 1}"));
+                continue;
+            }
+
+            if (query.Title.Length > MaxTitleLength)
+            {
+                errors.Add(new PlanError("plan_query_title_invalid", $"query {i + 1}"));
+            }
+
+            errors.AddRange(Validate(query, limits).Select(e => new PlanError(e.Code, $"query {i + 1}: {e.Detail}")));
+        }
+
+        return errors;
+    }
+
     public static IReadOnlyList<PlanError> Validate(QueryPlan plan, PlanLimits? limits = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -323,6 +362,6 @@ public static partial class QueryPlanValidator
     [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_$#]{0,127}$")]
     public static partial Regex Identifier();
 
-    [GeneratedRegex("^[a-z][a-z0-9_]{0,23}$")]
+    [GeneratedRegex("^[A-Za-z][A-Za-z0-9_]{0,39}$")]
     public static partial Regex Alias();
 }

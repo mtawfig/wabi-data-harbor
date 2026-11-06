@@ -54,5 +54,16 @@ public class AnalysisExecutionMetric : ITenantOwned
 
     public string Language { get; set; } = "en";
 
+    /// <summary>Storage key of the rendered PDF when the answer included a report; downloadable by the user who ran the analysis.</summary>
+    public string? ReportArtifactKey { get; set; }
+
+    public string? ReportFileName { get; set; }
+
+    public long? ReportSizeBytes { get; set; }
+
+    public long ReportInputTokens { get; set; }
+
+    public long ReportOutputTokens { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 }

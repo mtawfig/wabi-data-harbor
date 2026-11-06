@@ -132,6 +132,20 @@ public sealed class AiController : ControllerBase
         }
     }
 
+    /// <summary>The PDF report of an analysis the signed-in user ran; 404 for anyone else or when the answer had no report.</summary>
+    [HttpGet("analyses/{analysisId:guid}/report")]
+    public async Task<IActionResult> Report(Guid analysisId, CancellationToken cancellationToken)
+    {
+        var download = await _analysis.OpenReportAsync(analysisId, cancellationToken);
+        if (download is null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        return File(download.Content, download.ContentType, download.FileName);
+    }
+
     /// <summary>What the signed-in user may ask about in an application: the exact snapshot the model receives.</summary>
     [HttpGet("applications/{applicationId:guid}/snapshot")]
     public async Task<ActionResult<MetadataSnapshot>> Snapshot(Guid applicationId, CancellationToken cancellationToken) => Ok(await _planner.GetSnapshotAsync(applicationId, cancellationToken));

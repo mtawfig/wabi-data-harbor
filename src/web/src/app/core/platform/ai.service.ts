@@ -75,4 +75,9 @@ export class AiService {
   ask(applicationId: string, question: string, language: 'en' | 'ar', interpret = true): Observable<AskResponse> {
     return this.http.post<AskResponse>('/api/ai/ask', { applicationId, question, language, interpret });
   }
+
+  /** Download URL of the PDF report of an analysis the signed-in user ran (served by the API with the session cookie). */
+  reportUrl(analysisId: string): string {
+    return `/api/ai/analyses/${analysisId}/report`;
+  }
 }

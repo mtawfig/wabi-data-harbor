@@ -15,12 +15,17 @@ public sealed record AskableApplication(Guid ApplicationId, string ApplicationCo
 
 public sealed record AskRequest(Guid ApplicationId, string Question, string Language, bool Interpret = true);
 
+/// <summary>One executed query of the answer: a KPI, a chart or a table, with its own plan, redacted SQL and verified rows.</summary>
+public sealed record AnalysisPanel(string Title, QueryPlan Plan, string CompiledSqlPreview, AnalysisResult Result);
+
 public sealed record AskResponse(
     Guid AnalysisId,
-    QueryPlan Plan,
-    string CompiledSqlPreview,
-    AnalysisResult Result,
+    string Objective,
+    IReadOnlyList<string> Assumptions,
+    IReadOnlyList<AnalysisPanel> Panels,
     Interpretation? Interpretation,
+    GeneratedReport? Report,
+    EmailDraft? EmailDraft,
     PlanUsage PlanUsage,
     decimal TotalEstimatedCost,
     double TotalDurationMs);
@@ -31,4 +36,7 @@ public interface IAnalysisService
     Task<IReadOnlyList<AskableApplication>> ListApplicationsAsync(CancellationToken cancellationToken = default);
 
     Task<AskResponse> AskAsync(AskRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>The PDF of an analysis the signed-in user ran in their organization; null when there is none or it is not theirs.</summary>
+    Task<ReportDownload?> OpenReportAsync(Guid analysisId, CancellationToken cancellationToken = default);
 }

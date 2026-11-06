@@ -98,3 +98,15 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 
 ## Screenshots (P8.2)
 `docs/screenshots/p8-2-*.png`: empty Ask page, a live answer from Claude Opus 5.5 over the demo ERP (chart, rows, narrative), the *How this was computed* panel, an Arabic answer, and the outcome of an injection-style question.
+
+## Dashboard answers (P8.3)
+- An answer is one or more panels. The answer card keeps the narrative and highlight list on top, then a note with the number of read-only queries that ran, then: a row of KPI cards (`auto-fit`, minimum 180 px, 34 px ocean value, muted label = panel title), a two-column chart grid (one column under 900 px; a single chart takes the full width; a second category column becomes grouped bars or several lines with a bottom legend; month-truncated dates are shown as `YYYY-MM`), and the detail tables with the panel title and row count (column aliases rendered as words). A single-panel answer keeps the P8.2 layout (chart plus rows).
+- *How this was computed* lists the assumptions once and one redacted SQL block per query, titled with the panel name.
+
+## Report and email cards (P8.3)
+- When the answer includes a study, a *Report (PDF)* card precedes the answer: eyebrow, report title and subtitle, a filled *Download PDF* button, file name · size · section count, and a two-column table of contents (summary, sections, recommendations). An *Email draft* card follows: subject as heading, a *Copy email* outline button (turns into *Copied* for a moment), the body in a soft grey block with preserved paragraphs, and an attachment pill with the PDF file name. Both cards carry a 4 px ocean start border.
+- The PDF itself (QuestPDF, A4): logo top-left of every page (or the organization name when none is uploaded), report title and "Confidential" on the right, title block, light-blue executive summary box, key findings, numbered sections with KPI boxes, SVG charts (brand palette) and zebra tables, numbered recommendations, methodology appendix, and a footer with generation time and "Page x / y". Arabic reports flip to right-to-left with IBM Plex Sans Arabic.
+- Organization Settings gains a *Report logo* card: preview, *Upload logo* (PNG, JPEG, SVG ≤ 1 MB) and *Remove*.
+
+## Screenshots (P8.3)
+`docs/screenshots/p8-3-*.png`: the dashboard prompt typed on the Ask page, the live dashboard answer from Claude Opus 5.5 over the Sharjah Airport 2025 demo source (KPI cards, four charts, two tables, narrative), the full page, and the *How this was computed* panel with the ten queries. `docs/screenshots/p8-4-*.png`: the study prompt, the report and email draft cards, and the full page; `docs/demo/p8-4-ask-study-report-email.gif` records the prompt being typed, the wait, and the rendered email draft and report card.

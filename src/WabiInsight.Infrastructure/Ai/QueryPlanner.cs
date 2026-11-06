@@ -59,7 +59,7 @@ public sealed class QueryPlanner : IQueryPlanner
         AiCompletion completion;
         try
         {
-            completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(PromptBuilder.SystemPrompt, userContent, QueryPlanSchema.Json, QueryPlanSchema.Name, resolved.Descriptor.MaxOutputTokens, resolved.Descriptor.Effort), cancellationToken);
+            completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(PromptBuilder.SystemPrompt, userContent, AnalysisPlanSchema.Json, AnalysisPlanSchema.Name, Math.Max(resolved.Descriptor.MaxOutputTokens, AnalysisPlanSchema.MinPlanOutputTokens), resolved.Descriptor.Effort), cancellationToken);
         }
         catch (AiProviderException ex)
         {
@@ -69,7 +69,14 @@ public sealed class QueryPlanner : IQueryPlanner
 
         var usage = new PlanUsage(resolved.Descriptor.ProviderType.ToString(), completion.Model, completion.Usage.InputTokens, completion.Usage.OutputTokens, completion.Usage.CachedInputTokens, resolved.Descriptor.EstimateCost(completion.Usage), watch.Elapsed.TotalMilliseconds);
 
-        QueryPlan plan;
+        if (string.Equals(completion.StopReason, "max_tokens", StringComparison.OrdinalIgnoreCase) || string.Equals(completion.StopReason, "length", StringComparison.OrdinalIgnoreCase) || string.Equals(completion.StopReason, "MAX_TOKENS", StringComparison.Ordinal))
+        {
+            // The plan was cut off by the output budget: say so instead of reporting broken JSON.
+            await RejectAsync(request, usage, "format", [new PlanError("plan_output_truncated", completion.StopReason!)], cancellationToken);
+            throw new PlanRejectedException("format", [new PlanError("plan_output_truncated", "The plan did not fit in the output budget; ask for fewer panels or raise the provider's max output tokens.")]);
+        }
+
+        AnalysisPlan plan;
         try
         {
             plan = Parse(completion.Text);
@@ -80,33 +87,50 @@ public sealed class QueryPlanner : IQueryPlanner
             throw new PlanRejectedException("format", [new PlanError("plan_json_invalid", "The model did not return a valid plan.")]);
         }
 
-        var shapeErrors = QueryPlanValidator.Validate(plan);
+        var shapeErrors = QueryPlanValidator.ValidateAnalysis(plan);
         if (shapeErrors.Count > 0)
         {
             await RejectAsync(request, usage, "shape", shapeErrors, cancellationToken);
             throw new PlanRejectedException("shape", shapeErrors);
         }
 
-        var (authorized, authErrors) = QueryPlanAuthorizer.Authorize(plan, request.ApplicationId, permissions, mappings);
-        if (authorized is null)
+        // Every query is authorized on its own; one unauthorized reference rejects the whole answer.
+        var authorizedPlans = new List<AuthorizedPlan>(plan.Queries.Count);
+        var authErrors = new List<PlanError>();
+        for (var i = 0; i < plan.Queries.Count; i++)
+        {
+            var (authorized, errors) = QueryPlanAuthorizer.Authorize(plan.Queries[i], request.ApplicationId, permissions, mappings);
+            authErrors.AddRange(errors.Select(e => new PlanError(e.Code, $"query {i + 1}: {e.Detail}")));
+            if (authorized is null)
+            {
+                continue;
+            }
+
+            if (snapshot.DatabaseType == "PlatformInsights")
+            {
+                // Mandatory organization scope on every insights view (specification §12.1), bound from the principal.
+                authorized = authorized with { Objects = authorized.Objects.Select(o => o with { RowPredicates = [new RowPredicate(InsightsSqlBuilder.OrganizationColumn, InsightsSqlBuilder.TenantParameter, organizationId.ToString())] }).ToList() };
+            }
+
+            authorizedPlans.Add(authorized);
+        }
+
+        if (authorizedPlans.Count != plan.Queries.Count)
         {
             await RejectAsync(request, usage, "authorization", authErrors, cancellationToken);
             throw new PlanRejectedException("authorization", authErrors);
         }
 
-        if (snapshot.DatabaseType == "PlatformInsights")
-        {
-            // Mandatory organization scope on every insights view (specification §12.1), bound from the principal.
-            authorized = authorized with { Objects = authorized.Objects.Select(o => o with { RowPredicates = [new RowPredicate(InsightsSqlBuilder.OrganizationColumn, InsightsSqlBuilder.TenantParameter, organizationId.ToString())] }).ToList() };
-        }
-
         await _usage.AppendAndSaveAsync(UsageEventTypes.AiPlanGenerated, "Application", request.ApplicationId.ToString(), quantity: usage.InputTokens + usage.OutputTokens,
-            metadata: new { usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens, usage.CachedInputTokens, usage.EstimatedCost, usage.DurationMs, objects = authorized.Objects.Count, language }, cancellationToken: cancellationToken);
-        return new PlanResponse(plan, authorized, usage);
+            metadata: new { usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens, usage.CachedInputTokens, usage.EstimatedCost, usage.DurationMs, queries = plan.Queries.Count, objects = authorizedPlans.Sum(a => a.Objects.Count), language }, cancellationToken: cancellationToken);
+        return new PlanResponse(plan, authorizedPlans, usage);
     }
 
-    /// <summary>Accepts the raw JSON object, or JSON wrapped in a code fence (some OpenAI-compatible servers do that).</summary>
-    internal static QueryPlan Parse(string text)
+    /// <summary>
+    /// Accepts the raw JSON object, or JSON wrapped in a code fence (some OpenAI-compatible servers do that).
+    /// A bare single query plan (an object with "source" and no "queries") is accepted as a one-query answer.
+    /// </summary>
+    internal static AnalysisPlan Parse(string text)
     {
         var trimmed = text.Trim();
         if (trimmed.StartsWith("```", StringComparison.Ordinal))
@@ -123,7 +147,25 @@ public sealed class QueryPlanner : IQueryPlanner
             throw new JsonException("No JSON object in the response.");
         }
 
-        return JsonSerializer.Deserialize<QueryPlan>(trimmed[first..(last + 1)], JsonOptions) ?? throw new JsonException("Empty plan.");
+        var json = trimmed[first..(last + 1)];
+        using var document = JsonDocument.Parse(json, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
+        if (document.RootElement.ValueKind == JsonValueKind.Object && !document.RootElement.TryGetProperty("queries", out _) && document.RootElement.TryGetProperty("source", out _))
+        {
+            var single = JsonSerializer.Deserialize<QueryPlan>(json, JsonOptions) ?? throw new JsonException("Empty plan.");
+            return new AnalysisPlan { Objective = single.Objective, Assumptions = single.Assumptions, Queries = [single] };
+        }
+
+        var plan = JsonSerializer.Deserialize<AnalysisPlan>(json, JsonOptions) ?? throw new JsonException("Empty plan.");
+        foreach (var query in plan.Queries.Where(q => q is not null))
+        {
+            query.Title = PromptBuilder.Sanitize(query.Title, QueryPlanValidator.MaxTitleLength + 1);
+            if (string.IsNullOrEmpty(query.Objective))
+            {
+                query.Objective = query.Title;
+            }
+        }
+
+        return plan;
     }
 
     private async Task RejectAsync(PlanRequest request, PlanUsage usage, string stage, IReadOnlyList<PlanError> errors, CancellationToken cancellationToken)

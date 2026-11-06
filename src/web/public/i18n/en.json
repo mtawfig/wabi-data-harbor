@@ -211,7 +211,7 @@
     "examplesTitle": "Try asking",
     "examples": {
       "e1": "How many active users are registered in my organization?",
-      "e2": "Show a monthly chart of AI usage by department.",
+      "e2": "Build a dashboard of our support tickets: totals, by status, by month and by department.",
       "e3": "How many reports were shared internally last quarter?"
     },
     "engineComing": "The secure AI engine (query plans, authorization and SQL compilation) is delivered in Phase 8. Your question was not sent anywhere.",
@@ -266,7 +266,31 @@
       "plan_filter_value_type_mismatch": "A filter value does not match the column type.",
       "compiled_sql_rejected": "The compiled query failed the safety guard.",
       "plan_rejected": "The plan was rejected.",
-      "row_mapping_type_mismatch": "The row-scope mapping column cannot hold your department, section or employee code. Ask your administrator to map a code column."
+      "row_mapping_type_mismatch": "The row-scope mapping column cannot hold your department, section or employee code. Ask your administrator to map a code column.",
+      "plan_queries_invalid": "The plan contained no query.",
+      "plan_too_many_queries": "The plan asked for more than eight queries.",
+      "plan_query_title_invalid": "A panel title is too long.",
+      "plan_output_truncated": "The answer plan did not fit in the output budget. Ask for fewer panels, or raise the provider's max output tokens."
+    },
+    "kpis": "Headline numbers",
+    "charts": "Charts",
+    "tables": "Details",
+    "rowsOf": "{{count}} rows",
+    "queryOf": "Query — {{title}}",
+    "panelsNote": "{{count}} queries ran read-only on your data; every number below comes from them.",
+    "report": {
+      "title": "Report (PDF)",
+      "download": "Download PDF",
+      "size": "{{kb}} KB",
+      "sections": "{{count}} sections",
+      "summary": "Executive summary and key findings",
+      "recommendations": "Recommendations ({{count}})"
+    },
+    "email": {
+      "title": "Email draft",
+      "copy": "Copy email",
+      "copied": "Copied",
+      "subjectLabel": "Subject"
     }
   },
   "platform": {
@@ -366,7 +390,13 @@
     "settings": {
       "supportAccessTitle": "Support access policy",
       "requireSecondAdmin": "Require a different organization administrator to approve support access requested by an administrator",
-      "requireSecondAdminHint": "By default an administrator may approve support access on their own ticket. Turn this on to always require a second administrator."
+      "requireSecondAdminHint": "By default an administrator may approve support access on their own ticket. Turn this on to always require a second administrator.",
+      "logoTitle": "Report logo",
+      "logoHint": "Shown at the top-left of every page of generated PDF reports. PNG, JPEG or SVG, up to 1 MB.",
+      "logoNone": "No logo uploaded",
+      "logoUpload": "Upload logo",
+      "logoRemove": "Remove",
+      "logoSaved": "Logo saved."
     }
   },
   "admin": {
@@ -607,7 +637,9 @@
       "source_permission_denied": "The read-only account lacks permission on an object.",
       "source_schema_changed": "The source schema changed; refresh the metadata.",
       "query_failed": "The query failed at the source.",
-      "connection_not_configured": "The application has no connection configured."
+      "connection_not_configured": "The application has no connection configured.",
+      "logo_type_invalid": "The logo must be a PNG, JPEG or SVG image.",
+      "logo_too_large": "The logo must be 1 MB or smaller."
     },
     "applications": {
       "title": "Applications",

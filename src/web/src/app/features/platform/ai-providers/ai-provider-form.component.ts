@@ -67,7 +67,7 @@ export class AiProviderFormComponent {
     inputPricePerMillion: [4],
     outputPricePerMillion: [20],
     cachedInputPricePerMillion: [0.2],
-    maxOutputTokens: [4096, [Validators.min(256), Validators.max(65536)]],
+    maxOutputTokens: [16384, [Validators.min(256), Validators.max(65536)]],
     effort: ['medium' as AiEffort | null],
     isEnabled: [true],
     isApproved: [false],
@@ -80,7 +80,7 @@ export class AiProviderFormComponent {
         this.form.reset({ providerType: p.providerType, name: p.name, model: p.model, endpoint: p.endpoint ?? '', apiKey: '', inputPricePerMillion: p.inputPricePerMillion, outputPricePerMillion: p.outputPricePerMillion, cachedInputPricePerMillion: p.cachedInputPricePerMillion, maxOutputTokens: p.maxOutputTokens, effort: p.effort ?? null, isEnabled: p.isEnabled, isApproved: p.isApproved });
       } else {
         const type = this.types()[0] ?? 'Anthropic';
-        this.form.reset({ providerType: type, name: '', model: type === 'Anthropic' ? 'claude-opus-5-5' : '', endpoint: '', apiKey: '', inputPricePerMillion: type === 'Anthropic' ? 4 : 0, outputPricePerMillion: type === 'Anthropic' ? 20 : 0, cachedInputPricePerMillion: type === 'Anthropic' ? 0.2 : 0, maxOutputTokens: 4096, effort: 'medium', isEnabled: true, isApproved: false });
+        this.form.reset({ providerType: type, name: '', model: type === 'Anthropic' ? 'claude-opus-5-5' : '', endpoint: '', apiKey: '', inputPricePerMillion: type === 'Anthropic' ? 4 : 0, outputPricePerMillion: type === 'Anthropic' ? 20 : 0, cachedInputPricePerMillion: type === 'Anthropic' ? 0.2 : 0, maxOutputTokens: 16384, effort: 'medium', isEnabled: true, isApproved: false });
       }
     });
   }
