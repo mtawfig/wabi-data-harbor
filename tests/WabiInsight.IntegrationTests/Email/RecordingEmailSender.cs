@@ -24,12 +24,14 @@ public sealed class RecordingEmailSender : IEmailSender
         return Task.CompletedTask;
     }
 
-    public async Task<EmailMessage> WaitForAsync(string toEmail, TimeSpan? timeout = null)
+    public Task<EmailMessage> WaitForAsync(string toEmail, TimeSpan? timeout = null) => WaitForAsync(toEmail, _ => true, timeout);
+
+    public async Task<EmailMessage> WaitForAsync(string toEmail, Func<EmailMessage, bool> predicate, TimeSpan? timeout = null)
     {
         var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(10));
         while (DateTime.UtcNow < deadline)
         {
-            var match = _messages.FirstOrDefault(m => string.Equals(m.ToEmail, toEmail, StringComparison.OrdinalIgnoreCase));
+            var match = _messages.FirstOrDefault(m => string.Equals(m.ToEmail, toEmail, StringComparison.OrdinalIgnoreCase) && predicate(m));
             if (match is not null)
             {
                 return match;

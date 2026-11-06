@@ -1,10 +1,5 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard, organizationAdminGuard, organizationUserGuard, platformAdministratorGuard } from './core/auth/auth.guards';
-import { PagePlaceholderComponent } from './shared/ui/page-placeholder.component';
-
-function placeholder(path: string, titleKey: string, phase: string, extra: Partial<Routes[number]> = {}): Routes[number] {
-  return { path, component: PagePlaceholderComponent, data: { titleKey, phase }, ...extra };
-}
 
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./features/public/landing/landing.component').then((m) => m.LandingComponent) },
@@ -25,13 +20,14 @@ export const routes: Routes = [
       { path: 'history/:id', loadComponent: () => import('./features/organization/history/history-detail.component').then((m) => m.HistoryDetailComponent) },
       { path: 'reports', loadComponent: () => import('./features/organization/history/reports-list.component').then((m) => m.ReportsListComponent) },
       { path: 'favorites', loadComponent: () => import('./features/organization/history/history-list.component').then((m) => m.HistoryListComponent), data: { mode: 'favorites' } },
-      placeholder('shared-with-me', 'nav.org.sharedWithMe', '10'),
-      placeholder('shared-by-me', 'nav.org.sharedByMe', '10'),
+      { path: 'shared-with-me', loadComponent: () => import('./features/organization/sharing/shared-with-me.component').then((m) => m.SharedWithMeComponent) },
+      { path: 'shared-with-me/:id', loadComponent: () => import('./features/organization/sharing/shared-analysis.component').then((m) => m.SharedAnalysisComponent) },
+      { path: 'shared-by-me', loadComponent: () => import('./features/organization/sharing/shared-by-me.component').then((m) => m.SharedByMeComponent) },
       { path: 'support', loadComponent: () => import('./features/support/ticket-list.component').then((m) => m.TicketListComponent), data: { area: 'app' } },
       { path: 'support/new', loadComponent: () => import('./features/support/ticket-form.component').then((m) => m.TicketFormComponent) },
       { path: 'support/:id', loadComponent: () => import('./features/support/ticket-detail.component').then((m) => m.TicketDetailComponent), data: { area: 'app' } },
       { path: 'notifications', loadComponent: () => import('./features/support/notification-center.component').then((m) => m.NotificationCenterComponent), data: { area: 'app' } },
-      placeholder('profile', 'nav.org.profile', '2'),
+      { path: 'profile', loadComponent: () => import('./features/organization/profile/profile.component').then((m) => m.ProfileComponent) },
       {
         path: 'admin',
         canActivate: [organizationAdminGuard],
@@ -48,7 +44,7 @@ export const routes: Routes = [
           { path: 'metadata', loadComponent: () => import('./features/organization/admin/metadata.component').then((m) => m.MetadataComponent) },
           { path: 'permissions', loadComponent: () => import('./features/organization/admin/permissions.component').then((m) => m.PermissionsComponent) },
           { path: 'insights', loadComponent: () => import('./features/organization/insights/organization-insights.component').then((m) => m.OrganizationInsightsComponent) },
-          placeholder('integrations', 'nav.org.admin.integrations', '10'),
+          { path: 'integrations', loadComponent: () => import('./features/organization/admin/integrations.component').then((m) => m.IntegrationsComponent) },
           { path: 'settings', loadComponent: () => import('./features/organization/settings/organization-settings.component').then((m) => m.OrganizationSettingsComponent) },
         ],
       },

@@ -304,6 +304,12 @@ public sealed partial class AnalysisService : IAnalysisService
         _context.AnalysisArtifacts.Add(result);
         version.ResultArtifactId = result.ArtifactId;
 
+        if (response.EmailDraft is not null)
+        {
+            // Draft vs sent (specification §12.3): the model wrote an email; nothing has left the platform.
+            _context.EmailDraftEvents.Add(new EmailDraftEvent { EventId = Ids.New(), OrganizationId = entry.OrganizationId, UserId = entry.OwnerUserId, HistoryId = entry.HistoryId, VersionId = version.VersionId, Kind = EmailDraftEventKind.Drafted, DataClassification = entry.DataClassification, CreatedAt = _clock.UtcNow });
+        }
+
         if (metric.ReportArtifactKey is not null && response.Report is not null)
         {
             var pdf = new AnalysisArtifact { ArtifactId = Ids.New(), OrganizationId = entry.OrganizationId, HistoryId = entry.HistoryId, VersionId = version.VersionId, Kind = AnalysisArtifactKind.ReportPdf, StorageKey = metric.ReportArtifactKey, ContentType = "application/pdf", FileName = metric.ReportFileName ?? "report.pdf", SizeBytes = metric.ReportSizeBytes ?? 0, Sha256 = reportSha ?? string.Empty, CreatedAt = _clock.UtcNow };

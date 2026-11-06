@@ -21,3 +21,9 @@
 .shell-nav { padding: 12px 8px; &__title { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--wi-slate); padding: 16px 16px 6px; } &__item--active { background: #e8f1fe; border-radius: var(--wi-radius-sm); color: var(--wi-ocean); } }
 .shell-content { background: var(--wi-cloud); }
 @media (max-width: 960px) { .shell-header__context, .shell-header__user-name { display: none; } }
+@media (max-width: 600px) {
+  .shell-header { gap: 4px; padding-inline: 8px; }
+  .shell-header__brand ::ng-deep .logo__name { display: none; }
+  .shell-header ::ng-deep app-language-switcher .switcher { min-width: 0; padding-inline: 10px; .mdc-button__label { display: none; } }
+  .shell-header__user { min-width: 0; padding-inline: 6px; }
+}

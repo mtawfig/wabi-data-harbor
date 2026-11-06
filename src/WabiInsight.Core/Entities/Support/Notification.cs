@@ -44,4 +44,6 @@ public static class NotificationTypes
     public const string SupportAccessRevoked = "SupportAccess.Revoked";
     public const string SupportAccessExpired = "SupportAccess.Expired";
     public const string SupportOperationExecuted = "SupportAccess.OperationExecuted";
+    public const string AnalysisShared = "Analysis.Shared";
+    public const string AnalysisShareRevoked = "Analysis.ShareRevoked";
 }

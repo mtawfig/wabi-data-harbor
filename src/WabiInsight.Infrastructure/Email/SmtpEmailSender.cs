@@ -54,7 +54,13 @@ public sealed class SmtpEmailSender : IEmailSender
 
         mime.Subject = message.Subject;
         mime.Headers.Add("X-Wabi-Insight-Language", message.Language);
-        mime.Body = new BodyBuilder { HtmlBody = message.HtmlBody, TextBody = message.TextBody }.ToMessageBody();
+        var body = new BodyBuilder { HtmlBody = message.HtmlBody, TextBody = message.TextBody };
+        foreach (var attachment in message.Attachments)
+        {
+            body.Attachments.Add(attachment.FileName, attachment.Content, ContentType.Parse(attachment.ContentType));
+        }
+
+        mime.Body = body.ToMessageBody();
         return mime;
     }
 }

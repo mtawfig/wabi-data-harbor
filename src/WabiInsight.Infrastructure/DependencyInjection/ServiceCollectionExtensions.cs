@@ -193,6 +193,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAnswerExporter, Reports.XlsxExporter>();
         services.AddScoped<IAnalysisService, AnalysisService>();
         services.AddScoped<Core.Analysis.IAnalysisHistoryService, Analysis.AnalysisHistoryService>();
+        services.AddScoped<Core.Analysis.ISharingService, Analysis.SharingService>();
         services.AddHostedService<AiProviderSeeder>();
         services.AddSingleton<IDatabaseAdapterFactory, DatabaseAdapterFactory>();
         services.AddScoped<IApplicationService, ApplicationService>();

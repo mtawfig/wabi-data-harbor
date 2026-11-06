@@ -70,4 +70,6 @@ public static class UsageEventTypes
     public const string AiProviderTested = "Ai.ProviderTested";
     public const string AnalysisCompleted = "Ai.AnalysisCompleted";
     public const string AnalysisFailed = "Ai.AnalysisFailed";
+    public const string AnalysisShared = "Share.Created";
+    public const string AnalysisEmailed = "Share.EmailSent";
 }

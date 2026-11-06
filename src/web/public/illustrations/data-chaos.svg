@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Wabi Insight landing illustration A: "data chaos" — disconnected sources, tangled flows, unanswered questions. Text-free so it works in both languages. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 360" width="520" height="360" role="img" aria-label="Data chaos">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F8FAFC"/><stop offset="1" stop-color="#EEF2F7"/></linearGradient>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0B1F3A" flood-opacity=".10"/></filter>
+  </defs>
+  <rect width="520" height="360" rx="24" fill="url(#bg)"/>
+  <!-- tangled flows -->
+  <g fill="none" stroke-width="3" stroke-linecap="round" opacity=".85">
+    <path d="M70 120 C 160 40, 210 230, 300 150 S 420 60, 470 160" stroke="#CBD5E1"/>
+    <path d="M60 240 C 150 300, 190 110, 280 210 S 390 320, 460 230" stroke="#CBD5E1"/>
+    <path d="M110 300 C 200 180, 240 330, 330 250 S 410 110, 470 290" stroke="#E2E8F0"/>
+    <path d="M90 60 C 180 160, 260 60, 320 110" stroke="#FCA5A5" stroke-dasharray="6 8"/>
+    <path d="M330 110 L 360 140" stroke="#DC2626" stroke-dasharray="4 6"/>
+  </g>
+  <!-- disconnected database cylinders -->
+  <g filter="url(#soft)">
+    <g transform="translate(48 90)"><ellipse cx="32" cy="10" rx="32" ry="10" fill="#94A3B8"/><path d="M0 10v44c0 5.5 14.3 10 32 10s32-4.5 32-10V10" fill="#CBD5E1"/><ellipse cx="32" cy="10" rx="32" ry="10" fill="#E2E8F0"/></g>
+    <g transform="translate(420 70) rotate(12)"><ellipse cx="28" cy="9" rx="28" ry="9" fill="#94A3B8"/><path d="M0 9v38c0 5 12.5 9 28 9s28-4 28-9V9" fill="#CBD5E1"/><ellipse cx="28" cy="9" rx="28" ry="9" fill="#E2E8F0"/></g>
+    <g transform="translate(410 270) rotate(-9)"><ellipse cx="26" cy="8" rx="26" ry="8" fill="#94A3B8"/><path d="M0 8v34c0 4.5 11.6 8 26 8s26-3.5 26-8V8" fill="#CBD5E1"/><ellipse cx="26" cy="8" rx="26" ry="8" fill="#E2E8F0"/></g>
+  </g>
+  <!-- tilted spreadsheets -->
+  <g filter="url(#soft)">
+    <g transform="translate(150 190) rotate(-8)">
+      <rect width="150" height="96" rx="8" fill="#FFFFFF" stroke="#E2E8F0"/>
+      <g stroke="#E2E8F0" stroke-width="1.5"><path d="M0 24h150M0 48h150M0 72h150M38 0v96M76 0v96M114 0v96"/></g>
+      <g fill="#CBD5E1"><rect x="8" y="8" width="22" height="8" rx="2"/><rect x="46" y="32" width="22" height="8" rx="2"/><rect x="84" y="56" width="22" height="8" rx="2"/><rect x="122" y="80" width="22" height="8" rx="2"/></g>
+      <rect x="46" y="8" width="22" height="8" rx="2" fill="#FCA5A5"/><rect x="122" y="32" width="22" height="8" rx="2" fill="#FCA5A5"/>
+    </g>
+    <g transform="translate(300 40) rotate(7)">
+      <rect width="120" height="80" rx="8" fill="#FFFFFF" stroke="#E2E8F0"/>
+      <g stroke="#E2E8F0" stroke-width="1.5"><path d="M0 20h120M0 40h120M0 60h120M40 0v80M80 0v80"/></g>
+      <g fill="#CBD5E1"><rect x="8" y="6" width="22" height="8" rx="2"/><rect x="48" y="26" width="22" height="8" rx="2"/><rect x="88" y="46" width="22" height="8" rx="2"/></g>
+      <rect x="88" y="6" width="22" height="8" rx="2" fill="#FCA5A5"/>
+    </g>
+  </g>
+  <!-- broken chart -->
+  <g transform="translate(60 270)" filter="url(#soft)">
+    <rect width="130" height="60" rx="8" fill="#FFFFFF" stroke="#E2E8F0"/>
+    <g fill="#CBD5E1"><rect x="14" y="30" width="14" height="22" rx="2"/><rect x="38" y="14" width="14" height="38" rx="2"/><rect x="62" y="40" width="14" height="12" rx="2"/><rect x="110" y="22" width="14" height="30" rx="2"/></g>
+    <rect x="86" y="8" width="14" height="44" rx="2" fill="#FCA5A5"/>
+    <path d="M10 52h112" stroke="#E2E8F0" stroke-width="2"/>
+  </g>
+  <!-- question marks and warnings -->
+  <g font-family="Inter, Arial, sans-serif" font-weight="700" fill="#94A3B8">
+    <text x="236" y="98" font-size="34">?</text><text x="98" y="52" font-size="22" opacity=".8">?</text><text x="380" y="330" font-size="26" opacity=".8">?</text><text x="258" y="330" font-size="20" opacity=".6">?</text>
+  </g>
+  <g transform="translate(350 150)"><path d="M16 2 L30 28 H2 Z" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" stroke-linejoin="round"/><rect x="15" y="11" width="2.4" height="9" rx="1" fill="#DC2626"/><circle cx="16.2" cy="23.5" r="1.6" fill="#DC2626"/></g>
+  <g transform="translate(224 150)"><path d="M14 2 L26 24 H2 Z" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" stroke-linejoin="round"/><rect x="13" y="9" width="2.2" height="8" rx="1" fill="#DC2626"/><circle cx="14.1" cy="20.5" r="1.4" fill="#DC2626"/></g>
+  <!-- scattered dots -->
+  <g fill="#CBD5E1"><circle cx="40" cy="40" r="3"/><circle cx="480" cy="40" r="3"/><circle cx="30" cy="330" r="3"/><circle cx="490" cy="330" r="3"/><circle cx="250" cy="20" r="2"/><circle cx="130" cy="150" r="2.5"/><circle cx="390" cy="220" r="2.5"/></g>
+</svg>

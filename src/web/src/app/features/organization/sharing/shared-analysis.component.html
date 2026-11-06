@@ -1,0 +1,53 @@
+<section class="wi-page shared">
+  <header class="wi-page__header">
+    <div class="shared__heading">
+      <p class="wi-eyebrow"><a routerLink="/app/shared-with-me" class="shared__back"><mat-icon>arrow_back</mat-icon>{{ 'sharing.withMe.title' | transloco }}</a></p>
+      @if (detail(); as d) {
+        <h1 data-testid="shared-title">{{ d.share.title }}</h1>
+        <p class="wi-muted shared__meta">
+          <span class="chip">{{ 'history.types.' + d.share.analysisType | transloco }}</span>
+          <span class="chip" [class]="'chip chip--' + d.share.dataClassification.toLowerCase()">{{ 'sharing.classifications.' + d.share.dataClassification | transloco }}</span>
+          <span>{{ language.current() === 'ar' ? d.share.applicationNameAr : d.share.applicationName }}</span> ·
+          <span>{{ 'sharing.view.sharedBy' | transloco: { name: d.share.ownerName, date: (d.share.sharedAt | date: 'medium') } }}</span>
+          @if (d.share.expiresAt) { · <span>{{ 'sharing.share.expiresOn' | transloco: { date: (d.share.expiresAt | date: 'mediumDate') } }}</span> }
+        </p>
+      }
+    </div>
+    @if (version(); as v) {
+      @if (v.hasReport) { <a mat-flat-button [href]="reportUrl()" target="_blank" rel="noopener" data-testid="shared-report"><mat-icon>picture_as_pdf</mat-icon>{{ 'ask.report.download' | transloco }}</a> }
+    }
+  </header>
+
+  @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (error(); as e) { <div class="wi-card error" role="alert" data-testid="shared-error"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  @if (detail(); as d) {
+    <div class="shared__layout">
+      <div class="shared__main">
+        @if (d.share.message) { <div class="wi-card shared__note"><mat-icon>format_quote</mat-icon><div><p class="wi-eyebrow">{{ 'sharing.view.message' | transloco: { name: d.share.ownerName } }}</p><p>{{ d.share.message }}</p></div></div> }
+        <div class="wi-card shared__prompt">
+          <p class="wi-eyebrow">{{ 'history.prompt' | transloco }}</p>
+          <p class="shared__prompt-text" data-testid="shared-prompt">{{ d.originalPrompt }}</p>
+          <p class="wi-muted small"><mat-icon>visibility</mat-icon>{{ 'sharing.view.readOnly' | transloco }}</p>
+        </div>
+        @if (loadingAnswer()) { <mat-progress-bar mode="indeterminate" /> }
+        @if (answer(); as a) { <app-analysis-answer [answer]="a" [reportUrl]="reportUrl()" /> }
+      </div>
+      <aside class="wi-card shared__versions" data-testid="shared-versions">
+        <h3>{{ 'history.versions' | transloco }}</h3>
+        <p class="wi-muted small">{{ 'sharing.view.versionsHint' | transloco }}</p>
+        <ul>
+          @for (v of d.versions; track v.versionId) {
+            <li [class.active]="v.versionNumber === versionNumber()">
+              <button type="button" (click)="selectVersion(v.versionNumber)" [attr.data-testid]="'shared-version-' + v.versionNumber">
+                <strong>v{{ v.versionNumber }}</strong> · <span class="wi-muted">{{ v.createdAt | date: 'medium' }}</span><br />
+                <span class="wi-muted small">{{ 'sharing.view.versionMeta' | transloco: { panels: v.panelCount, rows: v.rowCount } }}</span>
+                @if (v.hasReport) { <mat-icon class="pdf" [title]="'ask.report.title' | transloco">picture_as_pdf</mat-icon> }
+              </button>
+            </li>
+          }
+        </ul>
+      </aside>
+    </div>
+  }
+</section>

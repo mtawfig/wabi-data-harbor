@@ -111,7 +111,7 @@
 | PR | Scope |
 |---|---|
 | P10.1 — In-app and email sharing | `AnalysisShares`, Shared With Me / Shared By Me, expiry and revocation, notifications, email sharing with external-disclosure approval, `EmailDraftEvents` (draft vs sent). |
-| P10.2 — Google Drive and OneDrive publishing | `ExternalProviderConnections` (encrypted OAuth tokens), Drive upload + reader permissions, OneDrive upload via Microsoft Graph + read-only sharing, `ExternalShareRecords`, `IntegrationOperationLogs`, organization Integrations page, provider failure handling with mocked provider tests. |
+| P10.2 — Google Drive and OneDrive publishing — **deferred to the next version (owner decision, 2026-11-06)**; the organization *Integrations* page states this and lists the sharing channels that exist | `ExternalProviderConnections` (encrypted OAuth tokens), Drive upload + reader permissions, OneDrive upload via Microsoft Graph + read-only sharing, `ExternalShareRecords`, `IntegrationOperationLogs`, organization Integrations page, provider failure handling with mocked provider tests. |
 
 ### Phase 11 — Landing Page and Visual Polish
 **Acceptance:** Public landing page in EN and AR, responsive, branded; consistent design across every screen.

@@ -29,65 +29,197 @@
   "landing": {
     "nav": {
       "capabilities": "Capabilities",
-      "howItWorks": "How it works",
-      "security": "Security"
+      "demo": "Product demo",
+      "useCases": "Use cases",
+      "how": "How it works",
+      "security": "Security",
+      "organizations": "Organizations"
     },
     "hero": {
       "eyebrow": "Enterprise AI intelligence platform",
       "title": "From data chaos to confident decisions",
-      "subtitle": "Wabi Insight lets your teams ask natural-language questions about the enterprise data they are authorized to see, and returns verified answers, charts and reports they can trust and share.",
+      "subtitle": "Wabi Insight lets your teams ask natural-language questions about the enterprise data they are authorized to see, and returns verified answers, dashboards and reports they can trust and share.",
       "cta": "Sign in to your organization",
-      "secondary": "See how it works"
+      "secondary": "See the product demo",
+      "facts": {
+        "bilingual": "English and Arabic, LTR and RTL",
+        "sources": "SQL Server and Oracle sources",
+        "readOnly": "Read-only, authorized queries only"
+      },
+      "scenes": {
+        "before": "Before: scattered sources, tangled spreadsheets, unanswered questions",
+        "after": "After: one secure place to ask, verify and decide"
+      }
     },
     "capabilities": {
-      "title": "Key capabilities",
+      "eyebrow": "Capabilities",
+      "title": "Everything a decision needs, in one place",
+      "lead": "Wabi Insight sits between your people and your databases. It understands the question, plans the query, checks permissions, runs read-only SQL and explains the verified result.",
       "ask": {
         "title": "Ask in plain language",
-        "text": "Employees ask questions in English or Arabic and receive verified results, not guesses."
+        "text": "Employees ask in English or Arabic and get verified results, not guesses. Follow-up questions keep the context."
       },
       "trust": {
         "title": "Trust every answer",
-        "text": "Typed query plans, read-only execution and deterministic calculations keep numbers accurate."
+        "text": "Typed query plans, validation and authorization before execution, read-only SQL and deterministic calculations keep numbers accurate."
+      },
+      "dashboards": {
+        "title": "Dashboards on demand",
+        "text": "KPI cards, charts and tables assembled from several verified queries, with a narrative of what the data shows."
+      },
+      "reports": {
+        "title": "Studies and reports",
+        "text": "Structured PDF studies with sections, findings and recommendations; Word and Excel exports; print-ready views; your organization's logo on every page."
       },
       "secure": {
         "title": "Secure by design",
-        "text": "Organization isolation, table, column and row permissions, encrypted connections, full audit."
+        "text": "Organization isolation, table, column and row permissions, encrypted connection strings and keys, append-only audit."
       },
       "share": {
-        "title": "Report and share",
-        "text": "Dashboards, PDF, Word and Excel reports in both languages, shared under control."
+        "title": "Share under control",
+        "text": "Share with colleagues, with expiry and revocation, or send by email under data-classification rules. Every share is logged."
+      }
+    },
+    "demo": {
+      "eyebrow": "Product demonstration",
+      "title": "Ask a question. Get a verified dashboard.",
+      "lead": "A typical answer: the question, the validated plan, headline numbers, a chart and a short narrative — all computed from the organization's own data.",
+      "window": "Ask Wabi Insight — Northwind Logistics (fictional)",
+      "question": "How did on-time delivery change by region this quarter compared with last quarter?",
+      "verified": "Plan validated · permissions applied · read-only SQL · 3 queries",
+      "kpis": {
+        "onTime": "On-time delivery",
+        "shipments": "Shipments this quarter",
+        "delay": "Average delay"
+      },
+      "chart": "On-time delivery by region (%)",
+      "regions": {
+        "north": "North",
+        "coast": "Coast",
+        "central": "Central",
+        "east": "East",
+        "west": "West"
+      },
+      "narrative": "On-time delivery improved to 94.2% this quarter, driven by East and North. West remains below target at 84%, where average delays grew in the last two months; the carrier change in October coincides with the drop.",
+      "notes": {
+        "plan": {
+          "title": "Every question becomes a typed plan",
+          "text": "The AI never writes SQL. It proposes a structured plan that Wabi Insight validates against approved metadata and the user's permissions before anything runs."
+        },
+        "numbers": {
+          "title": "Numbers are computed, not guessed",
+          "text": "Totals, averages and comparisons are calculated by the platform from the query results. The model only explains them."
+        },
+        "history": {
+          "title": "Saved, versioned, shareable",
+          "text": "Every answer is saved to the user's history with its versions, exports and shares."
+        }
+      },
+      "disclaimer": "Northwind Logistics and all figures shown are fictional demonstration data."
+    },
+    "useCases": {
+      "eyebrow": "Use cases",
+      "title": "Built for the questions your teams actually ask",
+      "finance": {
+        "title": "Finance",
+        "question": "Which cost centres exceeded budget in Q3, and by how much?",
+        "text": "Budget variance, cash flow and spend analysis without waiting for a report request."
+      },
+      "operations": {
+        "title": "Operations",
+        "question": "Show punctuality by hour and weekday for the last twelve months.",
+        "text": "Throughput, delays, incidents and capacity studies straight from operational systems."
+      },
+      "hr": {
+        "title": "Human Resources",
+        "question": "How did headcount and attrition change by department this year?",
+        "text": "Workforce trends with row-level scopes so managers see only their own teams."
+      },
+      "sales": {
+        "title": "Sales",
+        "question": "Which products grew fastest in the Northern region this quarter?",
+        "text": "Pipeline, revenue and product performance in a dashboard with narrative."
+      },
+      "executive": {
+        "title": "Executive",
+        "question": "Prepare a study of service quality for 2025 with recommendations as a PDF.",
+        "text": "Board-ready studies with executive summary, findings and recommendations."
+      },
+      "support": {
+        "title": "Service desk",
+        "question": "How many tickets were resolved within SLA per team last month?",
+        "text": "Service levels, backlog and resolution times, shared with the right people."
       }
     },
     "how": {
-      "title": "How it works",
+      "eyebrow": "How it works",
+      "title": "Four steps from question to decision",
       "step1": {
         "title": "Connect",
-        "text": "Your administrator registers SQL Server or Oracle applications and approves the metadata users may see."
+        "text": "Your administrator registers SQL Server or Oracle applications with read-only credentials and approves the metadata users may see."
       },
       "step2": {
+        "title": "Authorize",
+        "text": "Roles grant table, column and row-level access; data is classified Internal, Confidential or Restricted."
+      },
+      "step3": {
         "title": "Ask",
         "text": "Users ask questions. The AI drafts a structured plan that Wabi Insight validates and authorizes before running read-only SQL."
       },
-      "step3": {
-        "title": "Decide",
-        "text": "Verified results become tables, charts, narratives and reports, saved to history and shared with the right people."
+      "step4": {
+        "title": "Decide and share",
+        "text": "Verified results become dashboards, narratives and reports, saved to history and shared with colleagues under control."
       }
     },
     "security": {
-      "title": "Built for multi-organization trust",
-      "text": "Each organization keeps its own users, roles, data sources and history. The platform company operates the service without access to customer business data, and support work needs an approved, time-limited, audited grant.",
+      "eyebrow": "Security",
+      "title": "Trust is enforced, not assumed",
+      "text": "Every answer passes through the same path: the model proposes, the platform validates, authorizes and executes read-only SQL, and the result is calculated deterministically. Secrets never reach the browser and every sensitive action is logged.",
+      "flow": {
+        "question": "Question",
+        "plan": "Typed plan",
+        "authorize": "Validate & authorize",
+        "sql": "Read-only SQL",
+        "answer": "Verified answer"
+      },
       "points": {
-        "isolation": "Logical tenant isolation enforced in the database and the API",
-        "permissions": "Table, column and row-level permissions applied before every query",
-        "audit": "Append-only audit trail and support-access approval workflow"
+        "isolation": "Logical organization isolation enforced in the database and in every API query",
+        "permissions": "Table, column and row-level permissions applied before every execution",
+        "plan": "AI output is a typed plan; model-generated SQL is never executed",
+        "secrets": "Connection strings, provider keys and tokens encrypted at rest and never returned to the browser",
+        "audit": "Append-only audit trail of configuration, access and sharing events",
+        "support": "Support access only through an approved, time-limited, scoped grant — never business data"
+      }
+    },
+    "organizations": {
+      "eyebrow": "Multi-organization",
+      "title": "One platform, many organizations, strict boundaries",
+      "lead": "Wabi Insight is operated by the platform company for many organizations at once. Each organization keeps its own users, roles, sources, history and branding.",
+      "isolation": {
+        "title": "Complete isolation",
+        "text": "Users, roles, applications, history and shares belong to exactly one organization; nothing crosses the boundary."
+      },
+      "branding": {
+        "title": "Your identity",
+        "text": "Your logo on every report page; bilingual names for applications, departments and sections."
+      },
+      "support": {
+        "title": "Support with consent",
+        "text": "Platform administrators help only through grants your administrator approves, scoped and time-limited, with every operation logged."
+      },
+      "operations": {
+        "title": "Operated for you",
+        "text": "AI providers, usage, health and costs are managed centrally; you see your own insights and quotas."
       }
     },
     "cta": {
       "title": "Ready to ask your data?",
       "text": "Sign in with the account your organization administrator provided.",
-      "button": "Sign in"
+      "button": "Sign in",
+      "hint": "No account yet? Your organization administrator creates users and sends the temporary password by email."
     },
     "footer": {
+      "about": "Wabi Insight (AP-AIR) is the bilingual enterprise AI intelligence platform by Wabitex: ask your data, trust the answer.",
       "rights": "© {{year}} Wabitex. All rights reserved.",
       "demo": "Demonstration content uses fictional data."
     }
@@ -313,7 +445,17 @@
   },
   "dashboard": {
     "welcome": "Welcome, {{name}}",
-    "subtitle": "Your organization workspace."
+    "subtitle": "Your organization workspace.",
+    "tiles": {
+      "history": "Saved analyses",
+      "reports": "Files in My Reports",
+      "shared": "Shared with me",
+      "favorites": "Favorites"
+    },
+    "recent": {
+      "title": "Recent analyses",
+      "empty": "No analyses yet. Ask Wabi Insight a question to get started."
+    }
   },
   "organizations": {
     "title": "Organizations",
@@ -652,7 +794,16 @@
       "history_version_not_found": "That version does not exist.",
       "history_version_has_no_result": "That version has no stored result to export.",
       "export_format_unsupported": "Unsupported export format.",
-      "export_failed": "The file could not be generated."
+      "export_failed": "The file could not be generated.",
+      "share_recipients_required": "Choose at least one recipient.",
+      "share_too_many_recipients": "Too many recipients for one share.",
+      "share_expiry_in_past": "The expiry must be in the future.",
+      "share_recipient_not_active": "Every recipient must be an active user of your organization.",
+      "share_not_found": "That share does not exist or is not yours.",
+      "share_email_content_required": "A subject and a message are required.",
+      "share_email_recipient_invalid": "One of the recipients is not a valid email address.",
+      "share_restricted_external_blocked": "Restricted data cannot be emailed outside the organization. Remove the external addresses.",
+      "share_disclosure_approval_required": "Confidential data requires your explicit disclosure approval before it is sent."
     },
     "applications": {
       "title": "Applications",
@@ -1073,7 +1224,7 @@
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Updates on your support tickets and account.",
+    "subtitle": "Updates on your support tickets, shared analyses and account.",
     "unreadOnly": "Unread only",
     "markAll": "Mark all as read",
     "empty": "You are all caught up.",
@@ -1089,7 +1240,9 @@
       "SupportAccess.Declined": "Support access on ticket {{reference}} was declined by {{actorName}}",
       "SupportAccess.Revoked": "Support access on ticket {{reference}} was revoked by {{actorName}}",
       "SupportAccess.Expired": "Support access on ticket {{reference}} expired",
-      "SupportAccess.OperationExecuted": "{{actorName}} ran \"{{operation}}\" on ticket {{reference}} ({{outcome}})"
+      "SupportAccess.OperationExecuted": "{{actorName}} ran \"{{operation}}\" on ticket {{reference}} ({{outcome}})",
+      "Analysis.Shared": "{{actorName}} shared \"{{title}}\" with you",
+      "Analysis.ShareRevoked": "{{actorName}} stopped sharing \"{{title}}\" with you"
     }
   },
   "supportAccess": {
@@ -1469,5 +1622,129 @@
     },
     "download": "Download",
     "empty": "No reports yet. Open an analysis in My History and choose Export."
+  },
+  "sharing": {
+    "classifications": {
+      "Internal": "Internal",
+      "Confidential": "Confidential",
+      "Restricted": "Restricted"
+    },
+    "statuses": {
+      "Active": "Active",
+      "Expired": "Expired",
+      "Revoked": "Revoked"
+    },
+    "withMe": {
+      "title": "Shared With Me",
+      "subtitle": "Analyses your colleagues shared with you. You see the stored results exactly as the owner saw them; nothing is re-queried.",
+      "empty": "Nothing has been shared with you yet.",
+      "columns": {
+        "owner": "Shared by",
+        "shared": "Shared on",
+        "expires": "Expires"
+      }
+    },
+    "byMe": {
+      "title": "Shared By Me",
+      "subtitle": "Every share you granted: who, until when, whether it was opened, and revocation.",
+      "search": "Search analysis or recipient",
+      "includeInactive": "Show expired and revoked",
+      "empty": "You have not shared any analysis yet. Open an analysis in My History and choose Share.",
+      "columns": {
+        "recipient": "Recipient",
+        "status": "Status"
+      },
+      "notViewed": "Not opened yet",
+      "confirmRevoke": "Stop sharing \"{{title}}\" with {{name}}?"
+    },
+    "share": {
+      "button": "Share",
+      "title": "Share with colleagues",
+      "hint": "Recipients are active users of your organization. They can view this analysis and its files; they cannot re-run, export, change or delete it.",
+      "searchRecipients": "Search colleagues by name or email",
+      "noRecipients": "No colleagues match.",
+      "message": "Note for the recipients (optional)",
+      "expiry": "Access expires",
+      "expiryOptions": {
+        "none": "Never",
+        "days": "In {{days}} days"
+      },
+      "existing": "Already shared with",
+      "noneYet": "Not shared with anyone yet.",
+      "revoke": "Revoke",
+      "revoked": "Access revoked.",
+      "expiresOn": "expires {{date}}",
+      "viewed": "opened {{date}}",
+      "submit": "Share ({{count}})"
+    },
+    "email": {
+      "button": "Email",
+      "title": "Send by email",
+      "recipients": "Recipients",
+      "recipientsHint": "{{count}} valid addresses · separate with commas. Up to 10.",
+      "invalidRecipients": "Not valid email addresses: {{list}}",
+      "subject": "Subject",
+      "body": "Message",
+      "attachStudy": "Attach the study PDF",
+      "attachExport": "Attach the analysis as a PDF (generated now and saved to My Reports)",
+      "confirmSend": "I confirm that every recipient may receive this analysis.",
+      "approveDisclosure": "I explicitly approve disclosing this Confidential analysis to the listed recipients. This approval is recorded in the audit log.",
+      "send": "Send",
+      "sent": "Sent to {{count}} recipients ({{external}} outside the organization).",
+      "defaultSubject": "Analysis: {{title}}",
+      "defaultBody": "Hello,\n\nPlease find attached the analysis \"{{title}}\" prepared with Wabi Insight.\n\nRegards",
+      "rules": {
+        "Internal": "Internal data: you can send it to colleagues and to external addresses after confirming the recipients.",
+        "Confidential": "Confidential data: sending requires your explicit disclosure approval for these recipients. The approval is logged with the recipients and the time.",
+        "Restricted": "Restricted data never leaves the organization. Only the addresses of active colleagues of your organization are accepted; any external address blocks the send."
+      }
+    },
+    "view": {
+      "notFound": "This analysis is not shared with you, or the share has expired or was revoked.",
+      "sharedBy": "shared by {{name}} on {{date}}",
+      "message": "Note from {{name}}",
+      "readOnly": "Read-only copy. The owner's stored results are shown as computed under the owner's permissions; the source is never queried.",
+      "versionsHint": "Completed versions the owner saved.",
+      "versionMeta": "{{panels}} panels · {{rows}} rows"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your account as Wabi Insight knows it.",
+    "organization": "Organization",
+    "roles": "Roles",
+    "accountType": "Account type",
+    "preferredLanguage": "Preferred language",
+    "types": {
+      "OrganizationUser": "Organization user",
+      "PlatformAdministrator": "Platform administrator"
+    },
+    "language": {
+      "title": "Interface language",
+      "text": "Switch between English and Arabic at any time; the layout follows the direction of the language."
+    },
+    "security": {
+      "title": "Password",
+      "text": "Use a long passphrase. Changing it signs out every other session."
+    },
+    "managed": {
+      "title": "Name, email and roles",
+      "text": "These are managed by your organization administrator. Ask through the support desk if something is wrong."
+    }
+  },
+  "integrations": {
+    "title": "Integrations",
+    "subtitle": "Publishing analyses to external storage providers.",
+    "nextVersion": "Next version",
+    "drive": "Upload reports to a Google Drive folder and grant reader permissions to colleagues. Moved to the next version by the product owner; the connection, upload and sharing records are specified in the implementation plan (P10.2).",
+    "onedrive": "Upload reports to Microsoft OneDrive through Microsoft Graph with read-only sharing links. Moved to the next version by the product owner (P10.2).",
+    "available": {
+      "title": "Available today",
+      "badge": "Available",
+      "inApp": "Share analyses with colleagues (view-only, expiry, revocation)",
+      "email": "Send a version by email with the PDF attached, under classification rules",
+      "exports": "PDF, Word and Excel exports in My Reports"
+    },
+    "note": "No external provider is connected; nothing leaves the platform except the emails your users send explicitly."
   }
 }

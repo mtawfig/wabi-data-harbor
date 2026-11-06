@@ -198,3 +198,25 @@ a {
     padding: 16px;
   }
 }
+
+// Phones: wide tables scroll inside their card instead of clipping, chips wrap, long identifiers break.
+@media (max-width: 960px) {
+  .wi-card {
+    overflow-x: auto;
+  }
+
+  .mat-mdc-chip-set .mdc-evolution-chip__text-label,
+  .mat-mdc-chip .mdc-evolution-chip__text-label {
+    white-space: normal;
+  }
+
+  .mat-mdc-chip {
+    height: auto;
+    min-height: 32px;
+  }
+
+  .wi-ltr {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}

@@ -1,55 +1,53 @@
 <header class="site-header">
   <div class="site-header__inner">
-    <a routerLink="/" class="site-header__brand" aria-label="Wabi Insight"><app-brand-logo /></a>
-    <nav class="site-header__nav">
-      <a href="#capabilities">{{ 'landing.nav.capabilities' | transloco }}</a>
-      <a href="#how">{{ 'landing.nav.howItWorks' | transloco }}</a>
-      <a href="#security">{{ 'landing.nav.security' | transloco }}</a>
+    <a routerLink="/" class="site-header__brand" aria-label="Wabi Insight"><app-brand-logo [showTagline]="true" /></a>
+    <nav class="site-header__nav" aria-label="Sections">
+      @for (item of nav; track item) { <a [href]="'#' + item">{{ 'landing.nav.' + item | transloco }}</a> }
     </nav>
     <div class="site-header__actions">
       <app-language-switcher />
-      <a mat-flat-button [routerLink]="auth.isAuthenticated() ? auth.homeUrl() : '/login'" data-testid="header-sign-in">
-        {{ 'common.signIn' | transloco }}
-      </a>
+      <a mat-flat-button [routerLink]="auth.isAuthenticated() ? auth.homeUrl() : '/login'" data-testid="header-sign-in">{{ 'common.signIn' | transloco }}</a>
     </div>
   </div>
 </header>
 
 <main>
-  <section class="hero wi-gradient">
+  <!-- 2. Hero -->
+  <section class="hero wi-gradient" data-testid="landing-hero">
     <div class="hero__inner">
       <p class="hero__eyebrow">{{ 'landing.hero.eyebrow' | transloco }}</p>
       <h1 class="hero__title">{{ 'landing.hero.title' | transloco }}</h1>
       <p class="hero__subtitle">{{ 'landing.hero.subtitle' | transloco }}</p>
       <div class="hero__actions">
         <a mat-flat-button class="hero__cta" routerLink="/login" data-testid="hero-sign-in">{{ 'landing.hero.cta' | transloco }}</a>
-        <a mat-stroked-button class="hero__secondary" href="#how">{{ 'landing.hero.secondary' | transloco }}</a>
+        <a mat-stroked-button class="hero__secondary" href="#demo">{{ 'landing.hero.secondary' | transloco }}</a>
       </div>
-      <p class="hero__tagline">{{ 'common.tagline' | transloco }}</p>
+      <ul class="hero__facts">
+        <li><mat-icon>translate</mat-icon>{{ 'landing.hero.facts.bilingual' | transloco }}</li>
+        <li><mat-icon>storage</mat-icon>{{ 'landing.hero.facts.sources' | transloco }}</li>
+        <li><mat-icon>lock</mat-icon>{{ 'landing.hero.facts.readOnly' | transloco }}</li>
+      </ul>
     </div>
-    <div class="hero__visual" aria-hidden="true">
-      <div class="mock-card mock-card--kpi">
-        <span class="mock-card__label">Active users</span>
-        <span class="mock-card__value">1,284</span>
-        <span class="mock-card__delta">▲ 12%</span>
-      </div>
-      <div class="mock-card mock-card--chart">
-        <span class="mock-card__label">AI analyses by department</span>
-        <div class="mock-bars">
-          <span style="height: 40%"></span><span style="height: 70%"></span><span style="height: 55%"></span><span style="height: 90%"></span><span style="height: 65%"></span><span style="height: 80%"></span>
-        </div>
-      </div>
-      <div class="mock-card mock-card--prompt">
-        <mat-icon>auto_awesome</mat-icon>
-        <span>Which departments have the highest usage this quarter?</span>
-      </div>
+    <div class="hero__scenes" aria-hidden="true">
+      <figure class="scene scene--before">
+        <img src="illustrations/data-chaos.svg" alt="" width="520" height="360" />
+        <figcaption>{{ 'landing.hero.scenes.before' | transloco }}</figcaption>
+      </figure>
+      <mat-icon class="scene__arrow wi-flip-rtl">arrow_forward</mat-icon>
+      <figure class="scene scene--after">
+        <img src="illustrations/confident-decisions.svg" alt="" width="520" height="360" />
+        <figcaption>{{ 'landing.hero.scenes.after' | transloco }}</figcaption>
+      </figure>
     </div>
   </section>
 
+  <!-- 3. Capabilities -->
   <section id="capabilities" class="section">
     <div class="section__inner">
+      <p class="wi-eyebrow">{{ 'landing.capabilities.eyebrow' | transloco }}</p>
       <h2 class="section__title">{{ 'landing.capabilities.title' | transloco }}</h2>
-      <div class="grid grid--4">
+      <p class="section__lead wi-muted">{{ 'landing.capabilities.lead' | transloco }}</p>
+      <div class="grid grid--3">
         @for (item of capabilities; track item.key) {
           <article class="wi-card feature">
             <mat-icon class="feature__icon">{{ item.icon }}</mat-icon>
@@ -61,8 +59,65 @@
     </div>
   </section>
 
+  <!-- 4. Product demonstration (fictional, labelled data) -->
+  <section id="demo" class="section section--alt" data-testid="landing-demo">
+    <div class="section__inner">
+      <p class="wi-eyebrow">{{ 'landing.demo.eyebrow' | transloco }}</p>
+      <h2 class="section__title">{{ 'landing.demo.title' | transloco }}</h2>
+      <p class="section__lead wi-muted">{{ 'landing.demo.lead' | transloco }}</p>
+      <div class="demo">
+        <div class="demo__window">
+          <div class="demo__bar"><span></span><span></span><span></span><em>{{ 'landing.demo.window' | transloco }}</em></div>
+          <div class="demo__body">
+            <div class="demo__prompt"><mat-icon>auto_awesome</mat-icon><span>{{ 'landing.demo.question' | transloco }}</span></div>
+            <div class="demo__verified"><mat-icon>verified</mat-icon>{{ 'landing.demo.verified' | transloco }}</div>
+            <div class="demo__kpis">
+              @for (k of demo.kpis; track k.key) {
+                <div class="demo__kpi"><span class="demo__kpi-label">{{ 'landing.demo.kpis.' + k.key | transloco }}</span><span class="demo__kpi-value wi-ltr">{{ k.value }}</span><span class="demo__kpi-delta wi-ltr" [class.down]="!k.up">{{ k.delta }} pts</span></div>
+              }
+            </div>
+            <div class="demo__chart">
+              <span class="demo__chart-title">{{ 'landing.demo.chart' | transloco }}</span>
+              <div class="demo__bars">
+                @for (b of demo.bars; track b.key) {
+                  <div class="demo__bar-col"><span class="demo__bar-fill" [style.height.%]="b.value"></span><span class="demo__bar-value wi-ltr">{{ b.value }}%</span><span class="demo__bar-label">{{ 'landing.demo.regions.' + b.key | transloco }}</span></div>
+                }
+              </div>
+            </div>
+            <p class="demo__narrative">{{ 'landing.demo.narrative' | transloco }}</p>
+          </div>
+        </div>
+        <aside class="demo__notes">
+          <div class="wi-card demo__note"><mat-icon>fact_check</mat-icon><div><h3>{{ 'landing.demo.notes.plan.title' | transloco }}</h3><p class="wi-muted">{{ 'landing.demo.notes.plan.text' | transloco }}</p></div></div>
+          <div class="wi-card demo__note"><mat-icon>calculate</mat-icon><div><h3>{{ 'landing.demo.notes.numbers.title' | transloco }}</h3><p class="wi-muted">{{ 'landing.demo.notes.numbers.text' | transloco }}</p></div></div>
+          <div class="wi-card demo__note"><mat-icon>history</mat-icon><div><h3>{{ 'landing.demo.notes.history.title' | transloco }}</h3><p class="wi-muted">{{ 'landing.demo.notes.history.text' | transloco }}</p></div></div>
+          <p class="demo__disclaimer"><mat-icon>info</mat-icon>{{ 'landing.demo.disclaimer' | transloco }}</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Use cases -->
+  <section id="useCases" class="section">
+    <div class="section__inner">
+      <p class="wi-eyebrow">{{ 'landing.useCases.eyebrow' | transloco }}</p>
+      <h2 class="section__title">{{ 'landing.useCases.title' | transloco }}</h2>
+      <div class="grid grid--3">
+        @for (u of useCases; track u.key) {
+          <article class="wi-card usecase">
+            <div class="usecase__head"><mat-icon>{{ u.icon }}</mat-icon><h3>{{ 'landing.useCases.' + u.key + '.title' | transloco }}</h3></div>
+            <p class="usecase__question">“{{ 'landing.useCases.' + u.key + '.question' | transloco }}”</p>
+            <p class="wi-muted">{{ 'landing.useCases.' + u.key + '.text' | transloco }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. How it works -->
   <section id="how" class="section section--alt">
     <div class="section__inner">
+      <p class="wi-eyebrow">{{ 'landing.how.eyebrow' | transloco }}</p>
       <h2 class="section__title">{{ 'landing.how.title' | transloco }}</h2>
       <ol class="steps">
         @for (step of steps; track step; let i = $index) {
@@ -76,11 +131,20 @@
     </div>
   </section>
 
+  <!-- 7. Security -->
   <section id="security" class="section">
     <div class="section__inner security">
       <div>
+        <p class="wi-eyebrow">{{ 'landing.security.eyebrow' | transloco }}</p>
         <h2 class="section__title">{{ 'landing.security.title' | transloco }}</h2>
         <p class="wi-muted">{{ 'landing.security.text' | transloco }}</p>
+        <div class="security__flow" aria-hidden="true">
+          <span>{{ 'landing.security.flow.question' | transloco }}</span><mat-icon class="wi-flip-rtl">chevron_right</mat-icon>
+          <span>{{ 'landing.security.flow.plan' | transloco }}</span><mat-icon class="wi-flip-rtl">chevron_right</mat-icon>
+          <span class="accent">{{ 'landing.security.flow.authorize' | transloco }}</span><mat-icon class="wi-flip-rtl">chevron_right</mat-icon>
+          <span>{{ 'landing.security.flow.sql' | transloco }}</span><mat-icon class="wi-flip-rtl">chevron_right</mat-icon>
+          <span>{{ 'landing.security.flow.answer' | transloco }}</span>
+        </div>
       </div>
       <ul class="security__list">
         @for (point of securityPoints; track point) {
@@ -90,19 +154,47 @@
     </div>
   </section>
 
+  <!-- 8. Multi-organization benefits -->
+  <section id="organizations" class="section section--alt">
+    <div class="section__inner">
+      <p class="wi-eyebrow">{{ 'landing.organizations.eyebrow' | transloco }}</p>
+      <h2 class="section__title">{{ 'landing.organizations.title' | transloco }}</h2>
+      <p class="section__lead wi-muted">{{ 'landing.organizations.lead' | transloco }}</p>
+      <div class="grid grid--4">
+        @for (b of organizationBenefits; track b.key) {
+          <article class="wi-card feature">
+            <mat-icon class="feature__icon">{{ b.icon }}</mat-icon>
+            <h3>{{ 'landing.organizations.' + b.key + '.title' | transloco }}</h3>
+            <p class="wi-muted">{{ 'landing.organizations.' + b.key + '.text' | transloco }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. Call to action -->
   <section class="cta wi-gradient">
     <div class="cta__inner">
       <h2>{{ 'landing.cta.title' | transloco }}</h2>
       <p>{{ 'landing.cta.text' | transloco }}</p>
       <a mat-flat-button class="hero__cta" routerLink="/login">{{ 'landing.cta.button' | transloco }}</a>
+      <p class="cta__hint">{{ 'landing.cta.hint' | transloco }}</p>
     </div>
   </section>
 </main>
 
+<!-- 10. Footer -->
 <footer class="footer">
   <div class="footer__inner">
-    <app-brand-logo [size]="24" />
-    <span class="wi-muted">{{ 'landing.footer.rights' | transloco: { year: year } }}</span>
-    <span class="wi-muted">{{ 'landing.footer.demo' | transloco }}</span>
+    <div class="footer__brand"><app-brand-logo [size]="28" [showTagline]="true" /><p class="wi-muted">{{ 'landing.footer.about' | transloco }}</p></div>
+    <nav class="footer__links" aria-label="Footer">
+      @for (item of nav; track item) { <a [href]="'#' + item">{{ 'landing.nav.' + item | transloco }}</a> }
+      <a routerLink="/login">{{ 'common.signIn' | transloco }}</a>
+    </nav>
+    <div class="footer__meta wi-muted">
+      <span>{{ 'landing.footer.rights' | transloco: { year: year } }}</span>
+      <span>{{ 'landing.footer.demo' | transloco }}</span>
+      <span class="wi-ltr">AP-AIR</span>
+    </div>
   </div>
 </footer>
