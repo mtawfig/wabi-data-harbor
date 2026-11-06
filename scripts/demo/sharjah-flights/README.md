@@ -1,5 +1,7 @@
 # Demo source: Sharjah International Airport, 2025 flight movements
 
+> Superseded for new setups by the three sample source databases and the WabiInsightDB seed in [`scripts/sql/samples`](../../sql/samples/README.md) (flight operations with schedules and aircraft, HR/payroll/attendance, procurement/stores). This folder is kept because the P8.3–P11.2 screenshots were taken with it.
+
 A realistic **synthetic** dataset used to demonstrate dashboard answers in *Ask Wabi Insight*
 (`docs/screenshots/p8-3-*.png`). Carriers, the route network, fleet types, terminals, seasonality
 (summer and year-end peaks, Eid weeks), weekday patterns and delay behaviour mirror the real airport;
