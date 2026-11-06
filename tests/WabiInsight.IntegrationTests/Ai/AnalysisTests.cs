@@ -254,6 +254,98 @@ public sealed class AnalysisTests : IDisposable
         FakeAiProvider.Script = null;
     }
 
+    [Fact]
+    public async Task Ask_WithReportAndEmailDeliverables_RendersAPdfWithTheOrganizationLogo_DownloadableByItsOwnerOnly()
+    {
+        FakeAiProvider.Script = null;
+        try
+        {
+            using var alice = await LoginAsync(TestData.AliceEmail);
+            var (applicationId, _) = await PrepareApplicationAsync(alice, "aireport");
+            var roles = (await (await alice.GetAsync("/api/roles")).ReadJsonAsync()).EnumerateArray().ToList();
+            var managementId = roles.Single(r => r.GetProperty("roleCode").GetString() == "Management").GetProperty("roleId").GetGuid();
+            var (_, managerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId);
+            var (_, otherEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId);
+            using var manager = await LoginAsync(managerEmail);
+            using var other = await LoginAsync(otherEmail);
+
+            // Logo: administrators only, image types only, served back to the organization and never to another one.
+            var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==");
+            using (var form = new MultipartFormDataContent { { new ByteArrayContent(png) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png") } }, "file", "logo.png" } })
+            {
+                Assert.Equal(HttpStatusCode.Forbidden, (await manager.PutAsync(new Uri("/api/organization/logo", UriKind.Relative), form)).StatusCode);
+            }
+
+            using (var bad = new MultipartFormDataContent { { new ByteArrayContent([1, 2, 3]) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain") } }, "file", "logo.txt" } })
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, (await alice.PutAsync(new Uri("/api/organization/logo", UriKind.Relative), bad)).StatusCode);
+            }
+
+            using (var form = new MultipartFormDataContent { { new ByteArrayContent(png) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png") } }, "file", "logo.png" } })
+            {
+                Assert.Equal(HttpStatusCode.NoContent, (await alice.PutAsync(new Uri("/api/organization/logo", UriKind.Relative), form)).StatusCode);
+            }
+
+            var logo = await manager.GetAsync("/api/organization/logo");
+            Assert.Equal(HttpStatusCode.OK, logo.StatusCode);
+            Assert.Equal("image/png", logo.Content.Headers.ContentType!.MediaType);
+            Assert.True((await (await alice.GetAsync("/api/organization")).ReadJsonAsync()).GetProperty("hasLogo").GetBoolean());
+            using var bob = await LoginAsync(TestData.BobEmail);
+            Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync("/api/organization/logo")).StatusCode);
+
+            FakeAiProvider.Script = (request) => request.SchemaName switch
+            {
+                "wabi_report" => """
+                    {"title":"Ticket study","subtitle":"All tickets","introduction":"Purpose.\n\nScope.","sections":[{"title":"Overview","body":"Numbers.","panels":[0]},{"title":"By status","body":"Breakdown.","panels":[1]}],
+                     "summary":"Most tickets are open.","keyFindings":["Finding one","Finding two"],"recommendations":[{"title":"Triage daily","detail":"Add a triage system."}],
+                     "email":{"subject":"Ticket study attached","body":"Dear director,\n\nPlease find the study attached.\n\nRegards"}}
+                    """,
+                _ => """
+                    {"objective":"Ticket study","assumptions":[],"deliverables":["report","email"],"queries":[
+                      {"title":"Total tickets","source":{"schema":"dbo","object":"SupportTickets","alias":"t"},"joins":[],"select":[{"alias":"tickets","column":null,"aggregate":"count","dateTrunc":null}],"filters":null,"groupBy":[],"orderBy":[],"limit":null,"visualization":{"type":"kpi","x":null,"y":["tickets"]}},
+                      {"title":"Tickets by status","source":{"schema":"dbo","object":"SupportTickets","alias":"t"},"joins":[],"select":[{"alias":"status","column":"t.Status","aggregate":null,"dateTrunc":null},{"alias":"tickets","column":null,"aggregate":"count","dateTrunc":null}],"filters":null,"groupBy":["status"],"orderBy":[{"alias":"tickets","direction":"desc"}],"limit":null,"visualization":{"type":"bar","x":"status","y":["tickets"]}}]}
+                    """,
+            };
+            var ask = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Write a ticket study as PDF and an email to send it" });
+            Assert.True(ask.StatusCode == HttpStatusCode.OK, await ask.Content.ReadAsStringAsync());
+            var response = await ask.ReadJsonAsync();
+            var report = response.GetProperty("report");
+            Assert.Equal("Ticket study", report.GetProperty("title").GetString());
+            Assert.EndsWith(".pdf", report.GetProperty("fileName").GetString(), StringComparison.Ordinal);
+            Assert.True(report.GetProperty("sizeBytes").GetInt64() > 10_000);
+            Assert.Equal(2, report.GetProperty("sections").GetArrayLength());
+            Assert.Equal("Ticket study attached", response.GetProperty("emailDraft").GetProperty("subject").GetString());
+            Assert.Equal(report.GetProperty("fileName").GetString(), response.GetProperty("emailDraft").GetProperty("attachmentFileName").GetString());
+            Assert.Equal("Most tickets are open.", response.GetProperty("interpretation").GetProperty("narrative").GetString());
+            Assert.DoesNotContain(FakeAiProvider.Requests, r => r.SchemaName == "wabi_interpretation");
+            var reportRequest = FakeAiProvider.Requests.Last(r => r.SchemaName == "wabi_report");
+            Assert.Contains("emailRequested: yes", reportRequest.UserContent, StringComparison.Ordinal);
+            Assert.Contains("\"title\":\"Tickets by status\"", reportRequest.UserContent, StringComparison.Ordinal);
+
+            var analysisId = response.GetProperty("analysisId").GetGuid();
+            var download = await manager.GetAsync($"/api/ai/analyses/{analysisId}/report");
+            Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+            Assert.Equal("application/pdf", download.Content.Headers.ContentType!.MediaType);
+            var bytes = await download.Content.ReadAsByteArrayAsync();
+            Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
+            Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/ai/analyses/{analysisId}/report")).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await alice.GetAsync($"/api/ai/analyses/{analysisId}/report")).StatusCode);
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                var metric = await context.AnalysisExecutionMetrics.IgnoreQueryFilters().SingleAsync(m => m.MetricId == analysisId);
+                Assert.NotNull(metric.ReportArtifactKey);
+                Assert.True(metric.ReportInputTokens > 0);
+            }
+
+            Assert.Equal(HttpStatusCode.NoContent, (await alice.DeleteAsync(new Uri("/api/organization/logo", UriKind.Relative))).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await manager.GetAsync("/api/organization/logo")).StatusCode);
+        }
+        finally
+        {
+            FakeAiProvider.Script = null;
+        }
+    }
+
     private async Task<(Guid ApplicationId, List<JsonElement> Columns)> PrepareApplicationAsync(HttpClient alice, string tag)
     {
         var source = new SqlConnectionStringBuilder(_db.ConnectionString) { WorkstationID = tag }.ConnectionString;

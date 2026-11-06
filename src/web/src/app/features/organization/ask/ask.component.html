@@ -65,6 +65,36 @@
     }
 
     @if (answer(); as a) {
+      @if (a.report; as r) {
+        <div class="wi-card ask__report" data-testid="ask-report">
+          <div class="ask__report-head">
+            <div>
+              <p class="wi-eyebrow">{{ 'ask.report.title' | transloco }}</p>
+              <h2>{{ r.title }}</h2>
+              @if (r.subtitle) { <p class="wi-muted">{{ r.subtitle }}</p> }
+            </div>
+            <a mat-flat-button [href]="reportUrl(a.analysisId)" target="_blank" rel="noopener" data-testid="ask-report-download"><mat-icon>picture_as_pdf</mat-icon>{{ 'ask.report.download' | transloco }}</a>
+          </div>
+          <div class="ask__report-meta wi-muted small"><mat-icon>description</mat-icon><span class="wi-ltr">{{ r.fileName }}</span> · {{ 'ask.report.size' | transloco: { kb: (r.sizeBytes / 1024 | number: '1.0-0') } }} · {{ 'ask.report.sections' | transloco: { count: r.sections.length } }}</div>
+          <ol class="ask__report-toc">
+            <li>{{ 'ask.report.summary' | transloco }}</li>
+            @for (s of r.sections; track $index) { <li>{{ sectionTitle(s.title) }}</li> }
+            @if (r.recommendations.length) { <li>{{ 'ask.report.recommendations' | transloco: { count: r.recommendations.length } }}</li> }
+          </ol>
+        </div>
+      }
+      @if (a.emailDraft; as m) {
+        <div class="wi-card ask__email" data-testid="ask-email">
+          <div class="ask__report-head">
+            <div><p class="wi-eyebrow">{{ 'ask.email.title' | transloco }}</p><h2>{{ m.subject }}</h2></div>
+            <button mat-stroked-button type="button" (click)="copyEmail(m)" data-testid="ask-email-copy"><mat-icon>content_copy</mat-icon>{{ copied() ? ('ask.email.copied' | transloco) : ('ask.email.copy' | transloco) }}</button>
+          </div>
+          <pre class="ask__email-body" data-testid="ask-email-body">{{ m.body }}</pre>
+          @if (m.attachmentFileName) {
+            <a class="ask__attachment" [href]="reportUrl(a.analysisId)" target="_blank" rel="noopener"><mat-icon>attach_file</mat-icon><span class="wi-ltr">{{ m.attachmentFileName }}</span></a>
+          }
+        </div>
+      }
       <div class="wi-card ask__answer" data-testid="ask-answer">
         <p class="wi-eyebrow">{{ 'ask.answer' | transloco }}</p>
         <h2>{{ a.objective }}</h2>

@@ -35,5 +35,20 @@
     <div class="actions span"><button mat-flat-button type="submit" [disabled]="busy()" data-testid="org-settings-save">{{ 'common.save' | transloco }}</button></div>
   </form>
 
+  <div class="wi-card logo-card" data-testid="org-logo-card">
+    <h3>{{ 'organizations.settings.logoTitle' | transloco }}</h3>
+    <p class="wi-muted" style="font-size: 13px">{{ 'organizations.settings.logoHint' | transloco }}</p>
+    <div class="logo-row">
+      @if (profile()?.hasLogo) {
+        <img class="logo-preview" [src]="logoUrl()" alt="" data-testid="org-logo-preview" />
+      } @else {
+        <div class="logo-empty wi-muted"><mat-icon>image</mat-icon>{{ 'organizations.settings.logoNone' | transloco }}</div>
+      }
+      <input #logoInput type="file" accept="image/png,image/jpeg,image/svg+xml" hidden (change)="uploadLogo(logoInput.files)" data-testid="org-logo-input" />
+      <button mat-stroked-button type="button" (click)="logoInput.click()" [disabled]="busy()"><mat-icon>upload</mat-icon>{{ 'organizations.settings.logoUpload' | transloco }}</button>
+      @if (profile()?.hasLogo) { <button mat-button type="button" (click)="removeLogo()" [disabled]="busy()">{{ 'organizations.settings.logoRemove' | transloco }}</button> }
+    </div>
+  </div>
+
   <app-organization-ai-settings />
 </section>

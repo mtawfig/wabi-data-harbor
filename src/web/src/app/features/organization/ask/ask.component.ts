@@ -15,7 +15,7 @@ import type { EChartsOption } from 'echarts';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { AuthService } from '../../../core/auth/auth.service';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { AnalysisPanel, AskResponse, AskableApplication } from '../../../core/platform/ai.models';
+import { AnalysisPanel, AskResponse, AskableApplication, EmailDraft } from '../../../core/platform/ai.models';
 import { AiService } from '../../../core/platform/ai.service';
 import { problemMessage } from '../../../core/problem-message';
 import { baseChartOption } from '../../../shared/ui/chart-theme';
@@ -64,6 +64,7 @@ export class AskComponent {
   readonly error = signal<string | null>(null);
   readonly rejection = signal<Rejection | null>(null);
   readonly answer = signal<AskResponse | null>(null);
+  readonly copied = signal(false);
   readonly examples = ['e1', 'e2', 'e3'];
 
   readonly application = computed(() => this.applications().find((a) => a.applicationId === this.selectedApplication()) ?? null);
@@ -117,6 +118,23 @@ export class AskComponent {
     });
   }
 
+  /** The PDF numbers sections itself; drop a number the model put in the title so the contents list reads the same. */
+  sectionTitle(title: string): string {
+    return title.replace(/^\s*(\d+|[IVXivx]+)[.)]\s*(\d+[.)]\s*)?/, '').trim();
+  }
+
+  reportUrl(analysisId: string): string {
+    return this.ai.reportUrl(analysisId);
+  }
+
+  copyEmail(draft: EmailDraft): void {
+    const text = `${this.transloco.translate('ask.email.subjectLabel')}: ${draft.subject}\n\n${draft.body}`;
+    navigator.clipboard?.writeText(text).then(() => {
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 2500);
+    });
+  }
+
   appName(a: AskableApplication): string {
     return this.language.current() === 'ar' ? a.applicationNameAr : a.applicationName;
   }
@@ -137,6 +155,7 @@ export class AskComponent {
     this.error.set(null);
     this.rejection.set(null);
     this.answer.set(null);
+    this.copied.set(false);
     this.ai.ask(applicationId, question, language).subscribe({
       next: (a) => {
         this.answer.set(a);

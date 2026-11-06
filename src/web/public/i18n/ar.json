@@ -277,7 +277,21 @@
     "tables": "التفاصيل",
     "rowsOf": "{{count}} صفًا",
     "queryOf": "الاستعلام — {{title}}",
-    "panelsNote": "نُفِّذ {{count}} استعلامًا للقراءة فقط على بياناتك؛ وكل رقم أدناه مأخوذ منها."
+    "panelsNote": "نُفِّذ {{count}} استعلامًا للقراءة فقط على بياناتك؛ وكل رقم أدناه مأخوذ منها.",
+    "report": {
+      "title": "التقرير (PDF)",
+      "download": "تنزيل PDF",
+      "size": "{{kb}} ك.ب",
+      "sections": "{{count}} أقسام",
+      "summary": "الملخص التنفيذي وأبرز النتائج",
+      "recommendations": "التوصيات ({{count}})"
+    },
+    "email": {
+      "title": "مسودة البريد الإلكتروني",
+      "copy": "نسخ البريد",
+      "copied": "تم النسخ",
+      "subjectLabel": "الموضوع"
+    }
   },
   "platform": {
     "overview": {
@@ -376,7 +390,13 @@
     "settings": {
       "supportAccessTitle": "سياسة وصول الدعم",
       "requireSecondAdmin": "اشتراط اعتماد مدير مؤسسة آخر لوصول الدعم الذي يطلبه مدير",
-      "requireSecondAdminHint": "افتراضيًا يمكن للمدير اعتماد وصول الدعم على تذكرته. فعّل هذا الخيار لاشتراط مدير ثانٍ دائمًا."
+      "requireSecondAdminHint": "افتراضيًا يمكن للمدير اعتماد وصول الدعم على تذكرته. فعّل هذا الخيار لاشتراط مدير ثانٍ دائمًا.",
+      "logoTitle": "شعار التقارير",
+      "logoHint": "يظهر أعلى يسار كل صفحة من تقارير PDF المُنشأة. PNG أو JPEG أو SVG بحجم لا يتجاوز 1 م.ب.",
+      "logoNone": "لم يُرفع شعار",
+      "logoUpload": "رفع الشعار",
+      "logoRemove": "إزالة",
+      "logoSaved": "حُفظ الشعار."
     }
   },
   "admin": {
@@ -617,7 +637,9 @@
       "source_permission_denied": "حساب القراءة لا يملك صلاحية على أحد الكائنات.",
       "source_schema_changed": "تغيّر مخطط المصدر؛ حدّث البيانات الوصفية.",
       "query_failed": "فشل الاستعلام في المصدر.",
-      "connection_not_configured": "لا يملك التطبيق اتصالًا مضبوطًا."
+      "connection_not_configured": "لا يملك التطبيق اتصالًا مضبوطًا.",
+      "logo_type_invalid": "يجب أن يكون الشعار صورة PNG أو JPEG أو SVG.",
+      "logo_too_large": "يجب ألا يتجاوز حجم الشعار 1 م.ب."
     },
     "applications": {
       "title": "التطبيقات",

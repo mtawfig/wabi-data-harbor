@@ -26,3 +26,10 @@
 .small { font-size: 12px; }
 @media (max-width: 900px) { .ask__charts { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) { .ask__controls { grid-template-columns: 1fr; } }
+.ask__report, .ask__email { border-inline-start: 4px solid var(--wi-ocean); h2 { margin: 4px 0 4px; font-size: 20px; } }
+.ask__report-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.ask__report-meta { display: flex; gap: 6px; align-items: center; margin: 6px 0 8px; mat-icon { font-size: 18px; width: 18px; height: 18px; } }
+.ask__report-toc { margin: 0; padding-inline-start: 22px; columns: 2; column-gap: 24px; font-size: 14px; li { break-inside: avoid; padding: 2px 0; } }
+.ask__email-body { white-space: pre-wrap; font-family: inherit; font-size: 14.5px; line-height: 1.6; background: #f8fafc; border: 1px solid var(--wi-border); border-radius: var(--wi-radius-sm); padding: 14px 16px; margin: 8px 0; }
+.ask__attachment { display: inline-flex; gap: 6px; align-items: center; padding: 6px 12px; border: 1px solid var(--wi-border); border-radius: 999px; font-size: 13px; text-decoration: none; color: var(--wi-ocean); background: #fff; mat-icon { font-size: 18px; width: 18px; height: 18px; } }
+@media (max-width: 760px) { .ask__report-toc { columns: 1; } }

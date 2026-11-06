@@ -277,7 +277,21 @@
     "tables": "Details",
     "rowsOf": "{{count}} rows",
     "queryOf": "Query — {{title}}",
-    "panelsNote": "{{count}} queries ran read-only on your data; every number below comes from them."
+    "panelsNote": "{{count}} queries ran read-only on your data; every number below comes from them.",
+    "report": {
+      "title": "Report (PDF)",
+      "download": "Download PDF",
+      "size": "{{kb}} KB",
+      "sections": "{{count}} sections",
+      "summary": "Executive summary and key findings",
+      "recommendations": "Recommendations ({{count}})"
+    },
+    "email": {
+      "title": "Email draft",
+      "copy": "Copy email",
+      "copied": "Copied",
+      "subjectLabel": "Subject"
+    }
   },
   "platform": {
     "overview": {
@@ -376,7 +390,13 @@
     "settings": {
       "supportAccessTitle": "Support access policy",
       "requireSecondAdmin": "Require a different organization administrator to approve support access requested by an administrator",
-      "requireSecondAdminHint": "By default an administrator may approve support access on their own ticket. Turn this on to always require a second administrator."
+      "requireSecondAdminHint": "By default an administrator may approve support access on their own ticket. Turn this on to always require a second administrator.",
+      "logoTitle": "Report logo",
+      "logoHint": "Shown at the top-left of every page of generated PDF reports. PNG, JPEG or SVG, up to 1 MB.",
+      "logoNone": "No logo uploaded",
+      "logoUpload": "Upload logo",
+      "logoRemove": "Remove",
+      "logoSaved": "Logo saved."
     }
   },
   "admin": {
@@ -617,7 +637,9 @@
       "source_permission_denied": "The read-only account lacks permission on an object.",
       "source_schema_changed": "The source schema changed; refresh the metadata.",
       "query_failed": "The query failed at the source.",
-      "connection_not_configured": "The application has no connection configured."
+      "connection_not_configured": "The application has no connection configured.",
+      "logo_type_invalid": "The logo must be a PNG, JPEG or SVG image.",
+      "logo_too_large": "The logo must be 1 MB or smaller."
     },
     "applications": {
       "title": "Applications",

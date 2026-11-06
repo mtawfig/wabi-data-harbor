@@ -7,12 +7,15 @@ using WabiInsight.Core.Ai.Compilers;
 using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Ai;
 using WabiInsight.Core.Entities.Organizations;
+using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Entities.Usage;
 using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Tenancy;
 using WabiInsight.Core.Usage;
+using WabiInsight.Core.Storage;
 using WabiInsight.Infrastructure.Insights;
 using WabiInsight.Infrastructure.Persistence;
+using WabiInsight.Infrastructure.Reports;
 
 namespace WabiInsight.Infrastructure.Ai;
 
@@ -40,9 +43,15 @@ public sealed partial class AnalysisService : IAnalysisService
     private readonly IUsageEventWriter _usage;
     private readonly IClock _clock;
     private readonly ILogger<AnalysisService> _logger;
+    private readonly ReportComposer _reports;
+    private readonly IReportRenderer _renderer;
+    private readonly IArtifactStorage _storage;
 
-    public AnalysisService(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IAiProviderResolver providers, IUsageEventWriter usage, IClock clock, ILogger<AnalysisService> logger)
+    public AnalysisService(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IAiProviderResolver providers, IUsageEventWriter usage, IClock clock, ILogger<AnalysisService> logger, ReportComposer reports, IReportRenderer renderer, IArtifactStorage storage)
     {
+        _reports = reports;
+        _renderer = renderer;
+        _storage = storage;
         _context = context;
         _tenantContext = tenantContext;
         _planner = planner;
@@ -143,7 +152,41 @@ public sealed partial class AnalysisService : IAnalysisService
         metric.Truncated = panels.Any(p => p.Result.Truncated);
 
         Interpretation? interpretation = null;
-        if (request.Interpret)
+        GeneratedReport? report = null;
+        EmailDraft? emailDraft = null;
+        if (planned.Plan.WantsReport || planned.Plan.WantsEmail)
+        {
+            // Steps 15-16 for a study: the model writes the text from the verified panels, the renderer draws the PDF from the panel data.
+            var organization = await _context.Organizations.AsNoTracking().SingleAsync(o => o.OrganizationId == organizationId, cancellationToken);
+            var applicationName = language == "ar" ? application.ApplicationNameAr : application.ApplicationName;
+            var organizationName = language == "ar" ? organization.OrganizationNameAr : organization.OrganizationName;
+            var (content, reportUsage) = await _reports.ComposeAsync(organizationId, request.Question, language, planned.Plan, panels, planned.Plan.WantsEmail, organizationName, applicationName, cancellationToken);
+            metric.ReportInputTokens = reportUsage.InputTokens;
+            metric.ReportOutputTokens = reportUsage.OutputTokens;
+            metric.InterpretMs = reportUsage.DurationMs;
+            metric.EstimatedCost += reportUsage.EstimatedCost;
+            interpretation = new Interpretation(content.Summary, content.KeyFindings, reportUsage);
+
+            if (planned.Plan.WantsReport)
+            {
+                var branding = await LoadBrandingAsync(organization, cancellationToken);
+                var pdf = _renderer.RenderPdf(new ReportRenderRequest(content, panels, branding, language, organizationName, applicationName, organizationName, _clock.UtcNow));
+                await using (var stream = new MemoryStream(pdf, writable: false))
+                {
+                    metric.ReportArtifactKey = await _storage.SaveAsync("analysis-reports", stream, cancellationToken);
+                }
+
+                metric.ReportFileName = FileName(content.Title, _clock.UtcNow);
+                metric.ReportSizeBytes = pdf.LongLength;
+                report = new GeneratedReport(content.Title, content.Subtitle, metric.ReportFileName, pdf.LongLength, content.Introduction, content.Sections, content.Summary, content.KeyFindings, content.Recommendations);
+            }
+
+            if (content.Email is { } email)
+            {
+                emailDraft = new EmailDraft(email.Subject, email.Body, metric.ReportFileName);
+            }
+        }
+        else if (request.Interpret)
         {
             try
             {
@@ -163,11 +206,62 @@ public sealed partial class AnalysisService : IAnalysisService
 
         metric.Status = AnalysisStatus.Completed;
         _context.AnalysisExecutionMetrics.Add(metric);
-        _usage.Append(UsageEventTypes.AnalysisCompleted, "Application", request.ApplicationId.ToString(), quantity: metric.PlanInputTokens + metric.PlanOutputTokens + metric.InterpretInputTokens + metric.InterpretOutputTokens,
-            metadata: new { metric.MetricId, metric.Model, metric.RowCount, metric.Truncated, metric.EstimatedCost, planMs = metric.PlanMs, executeMs = metric.ExecuteMs, interpretMs = metric.InterpretMs, panels = panels.Count, language });
+        _usage.Append(UsageEventTypes.AnalysisCompleted, "Application", request.ApplicationId.ToString(), quantity: metric.PlanInputTokens + metric.PlanOutputTokens + metric.InterpretInputTokens + metric.InterpretOutputTokens + metric.ReportInputTokens + metric.ReportOutputTokens,
+            metadata: new { metric.MetricId, metric.Model, metric.RowCount, metric.Truncated, metric.EstimatedCost, planMs = metric.PlanMs, executeMs = metric.ExecuteMs, interpretMs = metric.InterpretMs, panels = panels.Count, report = report is not null, email = emailDraft is not null, language });
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new AskResponse(metric.MetricId, planned.Plan.Objective, planned.Plan.Assumptions, panels, interpretation, planned.Usage, metric.EstimatedCost, total.Elapsed.TotalMilliseconds);
+        return new AskResponse(metric.MetricId, planned.Plan.Objective, planned.Plan.Assumptions, panels, interpretation, report, emailDraft, planned.Usage, metric.EstimatedCost, total.Elapsed.TotalMilliseconds);
+    }
+
+    public async Task<ReportDownload?> OpenReportAsync(Guid analysisId, CancellationToken cancellationToken = default)
+    {
+        _tenantContext.RequireOrganizationId();
+        var userId = _tenantContext.Principal.UserId!.Value;
+        // Tenant filter plus explicit ownership: only the user who ran the analysis can download its report.
+        var metric = await _context.AnalysisExecutionMetrics.AsNoTracking().SingleOrDefaultAsync(m => m.MetricId == analysisId && m.UserId == userId, cancellationToken);
+        if (metric?.ReportArtifactKey is null)
+        {
+            return null;
+        }
+
+        var stream = await _storage.OpenReadAsync(metric.ReportArtifactKey, cancellationToken);
+        return stream is null ? null : new ReportDownload(stream, metric.ReportFileName ?? "report.pdf", "application/pdf");
+    }
+
+    private async Task<ReportBranding> LoadBrandingAsync(Organization organization, CancellationToken cancellationToken)
+    {
+        if (organization.LogoArtifactKey is null)
+        {
+            return new ReportBranding(null, null);
+        }
+
+        await using var stream = await _storage.OpenReadAsync(organization.LogoArtifactKey, cancellationToken);
+        if (stream is null)
+        {
+            return new ReportBranding(null, null);
+        }
+
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, cancellationToken);
+        return new ReportBranding(buffer.ToArray(), organization.LogoContentType);
+    }
+
+    /// <summary>A safe file name from the title: letters, digits, dashes; ASCII only so every browser and mail client keeps it.</summary>
+    internal static string FileName(string title, DateTimeOffset at)
+    {
+        var slug = new string(title.Select(c => char.IsLetterOrDigit(c) && c < 128 ? char.ToLowerInvariant(c) : '-').ToArray());
+        while (slug.Contains("--", StringComparison.Ordinal))
+        {
+            slug = slug.Replace("--", "-", StringComparison.Ordinal);
+        }
+
+        slug = slug.Trim('-');
+        if (slug.Length > 60)
+        {
+            slug = slug[..60].TrimEnd('-');
+        }
+
+        return $"{(slug.Length > 0 ? slug : "report")}-{at:yyyyMMdd}.pdf";
     }
 
     /// <summary>Step 15: the model explains verified numbers. Rows are passed as data inside delimiters, capped per panel and in total, and never as instructions.</summary>

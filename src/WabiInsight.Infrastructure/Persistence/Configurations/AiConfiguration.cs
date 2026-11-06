@@ -43,6 +43,8 @@ internal sealed class AnalysisExecutionMetricConfiguration : IEntityTypeConfigur
         builder.Property(m => m.FailureStage).HasMaxLength(32);
         builder.Property(m => m.FailureCode).HasMaxLength(100);
         builder.Property(m => m.Language).HasMaxLength(2);
+        builder.Property(m => m.ReportArtifactKey).HasMaxLength(260);
+        builder.Property(m => m.ReportFileName).HasMaxLength(200);
         builder.Property(m => m.EstimatedCost).HasPrecision(14, 6);
         builder.HasIndex(m => new { m.OrganizationId, m.CreatedAt });
         builder.HasIndex(m => new { m.OrganizationId, m.UserId });

@@ -13,6 +13,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { ProblemDetails } from '../../../core/auth/session.model';
 import { OrganizationProfile, TIME_ZONES } from '../../../core/organizations/organizations.models';
 import { OrganizationProfileService } from '../../../core/organizations/organizations.service';
+import { problemMessage } from '../../../core/problem-message';
 import { OrganizationAiSettingsComponent } from './organization-ai-settings.component';
 
 /** Organization Settings: profile (P2.1) and the support-access approval policy (P5.2). Integrations and defaults arrive in later phases. */
@@ -38,6 +39,8 @@ export class OrganizationSettingsComponent {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly timeZones = TIME_ZONES;
+  readonly logoVersion = signal(Date.now());
+  readonly logoUrl = () => this.profiles.logoUrl(this.logoVersion());
 
   readonly form = this.fb.nonNullable.group({
     organizationName: ['', [Validators.required, Validators.maxLength(200)]],
@@ -86,5 +89,44 @@ export class OrganizationSettingsComponent {
         this.busy.set(false);
       },
     });
+  }
+
+  uploadLogo(files: FileList | null): void {
+    const file = files?.item(0);
+    if (!file) {
+      return;
+    }
+    this.busy.set(true);
+    this.error.set(null);
+    this.profiles.uploadLogo(file).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.logoVersion.set(Date.now());
+        this.profile.update((p) => (p ? { ...p, hasLogo: true } : p));
+        this.snack.open(this.transloco.translate('organizations.settings.logoSaved'), undefined, { duration: 3000 });
+      },
+      error: (e: HttpErrorResponse) => {
+        this.busy.set(false);
+        this.error.set(this.describe(e));
+      },
+    });
+  }
+
+  removeLogo(): void {
+    this.busy.set(true);
+    this.profiles.removeLogo().subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.profile.update((p) => (p ? { ...p, hasLogo: false } : p));
+      },
+      error: (e: HttpErrorResponse) => {
+        this.busy.set(false);
+        this.error.set(this.describe(e));
+      },
+    });
+  }
+
+  private describe(e: HttpErrorResponse): string {
+    return problemMessage(e, this.transloco);
   }
 }

@@ -24,6 +24,8 @@ public sealed record AskResponse(
     IReadOnlyList<string> Assumptions,
     IReadOnlyList<AnalysisPanel> Panels,
     Interpretation? Interpretation,
+    GeneratedReport? Report,
+    EmailDraft? EmailDraft,
     PlanUsage PlanUsage,
     decimal TotalEstimatedCost,
     double TotalDurationMs);
@@ -34,4 +36,7 @@ public interface IAnalysisService
     Task<IReadOnlyList<AskableApplication>> ListApplicationsAsync(CancellationToken cancellationToken = default);
 
     Task<AskResponse> AskAsync(AskRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>The PDF of an analysis the signed-in user ran in their organization; null when there is none or it is not theirs.</summary>
+    Task<ReportDownload?> OpenReportAsync(Guid analysisId, CancellationToken cancellationToken = default);
 }

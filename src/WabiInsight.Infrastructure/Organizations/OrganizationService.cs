@@ -7,6 +7,7 @@ using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Security;
 using WabiInsight.Core.Entities.Usage;
+using WabiInsight.Core.Storage;
 using WabiInsight.Core.Tenancy;
 using WabiInsight.Core.Usage;
 using WabiInsight.Infrastructure.Persistence;
@@ -26,9 +27,11 @@ public sealed partial class OrganizationService : IOrganizationService
     private readonly ITenantContext _tenantContext;
     private readonly IClock _clock;
     private readonly IUsageEventWriter _usage;
+    private readonly IArtifactStorage _storage;
 
-    public OrganizationService(ConfigurationDbContext context, IOrganizationUserProvisioningService provisioning, IRoleTemplateService templates, IAuditWriter audit, ITenantContext tenantContext, IClock clock, IUsageEventWriter usage)
+    public OrganizationService(ConfigurationDbContext context, IOrganizationUserProvisioningService provisioning, IRoleTemplateService templates, IAuditWriter audit, ITenantContext tenantContext, IClock clock, IUsageEventWriter usage, IArtifactStorage storage)
     {
+        _storage = storage;
         _context = context;
         _provisioning = provisioning;
         _templates = templates;
@@ -294,8 +297,105 @@ public sealed partial class OrganizationService : IOrganizationService
         var organizationId = _tenantContext.RequireOrganizationId();
         return await _context.Organizations.AsNoTracking()
             .Where(o => o.OrganizationId == organizationId)
-            .Select(o => new OrganizationProfile(o.OrganizationId, o.OrganizationCode, o.OrganizationName, o.OrganizationNameAr, o.Description, o.ContactEmail, o.ContactPhone, o.CountryCode, o.TimeZone, o.DefaultLanguage, o.Status, o.CreatedAt, o.RequireSecondAdminApprovalForSupportAccess))
+            .Select(o => new OrganizationProfile(o.OrganizationId, o.OrganizationCode, o.OrganizationName, o.OrganizationNameAr, o.Description, o.ContactEmail, o.ContactPhone, o.CountryCode, o.TimeZone, o.DefaultLanguage, o.Status, o.CreatedAt, o.RequireSecondAdminApprovalForSupportAccess, o.LogoArtifactKey != null))
             .SingleAsync(cancellationToken);
+    }
+
+    private static readonly string[] LogoContentTypes = ["image/png", "image/jpeg", "image/svg+xml"];
+    public const long MaxLogoBytes = 1024 * 1024;
+
+    public async Task SetLogoAsync(LogoUpload upload, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(upload);
+        var organizationId = _tenantContext.RequireOrganizationId();
+        if (!_tenantContext.Principal.Roles.Contains(SystemRoles.OrganizationAdmin))
+        {
+            throw new TenantContextException("Only organization administrators can change the logo.");
+        }
+
+        var contentType = upload.ContentType.Split(';')[0].Trim().ToLowerInvariant();
+        if (!LogoContentTypes.Contains(contentType))
+        {
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "logo_type_invalid");
+        }
+
+        if (upload.Length <= 0 || upload.Length > MaxLogoBytes)
+        {
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "logo_too_large");
+        }
+
+        using var buffer = new MemoryStream();
+        await upload.Content.CopyToAsync(buffer, cancellationToken);
+        if (buffer.Length > MaxLogoBytes || !LooksLikeImage(buffer, contentType))
+        {
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "logo_type_invalid");
+        }
+
+        buffer.Position = 0;
+        var organization = await _context.Organizations.SingleAsync(o => o.OrganizationId == organizationId, cancellationToken);
+        var previous = organization.LogoArtifactKey;
+        organization.LogoArtifactKey = await _storage.SaveAsync("organization-logos", buffer, cancellationToken);
+        organization.LogoContentType = contentType;
+        _audit.Append(AuditEvents.OrganizationUpdated, "Organization", organizationId.ToString(), new { logo = "replaced", contentType, bytes = buffer.Length }, organizationId);
+        await _context.SaveChangesAsync(cancellationToken);
+        if (previous is not null)
+        {
+            await _storage.DeleteAsync(previous, cancellationToken);
+        }
+    }
+
+    public async Task RemoveLogoAsync(CancellationToken cancellationToken = default)
+    {
+        var organizationId = _tenantContext.RequireOrganizationId();
+        if (!_tenantContext.Principal.Roles.Contains(SystemRoles.OrganizationAdmin))
+        {
+            throw new TenantContextException("Only organization administrators can change the logo.");
+        }
+
+        var organization = await _context.Organizations.SingleAsync(o => o.OrganizationId == organizationId, cancellationToken);
+        var previous = organization.LogoArtifactKey;
+        organization.LogoArtifactKey = null;
+        organization.LogoContentType = null;
+        _audit.Append(AuditEvents.OrganizationUpdated, "Organization", organizationId.ToString(), new { logo = "removed" }, organizationId);
+        await _context.SaveChangesAsync(cancellationToken);
+        if (previous is not null)
+        {
+            await _storage.DeleteAsync(previous, cancellationToken);
+        }
+    }
+
+    public async Task<LogoDownload?> OpenLogoAsync(CancellationToken cancellationToken = default)
+    {
+        var organizationId = _tenantContext.RequireOrganizationId();
+        var organization = await _context.Organizations.AsNoTracking().SingleAsync(o => o.OrganizationId == organizationId, cancellationToken);
+        if (organization.LogoArtifactKey is null)
+        {
+            return null;
+        }
+
+        var stream = await _storage.OpenReadAsync(organization.LogoArtifactKey, cancellationToken);
+        return stream is null ? null : new LogoDownload(stream, organization.LogoContentType ?? "application/octet-stream");
+    }
+
+    /// <summary>Magic bytes for PNG and JPEG; an SVG must start with an XML or svg element and contain no script.</summary>
+    private static bool LooksLikeImage(MemoryStream buffer, string contentType)
+    {
+        var bytes = buffer.GetBuffer();
+        var length = (int)buffer.Length;
+        return contentType switch
+        {
+            "image/png" => length > 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47,
+            "image/jpeg" => length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF,
+            "image/svg+xml" => IsSafeSvg(System.Text.Encoding.UTF8.GetString(bytes, 0, length)),
+            _ => false,
+        };
+    }
+
+    private static bool IsSafeSvg(string text)
+    {
+        var trimmed = text.TrimStart('\uFEFF', ' ', '\t', '\r', '\n');
+        var startsWell = trimmed.StartsWith("<svg", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("<?xml", StringComparison.OrdinalIgnoreCase);
+        return startsWell && trimmed.Contains("<svg", StringComparison.OrdinalIgnoreCase) && !trimmed.Contains("<script", StringComparison.OrdinalIgnoreCase) && !trimmed.Contains("javascript:", StringComparison.OrdinalIgnoreCase) && !trimmed.Contains("onload", StringComparison.OrdinalIgnoreCase) && !trimmed.Contains("<foreignObject", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<OrganizationOperationResult> UpdateCurrentAsync(UpdateOrganizationProfileCommand command, CancellationToken cancellationToken = default)

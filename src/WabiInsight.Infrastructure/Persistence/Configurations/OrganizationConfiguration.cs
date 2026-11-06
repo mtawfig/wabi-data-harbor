@@ -23,6 +23,8 @@ internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organ
         builder.Property(o => o.CountryCode).HasMaxLength(2).IsFixedLength();
         builder.Property(o => o.TimeZone).HasMaxLength(64).IsRequired();
         builder.Property(o => o.DefaultLanguage).HasMaxLength(2).IsRequired();
+        builder.Property(o => o.LogoArtifactKey).HasMaxLength(260);
+        builder.Property(o => o.LogoContentType).HasMaxLength(100);
 
         builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.HasIndex(o => o.Status);

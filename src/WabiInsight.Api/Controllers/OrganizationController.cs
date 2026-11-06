@@ -41,4 +41,43 @@ public sealed class OrganizationController : ControllerBase
 
         return Ok(await _organizations.GetCurrentAsync(cancellationToken));
     }
+
+    /// <summary>The organization's logo as uploaded (PNG, JPEG or SVG); 404 when none.</summary>
+    [HttpGet("logo")]
+    public async Task<IActionResult> Logo(CancellationToken cancellationToken)
+    {
+        var logo = await _organizations.OpenLogoAsync(cancellationToken);
+        if (logo is null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        Response.Headers.Append("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+        return File(logo.Content, logo.ContentType);
+    }
+
+    /// <summary>Replaces the logo stamped on report pages (PNG, JPEG or SVG, at most 1 MB).</summary>
+    [HttpPut("logo")]
+    [Authorize(Policy = Policies.OrganizationAdmin)]
+    [RequestSizeLimit(2 * 1024 * 1024)]
+    public async Task<IActionResult> SetLogo(IFormFile? file, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return ValidationProblem("A file is required.");
+        }
+
+        await using var content = file.OpenReadStream();
+        await _organizations.SetLogoAsync(new LogoUpload(file.FileName, file.ContentType, file.Length, content), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("logo")]
+    [Authorize(Policy = Policies.OrganizationAdmin)]
+    public async Task<IActionResult> RemoveLogo(CancellationToken cancellationToken)
+    {
+        await _organizations.RemoveLogoAsync(cancellationToken);
+        return NoContent();
+    }
 }

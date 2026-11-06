@@ -209,6 +209,14 @@ public sealed class AnalysisPlan
 
     [JsonPropertyName("assumptions")]
     public List<string> Assumptions { get; set; } = [];
+
+    /// <summary>"report" (a written study rendered to PDF) and/or "email" (a draft introducing the findings); empty for a plain answer.</summary>
+    [JsonPropertyName("deliverables")]
+    public List<string> Deliverables { get; set; } = [];
+
+    public bool WantsReport => Deliverables.Contains("report", StringComparer.OrdinalIgnoreCase);
+
+    public bool WantsEmail => Deliverables.Contains("email", StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>Structured-output schema for the whole answer: the query definition of <see cref="QueryPlanSchema"/> inside a "queries" array.</summary>
@@ -227,7 +235,7 @@ public static class AnalysisPlanSchema
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["objective", "queries", "assumptions"],
+          "required": ["objective", "queries", "assumptions", "deliverables"],
           "properties": {
             "objective": { "type": "string", "description": "One sentence restating what is answered, in the user's language." },
             "queries": {
@@ -250,7 +258,8 @@ public static class AnalysisPlanSchema
                 }
               }
             },
-            "assumptions": { "type": "array", "items": { "type": "string" }, "description": "Interpretation choices worth telling the user, in the user's language." }
+            "assumptions": { "type": "array", "items": { "type": "string" }, "description": "Interpretation choices worth telling the user, in the user's language." },
+            "deliverables": { "type": "array", "items": { "type": "string", "enum": ["report", "email"] }, "description": "report when the user asks for a study, report, document or PDF; email when they ask for an email or message draft; otherwise empty." }
           },
           "$defs": 
         """;

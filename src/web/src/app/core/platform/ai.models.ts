@@ -106,11 +106,37 @@ export interface AnalysisPanel {
   result: AnalysisResult;
 }
 
+export interface ReportSection {
+  title: string;
+  body: string;
+  panels: number[];
+}
+
+export interface GeneratedReport {
+  title: string;
+  subtitle: string;
+  fileName: string;
+  sizeBytes: number;
+  introduction: string;
+  sections: ReportSection[];
+  summary: string;
+  keyFindings: string[];
+  recommendations: { title: string; detail: string }[];
+}
+
+export interface EmailDraft {
+  subject: string;
+  body: string;
+  attachmentFileName?: string | null;
+}
+
 export interface AskResponse {
   analysisId: string;
   objective: string;
   assumptions: string[];
   panels: AnalysisPanel[];
+  report?: GeneratedReport | null;
+  emailDraft?: EmailDraft | null;
   interpretation?: { narrative: string; highlights: string[]; usage: PlanUsage } | null;
   planUsage: PlanUsage;
   totalEstimatedCost: number;
