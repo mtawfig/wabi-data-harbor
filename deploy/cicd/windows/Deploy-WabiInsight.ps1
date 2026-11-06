@@ -3,7 +3,7 @@
     Installs a Wabi Insight release on Windows Server + IIS (docs/DEVOPS_WINDOWS.md).
 
 .DESCRIPTION
-    Installed once by an administrator as C:\WabiInsight\deploy\Deploy-WabiInsight.ps1 (writable by Administrators and
+    Installed once by an administrator as C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1 (writable by Administrators and
     SYSTEM only) and run by the GitHub Actions self-hosted runner service. The installed copy, not the one in the
     runner's workspace, is what runs.
 
@@ -12,6 +12,10 @@
               binaries are restored (database changes made by a migration are not rolled back; restore the backup).
     Frontend: stage -> keep the live files as "previous-web" -> copy (index.html last) -> check the site over HTTPS.
     appsettings.Local.json (server settings) is never overwritten or deleted.
+
+    Layout (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 5): <Root>\web\api (API site), <Root>\web\app (frontend site),
+    <Root>\releases, <Root>\logs. Generated and uploaded files live outside Root (D:\wabi-insight\files, Storage:RootPath)
+    and are never touched by a deployment.
 
 .EXAMPLE
     .\Deploy-WabiInsight.ps1 -Component 'frontend+backend' -Migrate yes -ApiDir D:\a\_temp\release\api -WebDir D:\a\_temp\release\web -Version 1a2b3c4
@@ -24,7 +28,7 @@ param(
     [string]$WebDir,
     [ValidatePattern('^[A-Za-z0-9._-]{1,64}$')][string]$Version = 'manual',
     [string]$Actor = $env:USERNAME,
-    [string]$Root = 'C:\WabiInsight',
+    [string]$Root = 'C:\wabitex-apps\wabi-insight',
     [string]$ApiHealthUrl = 'http://127.0.0.1:5080/health/ready',
     [string]$BackupTaskName = 'Wabi Insight backup',
     [int]$KeepReleases = 5,
@@ -34,12 +38,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$DeployScriptVersion = 1
+$DeployScriptVersion = 2
 if ($ScriptVersion) { $DeployScriptVersion; return }
 if (-not $Component) { throw "-Component is required: backend, frontend or frontend+backend." }
 
-$apiTarget = Join-Path $Root 'api'
-$webTarget = Join-Path $Root 'web'
+$apiTarget = Join-Path $Root 'web\api'
+$webTarget = Join-Path $Root 'web\app'
 $releases = Join-Path $Root 'releases'
 $logFile = Join-Path $Root 'logs\deploy.log'
 $dotnet = Join-Path $env:ProgramFiles 'dotnet\dotnet.exe'
@@ -103,7 +107,7 @@ function Restore-Backend {
         Invoke-Robocopy $previous $apiTarget @('/MIR', '/XF', 'appsettings.Local.json', 'app_offline.htm')
         Set-AppOffline $false
         if (Test-ApiHealthy) { Write-Output 'Previous backend release is running again.' }
-        else { Write-Output '::error::The previous release did not become healthy either: see C:\WabiInsight\logs and the Event Log.' }
+        else { Write-Output "::error::The previous release did not become healthy either: see $Root\logs and the Application event log." }
     } else {
         Set-AppOffline $false
         Write-Output '::error::No previous backend release to restore (first deployment).'

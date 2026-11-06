@@ -135,6 +135,7 @@
 | PR | Scope |
 |---|---|
 | P13.1 — Sample source databases and WabiInsightDB seed | Flight operations, HR/payroll/attendance and procurement/stores SQL Server databases (one script each with database, owner and reader logins, tables and data) and a configuration seed with organization, structure, four users, applications, catalogue, classifications and permissions. |
+| P13.4 — Windows server layout | `C:\wabitex-apps\wabi-insight` (`src`, `web\app`, `web\api`) and `D:\wabi-insight\files` per kind, in the Windows deployment and DevOps guides and the deploy script; moving an existing installation. |
 | P13.3 — CI/CD with manual deployments | Reusable release build, `Deploy (Linux)` / `Deploy (Windows)` workflows started by hand (frontend / backend / both, migration switch), self-hosted runner + server-side deploy scripts with backup, health check and automatic restore, DevOps guides for both platforms. |
 | P13.2 — Step-by-step deployment guides | Windows Server 2019 (IIS + ARR) and Ubuntu 24.04 (nginx + systemd) guides from a fresh server to the live site, with SQL Server Express, a check and a verification for every step; reverse-proxy fixes found along the way. |
 

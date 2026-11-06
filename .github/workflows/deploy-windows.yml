@@ -1,7 +1,7 @@
 # Manual deployment to the Windows Server (IIS) (docs/DEVOPS_WINDOWS.md). Never runs automatically:
 # Actions → "Deploy (Windows)" → Run workflow → choose the branch, what to deploy and whether to migrate the database.
 # Build: GitHub-hosted runners. Install: the self-hosted runner service on the server (labels self-hosted, windows,
-# wabi-insight), which runs the administrator-installed C:\WabiInsight\deploy\Deploy-WabiInsight.ps1.
+# wabi-insight), which runs the administrator-installed C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1.
 name: Deploy (Windows)
 run-name: "Deploy ${{ inputs.component }} to Windows${{ inputs.migrate_database && ' + database migration' || '' }} (${{ inputs.ref || github.ref_name }}) by @${{ github.actor }}"
 
@@ -61,7 +61,7 @@ jobs:
       MIGRATE: ${{ inputs.migrate_database && 'yes' || 'no' }}
       VERSION: ${{ needs.build.outputs.version }}
       ACTOR: ${{ github.actor }}
-      DEPLOY_SCRIPT: C:\WabiInsight\deploy\Deploy-WabiInsight.ps1
+      DEPLOY_SCRIPT: C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1
     steps:
       - name: Clear the release folder
         run: |
@@ -122,7 +122,7 @@ jobs:
             "| Database migration | $env:MIGRATE |",
             "| Version | ``$env:VERSION`` ($env:COMMIT) |",
             "| Started by | @$env:ACTOR |",
-            '| Server log | `C:\WabiInsight\logs\deploy.log` |'
+            '| Server log | `C:\wabitex-apps\wabi-insight\logs\deploy.log` |'
           )
           $lines | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding UTF8
 
