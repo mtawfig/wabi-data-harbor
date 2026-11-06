@@ -5,7 +5,8 @@ Description=Wabi Insight API
 After=network.target
 
 [Service]
-Type=notify
+# exec: the API does not send sd_notify readiness, so systemd treats it as started once the process runs.
+Type=exec
 User=wabi-insight
 Group=wabi-insight
 WorkingDirectory=/opt/wabi-insight/api

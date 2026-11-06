@@ -10,6 +10,13 @@
     <ProjectReference Include="..\WabiInsight.Infrastructure\WabiInsight.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- Machine-specific and development-only settings never ship: a developer's git-ignored appsettings.Local.json
+       would otherwise be published and, because it loads after environment variables, silently override the server's
+       configuration. Servers keep their own appsettings.Local.json (or environment variables) next to the publish output. -->
+  <ItemGroup>
+    <Content Update="appsettings.Local.json;appsettings.Local.example.json;appsettings.Development.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="WabiInsight.IntegrationTests" />
   </ItemGroup>

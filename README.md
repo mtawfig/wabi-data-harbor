@@ -10,7 +10,7 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 - [Review of the original prompt and owner decisions](docs/SPEC_REVIEW.md)
 - [Implementation plan: phases and pull requests](docs/IMPLEMENTATION_PLAN.md)
 - [Progress log](docs/PROGRESS.md)
-- [Deployment guide (Docker, Linux, IIS)](docs/DEPLOYMENT.md)
+- [Deployment guide (Docker, Linux, IIS)](docs/DEPLOYMENT.md) · step by step: [Windows Server 2019](docs/DEPLOYMENT_WINDOWS_SERVER_2019.md) · [Ubuntu 24.04](docs/DEPLOYMENT_LINUX.md)
 - [Security](docs/SECURITY.md) · [Architecture](docs/ARCHITECTURE.md) · [Design system](docs/DESIGN_SYSTEM.md) · [Screens](docs/SCREENSHOTS.md) · [Performance](docs/PERFORMANCE.md)
 - [Guide for Claude Code sessions](CLAUDE.md)
 
