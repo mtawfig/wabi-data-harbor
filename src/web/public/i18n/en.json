@@ -445,7 +445,17 @@
   },
   "dashboard": {
     "welcome": "Welcome, {{name}}",
-    "subtitle": "Your organization workspace."
+    "subtitle": "Your organization workspace.",
+    "tiles": {
+      "history": "Saved analyses",
+      "reports": "Files in My Reports",
+      "shared": "Shared with me",
+      "favorites": "Favorites"
+    },
+    "recent": {
+      "title": "Recent analyses",
+      "empty": "No analyses yet. Ask Wabi Insight a question to get started."
+    }
   },
   "organizations": {
     "title": "Organizations",
@@ -1697,5 +1707,44 @@
       "versionsHint": "Completed versions the owner saved.",
       "versionMeta": "{{panels}} panels · {{rows}} rows"
     }
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your account as Wabi Insight knows it.",
+    "organization": "Organization",
+    "roles": "Roles",
+    "accountType": "Account type",
+    "preferredLanguage": "Preferred language",
+    "types": {
+      "OrganizationUser": "Organization user",
+      "PlatformAdministrator": "Platform administrator"
+    },
+    "language": {
+      "title": "Interface language",
+      "text": "Switch between English and Arabic at any time; the layout follows the direction of the language."
+    },
+    "security": {
+      "title": "Password",
+      "text": "Use a long passphrase. Changing it signs out every other session."
+    },
+    "managed": {
+      "title": "Name, email and roles",
+      "text": "These are managed by your organization administrator. Ask through the support desk if something is wrong."
+    }
+  },
+  "integrations": {
+    "title": "Integrations",
+    "subtitle": "Publishing analyses to external storage providers.",
+    "nextVersion": "Next version",
+    "drive": "Upload reports to a Google Drive folder and grant reader permissions to colleagues. Moved to the next version by the product owner; the connection, upload and sharing records are specified in the implementation plan (P10.2).",
+    "onedrive": "Upload reports to Microsoft OneDrive through Microsoft Graph with read-only sharing links. Moved to the next version by the product owner (P10.2).",
+    "available": {
+      "title": "Available today",
+      "badge": "Available",
+      "inApp": "Share analyses with colleagues (view-only, expiry, revocation)",
+      "email": "Send a version by email with the PDF attached, under classification rules",
+      "exports": "PDF, Word and Excel exports in My Reports"
+    },
+    "note": "No external provider is connected; nothing leaves the platform except the emails your users send explicitly."
   }
 }

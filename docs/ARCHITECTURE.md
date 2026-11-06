@@ -62,6 +62,8 @@ One SQL Server database, EF Core 10, migrations in `src/WabiInsight.Infrastructu
 | `AnalysisArtifacts` | Stored files of a version through `IArtifactStorage`: the answer JSON (`analysis-results`) and the PDF (`analysis-reports`), with content type, size and SHA-256 | tenant filter; cascade with the version |
 | `ReportGenerationEvents` | Append-only record of every export (P9.2): user, history, version, artifact, format, status, language, size, duration, failure code | tenant filter; UPDATE/DELETE refused by the context |
 | `AnalysisCollections` / `AnalysisCollectionItems` | A user's named groups of saved analyses | tenant filter; owner check; unique name per owner |
+| `AnalysisShares` | A saved analysis shared with an active colleague (P10.1): owner, recipient, VIEW, optional message, expiry, revocation and last view | tenant filter; owner and recipient are composite foreign keys into `OrganizationUsers` of the same organization, so a cross-organization share is unrepresentable; index `(OrganizationId, RecipientUserId, RevokedAt, ExpiresAt)` |
+| `EmailDraftEvents` | Append-only draft-vs-sent record (P10.1): who, which version, kind (Drafted / Sent / Blocked), data classification, internal and external recipient counts and addresses, whether the report was attached, the owner's disclosure approval, block reason; never a body | tenant filter; UPDATE/DELETE refused by the context |
 | `AnalysisExecutionMetrics` | One row per analysis attempt (P8.2): status and failure stage/code, plan/interpretation tokens, estimated cost, plan/execute/interpret durations, row count, truncation, object count, language; never the question or rows | tenant filter; indexes on `(OrganizationId, CreatedAt)` and `(OrganizationId, UserId)` |
 | `Applications` | Business applications; one built-in `WI-INSIGHTS` row per organization; P6.1 adds the connection hint, last test and last refresh timestamps | unique `(OrganizationId, ApplicationCode)`, unique built-in code per organization, globally unique `ConnectionFingerprint`, built-in rows cannot carry a connection string (check constraint) |
 
@@ -122,6 +124,20 @@ Step 17 of the workflow: `AnalysisService.AskAsync` ends by creating an `Analysi
 ### Reports and exports (P9.2)
 
 `ExportAsync` reads the stored answer of a version, builds `ReportContent` (`AnswerReportBuilder`: the written study when the answer had one, otherwise summary, key findings, headline numbers and results from the verified panels) and hands it to the PDF renderer or to an `IAnswerExporter` (`DocxExporter` with the Open XML SDK, `XlsxExporter` with ClosedXML). Charts in DOCX and XLSX are the same SVG the PDF draws, rasterized to PNG by `ChartImageRenderer` through QuestPDF's Skia backend. The file is stored as an `AnalysisArtifact` of kind `ExportPdf/ExportDocx/ExportXlsx` under `analysis-exports`, a `ReportGenerationEvent` is appended (also for failures), and the reports library (`ListReportsAsync`) is a projection over the owner's artifacts other than the result JSON. Arabic output is right-to-left in all three formats (QuestPDF content direction, Word `BiDi`/`BiDiVisual`, Excel `RightToLeft`), and sample files produced by the unit tests live under `tests/fixtures/exports/`.
+
+### Sharing (P10.1)
+
+`SharingService` serves `/api/shares` and the `shares`/`email` routes under `/api/history/{id}`. Owners (the `Mine` projection: `OwnerUserId == UserId`, not deleted) share with colleagues looked up through the tenant filter and an explicit `Active` status check; sharing again with the same colleague refreshes the message and expiry instead of creating a second row. Recipients read through the `Received` projection only (addressed to them, not revoked, not expired, analysis not deleted): the detail, the stored answer and the study PDF of completed versions. Nothing else is reachable through a share — re-run, export, rename, archive, delete and collections stay owner-only, and the history endpoints keep answering 404 to a recipient. Every share and revocation writes a notification (`Analysis.Shared`, `Analysis.ShareRevoked`), a bilingual email through the outbox and an audit entry.
+
+Email delivery (`SendEmailAsync`) classifies each address as internal (an active user of the organization) or external and applies the review B11 rules before anything is queued: Restricted data with any external address is blocked (`share_restricted_external_blocked`), Confidential data requires the owner's explicit per-send `disclosureApproved` flag (`share_disclosure_approval_required`), Internal data needs the client's standard confirmation. Blocked and sent attempts both append an `EmailDraftEvent`; the model's own drafts append a `Drafted` event when the answer is stored, so drafts and sends are distinguishable (specification §12.3). The attachment is the version's study PDF, or the answer rendered to PDF through `ExportAsync` (which also lands in My Reports). Internal recipients also receive an in-app share so the link in the email opens the stored analysis; the email body is the owner's text inside `EmailTemplates.SharedAnalysis`, and `EmailMessage.Attachments` travels with the message in memory only — the outbox row never stores bodies or files. `SmtpEmailSender` attaches the files through MimeKit.
+
+### Brand and landing (P11.1)
+
+`src/web/public/brand/` holds the logo set (`wabi-insight-icon.svg`, `wabi-insight-icon-light.svg`, `wabi-insight-wordmark-dark.svg`, `wabi-insight-wordmark-light.svg`, `favicon.svg`, `apple-touch-icon.png`) and `public/favicon.ico` is generated from the same drawing; `BrandLogoComponent` inlines the mark for the app. `public/illustrations/` holds the two landing scenes (`data-chaos.svg`, `confident-decisions.svg`), text-free so one file serves both languages. The landing page is a single standalone component with ten sections driven by translation keys; the product demonstration is static, fictional and labelled as such.
+
+### Screenshots (P11.2)
+
+`scripts/screenshots/capture.js` signs in with the demo accounts against the running API and dev server and captures the 42 screens of specification §32 in English and Arabic at desktop and mobile widths into `docs/screenshots/screens/`, with `capture-report.json` recording each shot and any horizontal overflow it detected. `docs/SCREENSHOTS.md` indexes them.
 
 ### Tenant core
 
@@ -186,15 +202,15 @@ Standalone components with signals; `provideHttpClient(withFetch(), withIntercep
 src/app/core/auth        AuthService (session signal, csrf, login/logout/change-password, homeUrl), interceptor (X-XSRF-TOKEN, 401 → login), guards
 src/app/core/i18n        LanguageService (lang/dir, persistence), Transloco HTTP loader
 src/app/shared/layout    AppShellComponent (header, sidebar, user menu)
-src/app/shared/ui        BrandLogo, LanguageSwitcher, PagePlaceholder
+src/app/shared/ui        BrandLogo (final mark, P11.1), LanguageSwitcher
 src/app/features/public  landing, login, bootstrap
 src/app/features/auth    change-password
-src/app/features/organization  shell + navigation, ask workspace, user dashboard
+src/app/features/organization  shell + navigation, ask workspace, user dashboard, history, sharing (dialogs, Shared With Me / By Me, shared view), profile, admin (incl. Integrations notice)
 src/app/features/platform      shell + navigation, overview, general settings (bootstrap status)
 public/i18n              en.json, ar.json
 ```
 
-Startup: `provideAppInitializer` initializes the language and calls `GET /api/auth/csrf` + `GET /api/auth/me` to restore a session. Guards are UX only; the API enforces authorization. Routes whose feature belongs to a later phase render `PagePlaceholderComponent` with the phase number.
+Startup: `provideAppInitializer` initializes the language and calls `GET /api/auth/csrf` + `GET /api/auth/me` to restore a session. Guards are UX only; the API enforces authorization. Every route renders a real page since P11.2 (the phase placeholder component was removed).
 
 ### Support access UI (P5.2)
 `SupportAccessService` (Angular) wraps the grant endpoints and holds the support-mode `session` signal; `features/support/support-access-tab`, `grant-list` (platform page and organization approval list, parameterised by `area`) and `support-mode-banner` (platform shell). Routes: `/platform/support-access`, `/app/admin/support-access`, and `?tab=access` on a ticket opens tab 5. `GET /api/platform/support/tickets/{id}/targets` lists users (name, email) and roles of the ticket's organization for the proposal form; the grant DTO carries `targetLabels` so both sides render names instead of ids.

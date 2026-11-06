@@ -1,0 +1,1605 @@
+{
+  "updatedAt": "2026-11-06T11:09:51.651Z",
+  "base": "http://localhost:4200",
+  "total": 168,
+  "overflowing": 0,
+  "failed": 0,
+  "screens": [
+    {
+      "n": 1,
+      "slug": "landing",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "01-landing-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 1,
+      "slug": "landing",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "01-landing-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 1,
+      "slug": "landing",
+      "lang": "en",
+      "device": "desktop",
+      "file": "01-landing-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.642Z"
+    },
+    {
+      "n": 1,
+      "slug": "landing",
+      "lang": "en",
+      "device": "mobile",
+      "file": "01-landing-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 2,
+      "slug": "login",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "02-login-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 2,
+      "slug": "login",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "02-login-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 2,
+      "slug": "login",
+      "lang": "en",
+      "device": "desktop",
+      "file": "02-login-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 2,
+      "slug": "login",
+      "lang": "en",
+      "device": "mobile",
+      "file": "02-login-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 3,
+      "slug": "bootstrap",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "03-bootstrap-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 3,
+      "slug": "bootstrap",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "03-bootstrap-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 3,
+      "slug": "bootstrap",
+      "lang": "en",
+      "device": "desktop",
+      "file": "03-bootstrap-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 3,
+      "slug": "bootstrap",
+      "lang": "en",
+      "device": "mobile",
+      "file": "03-bootstrap-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 4,
+      "slug": "change-password",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "04-change-password-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 4,
+      "slug": "change-password",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "04-change-password-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 4,
+      "slug": "change-password",
+      "lang": "en",
+      "device": "desktop",
+      "file": "04-change-password-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 4,
+      "slug": "change-password",
+      "lang": "en",
+      "device": "mobile",
+      "file": "04-change-password-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 5,
+      "slug": "platform-overview",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "05-platform-overview-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 5,
+      "slug": "platform-overview",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "05-platform-overview-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 5,
+      "slug": "platform-overview",
+      "lang": "en",
+      "device": "desktop",
+      "file": "05-platform-overview-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 5,
+      "slug": "platform-overview",
+      "lang": "en",
+      "device": "mobile",
+      "file": "05-platform-overview-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 6,
+      "slug": "platform-organizations",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "06-platform-organizations-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 6,
+      "slug": "platform-organizations",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "06-platform-organizations-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 6,
+      "slug": "platform-organizations",
+      "lang": "en",
+      "device": "desktop",
+      "file": "06-platform-organizations-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 6,
+      "slug": "platform-organizations",
+      "lang": "en",
+      "device": "mobile",
+      "file": "06-platform-organizations-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 7,
+      "slug": "platform-organization-create",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "07-platform-organization-create-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 7,
+      "slug": "platform-organization-create",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "07-platform-organization-create-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 7,
+      "slug": "platform-organization-create",
+      "lang": "en",
+      "device": "desktop",
+      "file": "07-platform-organization-create-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 7,
+      "slug": "platform-organization-create",
+      "lang": "en",
+      "device": "mobile",
+      "file": "07-platform-organization-create-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 8,
+      "slug": "platform-organization-detail",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "08-platform-organization-detail-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 8,
+      "slug": "platform-organization-detail",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "08-platform-organization-detail-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 8,
+      "slug": "platform-organization-detail",
+      "lang": "en",
+      "device": "desktop",
+      "file": "08-platform-organization-detail-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 8,
+      "slug": "platform-organization-detail",
+      "lang": "en",
+      "device": "mobile",
+      "file": "08-platform-organization-detail-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 9,
+      "slug": "platform-administrators",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "09-platform-administrators-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 9,
+      "slug": "platform-administrators",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "09-platform-administrators-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 9,
+      "slug": "platform-administrators",
+      "lang": "en",
+      "device": "desktop",
+      "file": "09-platform-administrators-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 9,
+      "slug": "platform-administrators",
+      "lang": "en",
+      "device": "mobile",
+      "file": "09-platform-administrators-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 10,
+      "slug": "platform-role-templates",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "10-platform-role-templates-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 10,
+      "slug": "platform-role-templates",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "10-platform-role-templates-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 10,
+      "slug": "platform-role-templates",
+      "lang": "en",
+      "device": "desktop",
+      "file": "10-platform-role-templates-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 10,
+      "slug": "platform-role-templates",
+      "lang": "en",
+      "device": "mobile",
+      "file": "10-platform-role-templates-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 11,
+      "slug": "platform-ai-providers",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "11-platform-ai-providers-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 11,
+      "slug": "platform-ai-providers",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "11-platform-ai-providers-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 11,
+      "slug": "platform-ai-providers",
+      "lang": "en",
+      "device": "desktop",
+      "file": "11-platform-ai-providers-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 11,
+      "slug": "platform-ai-providers",
+      "lang": "en",
+      "device": "mobile",
+      "file": "11-platform-ai-providers-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 12,
+      "slug": "platform-insights-config",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "12-platform-insights-config-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 12,
+      "slug": "platform-insights-config",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "12-platform-insights-config-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 12,
+      "slug": "platform-insights-config",
+      "lang": "en",
+      "device": "desktop",
+      "file": "12-platform-insights-config-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 12,
+      "slug": "platform-insights-config",
+      "lang": "en",
+      "device": "mobile",
+      "file": "12-platform-insights-config-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 13,
+      "slug": "platform-support-desk",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "13-platform-support-desk-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 13,
+      "slug": "platform-support-desk",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "13-platform-support-desk-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 13,
+      "slug": "platform-support-desk",
+      "lang": "en",
+      "device": "desktop",
+      "file": "13-platform-support-desk-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 13,
+      "slug": "platform-support-desk",
+      "lang": "en",
+      "device": "mobile",
+      "file": "13-platform-support-desk-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 14,
+      "slug": "platform-health",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "14-platform-health-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 14,
+      "slug": "platform-health",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "14-platform-health-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 14,
+      "slug": "platform-health",
+      "lang": "en",
+      "device": "desktop",
+      "file": "14-platform-health-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 14,
+      "slug": "platform-health",
+      "lang": "en",
+      "device": "mobile",
+      "file": "14-platform-health-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 15,
+      "slug": "platform-audit",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "15-platform-audit-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 15,
+      "slug": "platform-audit",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "15-platform-audit-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 15,
+      "slug": "platform-audit",
+      "lang": "en",
+      "device": "desktop",
+      "file": "15-platform-audit-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 15,
+      "slug": "platform-audit",
+      "lang": "en",
+      "device": "mobile",
+      "file": "15-platform-audit-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 16,
+      "slug": "org-admin-dashboard",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "16-org-admin-dashboard-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 16,
+      "slug": "org-admin-dashboard",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "16-org-admin-dashboard-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 16,
+      "slug": "org-admin-dashboard",
+      "lang": "en",
+      "device": "desktop",
+      "file": "16-org-admin-dashboard-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 16,
+      "slug": "org-admin-dashboard",
+      "lang": "en",
+      "device": "mobile",
+      "file": "16-org-admin-dashboard-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 17,
+      "slug": "org-users",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "17-org-users-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 17,
+      "slug": "org-users",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "17-org-users-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 17,
+      "slug": "org-users",
+      "lang": "en",
+      "device": "desktop",
+      "file": "17-org-users-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 17,
+      "slug": "org-users",
+      "lang": "en",
+      "device": "mobile",
+      "file": "17-org-users-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 18,
+      "slug": "org-user-form",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "18-org-user-form-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 18,
+      "slug": "org-user-form",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "18-org-user-form-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 18,
+      "slug": "org-user-form",
+      "lang": "en",
+      "device": "desktop",
+      "file": "18-org-user-form-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 18,
+      "slug": "org-user-form",
+      "lang": "en",
+      "device": "mobile",
+      "file": "18-org-user-form-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 19,
+      "slug": "org-departments",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "19-org-departments-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 19,
+      "slug": "org-departments",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "19-org-departments-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 19,
+      "slug": "org-departments",
+      "lang": "en",
+      "device": "desktop",
+      "file": "19-org-departments-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 19,
+      "slug": "org-departments",
+      "lang": "en",
+      "device": "mobile",
+      "file": "19-org-departments-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 20,
+      "slug": "org-sections",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "20-org-sections-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 20,
+      "slug": "org-sections",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "20-org-sections-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 20,
+      "slug": "org-sections",
+      "lang": "en",
+      "device": "desktop",
+      "file": "20-org-sections-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 20,
+      "slug": "org-sections",
+      "lang": "en",
+      "device": "mobile",
+      "file": "20-org-sections-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 21,
+      "slug": "org-roles",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "21-org-roles-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 21,
+      "slug": "org-roles",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "21-org-roles-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 21,
+      "slug": "org-roles",
+      "lang": "en",
+      "device": "desktop",
+      "file": "21-org-roles-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 21,
+      "slug": "org-roles",
+      "lang": "en",
+      "device": "mobile",
+      "file": "21-org-roles-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 22,
+      "slug": "org-applications",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "22-org-applications-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 22,
+      "slug": "org-applications",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "22-org-applications-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 22,
+      "slug": "org-applications",
+      "lang": "en",
+      "device": "desktop",
+      "file": "22-org-applications-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 22,
+      "slug": "org-applications",
+      "lang": "en",
+      "device": "mobile",
+      "file": "22-org-applications-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 23,
+      "slug": "org-metadata",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "23-org-metadata-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 23,
+      "slug": "org-metadata",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "23-org-metadata-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 23,
+      "slug": "org-metadata",
+      "lang": "en",
+      "device": "desktop",
+      "file": "23-org-metadata-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 23,
+      "slug": "org-metadata",
+      "lang": "en",
+      "device": "mobile",
+      "file": "23-org-metadata-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 24,
+      "slug": "org-permissions",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "24-org-permissions-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 24,
+      "slug": "org-permissions",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "24-org-permissions-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 24,
+      "slug": "org-permissions",
+      "lang": "en",
+      "device": "desktop",
+      "file": "24-org-permissions-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 24,
+      "slug": "org-permissions",
+      "lang": "en",
+      "device": "mobile",
+      "file": "24-org-permissions-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 25,
+      "slug": "org-insights",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "25-org-insights-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 25,
+      "slug": "org-insights",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "25-org-insights-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 25,
+      "slug": "org-insights",
+      "lang": "en",
+      "device": "desktop",
+      "file": "25-org-insights-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 25,
+      "slug": "org-insights",
+      "lang": "en",
+      "device": "mobile",
+      "file": "25-org-insights-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 26,
+      "slug": "org-support-access",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "26-org-support-access-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 26,
+      "slug": "org-support-access",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "26-org-support-access-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 26,
+      "slug": "org-support-access",
+      "lang": "en",
+      "device": "desktop",
+      "file": "26-org-support-access-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 26,
+      "slug": "org-support-access",
+      "lang": "en",
+      "device": "mobile",
+      "file": "26-org-support-access-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 27,
+      "slug": "org-integrations",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "27-org-integrations-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 27,
+      "slug": "org-integrations",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "27-org-integrations-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 27,
+      "slug": "org-integrations",
+      "lang": "en",
+      "device": "desktop",
+      "file": "27-org-integrations-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 27,
+      "slug": "org-integrations",
+      "lang": "en",
+      "device": "mobile",
+      "file": "27-org-integrations-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 28,
+      "slug": "org-settings",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "28-org-settings-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 28,
+      "slug": "org-settings",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "28-org-settings-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 28,
+      "slug": "org-settings",
+      "lang": "en",
+      "device": "desktop",
+      "file": "28-org-settings-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 28,
+      "slug": "org-settings",
+      "lang": "en",
+      "device": "mobile",
+      "file": "28-org-settings-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 29,
+      "slug": "org-notifications",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "29-org-notifications-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 29,
+      "slug": "org-notifications",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "29-org-notifications-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 29,
+      "slug": "org-notifications",
+      "lang": "en",
+      "device": "desktop",
+      "file": "29-org-notifications-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 29,
+      "slug": "org-notifications",
+      "lang": "en",
+      "device": "mobile",
+      "file": "29-org-notifications-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 30,
+      "slug": "user-dashboard",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "30-user-dashboard-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 30,
+      "slug": "user-dashboard",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "30-user-dashboard-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 30,
+      "slug": "user-dashboard",
+      "lang": "en",
+      "device": "desktop",
+      "file": "30-user-dashboard-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 30,
+      "slug": "user-dashboard",
+      "lang": "en",
+      "device": "mobile",
+      "file": "30-user-dashboard-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 31,
+      "slug": "ask-prompt",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "31-ask-prompt-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 31,
+      "slug": "ask-prompt",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "31-ask-prompt-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 31,
+      "slug": "ask-prompt",
+      "lang": "en",
+      "device": "desktop",
+      "file": "31-ask-prompt-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 31,
+      "slug": "ask-prompt",
+      "lang": "en",
+      "device": "mobile",
+      "file": "31-ask-prompt-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 32,
+      "slug": "ask-answer-dashboard",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "32-ask-answer-dashboard-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 32,
+      "slug": "ask-answer-dashboard",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "32-ask-answer-dashboard-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 32,
+      "slug": "ask-answer-dashboard",
+      "lang": "en",
+      "device": "desktop",
+      "file": "32-ask-answer-dashboard-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 32,
+      "slug": "ask-answer-dashboard",
+      "lang": "en",
+      "device": "mobile",
+      "file": "32-ask-answer-dashboard-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 33,
+      "slug": "my-history",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "33-my-history-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 33,
+      "slug": "my-history",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "33-my-history-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 33,
+      "slug": "my-history",
+      "lang": "en",
+      "device": "desktop",
+      "file": "33-my-history-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 33,
+      "slug": "my-history",
+      "lang": "en",
+      "device": "mobile",
+      "file": "33-my-history-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 34,
+      "slug": "analysis-detail-study",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "34-analysis-detail-study-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 34,
+      "slug": "analysis-detail-study",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "34-analysis-detail-study-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 34,
+      "slug": "analysis-detail-study",
+      "lang": "en",
+      "device": "desktop",
+      "file": "34-analysis-detail-study-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 34,
+      "slug": "analysis-detail-study",
+      "lang": "en",
+      "device": "mobile",
+      "file": "34-analysis-detail-study-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 35,
+      "slug": "my-reports",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "35-my-reports-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 35,
+      "slug": "my-reports",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "35-my-reports-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 35,
+      "slug": "my-reports",
+      "lang": "en",
+      "device": "desktop",
+      "file": "35-my-reports-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 35,
+      "slug": "my-reports",
+      "lang": "en",
+      "device": "mobile",
+      "file": "35-my-reports-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 36,
+      "slug": "favorites",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "36-favorites-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 36,
+      "slug": "favorites",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "36-favorites-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 36,
+      "slug": "favorites",
+      "lang": "en",
+      "device": "desktop",
+      "file": "36-favorites-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 36,
+      "slug": "favorites",
+      "lang": "en",
+      "device": "mobile",
+      "file": "36-favorites-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 37,
+      "slug": "shared-with-me",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "37-shared-with-me-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 37,
+      "slug": "shared-with-me",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "37-shared-with-me-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 37,
+      "slug": "shared-with-me",
+      "lang": "en",
+      "device": "desktop",
+      "file": "37-shared-with-me-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 37,
+      "slug": "shared-with-me",
+      "lang": "en",
+      "device": "mobile",
+      "file": "37-shared-with-me-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 38,
+      "slug": "shared-analysis",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "38-shared-analysis-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 38,
+      "slug": "shared-analysis",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "38-shared-analysis-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 38,
+      "slug": "shared-analysis",
+      "lang": "en",
+      "device": "desktop",
+      "file": "38-shared-analysis-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 38,
+      "slug": "shared-analysis",
+      "lang": "en",
+      "device": "mobile",
+      "file": "38-shared-analysis-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 39,
+      "slug": "shared-by-me",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "39-shared-by-me-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 39,
+      "slug": "shared-by-me",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "39-shared-by-me-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 39,
+      "slug": "shared-by-me",
+      "lang": "en",
+      "device": "desktop",
+      "file": "39-shared-by-me-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 39,
+      "slug": "shared-by-me",
+      "lang": "en",
+      "device": "mobile",
+      "file": "39-shared-by-me-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 40,
+      "slug": "support-new-ticket",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "40-support-new-ticket-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 40,
+      "slug": "support-new-ticket",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "40-support-new-ticket-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 40,
+      "slug": "support-new-ticket",
+      "lang": "en",
+      "device": "desktop",
+      "file": "40-support-new-ticket-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 40,
+      "slug": "support-new-ticket",
+      "lang": "en",
+      "device": "mobile",
+      "file": "40-support-new-ticket-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 41,
+      "slug": "support-ticket-detail",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "41-support-ticket-detail-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 41,
+      "slug": "support-ticket-detail",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "41-support-ticket-detail-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 41,
+      "slug": "support-ticket-detail",
+      "lang": "en",
+      "device": "desktop",
+      "file": "41-support-ticket-detail-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 41,
+      "slug": "support-ticket-detail",
+      "lang": "en",
+      "device": "mobile",
+      "file": "41-support-ticket-detail-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 42,
+      "slug": "profile",
+      "lang": "ar",
+      "device": "desktop",
+      "file": "42-profile-ar-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 42,
+      "slug": "profile",
+      "lang": "ar",
+      "device": "mobile",
+      "file": "42-profile-ar-mobile.png",
+      "ok": true,
+      "overflow": null
+    },
+    {
+      "n": 42,
+      "slug": "profile",
+      "lang": "en",
+      "device": "desktop",
+      "file": "42-profile-en-desktop.png",
+      "ok": true,
+      "overflow": null,
+      "capturedAt": "2026-11-06T11:09:51.643Z"
+    },
+    {
+      "n": 42,
+      "slug": "profile",
+      "lang": "en",
+      "device": "mobile",
+      "file": "42-profile-en-mobile.png",
+      "ok": true,
+      "overflow": null
+    }
+  ]
+}

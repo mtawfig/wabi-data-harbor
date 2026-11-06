@@ -1,6 +1,6 @@
 # Wabi Insight — Design System
 
-Status: P1.4 foundation. P11 completes the logo set, marketing assets and cross-page refinement.
+Status: P11.2 — logo set, landing page and cross-page polish complete; the 42 screens are captured by `scripts/screenshots/capture.js` (see `docs/SCREENSHOTS.md`).
 
 ## Identity
 | Token | Value | Use |
@@ -15,7 +15,8 @@ Status: P1.4 foundation. P11 completes the logo set, marketing assets and cross-
 
 Dimensions: header 76 px (`--wi-header-height`), sidebar 248 px (`--wi-sidebar-width`), card radius 14 px, hero heading 36–56 px (clamped), page heading 28 px, navigation 15 px, body 15 px.
 
-Interim logo: `BrandLogoComponent` (lighthouse over two data waves, dark and light variants). The final SVG set arrives in P11.1.
+## Logo (P11.1)
+The mark is a lighthouse (navy tower with ocean bands, aqua lamp) over three data waves (ocean→aqua gradient, fading) with connectivity marks (aqua beams ending in linked nodes). Files in `src/web/public/brand/`: `wabi-insight-icon.svg` (light backgrounds), `wabi-insight-icon-light.svg` (white tower for navy/gradient backgrounds), `wabi-insight-wordmark-dark.svg` and `wabi-insight-wordmark-light.svg` (icon + "Wabi Insight" + the tagline "ASK YOUR DATA. TRUST THE ANSWER."), `favicon.svg` (mark on a rounded navy tile; `public/favicon.ico` 16–64 px and `apple-touch-icon.png` are generated from it). `BrandLogoComponent` inlines the same drawing with `variant` dark/light, `size`, `showName` and `showTagline`. Clear space: half the mark's height on every side; never recolour the waves or place the dark variant on navy. Preview: `docs/screenshots/p11-1-brand-sheet.png`.
 
 ## Typography and direction
 - English: Inter (self-hosted via `@fontsource/inter`, weights 400–700), LTR.
@@ -26,7 +27,7 @@ Interim logo: `BrandLogoComponent` (lighthouse over two data waves, dark and lig
 ## Components
 - Angular Material 22 (M3) with `mat.theme` (azure/cyan palettes) and brand overrides of the key `--mat-sys-*` tokens in `src/styles.scss`. Icons: Material Icons font (self-hosted `material-icons` package).
 - `AppShellComponent`: shared authenticated shell (header, collapsible sidebar, user menu, language switcher). Organization shell uses the white header; platform shell uses the navy header with light button tokens.
-- `LanguageSwitcherComponent`, `BrandLogoComponent`, `PagePlaceholderComponent` (honest "coming in phase N" page driven by route data).
+- `LanguageSwitcherComponent`, `BrandLogoComponent` (the route placeholder component was retired in P11.2 once every route had a real page).
 - Auth layouts (login, bootstrap, change password) share `login.component.scss`: gradient aside + card.
 - Utility classes: `.wi-card`, `.wi-page`, `.wi-page__header`, `.wi-eyebrow`, `.wi-muted`, `.wi-gradient`, `.wi-ms-auto`.
 
@@ -118,6 +119,27 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 - Analysis detail gains an outlined *Export* menu button (PDF, Word, Excel, Print view) next to Archive; exporting shows "Exporting…" and ends with a snackbar "… saved to My Reports".
 - Print view (`/print/history/{id}/{version}`): a plain white page without the shell — dashed bar with the hint and a filled *Print view* button (hidden when printing), brand eyebrow, title, application · version · date, the question, then the answer rendered by `app-analysis-answer`; print CSS removes shadows, avoids page breaks inside cards and hides *How this was computed*.
 - Exported documents follow the PDF's visual language: ocean headings, light-blue summary box, brand palette charts, zebra tables, logo top-left, page x / y.
+
+## Sharing (P10.1)
+- Analysis detail gains outlined *Share* and *Email* buttons before Archive. *Share with colleagues* is a 640 px dialog: search field, a scrollable checkbox list of active colleagues (name, email in LTR, department), note and *Access expires* (Never / 7 / 30 / 90 days) fields, an *Already shared with* list with green *Active* / grey *Expired* / *Revoked* chips, opened-at and expiry notes and a red outlined *Revoke* per active row, and a filled *Share (n)* action.
+- *Send by email* is a 700 px dialog that opens with a classification banner — blue shield for Internal, orange for Confidential, red for Restricted — stating the rule that applies, then recipients (textarea, comma-separated, counted), subject and message (pre-filled from the AI email draft when the version has one), *Attach the study PDF* (or *Attach the analysis as a PDF*), and the gate checkbox: the standard confirmation for Internal/Restricted, the explicit disclosure approval for Confidential. Blocked sends show the API message in red inside the dialog.
+- *Shared With Me*: table of title + prompt excerpt (+ the owner's note with a quote icon), shared by, application with type and classification chips, shared on, expires, outlined *Open*. *Shared By Me*: analysis link with chips, recipient (+ note), status chip with "opened …" / "Not opened yet", dates, *Revoke*; a *Show expired and revoked* toggle.
+- The shared analysis view mirrors the analysis detail without owner actions: eyebrow back link to Shared With Me, type and classification chips, "shared by … on …", *Download PDF*, an aqua note card with the owner's message, the question card with a read-only note, `app-analysis-answer`, and a *Versions* sidebar of completed versions (no cost shown to recipients).
+- Classification chips everywhere: Internal light blue, Confidential light orange, Restricted light red.
+
+## Landing page (P11.1)
+Ten sections: sticky header (wordmark with tagline, section links, language switcher, *Sign in*), gradient hero with the two illustrated scenes (before/after with captions, arrow flips in RTL and turns vertical on phones) and three fact chips, *Capabilities* (six cards), *Product demonstration* (a mock Ask window: question, green "plan validated" pill, three KPI tiles, a CSS bar chart by region, narrative; three explanatory cards; the fictional-data disclaimer), *Use cases* (six cards with a quoted example question), *How it works* (four numbered steps), *Security* (text, the question→plan→validate & authorize→read-only SQL→answer flow pills, six checked points), *Multi-organization* (four cards), gradient *Call to action* with a hint, footer (brand and blurb, section links, rights / fictional-data note / AP-AIR). Breakpoints: 1100 px (hero stacks), 960 px (single columns, section nav hidden), 600 px (compact header without tagline or switcher label, 16 px gutters).
+
+## Profile, dashboard and Integrations (P11.2)
+- *Profile*: avatar with initials, name, email, organization, role chips, account type, preferred language; side cards for the interface language (switcher), password (link to the change-password screen) and "managed by your administrator" (link to a new ticket).
+- User *Dashboard*: four count tiles (saved analyses, files in My Reports, shared with me, favorites) linking to their pages, a *Recent analyses* card and the support ticket widget — the "coming soon" card is gone.
+- *Integrations* (organization administration): Google Drive and Microsoft OneDrive cards marked *Next version* with the owner's deferral explained, and an *Available today* card listing in-app sharing, email delivery and exports.
+
+## Screenshots (P11.2)
+`docs/screenshots/screens/NN-slug-{en|ar}-{desktop|mobile}.png`: the 42 screens of specification §32 (public 1–4, platform 5–15, organization administrator 16–29, organization user 30–42) captured by `scripts/screenshots/capture.js`; `docs/SCREENSHOTS.md` is the index. `docs/screenshots/p11-1-*.png`: brand sheet and the full landing page (EN, AR, mobile).
+
+## Screenshots (P10.1)
+`docs/screenshots/p10-1-*.png`: the share dialog before and after sharing, the email dialog with the Internal banner and the AI draft, Shared By Me, the recipient's notification, Shared With Me (EN and AR) and the shared analysis view (EN and AR).
 
 ## Screenshots (P9.2)
 `docs/screenshots/p9-2-*.png`: My Reports (EN), the Export menu on an analysis, and the print view.

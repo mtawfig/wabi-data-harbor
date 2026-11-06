@@ -1,0 +1,82 @@
+# Wabi Insight — Screens
+
+The 42 screens required by specification §32, captured from the running application (never mocked) by `scripts/screenshots/capture.js` in English and Arabic at desktop (1440 × 960, device scale 2) and mobile (390 × 844, device scale 2) widths. Files live in `docs/screenshots/screens/` as `NN-slug-{en|ar}-{desktop|mobile}.png`; `capture-report.json` next to them records when each shot was taken and any horizontal overflow the script detected (none at the time of writing).
+
+## Reproducing
+
+```bash
+# 1. API and web running with the demo data (docs/PROGRESS.md P8.3 / scripts/demo/sharjah-flights)
+dotnet run --project src/WabiInsight.Api            # :5080
+cd src/web && npm start                              # :4200
+# 2. Capture (ids of a saved study with a PDF, the organization and a ticket come from the demo data)
+WI_HISTORY_ID=<history guid> WI_ORGANIZATION_ID=<organization guid> WI_TICKET_ID=<ticket guid> \
+  node scripts/screenshots/capture.js [--lang en,ar] [--device desktop,mobile] [--only 31,32] [--out docs/screenshots/screens]
+```
+
+Accounts default to the demo users (`WI_PLATFORM_*`, `WI_ORGADMIN_*`, `WI_USER_*`, `WI_RECIPIENT_*` override them). The script toggles the visible language switcher when the signed-in account's preferred language differs from the requested one, so Arabic shots show the real RTL layout of the same session.
+
+## Public (1–4)
+
+| # | Screen | Signed in as | EN desktop | AR desktop | EN mobile | AR mobile |
+|---|---|---|---|---|---|---|
+| 1 | Landing page | public | [en-desktop](screenshots/screens/01-landing-en-desktop.png) | [ar-desktop](screenshots/screens/01-landing-ar-desktop.png) | [en-mobile](screenshots/screens/01-landing-en-mobile.png) | [ar-mobile](screenshots/screens/01-landing-ar-mobile.png) |
+| 2 | Sign in | public | [en-desktop](screenshots/screens/02-login-en-desktop.png) | [ar-desktop](screenshots/screens/02-login-ar-desktop.png) | [en-mobile](screenshots/screens/02-login-en-mobile.png) | [ar-mobile](screenshots/screens/02-login-ar-mobile.png) |
+| 3 | Platform bootstrap (first administrator) | public | [en-desktop](screenshots/screens/03-bootstrap-en-desktop.png) | [ar-desktop](screenshots/screens/03-bootstrap-ar-desktop.png) | [en-mobile](screenshots/screens/03-bootstrap-en-mobile.png) | [ar-mobile](screenshots/screens/03-bootstrap-ar-mobile.png) |
+| 4 | Change password | Organization user | [en-desktop](screenshots/screens/04-change-password-en-desktop.png) | [ar-desktop](screenshots/screens/04-change-password-ar-desktop.png) | [en-mobile](screenshots/screens/04-change-password-en-mobile.png) | [ar-mobile](screenshots/screens/04-change-password-ar-mobile.png) |
+
+## Platform Administrator (5–15)
+
+| # | Screen | Signed in as | EN desktop | AR desktop | EN mobile | AR mobile |
+|---|---|---|---|---|---|---|
+| 5 | Platform Overview | Platform Administrator | [en-desktop](screenshots/screens/05-platform-overview-en-desktop.png) | [ar-desktop](screenshots/screens/05-platform-overview-ar-desktop.png) | [en-mobile](screenshots/screens/05-platform-overview-en-mobile.png) | [ar-mobile](screenshots/screens/05-platform-overview-ar-mobile.png) |
+| 6 | Organizations | Platform Administrator | [en-desktop](screenshots/screens/06-platform-organizations-en-desktop.png) | [ar-desktop](screenshots/screens/06-platform-organizations-ar-desktop.png) | [en-mobile](screenshots/screens/06-platform-organizations-en-mobile.png) | [ar-mobile](screenshots/screens/06-platform-organizations-ar-mobile.png) |
+| 7 | Create organization | Platform Administrator | [en-desktop](screenshots/screens/07-platform-organization-create-en-desktop.png) | [ar-desktop](screenshots/screens/07-platform-organization-create-ar-desktop.png) | [en-mobile](screenshots/screens/07-platform-organization-create-en-mobile.png) | [ar-mobile](screenshots/screens/07-platform-organization-create-ar-mobile.png) |
+| 8 | Organization detail (status, administrators, applications) | Platform Administrator | [en-desktop](screenshots/screens/08-platform-organization-detail-en-desktop.png) | [ar-desktop](screenshots/screens/08-platform-organization-detail-ar-desktop.png) | [en-mobile](screenshots/screens/08-platform-organization-detail-en-mobile.png) | [ar-mobile](screenshots/screens/08-platform-organization-detail-ar-mobile.png) |
+| 9 | Platform Administrators | Platform Administrator | [en-desktop](screenshots/screens/09-platform-administrators-en-desktop.png) | [ar-desktop](screenshots/screens/09-platform-administrators-ar-desktop.png) | [en-mobile](screenshots/screens/09-platform-administrators-en-mobile.png) | [ar-mobile](screenshots/screens/09-platform-administrators-ar-mobile.png) |
+| 10 | Global role templates | Platform Administrator | [en-desktop](screenshots/screens/10-platform-role-templates-en-desktop.png) | [ar-desktop](screenshots/screens/10-platform-role-templates-ar-desktop.png) | [en-mobile](screenshots/screens/10-platform-role-templates-en-mobile.png) | [ar-mobile](screenshots/screens/10-platform-role-templates-ar-mobile.png) |
+| 11 | AI providers | Platform Administrator | [en-desktop](screenshots/screens/11-platform-ai-providers-en-desktop.png) | [ar-desktop](screenshots/screens/11-platform-ai-providers-ar-desktop.png) | [en-mobile](screenshots/screens/11-platform-ai-providers-en-mobile.png) | [ar-mobile](screenshots/screens/11-platform-ai-providers-ar-mobile.png) |
+| 12 | Platform Insights configuration | Platform Administrator | [en-desktop](screenshots/screens/12-platform-insights-config-en-desktop.png) | [ar-desktop](screenshots/screens/12-platform-insights-config-ar-desktop.png) | [en-mobile](screenshots/screens/12-platform-insights-config-en-mobile.png) | [ar-mobile](screenshots/screens/12-platform-insights-config-ar-mobile.png) |
+| 13 | Support desk (platform queue) | Platform Administrator | [en-desktop](screenshots/screens/13-platform-support-desk-en-desktop.png) | [ar-desktop](screenshots/screens/13-platform-support-desk-ar-desktop.png) | [en-mobile](screenshots/screens/13-platform-support-desk-en-mobile.png) | [ar-mobile](screenshots/screens/13-platform-support-desk-ar-mobile.png) |
+| 14 | System health | Platform Administrator | [en-desktop](screenshots/screens/14-platform-health-en-desktop.png) | [ar-desktop](screenshots/screens/14-platform-health-ar-desktop.png) | [en-mobile](screenshots/screens/14-platform-health-en-mobile.png) | [ar-mobile](screenshots/screens/14-platform-health-ar-mobile.png) |
+| 15 | Audit logs | Platform Administrator | [en-desktop](screenshots/screens/15-platform-audit-en-desktop.png) | [ar-desktop](screenshots/screens/15-platform-audit-ar-desktop.png) | [en-mobile](screenshots/screens/15-platform-audit-en-mobile.png) | [ar-mobile](screenshots/screens/15-platform-audit-ar-mobile.png) |
+
+## Organization Administrator (16–29)
+
+| # | Screen | Signed in as | EN desktop | AR desktop | EN mobile | AR mobile |
+|---|---|---|---|---|---|---|
+| 16 | Organization dashboard | Organization Administrator | [en-desktop](screenshots/screens/16-org-admin-dashboard-en-desktop.png) | [ar-desktop](screenshots/screens/16-org-admin-dashboard-ar-desktop.png) | [en-mobile](screenshots/screens/16-org-admin-dashboard-en-mobile.png) | [ar-mobile](screenshots/screens/16-org-admin-dashboard-ar-mobile.png) |
+| 17 | Organization users | Organization Administrator | [en-desktop](screenshots/screens/17-org-users-en-desktop.png) | [ar-desktop](screenshots/screens/17-org-users-ar-desktop.png) | [en-mobile](screenshots/screens/17-org-users-en-mobile.png) | [ar-mobile](screenshots/screens/17-org-users-ar-mobile.png) |
+| 18 | Create user | Organization Administrator | [en-desktop](screenshots/screens/18-org-user-form-en-desktop.png) | [ar-desktop](screenshots/screens/18-org-user-form-ar-desktop.png) | [en-mobile](screenshots/screens/18-org-user-form-en-mobile.png) | [ar-mobile](screenshots/screens/18-org-user-form-ar-mobile.png) |
+| 19 | Departments | Organization Administrator | [en-desktop](screenshots/screens/19-org-departments-en-desktop.png) | [ar-desktop](screenshots/screens/19-org-departments-ar-desktop.png) | [en-mobile](screenshots/screens/19-org-departments-en-mobile.png) | [ar-mobile](screenshots/screens/19-org-departments-ar-mobile.png) |
+| 20 | Sections | Organization Administrator | [en-desktop](screenshots/screens/20-org-sections-en-desktop.png) | [ar-desktop](screenshots/screens/20-org-sections-ar-desktop.png) | [en-mobile](screenshots/screens/20-org-sections-en-mobile.png) | [ar-mobile](screenshots/screens/20-org-sections-ar-mobile.png) |
+| 21 | Roles | Organization Administrator | [en-desktop](screenshots/screens/21-org-roles-en-desktop.png) | [ar-desktop](screenshots/screens/21-org-roles-ar-desktop.png) | [en-mobile](screenshots/screens/21-org-roles-en-mobile.png) | [ar-mobile](screenshots/screens/21-org-roles-ar-mobile.png) |
+| 22 | Applications (data sources) | Organization Administrator | [en-desktop](screenshots/screens/22-org-applications-en-desktop.png) | [ar-desktop](screenshots/screens/22-org-applications-ar-desktop.png) | [en-mobile](screenshots/screens/22-org-applications-en-mobile.png) | [ar-mobile](screenshots/screens/22-org-applications-ar-mobile.png) |
+| 23 | Metadata approval | Organization Administrator | [en-desktop](screenshots/screens/23-org-metadata-en-desktop.png) | [ar-desktop](screenshots/screens/23-org-metadata-ar-desktop.png) | [en-mobile](screenshots/screens/23-org-metadata-en-mobile.png) | [ar-mobile](screenshots/screens/23-org-metadata-ar-mobile.png) |
+| 24 | Permissions | Organization Administrator | [en-desktop](screenshots/screens/24-org-permissions-en-desktop.png) | [ar-desktop](screenshots/screens/24-org-permissions-ar-desktop.png) | [en-mobile](screenshots/screens/24-org-permissions-en-mobile.png) | [ar-mobile](screenshots/screens/24-org-permissions-ar-mobile.png) |
+| 25 | Organization Insights | Organization Administrator | [en-desktop](screenshots/screens/25-org-insights-en-desktop.png) | [ar-desktop](screenshots/screens/25-org-insights-ar-desktop.png) | [en-mobile](screenshots/screens/25-org-insights-en-mobile.png) | [ar-mobile](screenshots/screens/25-org-insights-ar-mobile.png) |
+| 26 | Support access grants | Organization Administrator | [en-desktop](screenshots/screens/26-org-support-access-en-desktop.png) | [ar-desktop](screenshots/screens/26-org-support-access-ar-desktop.png) | [en-mobile](screenshots/screens/26-org-support-access-en-mobile.png) | [ar-mobile](screenshots/screens/26-org-support-access-ar-mobile.png) |
+| 27 | Integrations (Drive / OneDrive deferred) | Organization Administrator | [en-desktop](screenshots/screens/27-org-integrations-en-desktop.png) | [ar-desktop](screenshots/screens/27-org-integrations-ar-desktop.png) | [en-mobile](screenshots/screens/27-org-integrations-en-mobile.png) | [ar-mobile](screenshots/screens/27-org-integrations-ar-mobile.png) |
+| 28 | Organization settings and report logo | Organization Administrator | [en-desktop](screenshots/screens/28-org-settings-en-desktop.png) | [ar-desktop](screenshots/screens/28-org-settings-ar-desktop.png) | [en-mobile](screenshots/screens/28-org-settings-en-mobile.png) | [ar-mobile](screenshots/screens/28-org-settings-ar-mobile.png) |
+| 29 | Notifications | Organization Administrator | [en-desktop](screenshots/screens/29-org-notifications-en-desktop.png) | [ar-desktop](screenshots/screens/29-org-notifications-ar-desktop.png) | [en-mobile](screenshots/screens/29-org-notifications-en-mobile.png) | [ar-mobile](screenshots/screens/29-org-notifications-ar-mobile.png) |
+
+## Organization user (30–42)
+
+| # | Screen | Signed in as | EN desktop | AR desktop | EN mobile | AR mobile |
+|---|---|---|---|---|---|---|
+| 30 | User dashboard | Organization user | [en-desktop](screenshots/screens/30-user-dashboard-en-desktop.png) | [ar-desktop](screenshots/screens/30-user-dashboard-ar-desktop.png) | [en-mobile](screenshots/screens/30-user-dashboard-en-mobile.png) | [ar-mobile](screenshots/screens/30-user-dashboard-ar-mobile.png) |
+| 31 | Ask Wabi Insight — prompt | Organization user | [en-desktop](screenshots/screens/31-ask-prompt-en-desktop.png) | [ar-desktop](screenshots/screens/31-ask-prompt-ar-desktop.png) | [en-mobile](screenshots/screens/31-ask-prompt-en-mobile.png) | [ar-mobile](screenshots/screens/31-ask-prompt-ar-mobile.png) |
+| 32 | Dashboard answer (KPI cards, charts, tables, narrative) | Organization user | [en-desktop](screenshots/screens/32-ask-answer-dashboard-en-desktop.png) | [ar-desktop](screenshots/screens/32-ask-answer-dashboard-ar-desktop.png) | [en-mobile](screenshots/screens/32-ask-answer-dashboard-en-mobile.png) | [ar-mobile](screenshots/screens/32-ask-answer-dashboard-ar-mobile.png) |
+| 33 | My History | Organization user | [en-desktop](screenshots/screens/33-my-history-en-desktop.png) | [ar-desktop](screenshots/screens/33-my-history-ar-desktop.png) | [en-mobile](screenshots/screens/33-my-history-en-mobile.png) | [ar-mobile](screenshots/screens/33-my-history-ar-mobile.png) |
+| 34 | Analysis detail — study with PDF report and email draft | Organization user | [en-desktop](screenshots/screens/34-analysis-detail-study-en-desktop.png) | [ar-desktop](screenshots/screens/34-analysis-detail-study-ar-desktop.png) | [en-mobile](screenshots/screens/34-analysis-detail-study-en-mobile.png) | [ar-mobile](screenshots/screens/34-analysis-detail-study-ar-mobile.png) |
+| 35 | My Reports | Organization user | [en-desktop](screenshots/screens/35-my-reports-en-desktop.png) | [ar-desktop](screenshots/screens/35-my-reports-ar-desktop.png) | [en-mobile](screenshots/screens/35-my-reports-en-mobile.png) | [ar-mobile](screenshots/screens/35-my-reports-ar-mobile.png) |
+| 36 | Favorites | Organization user | [en-desktop](screenshots/screens/36-favorites-en-desktop.png) | [ar-desktop](screenshots/screens/36-favorites-ar-desktop.png) | [en-mobile](screenshots/screens/36-favorites-en-mobile.png) | [ar-mobile](screenshots/screens/36-favorites-ar-mobile.png) |
+| 37 | Shared With Me | Organization user (share recipient) | [en-desktop](screenshots/screens/37-shared-with-me-en-desktop.png) | [ar-desktop](screenshots/screens/37-shared-with-me-ar-desktop.png) | [en-mobile](screenshots/screens/37-shared-with-me-en-mobile.png) | [ar-mobile](screenshots/screens/37-shared-with-me-ar-mobile.png) |
+| 38 | Shared analysis (recipient view) | Organization user (share recipient) | [en-desktop](screenshots/screens/38-shared-analysis-en-desktop.png) | [ar-desktop](screenshots/screens/38-shared-analysis-ar-desktop.png) | [en-mobile](screenshots/screens/38-shared-analysis-en-mobile.png) | [ar-mobile](screenshots/screens/38-shared-analysis-ar-mobile.png) |
+| 39 | Shared By Me | Organization user | [en-desktop](screenshots/screens/39-shared-by-me-en-desktop.png) | [ar-desktop](screenshots/screens/39-shared-by-me-ar-desktop.png) | [en-mobile](screenshots/screens/39-shared-by-me-en-mobile.png) | [ar-mobile](screenshots/screens/39-shared-by-me-ar-mobile.png) |
+| 40 | New support ticket | Organization user | [en-desktop](screenshots/screens/40-support-new-ticket-en-desktop.png) | [ar-desktop](screenshots/screens/40-support-new-ticket-ar-desktop.png) | [en-mobile](screenshots/screens/40-support-new-ticket-en-mobile.png) | [ar-mobile](screenshots/screens/40-support-new-ticket-ar-mobile.png) |
+| 41 | Support ticket detail | Organization user | [en-desktop](screenshots/screens/41-support-ticket-detail-en-desktop.png) | [ar-desktop](screenshots/screens/41-support-ticket-detail-ar-desktop.png) | [en-mobile](screenshots/screens/41-support-ticket-detail-en-mobile.png) | [ar-mobile](screenshots/screens/41-support-ticket-detail-ar-mobile.png) |
+| 42 | Profile | Organization user | [en-desktop](screenshots/screens/42-profile-en-desktop.png) | [ar-desktop](screenshots/screens/42-profile-ar-desktop.png) | [en-mobile](screenshots/screens/42-profile-en-mobile.png) | [ar-mobile](screenshots/screens/42-profile-ar-mobile.png) |
+
+## Feature screenshots by PR
+
+Earlier PRs keep their own captures under `docs/screenshots/p<phase>-<n>-*.png` (listed per PR in `docs/DESIGN_SYSTEM.md`), the recorded demo under `docs/demo/`, and the brand sheet at `docs/screenshots/p11-1-brand-sheet.png`.
