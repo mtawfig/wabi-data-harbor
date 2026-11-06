@@ -1,0 +1,128 @@
+# Manual deployment to the Linux server (docs/DEVOPS_LINUX.md). Never runs automatically:
+# Actions → "Deploy (Linux)" → Run workflow → choose the branch, what to deploy and whether to migrate the database.
+# Build: GitHub-hosted runners. Install: the self-hosted runner on the server (labels self-hosted, linux, wabi-insight),
+# which calls the root-owned /usr/local/sbin/wabi-insight-deploy through one sudo rule.
+name: Deploy (Linux)
+run-name: "Deploy ${{ inputs.component }} to Linux${{ inputs.migrate_database && ' + database migration' || '' }} (${{ inputs.ref || github.ref_name }}) by @${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "What to deploy"
+        type: choice
+        options:
+          - frontend+backend
+          - backend
+          - frontend
+        default: frontend+backend
+      migrate_database:
+        description: "Apply database migrations (with the backend only; a database backup runs first)"
+        type: boolean
+        default: false
+      run_tests:
+        description: "Run unit tests and web lint/tests before deploying"
+        type: boolean
+        default: true
+      ref:
+        description: "Optional commit SHA or tag to deploy instead of the selected branch (e.g. to roll back)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-linux
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/build-release.yml
+    with:
+      component: ${{ inputs.component }}
+      run_tests: ${{ inputs.run_tests }}
+      ref: ${{ inputs.ref }}
+
+  deploy:
+    name: Deploy to Linux server
+    needs: build
+    runs-on: [self-hosted, linux, wabi-insight]
+    environment:
+      name: production-linux
+      url: ${{ vars.WI_PUBLIC_URL }}
+    timeout-minutes: 30
+    env:
+      COMPONENT: ${{ inputs.component }}
+      MIGRATE: ${{ inputs.migrate_database && 'yes' || 'no' }}
+      VERSION: ${{ needs.build.outputs.version }}
+      ACTOR: ${{ github.actor }}
+      DEPLOY_SCRIPT: /usr/local/sbin/wabi-insight-deploy
+    steps:
+      - name: Clear the release folder
+        run: rm -rf "$RUNNER_TEMP/wabi-insight-release"
+
+      - name: Download the deploy scripts of this version
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-deploy-scripts
+          path: ${{ runner.temp }}/wabi-insight-release/scripts
+
+      - name: Check the server's deploy script
+        run: |
+          if [ ! -x "$DEPLOY_SCRIPT" ]; then
+            echo "::error::$DEPLOY_SCRIPT is not installed. See docs/DEVOPS_LINUX.md step 4."
+            exit 1
+          fi
+          if ! sudo -n "$DEPLOY_SCRIPT" --script-version >/dev/null; then
+            echo "::error::The runner user may not run $DEPLOY_SCRIPT with sudo. See docs/DEVOPS_LINUX.md step 4."
+            exit 1
+          fi
+          if ! cmp -s "$RUNNER_TEMP/wabi-insight-release/scripts/linux/wabi-insight-deploy.sh" "$DEPLOY_SCRIPT"; then
+            echo "::warning::The installed $DEPLOY_SCRIPT differs from deploy/cicd/linux/wabi-insight-deploy.sh in this version. Reinstall it (docs/DEVOPS_LINUX.md step 4) to use the latest deploy logic."
+          fi
+
+      - name: Download backend
+        if: contains(inputs.component, 'backend')
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-api
+          path: ${{ runner.temp }}/wabi-insight-release/api
+
+      - name: Download frontend
+        if: contains(inputs.component, 'frontend')
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-web
+          path: ${{ runner.temp }}/wabi-insight-release/web
+
+      - name: Install the release
+        run: |
+          release="$RUNNER_TEMP/wabi-insight-release"
+          sudo -n "$DEPLOY_SCRIPT" \
+            --component "$COMPONENT" --migrate "$MIGRATE" \
+            --api-dir "$release/api" --web-dir "$release/web/browser" \
+            --version "$VERSION" --actor "$ACTOR"
+
+      - name: Summary
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+          COMMIT: ${{ needs.build.outputs.commit }}
+        run: |
+          {
+            echo "### Wabi Insight → Linux: $RESULT"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Component | \`$COMPONENT\` |"
+            echo "| Database migration | $MIGRATE |"
+            echo "| Version | \`$VERSION\` ($COMMIT) |"
+            echo "| Started by | @$ACTOR |"
+            echo "| Server log | \`/var/log/wabi-insight-deploy.log\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clean up
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/wabi-insight-release"

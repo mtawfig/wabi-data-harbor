@@ -1,0 +1,154 @@
+# Reusable build used by the manual deployment workflows (deploy-linux.yml, deploy-windows.yml).
+# Builds the selected components on GitHub-hosted runners and uploads them as workflow artifacts:
+#   wabi-insight-api  — `dotnet publish` output (framework-dependent, runs on Linux and Windows) + IIS web.config
+#   wabi-insight-web  — browser/ (Angular production build) + iis/web.config (used on Windows only)
+#   wabi-insight-deploy-scripts — deploy/cicd of the same commit (the deploy job compares it with the installed script)
+name: Build release
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: "frontend, backend or frontend+backend"
+        type: string
+        required: true
+      run_tests:
+        description: "Run unit tests (API) and lint + tests (web) before packaging"
+        type: boolean
+        default: true
+      ref:
+        description: "Commit SHA, tag or branch to build (empty: the ref the workflow was started from)"
+        type: string
+        default: ""
+    outputs:
+      commit:
+        description: "Full commit SHA that was built"
+        value: ${{ jobs.prepare.outputs.commit }}
+      version:
+        description: "Short commit SHA used as the release version"
+        value: ${{ jobs.prepare.outputs.version }}
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  prepare:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      commit: ${{ steps.version.outputs.commit }}
+      version: ${{ steps.version.outputs.version }}
+      build_api: ${{ steps.components.outputs.build_api }}
+      build_web: ${{ steps.components.outputs.build_web }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - id: version
+        run: |
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "version=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Building $(git log -1 --format='%h %s')"
+      - id: components
+        env:
+          COMPONENT: ${{ inputs.component }}
+        run: |
+          case "$COMPONENT" in
+            frontend+backend) echo "build_api=true" >> "$GITHUB_OUTPUT"; echo "build_web=true" >> "$GITHUB_OUTPUT" ;;
+            backend)          echo "build_api=true" >> "$GITHUB_OUTPUT"; echo "build_web=false" >> "$GITHUB_OUTPUT" ;;
+            frontend)         echo "build_api=false" >> "$GITHUB_OUTPUT"; echo "build_web=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::component must be frontend, backend or frontend+backend (got '$COMPONENT')"; exit 1 ;;
+          esac
+      - name: Upload deploy scripts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wabi-insight-deploy-scripts
+          path: deploy/cicd
+          retention-days: 7
+          if-no-files-found: error
+
+  api:
+    name: Backend (.NET 10)
+    needs: prepare
+    if: needs.prepare.outputs.build_api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        run: dotnet restore WabiInsight.slnx
+      - name: Build
+        run: dotnet build WabiInsight.slnx --configuration Release --no-restore
+      - name: Unit tests
+        if: inputs.run_tests
+        run: dotnet test tests/WabiInsight.UnitTests/WabiInsight.UnitTests.csproj --configuration Release --no-build
+      - name: Publish
+        run: |
+          dotnet publish src/WabiInsight.Api/WabiInsight.Api.csproj --configuration Release --no-restore --output out/api
+          cp deploy/iis/web.config out/api/web.config
+          # Machine-specific and development settings must never ship (the project excludes them; double-check).
+          for f in appsettings.Local.json appsettings.Local.example.json appsettings.Development.json; do
+            if [ -e "out/api/$f" ]; then echo "::error::out/api/$f must not be published"; exit 1; fi
+          done
+          test -f out/api/WabiInsight.Api.dll
+          du -sh out/api
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wabi-insight-api
+          path: out/api
+          retention-days: 7
+          if-no-files-found: error
+
+  web:
+    name: Frontend (Angular 22)
+    needs: prepare
+    if: needs.prepare.outputs.build_web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      - name: Install
+        working-directory: src/web
+        run: npm ci --no-audit --no-fund
+      - name: Lint and tests
+        if: inputs.run_tests
+        working-directory: src/web
+        run: |
+          npm run lint
+          npm test
+      - name: Build
+        working-directory: src/web
+        run: npm run build -- --configuration production
+      - name: Package
+        run: |
+          mkdir -p out/web/iis
+          cp -r src/web/dist/wabi-insight-web/browser out/web/browser
+          cp deploy/iis/web.spa.config out/web/iis/web.config
+          test -f out/web/browser/index.html
+          du -sh out/web
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wabi-insight-web
+          path: out/web
+          retention-days: 7
+          if-no-files-found: error

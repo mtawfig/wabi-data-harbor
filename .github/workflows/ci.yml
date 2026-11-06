@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main, "wi/**", "claude/**"]
+  workflow_dispatch: # run the checks on any branch from the Actions tab
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -101,7 +102,7 @@ jobs:
       - name: Smoke-start the API image
         run: |
           docker run -d --name api -e ConnectionStrings__ConfigurationDatabase="Server=none;Database=x;User Id=x;Password=x;Encrypt=True;TrustServerCertificate=True;" -p 8080:8080 wabi-insight-api:ci
-          for i in $(seq 1 20); do curl -fsS http://localhost:8080/health/live && break || sleep 2; done
+          for _ in $(seq 1 20); do if curl -fsS http://localhost:8080/health/live; then break; fi; sleep 2; done
           curl -fsS http://localhost:8080/health/live
           docker logs api | tail -20
           docker rm -f api

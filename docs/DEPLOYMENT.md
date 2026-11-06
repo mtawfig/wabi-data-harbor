@@ -7,6 +7,8 @@ Wabi Insight is three deployable parts: the **Angular build** (static files), th
 - [Ubuntu 24.04 LTS: nginx + systemd + SQL Server Express](DEPLOYMENT_LINUX.md)
 - [Windows Server 2019: IIS + ARR + SQL Server Express](DEPLOYMENT_WINDOWS_SERVER_2019.md)
 
+**CI/CD:** after the first setup, deploy from GitHub with one click (*Actions → Deploy (Linux) / Deploy (Windows)*: frontend, backend or both, optional database migration, automatic restore when the new backend isn't healthy). See [DEVOPS_LINUX.md](DEVOPS_LINUX.md) and [DEVOPS_WINDOWS.md](DEVOPS_WINDOWS.md).
+
 **SQL Server Express** 2019, 2022 and 2025 are supported. The full integration suite passes on each. Express limits are 10 GB per database (50 GB on 2025), a 1,410 MB buffer pool and no SQL Server Agent (schedule backups with cron or Task Scheduler); see the guides.
 
 ## 1. Before you start

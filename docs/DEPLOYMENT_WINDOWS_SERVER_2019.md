@@ -961,6 +961,8 @@ Restart-WebAppPool 'WabiInsightApi'
 
 ## 28. Updating to a new version
 
+With CI/CD set up ([DEVOPS_WINDOWS.md](DEVOPS_WINDOWS.md)), use **Actions → Deploy (Windows)** instead of these commands. The manual procedure:
+
 ```powershell
 $WI = Import-Clixml C:\WabiInsight\wabi-insight.vars.xml     # plus the session settings and helpers from step 1
 $src = Join-Path $WI.Root 'src'; $api = Join-Path $WI.Root 'api'; $web = Join-Path $WI.Root 'web'
