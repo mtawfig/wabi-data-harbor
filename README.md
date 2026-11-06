@@ -22,4 +22,4 @@ Sample data: `scripts/sql/samples` creates three realistic source databases (fli
 
 ## Status
 
-Version 1 feature-complete: phases 1–12 of the implementation plan are merged, with sample data (P13.1) in review (see `docs/PROGRESS.md`). Google Drive / OneDrive publishing (P10.2) is deferred to the next version by owner decision. CI runs the .NET and Angular suites, the dependency audits and the container image builds on every pull request.
+Version 1 feature-complete: phases 1–12 of the implementation plan are merged, plus sample data (P13.1) (see `docs/PROGRESS.md`). Google Drive / OneDrive publishing (P10.2) is deferred to the next version by owner decision. CI runs the .NET and Angular suites, the dependency audits and the container image builds on every pull request.
