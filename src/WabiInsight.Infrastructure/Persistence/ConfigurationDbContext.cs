@@ -5,6 +5,7 @@ using WabiInsight.Core.Entities.Audit;
 using WabiInsight.Core.Entities.Email;
 using WabiInsight.Core.Entities.Metadata;
 using WabiInsight.Core.Entities.Ai;
+using WabiInsight.Core.Entities.Analysis;
 using WabiInsight.Core.Entities.Insights;
 using WabiInsight.Core.Entities.Permissions;
 using WabiInsight.Core.Entities.Organizations;
@@ -107,6 +108,16 @@ public class ConfigurationDbContext : DbContext
     public DbSet<AiProviderConfiguration> AiProviderConfigurations => Set<AiProviderConfiguration>();
 
     public DbSet<AnalysisExecutionMetric> AnalysisExecutionMetrics => Set<AnalysisExecutionMetric>();
+
+    public DbSet<AnalysisHistory> AnalysisHistories => Set<AnalysisHistory>();
+
+    public DbSet<AnalysisHistoryVersion> AnalysisHistoryVersions => Set<AnalysisHistoryVersion>();
+
+    public DbSet<AnalysisArtifact> AnalysisArtifacts => Set<AnalysisArtifact>();
+
+    public DbSet<AnalysisCollectionRecord> AnalysisCollections => Set<AnalysisCollectionRecord>();
+
+    public DbSet<AnalysisCollectionItem> AnalysisCollectionItems => Set<AnalysisCollectionItem>();
 
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;

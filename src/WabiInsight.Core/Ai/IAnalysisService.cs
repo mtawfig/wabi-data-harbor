@@ -13,13 +13,16 @@ public sealed record Interpretation(string Narrative, IReadOnlyList<string> High
 /// <summary>One application the signed-in user may ask about.</summary>
 public sealed record AskableApplication(Guid ApplicationId, string ApplicationCode, string ApplicationName, string ApplicationNameAr, string DatabaseType, bool IsBuiltIn, int ObjectCount);
 
-public sealed record AskRequest(Guid ApplicationId, string Question, string Language, bool Interpret = true);
+/// <summary>HistoryId set means "re-run this saved analysis": the outcome becomes its next version instead of a new history entry.</summary>
+public sealed record AskRequest(Guid ApplicationId, string Question, string Language, bool Interpret = true, Guid? HistoryId = null);
 
 /// <summary>One executed query of the answer: a KPI, a chart or a table, with its own plan, redacted SQL and verified rows.</summary>
 public sealed record AnalysisPanel(string Title, QueryPlan Plan, string CompiledSqlPreview, AnalysisResult Result);
 
 public sealed record AskResponse(
     Guid AnalysisId,
+    Guid? HistoryId,
+    int VersionNumber,
     string Objective,
     IReadOnlyList<string> Assumptions,
     IReadOnlyList<AnalysisPanel> Panels,

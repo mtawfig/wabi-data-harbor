@@ -190,6 +190,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Reports.ReportComposer>();
         services.AddSingleton<IReportRenderer, Reports.QuestPdfReportRenderer>();
         services.AddScoped<IAnalysisService, AnalysisService>();
+        services.AddScoped<Core.Analysis.IAnalysisHistoryService, Analysis.AnalysisHistoryService>();
         services.AddHostedService<AiProviderSeeder>();
         services.AddSingleton<IDatabaseAdapterFactory, DatabaseAdapterFactory>();
         services.AddScoped<IApplicationService, ApplicationService>();

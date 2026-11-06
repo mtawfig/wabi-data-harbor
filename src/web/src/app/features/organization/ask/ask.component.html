@@ -65,87 +65,10 @@
     }
 
     @if (answer(); as a) {
-      @if (a.report; as r) {
-        <div class="wi-card ask__report" data-testid="ask-report">
-          <div class="ask__report-head">
-            <div>
-              <p class="wi-eyebrow">{{ 'ask.report.title' | transloco }}</p>
-              <h2>{{ r.title }}</h2>
-              @if (r.subtitle) { <p class="wi-muted">{{ r.subtitle }}</p> }
-            </div>
-            <a mat-flat-button [href]="reportUrl(a.analysisId)" target="_blank" rel="noopener" data-testid="ask-report-download"><mat-icon>picture_as_pdf</mat-icon>{{ 'ask.report.download' | transloco }}</a>
-          </div>
-          <div class="ask__report-meta wi-muted small"><mat-icon>description</mat-icon><span class="wi-ltr">{{ r.fileName }}</span> · {{ 'ask.report.size' | transloco: { kb: (r.sizeBytes / 1024 | number: '1.0-0') } }} · {{ 'ask.report.sections' | transloco: { count: r.sections.length } }}</div>
-          <ol class="ask__report-toc">
-            <li>{{ 'ask.report.summary' | transloco }}</li>
-            @for (s of r.sections; track $index) { <li>{{ sectionTitle(s.title) }}</li> }
-            @if (r.recommendations.length) { <li>{{ 'ask.report.recommendations' | transloco: { count: r.recommendations.length } }}</li> }
-          </ol>
-        </div>
+      <app-analysis-answer [answer]="a" [reportUrl]="reportUrl(a.analysisId)" />
+      @if (a.historyId) {
+        <p class="ask__saved wi-muted small"><mat-icon>history</mat-icon>{{ 'ask.savedToHistory' | transloco }} <a [routerLink]="['/app/history', a.historyId]" data-testid="ask-open-history">{{ 'ask.openInHistory' | transloco }}</a></p>
       }
-      @if (a.emailDraft; as m) {
-        <div class="wi-card ask__email" data-testid="ask-email">
-          <div class="ask__report-head">
-            <div><p class="wi-eyebrow">{{ 'ask.email.title' | transloco }}</p><h2>{{ m.subject }}</h2></div>
-            <button mat-stroked-button type="button" (click)="copyEmail(m)" data-testid="ask-email-copy"><mat-icon>content_copy</mat-icon>{{ copied() ? ('ask.email.copied' | transloco) : ('ask.email.copy' | transloco) }}</button>
-          </div>
-          <pre class="ask__email-body" data-testid="ask-email-body">{{ m.body }}</pre>
-          @if (m.attachmentFileName) {
-            <a class="ask__attachment" [href]="reportUrl(a.analysisId)" target="_blank" rel="noopener"><mat-icon>attach_file</mat-icon><span class="wi-ltr">{{ m.attachmentFileName }}</span></a>
-          }
-        </div>
-      }
-      <div class="wi-card ask__answer" data-testid="ask-answer">
-        <p class="wi-eyebrow">{{ 'ask.answer' | transloco }}</p>
-        <h2>{{ a.objective }}</h2>
-        @if (a.interpretation?.narrative) { <p class="ask__narrative" data-testid="ask-narrative">{{ a.interpretation!.narrative }}</p> }
-        @if (a.interpretation?.highlights?.length) { <ul class="ask__highlights">@for (h of a.interpretation!.highlights; track h) { <li><mat-icon>check_circle</mat-icon>{{ h }}</li> }</ul> }
-        @if (panels().length > 1) { <p class="ask__panels-note wi-muted small"><mat-icon>verified</mat-icon>{{ 'ask.panelsNote' | transloco: { count: panels().length } }}</p> }
-        @if (truncatedRows() > 0) { <p class="ask__truncated"><mat-icon>warning_amber</mat-icon>{{ 'ask.truncated' | transloco: { count: truncatedRows() } }}</p> }
-
-        @if (kpis().length > 0) {
-          <div class="ask__kpis" data-testid="ask-kpis">
-            @for (k of kpis(); track k.title) {
-              <div class="ask__kpi" data-testid="ask-kpi"><span class="ask__kpi-value">{{ format(k.value, true) }}</span><span class="ask__kpi-label">{{ k.title }}</span></div>
-            }
-          </div>
-        }
-
-        @if (charts().length > 0) {
-          <div class="ask__charts" [class.ask__charts--single]="charts().length === 1" data-testid="ask-charts">
-            @for (c of charts(); track c.index) {
-              <div class="ask__chart-card">
-                @if (panels().length > 1) { <h3>{{ c.title }}</h3> }
-                <div echarts [options]="c.option" class="ask__chart" data-testid="ask-chart"></div>
-              </div>
-            }
-          </div>
-        }
-
-        @for (p of tables(); track $index) {
-          <div class="ask__table-card">
-            @if (panels().length > 1) { <h3>{{ p.title || p.plan.objective }} <span class="wi-muted small">{{ 'ask.rowsOf' | transloco: { count: p.result.rowCount } }}</span></h3> }
-            <div class="ask__table-wrap">
-              <table class="ask__table" data-testid="ask-table">
-                <thead><tr>@for (col of p.result.columns; track col.name) { <th [class.num]="col.isNumeric">{{ label(col.name) }}</th> }</tr></thead>
-                <tbody>@for (row of p.result.rows; track $index) { <tr>@for (col of p.result.columns; track col.name; let i = $index) { <td [class.num]="col.isNumeric">{{ format(row[i], col.isNumeric) }}</td> }</tr> }</tbody>
-              </table>
-            </div>
-          </div>
-        } @empty {
-          @if (totalRows() === 0) { <p class="wi-muted">{{ 'ask.noRows' | transloco }}</p> }
-        }
-
-        <mat-expansion-panel class="ask__how" data-testid="ask-how">
-          <mat-expansion-panel-header><mat-panel-title>{{ 'ask.how' | transloco }}</mat-panel-title></mat-expansion-panel-header>
-          @if (a.assumptions.length) { <h4>{{ 'ask.assumptions' | transloco }}</h4><ul>@for (s of a.assumptions; track s) { <li>{{ s }}</li> }</ul> }
-          @for (p of a.panels; track $index) {
-            <h4>{{ a.panels.length > 1 ? ('ask.queryOf' | transloco: { title: p.title || p.plan.objective }) : ('ask.sql' | transloco) }}</h4>
-            <pre class="ask__sql">{{ p.compiledSqlPreview }}</pre>
-          }
-          <p class="wi-muted small">{{ 'ask.usage' | transloco: { model: a.planUsage.model, tokens: totalTokens(), cost: (a.totalEstimatedCost | number: '1.4-4'), ms: (a.totalDurationMs | number: '1.0-0'), rows: totalRows() } }}</p>
-        </mat-expansion-panel>
-      </div>
     } @else if (!busy() && !rejection() && !error()) {
       <div class="wi-card ask__results">
         <div class="ask__empty wi-muted"><mat-icon>insights</mat-icon><p>{{ 'ask.noAnswerYet' | transloco }}</p></div>

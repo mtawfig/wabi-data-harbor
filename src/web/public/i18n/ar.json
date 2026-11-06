@@ -22,7 +22,9 @@
     "platform": "المنصة",
     "apiOffline": "تعذّر الوصول إلى الخادم حاليًا.",
     "requiredField": "هذا الحقل مطلوب.",
-    "invalidEmail": "أدخل بريدًا إلكترونيًا صحيحًا."
+    "invalidEmail": "أدخل بريدًا إلكترونيًا صحيحًا.",
+    "add": "إضافة",
+    "delete": "حذف"
   },
   "landing": {
     "nav": {
@@ -291,7 +293,9 @@
       "copy": "نسخ البريد",
       "copied": "تم النسخ",
       "subjectLabel": "الموضوع"
-    }
+    },
+    "savedToHistory": "حُفظ في سجلّي.",
+    "openInHistory": "فتح"
   },
   "platform": {
     "overview": {
@@ -639,7 +643,12 @@
       "query_failed": "فشل الاستعلام في المصدر.",
       "connection_not_configured": "لا يملك التطبيق اتصالًا مضبوطًا.",
       "logo_type_invalid": "يجب أن يكون الشعار صورة PNG أو JPEG أو SVG.",
-      "logo_too_large": "يجب ألا يتجاوز حجم الشعار 1 م.ب."
+      "logo_too_large": "يجب ألا يتجاوز حجم الشعار 1 م.ب.",
+      "history_not_found": "هذا التحليل غير موجود أو ليس لك.",
+      "history_title_required": "العنوان مطلوب.",
+      "collection_not_found": "المجموعة غير موجودة أو ليست لك.",
+      "collection_name_required": "اسم المجموعة مطلوب.",
+      "collection_name_exists": "لديك مجموعة بهذا الاسم بالفعل."
     },
     "applications": {
       "title": "التطبيقات",
@@ -1374,5 +1383,58 @@
     "ownProviders": "المزوّدون الخاصون",
     "noneAllowed": "لا تسمح المنصة حاليًا بمزوّدين خاصين بالمؤسسات.",
     "selectionSaved": "تم حفظ اختيار المزوّد."
+  },
+  "history": {
+    "title": "سجلّي",
+    "subtitle": "كل تحليل أجريته، مع إصداراته ونتائجه المخزّنة. إعادة الفتح لا تستعلم عن بياناتك مجددًا.",
+    "favoritesTitle": "المفضلة",
+    "favoritesSubtitle": "التحليلات التي ميّزتها بنجمة.",
+    "search": "ابحث في العنوان أو السؤال",
+    "allApplications": "كل التطبيقات",
+    "type": "النوع",
+    "allTypes": "كل الأنواع",
+    "types": {
+      "Answer": "إجابة",
+      "Dashboard": "لوحة معلومات",
+      "Report": "تقرير"
+    },
+    "from": "من",
+    "to": "إلى",
+    "showArchived": "إظهار المؤرشف",
+    "columns": {
+      "title": "التحليل",
+      "version": "الإصدار · التكلفة",
+      "updated": "آخر تشغيل"
+    },
+    "favorite": "مفضلة",
+    "open": "فتح",
+    "addToCollection": "إضافة إلى مجموعة",
+    "archive": "أرشفة",
+    "unarchive": "إلغاء الأرشفة",
+    "archived": "مؤرشف",
+    "statusFailed": "فشل آخر تشغيل",
+    "empty": "لا توجد تحليلات بعد. اطرح سؤالًا وسيُحفظ هنا.",
+    "emptyFavorites": "لا توجد مفضلات بعد. ميّز تحليلًا بنجمة في سجلّي.",
+    "confirmDelete": "حذف \"{{title}}\"؟ سيختفي من سجلّك.",
+    "deleted": "حُذف التحليل.",
+    "addedToCollection": "أُضيف إلى {{name}}.",
+    "collections": "المجموعات",
+    "collectionsHint": "اجمع التحليلات حسب الموضوع. المجموعة خاصة بك فقط.",
+    "allAnalyses": "كل التحليلات",
+    "newCollection": "مجموعة جديدة",
+    "confirmDeleteCollection": "حذف المجموعة \"{{name}}\"؟ تبقى التحليلات في سجلّك.",
+    "noCollections": "لا توجد مجموعات بعد",
+    "notFound": "هذا التحليل غير موجود أو ليس لك.",
+    "rename": "إعادة تسمية",
+    "versionsCount": "{{count}} إصدارات",
+    "prompt": "السؤال",
+    "storedNote": "نتيجة مخزّنة. استخدم إعادة التشغيل للاستعلام عن المصدر مجددًا وفق صلاحياتك الحالية؛ وتصبح النتيجة إصدارًا جديدًا.",
+    "rerun": "إعادة التشغيل",
+    "rerunning": "يجري تشغيل السؤال مجددًا على بياناتك وفق صلاحياتك الحالية…",
+    "rerunDone": "حُفظ كإصدار {{version}}.",
+    "versions": "الإصدارات",
+    "versionsHint": "لا تُستبدل الإصدارات الأقدم أبدًا.",
+    "versionMeta": "{{panels}} لوحات · {{rows}} صفًا · ${{cost}}",
+    "versionFailed": "فشل الإصدار {{version}}"
   }
 }

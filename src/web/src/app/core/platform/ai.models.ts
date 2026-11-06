@@ -132,6 +132,9 @@ export interface EmailDraft {
 
 export interface AskResponse {
   analysisId: string;
+  /** Set once the answer is saved to My History (every successful ask); the version it became. */
+  historyId?: string | null;
+  versionNumber: number;
   objective: string;
   assumptions: string[];
   panels: AnalysisPanel[];

@@ -108,5 +108,13 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 - The PDF itself (QuestPDF, A4): logo top-left of every page (or the organization name when none is uploaded), report title and "Confidential" on the right, title block, light-blue executive summary box, key findings, numbered sections with KPI boxes, SVG charts (brand palette) and zebra tables, numbered recommendations, methodology appendix, and a footer with generation time and "Page x / y". Arabic reports flip to right-to-left with IBM Plex Sans Arabic.
 - Organization Settings gains a *Report logo* card: preview, *Upload logo* (PNG, JPEG, SVG ≤ 1 MB) and *Remove*.
 
+## My History and Favorites (P9.1)
+- `app-history-list`: filters row (search, application, type, from/to dates, *Show archived* toggle), a Material table (star toggle + title and prompt excerpt, application, type chip with a PDF marker and a *Last run failed* chip, version and cost, last run, a row menu with Open / Add to collection / Archive / Delete) with the paginator, and a *Collections* sidebar (list with counts, inline create, delete). The same component serves *Favorites* with the favorite filter pinned.
+- `app-history-detail`: back link, editable title, type chip and metadata line, action bar (star, Collections menu with check boxes, Archive, Delete, filled *Re-run*), the original question card with the "stored result" note, the stored answer rendered by `app-analysis-answer` (identical to the Ask page), and a *Versions* sidebar (active version highlighted, failed versions in red, PDF marker).
+- `app-analysis-answer` is the shared renderer of an answer (report and email cards, narrative, KPI cards, charts, tables, *How this was computed*) used by the Ask page and by history; the Ask page adds a "Saved to My History · Open" line under a fresh answer.
+
+## Screenshots (P9.1)
+`docs/screenshots/p9-1-*.png`: My History list, an analysis reopened from history with its versions, Favorites, and the Arabic history list.
+
 ## Screenshots (P8.3)
 `docs/screenshots/p8-3-*.png`: the dashboard prompt typed on the Ask page, the live dashboard answer from Claude Opus 5.5 over the Sharjah Airport 2025 demo source (KPI cards, four charts, two tables, narrative), the full page, and the *How this was computed* panel with the ten queries. `docs/screenshots/p8-4-*.png`: the study prompt, the report and email draft cards, and the full page; `docs/demo/p8-4-ask-study-report-email.gif` records the prompt being typed, the wait, and the rendered email draft and report card.

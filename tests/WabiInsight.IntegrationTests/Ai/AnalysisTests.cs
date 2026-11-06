@@ -306,6 +306,7 @@ public sealed class AnalysisTests : IDisposable
                       {"title":"Tickets by status","source":{"schema":"dbo","object":"SupportTickets","alias":"t"},"joins":[],"select":[{"alias":"status","column":"t.Status","aggregate":null,"dateTrunc":null},{"alias":"tickets","column":null,"aggregate":"count","dateTrunc":null}],"filters":null,"groupBy":["status"],"orderBy":[{"alias":"tickets","direction":"desc"}],"limit":null,"visualization":{"type":"bar","x":"status","y":["tickets"]}}]}
                     """,
             };
+            var requestsBefore = FakeAiProvider.Requests.Count;
             var ask = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Write a ticket study as PDF and an email to send it" });
             Assert.True(ask.StatusCode == HttpStatusCode.OK, await ask.Content.ReadAsStringAsync());
             var response = await ask.ReadJsonAsync();
@@ -317,7 +318,7 @@ public sealed class AnalysisTests : IDisposable
             Assert.Equal("Ticket study attached", response.GetProperty("emailDraft").GetProperty("subject").GetString());
             Assert.Equal(report.GetProperty("fileName").GetString(), response.GetProperty("emailDraft").GetProperty("attachmentFileName").GetString());
             Assert.Equal("Most tickets are open.", response.GetProperty("interpretation").GetProperty("narrative").GetString());
-            Assert.DoesNotContain(FakeAiProvider.Requests, r => r.SchemaName == "wabi_interpretation");
+            Assert.DoesNotContain(FakeAiProvider.Requests.Skip(requestsBefore), r => r.SchemaName == "wabi_interpretation");
             var reportRequest = FakeAiProvider.Requests.Last(r => r.SchemaName == "wabi_report");
             Assert.Contains("emailRequested: yes", reportRequest.UserContent, StringComparison.Ordinal);
             Assert.Contains("\"title\":\"Tickets by status\"", reportRequest.UserContent, StringComparison.Ordinal);
