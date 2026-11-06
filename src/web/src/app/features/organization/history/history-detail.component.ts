@@ -13,7 +13,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { HistoryService } from '../../../core/history/history.service';
-import { CollectionSummary, HistoryDetail, HistoryVersion } from '../../../core/history/history.models';
+import { CollectionSummary, ExportFormat, HistoryDetail, HistoryVersion } from '../../../core/history/history.models';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { AskResponse } from '../../../core/platform/ai.models';
 import { problemMessage } from '../../../core/problem-message';
@@ -49,6 +49,7 @@ export class HistoryDetailComponent {
   readonly loading = signal(true);
   readonly loadingAnswer = signal(false);
   readonly rerunning = signal(false);
+  readonly exporting = signal(false);
   readonly error = signal<string | null>(null);
   readonly rejection = signal<Rejection | null>(null);
   readonly editingTitle = signal(false);
@@ -125,6 +126,35 @@ export class HistoryDetailComponent {
         this.load();
       },
     });
+  }
+
+  /** Downloads the rendered file and refreshes the version list (the export now appears in My Reports). */
+  exportAs(format: ExportFormat): void {
+    const version = this.versionNumber();
+    if (!version || this.exporting()) {
+      return;
+    }
+    this.exporting.set(true);
+    this.history.export(this.historyId, version, format).subscribe({
+      next: (blob) => {
+        this.exporting.set(false);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${this.detail()?.summary.title ?? 'analysis'}-v${version}.${format.toLowerCase()}`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        this.snack.open(this.transloco.translate('history.exported', { format: this.transloco.translate('reports.formats.' + format) }), undefined, { duration: 3000 });
+      },
+      error: (e: HttpErrorResponse) => {
+        this.exporting.set(false);
+        this.error.set(problemMessage(e, this.transloco));
+      },
+    });
+  }
+
+  openPrint(): void {
+    window.open(`/print/history/${this.historyId}/${this.versionNumber() ?? 1}`, '_blank', 'noopener');
   }
 
   startRename(): void {

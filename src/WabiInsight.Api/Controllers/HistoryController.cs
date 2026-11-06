@@ -27,6 +27,33 @@ public sealed class HistoryController : ControllerBase
     public async Task<ActionResult<PagedResult<HistorySummaryDto>>> List([FromQuery] int page = 1, [FromQuery] int pageSize = 25, [FromQuery] string? search = null, [FromQuery] Guid? applicationId = null, [FromQuery] DateTimeOffset? from = null, [FromQuery] DateTimeOffset? to = null, [FromQuery] bool? favorite = null, [FromQuery] bool archived = false, [FromQuery] Guid? collectionId = null, [FromQuery] AnalysisType? type = null, CancellationToken cancellationToken = default)
         => Ok(await _history.ListAsync(new HistoryListQuery(page, pageSize, search, applicationId, from, to, favorite, archived, collectionId, type), cancellationToken));
 
+    /// <summary>The caller's generated files: study PDFs and exports, newest first.</summary>
+    [HttpGet("reports")]
+    public async Task<ActionResult<PagedResult<ReportFileDto>>> Reports([FromQuery] int page = 1, [FromQuery] int pageSize = 25, [FromQuery] string? search = null, [FromQuery] ExportFormat? format = null, [FromQuery] Guid? historyId = null, CancellationToken cancellationToken = default)
+        => Ok(await _history.ListReportsAsync(new ReportListQuery(page, pageSize, search, format, historyId), cancellationToken));
+
+    [HttpGet("artifacts/{artifactId:guid}")]
+    public async Task<IActionResult> Artifact(Guid artifactId, CancellationToken cancellationToken)
+    {
+        var download = await _history.OpenArtifactAsync(artifactId, cancellationToken);
+        if (download is null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        return File(download.Content, download.ContentType, download.FileName);
+    }
+
+    /// <summary>Renders a version to PDF, DOCX or XLSX, stores it in the reports library and returns the file.</summary>
+    [HttpPost("{historyId:guid}/versions/{versionNumber:int}/export/{format}")]
+    public async Task<IActionResult> Export(Guid historyId, int versionNumber, ExportFormat format, CancellationToken cancellationToken)
+    {
+        var download = await _history.ExportAsync(historyId, versionNumber, format, cancellationToken);
+        Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        return File(download.Content, download.ContentType, download.FileName);
+    }
+
     [HttpGet("collections")]
     public async Task<ActionResult<IReadOnlyList<CollectionSummaryDto>>> Collections(CancellationToken cancellationToken) => Ok(await _history.ListCollectionsAsync(cancellationToken));
 

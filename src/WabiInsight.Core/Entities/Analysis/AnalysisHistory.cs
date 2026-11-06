@@ -120,6 +120,52 @@ public enum AnalysisArtifactKind
 {
     ResultJson = 1,
     ReportPdf = 2,
+    ExportPdf = 3,
+    ExportDocx = 4,
+    ExportXlsx = 5,
+}
+
+public enum ExportFormat
+{
+    Pdf = 1,
+    Docx = 2,
+    Xlsx = 3,
+}
+
+public enum ReportGenerationStatus
+{
+    Completed = 1,
+    Failed = 2,
+}
+
+/// <summary>Append-only record of every report or export produced (specification §20): who, which version, which format, how big, how long.</summary>
+public class ReportGenerationEvent : ITenantOwned
+{
+    public Guid EventId { get; set; }
+
+    public Guid OrganizationId { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public Guid HistoryId { get; set; }
+
+    public Guid VersionId { get; set; }
+
+    public Guid? ArtifactId { get; set; }
+
+    public ExportFormat Format { get; set; }
+
+    public ReportGenerationStatus Status { get; set; }
+
+    public string Language { get; set; } = "en";
+
+    public long SizeBytes { get; set; }
+
+    public double DurationMs { get; set; }
+
+    public string? FailureCode { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 /// <summary>A stored file of a version (result set as JSON, rendered report) kept through IArtifactStorage with its organization.</summary>

@@ -68,6 +68,11 @@ public sealed record SaveCollectionCommand(string Name, string? Description);
 
 public sealed record ArtifactDownload(Stream Content, string FileName, string ContentType);
 
+public sealed record ReportListQuery(int Page = 1, int PageSize = 25, string? Search = null, ExportFormat? Format = null, Guid? HistoryId = null);
+
+/// <summary>One file in the reports library: a generated study PDF or an export of a version.</summary>
+public sealed record ReportFileDto(Guid ArtifactId, Guid HistoryId, int VersionNumber, string HistoryTitle, AnalysisArtifactKind Kind, ExportFormat Format, string FileName, string ContentType, long SizeBytes, string Language, DateTimeOffset CreatedAt);
+
 /// <summary>
 /// Persistent analysis history (specification §23). Every read is tenant-filtered and owner-checked
 /// (shares arrive in P10.1). Reopening a version returns the stored result; it never re-queries the source.
@@ -93,6 +98,14 @@ public interface IAnalysisHistoryService
 
     /// <summary>Runs the original prompt again under the caller's current permissions and stores the outcome as a new version.</summary>
     Task<AskResponse> RerunAsync(Guid historyId, CancellationToken cancellationToken = default);
+
+    /// <summary>Renders a version of the caller's analysis to PDF, DOCX or XLSX, stores it as an artifact, records a generation event and returns it.</summary>
+    Task<ArtifactDownload> ExportAsync(Guid historyId, int versionNumber, ExportFormat format, CancellationToken cancellationToken = default);
+
+    /// <summary>The caller's generated files (study PDFs and exports), newest first.</summary>
+    Task<PagedResult<ReportFileDto>> ListReportsAsync(ReportListQuery query, CancellationToken cancellationToken = default);
+
+    Task<ArtifactDownload?> OpenArtifactAsync(Guid artifactId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<CollectionSummaryDto>> ListCollectionsAsync(CancellationToken cancellationToken = default);
 

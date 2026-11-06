@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AskResponse } from '../platform/ai.models';
-import { CollectionSummary, HistoryDetail, HistoryListQuery, HistorySummary, PagedResult } from './history.models';
+import { CollectionSummary, ExportFormat, HistoryDetail, HistoryListQuery, HistorySummary, PagedResult, ReportFile } from './history.models';
 
 /** My History (specification §23): owner-scoped reads; reopening a version returns the stored answer and never re-queries the source. */
 @Injectable({ providedIn: 'root' })
@@ -76,5 +76,21 @@ export class HistoryService {
 
   removeFromCollection(collectionId: string, historyId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/collections/${collectionId}/items/${historyId}`);
+  }
+
+  /** Renders a version to a file and stores it in the reports library; the response is the file itself. */
+  export(historyId: string, versionNumber: number, format: ExportFormat): Observable<Blob> {
+    return this.http.post(`${this.base}/${historyId}/versions/${versionNumber}/export/${format}`, {}, { responseType: 'blob' });
+  }
+
+  reports(page: number, pageSize: number, search?: string, format?: ExportFormat | null): Observable<PagedResult<ReportFile>> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (search) params = params.set('search', search);
+    if (format) params = params.set('format', format);
+    return this.http.get<PagedResult<ReportFile>>(`${this.base}/reports`, { params });
+  }
+
+  artifactUrl(artifactId: string): string {
+    return `${this.base}/artifacts/${artifactId}`;
   }
 }

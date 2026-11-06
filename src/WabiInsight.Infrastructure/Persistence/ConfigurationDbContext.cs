@@ -119,6 +119,8 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<AnalysisCollectionItem> AnalysisCollectionItems => Set<AnalysisCollectionItem>();
 
+    public DbSet<ReportGenerationEvent> ReportGenerationEvents => Set<ReportGenerationEvent>();
+
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;
 
@@ -175,7 +177,7 @@ public class ConfigurationDbContext : DbContext
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent && entry.State is EntityState.Modified or EntityState.Deleted)
+            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent or ReportGenerationEvent && entry.State is EntityState.Modified or EntityState.Deleted)
             {
                 throw new InvalidOperationException($"{entry.Metadata.ClrType.Name} rows are append-only.");
             }

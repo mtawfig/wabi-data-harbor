@@ -1,0 +1,9 @@
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; &__search { flex: 1 1 260px; } }
+.reports__table { width: 100%; .num { text-align: end; } td, th { padding-inline: 8px; } }
+.reports__file { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.reports__link { color: var(--wi-ocean); font-weight: 600; text-decoration: none; }
+.fmt { font-size: 22px; width: 22px; height: 22px; &--pdf { color: #dc2626; } &--docx { color: #2563eb; } &--xlsx { color: #16a34a; } }
+.chip { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #eef4fb; color: var(--wi-ocean); font-size: 12px; font-weight: 600; }
+.small { font-size: 12px; }
+.empty { text-align: center; padding: 32px 0; }
+.error { display: flex; gap: 8px; align-items: center; color: #991b1b; }

@@ -189,6 +189,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQueryExecutor, QueryExecutor>();
         services.AddScoped<Reports.ReportComposer>();
         services.AddSingleton<IReportRenderer, Reports.QuestPdfReportRenderer>();
+        services.AddSingleton<IAnswerExporter, Reports.DocxExporter>();
+        services.AddSingleton<IAnswerExporter, Reports.XlsxExporter>();
         services.AddScoped<IAnalysisService, AnalysisService>();
         services.AddScoped<Core.Analysis.IAnalysisHistoryService, Analysis.AnalysisHistoryService>();
         services.AddHostedService<AiProviderSeeder>();

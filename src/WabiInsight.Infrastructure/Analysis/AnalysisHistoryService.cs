@@ -9,6 +9,7 @@ using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Storage;
 using WabiInsight.Core.Tenancy;
 using WabiInsight.Infrastructure.Persistence;
+using WabiInsight.Infrastructure.Reports;
 
 namespace WabiInsight.Infrastructure.Analysis;
 
@@ -28,9 +29,13 @@ public sealed class AnalysisHistoryService : IAnalysisHistoryService
     private readonly IArtifactStorage _storage;
     private readonly IAuditWriter _audit;
     private readonly IClock _clock;
+    private readonly IReportRenderer _pdf;
+    private readonly Dictionary<ExportFormat, IAnswerExporter> _exporters;
 
-    public AnalysisHistoryService(ConfigurationDbContext context, ITenantContext tenantContext, IAnalysisService analysis, IArtifactStorage storage, IAuditWriter audit, IClock clock)
+    public AnalysisHistoryService(ConfigurationDbContext context, ITenantContext tenantContext, IAnalysisService analysis, IArtifactStorage storage, IAuditWriter audit, IClock clock, IReportRenderer pdf, IEnumerable<IAnswerExporter> exporters)
     {
+        _pdf = pdf;
+        _exporters = exporters.ToDictionary(e => e.Format);
         _context = context;
         _tenantContext = tenantContext;
         _analysis = analysis;
@@ -199,6 +204,169 @@ public sealed class AnalysisHistoryService : IAnalysisHistoryService
         var entry = await OwnedAsync(historyId, cancellationToken);
         _context.Entry(entry).State = EntityState.Detached;
         return await _analysis.AskAsync(new AskRequest(entry.ApplicationId, entry.OriginalPrompt, entry.OutputLanguage, true, historyId), cancellationToken);
+    }
+
+    public async Task<ArtifactDownload> ExportAsync(Guid historyId, int versionNumber, ExportFormat format, CancellationToken cancellationToken = default)
+    {
+        var entry = await OwnedAsync(historyId, cancellationToken);
+        var version = await _context.AnalysisHistoryVersions.AsNoTracking().SingleOrDefaultAsync(v => v.HistoryId == historyId && v.VersionNumber == versionNumber, cancellationToken)
+            ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "history_version_not_found");
+        var answer = await GetVersionResultAsync(historyId, versionNumber, cancellationToken)
+            ?? throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "history_version_has_no_result");
+        var organization = await _context.Organizations.AsNoTracking().SingleAsync(o => o.OrganizationId == entry.OrganizationId, cancellationToken);
+        var application = await _context.Applications.AsNoTracking().SingleAsync(a => a.ApplicationId == entry.ApplicationId, cancellationToken);
+        var rtl = entry.OutputLanguage == "ar";
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var generation = new ReportGenerationEvent { EventId = Ids.New(), OrganizationId = entry.OrganizationId, UserId = UserId, HistoryId = historyId, VersionId = version.VersionId, Format = format, Language = entry.OutputLanguage, CreatedAt = _clock.UtcNow };
+        try
+        {
+            var content = AnswerReportBuilder.Build(answer, entry.Title, entry.OriginalPrompt, entry.OutputLanguage);
+            var branding = await LoadBrandingAsync(organization, cancellationToken);
+            var organizationName = rtl ? organization.OrganizationNameAr : organization.OrganizationName;
+            var applicationName = rtl ? application.ApplicationNameAr : application.ApplicationName;
+            byte[] bytes;
+            string contentType;
+            string extension;
+            if (format == ExportFormat.Pdf)
+            {
+                bytes = _pdf.RenderPdf(new ReportRenderRequest(content, answer.Panels, branding, entry.OutputLanguage, organizationName, applicationName, organizationName, _clock.UtcNow));
+                contentType = "application/pdf";
+                extension = "pdf";
+            }
+            else
+            {
+                if (!_exporters.TryGetValue(format, out var exporter))
+                {
+                    throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "export_format_unsupported");
+                }
+
+                bytes = exporter.Export(new ExportRequest(answer, content, entry.OutputLanguage, organizationName, applicationName, entry.OriginalPrompt, branding, _clock.UtcNow));
+                contentType = exporter.ContentType;
+                extension = exporter.Extension;
+            }
+
+            string key;
+            await using (var stream = new MemoryStream(bytes, writable: false))
+            {
+                key = await _storage.SaveAsync("analysis-exports", stream, cancellationToken);
+            }
+
+            var fileName = $"{Slug(entry.Title)}-v{version.VersionNumber}-{_clock.UtcNow:yyyyMMdd-HHmm}.{extension}";
+            var artifact = new AnalysisArtifact
+            {
+                ArtifactId = Ids.New(),
+                OrganizationId = entry.OrganizationId,
+                HistoryId = historyId,
+                VersionId = version.VersionId,
+                Kind = format switch { ExportFormat.Pdf => AnalysisArtifactKind.ExportPdf, ExportFormat.Docx => AnalysisArtifactKind.ExportDocx, _ => AnalysisArtifactKind.ExportXlsx },
+                StorageKey = key,
+                ContentType = contentType,
+                FileName = fileName,
+                SizeBytes = bytes.LongLength,
+                Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)),
+                CreatedAt = _clock.UtcNow,
+            };
+            _context.AnalysisArtifacts.Add(artifact);
+            generation.ArtifactId = artifact.ArtifactId;
+            generation.Status = ReportGenerationStatus.Completed;
+            generation.SizeBytes = bytes.LongLength;
+            generation.DurationMs = watch.Elapsed.TotalMilliseconds;
+            _context.ReportGenerationEvents.Add(generation);
+            await _context.SaveChangesAsync(cancellationToken);
+            return new ArtifactDownload(new MemoryStream(bytes, writable: false), fileName, contentType);
+        }
+        catch (Exception ex) when (ex is not DomainException and not OperationCanceledException)
+        {
+            generation.Status = ReportGenerationStatus.Failed;
+            generation.FailureCode = "export_failed";
+            generation.DurationMs = watch.Elapsed.TotalMilliseconds;
+            _context.ReportGenerationEvents.Add(generation);
+            await _context.SaveChangesAsync(cancellationToken);
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "export_failed");
+        }
+    }
+
+    public async Task<PagedResult<ReportFileDto>> ListReportsAsync(ReportListQuery query, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        var page = Math.Max(1, query.Page);
+        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var files = from artifact in _context.AnalysisArtifacts
+                    join history in Mine on artifact.HistoryId equals history.HistoryId
+                    join version in _context.AnalysisHistoryVersions on artifact.VersionId equals version.VersionId
+                    where artifact.Kind != AnalysisArtifactKind.ResultJson
+                    select new { artifact, history, version };
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = query.Search.Trim();
+            files = files.Where(f => f.history.Title.Contains(term) || f.artifact.FileName.Contains(term));
+        }
+
+        if (query.HistoryId is { } historyId)
+        {
+            files = files.Where(f => f.history.HistoryId == historyId);
+        }
+
+        if (query.Format is { } format)
+        {
+            var kinds = format switch
+            {
+                ExportFormat.Pdf => new[] { AnalysisArtifactKind.ReportPdf, AnalysisArtifactKind.ExportPdf },
+                ExportFormat.Docx => [AnalysisArtifactKind.ExportDocx],
+                _ => [AnalysisArtifactKind.ExportXlsx],
+            };
+            files = files.Where(f => kinds.Contains(f.artifact.Kind));
+        }
+
+        var total = await files.CountAsync(cancellationToken);
+        var items = await files.OrderByDescending(f => f.artifact.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(f => new ReportFileDto(f.artifact.ArtifactId, f.history.HistoryId, f.version.VersionNumber, f.history.Title, f.artifact.Kind,
+                f.artifact.Kind == AnalysisArtifactKind.ExportDocx ? ExportFormat.Docx : f.artifact.Kind == AnalysisArtifactKind.ExportXlsx ? ExportFormat.Xlsx : ExportFormat.Pdf,
+                f.artifact.FileName, f.artifact.ContentType, f.artifact.SizeBytes, f.history.OutputLanguage, f.artifact.CreatedAt))
+            .ToListAsync(cancellationToken);
+        return new PagedResult<ReportFileDto>(items, page, pageSize, total);
+    }
+
+    public async Task<ArtifactDownload?> OpenArtifactAsync(Guid artifactId, CancellationToken cancellationToken = default)
+    {
+        var artifact = await _context.AnalysisArtifacts.AsNoTracking().SingleOrDefaultAsync(a => a.ArtifactId == artifactId && a.Kind != AnalysisArtifactKind.ResultJson, cancellationToken);
+        if (artifact is null || !await Mine.AnyAsync(h => h.HistoryId == artifact.HistoryId, cancellationToken))
+        {
+            return null;
+        }
+
+        var stream = await _storage.OpenReadAsync(artifact.StorageKey, cancellationToken);
+        return stream is null ? null : new ArtifactDownload(stream, artifact.FileName, artifact.ContentType);
+    }
+
+    private async Task<ReportBranding> LoadBrandingAsync(Core.Entities.Platform.Organization organization, CancellationToken cancellationToken)
+    {
+        if (organization.LogoArtifactKey is null)
+        {
+            return new ReportBranding(null, null);
+        }
+
+        await using var stream = await _storage.OpenReadAsync(organization.LogoArtifactKey, cancellationToken);
+        if (stream is null)
+        {
+            return new ReportBranding(null, null);
+        }
+
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, cancellationToken);
+        return new ReportBranding(buffer.ToArray(), organization.LogoContentType);
+    }
+
+    private static string Slug(string title)
+    {
+        var slug = new string(title.Select(c => char.IsLetterOrDigit(c) && c < 128 ? char.ToLowerInvariant(c) : '-').ToArray());
+        while (slug.Contains("--", StringComparison.Ordinal))
+        {
+            slug = slug.Replace("--", "-", StringComparison.Ordinal);
+        }
+
+        slug = slug.Trim('-');
+        return slug.Length == 0 ? "analysis" : slug.Length > 60 ? slug[..60].TrimEnd('-') : slug;
     }
 
     public async Task<IReadOnlyList<CollectionSummaryDto>> ListCollectionsAsync(CancellationToken cancellationToken = default)

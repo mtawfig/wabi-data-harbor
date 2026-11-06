@@ -123,6 +123,43 @@ public sealed class HistoryTests : IDisposable
             Assert.False(failed.GetProperty("hasResult").GetBoolean());
             Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/history/{historyId}/versions/3/result")).StatusCode);
 
+            // Exports: PDF, DOCX and XLSX of a version land in the reports library, downloadable by the owner only, with a generation event each.
+            foreach (var (format, contentType, magic) in new[] { ("Pdf", "application/pdf", "%PDF"), ("Docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "PK"), ("Xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "PK") })
+            {
+                var export = await owner.PostJsonAsync($"/api/history/{historyId}/versions/2/export/{format}", new { });
+                Assert.True(export.StatusCode == HttpStatusCode.OK, await export.Content.ReadAsStringAsync());
+                Assert.Equal(contentType, export.Content.Headers.ContentType!.MediaType);
+                var bytes = await export.Content.ReadAsByteArrayAsync();
+                Assert.Equal(magic, System.Text.Encoding.ASCII.GetString(bytes, 0, magic.Length));
+                Assert.EndsWith("-v2-" + DateTimeOffset.UtcNow.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture), Path.GetFileNameWithoutExtension(export.Content.Headers.ContentDisposition!.FileName!.Trim('"'))[..^5], StringComparison.Ordinal);
+            }
+
+            Assert.Equal(HttpStatusCode.NotFound, (await other.PostJsonAsync($"/api/history/{historyId}/versions/2/export/Pdf", new { })).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await owner.PostJsonAsync($"/api/history/{historyId}/versions/9/export/Pdf", new { })).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostJsonAsync($"/api/history/{historyId}/versions/3/export/Pdf", new { })).StatusCode);
+            var library = await (await owner.GetAsync("/api/history/reports")).ReadJsonAsync();
+            Assert.Equal(3, library.GetProperty("totalCount").GetInt32());
+            var docx = library.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("format").GetString() == "Docx");
+            Assert.Equal("ExportDocx", docx.GetProperty("kind").GetString());
+            Assert.Equal(2, docx.GetProperty("versionNumber").GetInt32());
+            Assert.Equal(1, (await (await owner.GetAsync("/api/history/reports?format=Xlsx")).ReadJsonAsync()).GetProperty("totalCount").GetInt32());
+            Assert.Empty((await (await other.GetAsync("/api/history/reports")).ReadJsonAsync()).GetProperty("items").EnumerateArray());
+            var artifactId = docx.GetProperty("artifactId").GetGuid();
+            var download = await owner.GetAsync($"/api/history/artifacts/{artifactId}");
+            Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+            Assert.Equal("PK", System.Text.Encoding.ASCII.GetString((await download.Content.ReadAsByteArrayAsync()).Take(2).ToArray()));
+            Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/history/artifacts/{artifactId}")).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/history/artifacts/{artifactId}")).StatusCode);
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                var events = await context.ReportGenerationEvents.IgnoreQueryFilters().Where(e => e.HistoryId == historyId).ToListAsync();
+                Assert.Equal(3, events.Count);
+                Assert.All(events, e => Assert.Equal(Core.Entities.Analysis.ReportGenerationStatus.Completed, e.Status));
+                Assert.All(events, e => Assert.True(e.SizeBytes > 0 && e.ArtifactId != null));
+                events[0].SizeBytes = 1;
+                await Assert.ThrowsAsync<InvalidOperationException>(() => context.SaveChangesAsync());
+            }
+
             // Rename, favorite, archive, collections, delete.
             Assert.Equal("Weekly ticket check", (await (await owner.PutAsJsonAsync(new Uri($"/api/history/{historyId}", UriKind.Relative), new { title = "Weekly ticket check" })).ReadJsonAsync()).GetProperty("title").GetString());
             Assert.True((await (await owner.PostJsonAsync($"/api/history/{historyId}/favorite", new { isFavorite = true })).ReadJsonAsync()).GetProperty("isFavorite").GetBoolean());

@@ -11,6 +11,7 @@ export const routes: Routes = [
   { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./features/public/login/login.component').then((m) => m.LoginComponent) },
   { path: 'bootstrap', loadComponent: () => import('./features/public/bootstrap/bootstrap.component').then((m) => m.BootstrapComponent) },
   { path: 'change-password', canActivate: [authGuard], loadComponent: () => import('./features/auth/change-password.component').then((m) => m.ChangePasswordComponent) },
+  { path: 'print/history/:id/:version', canActivate: [authGuard, organizationUserGuard], loadComponent: () => import('./features/organization/history/history-print.component').then((m) => m.HistoryPrintComponent) },
   {
     path: 'app',
     canActivate: [authGuard, organizationUserGuard],
@@ -22,7 +23,7 @@ export const routes: Routes = [
       { path: 'insights', loadComponent: () => import('./features/organization/insights/organization-insights.component').then((m) => m.OrganizationInsightsComponent) },
       { path: 'history', loadComponent: () => import('./features/organization/history/history-list.component').then((m) => m.HistoryListComponent) },
       { path: 'history/:id', loadComponent: () => import('./features/organization/history/history-detail.component').then((m) => m.HistoryDetailComponent) },
-      placeholder('reports', 'nav.org.reports', '9'),
+      { path: 'reports', loadComponent: () => import('./features/organization/history/reports-list.component').then((m) => m.ReportsListComponent) },
       { path: 'favorites', loadComponent: () => import('./features/organization/history/history-list.component').then((m) => m.HistoryListComponent), data: { mode: 'favorites' } },
       placeholder('shared-with-me', 'nav.org.sharedWithMe', '10'),
       placeholder('shared-by-me', 'nav.org.sharedByMe', '10'),

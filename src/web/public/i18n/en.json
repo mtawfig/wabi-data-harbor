@@ -648,7 +648,11 @@
       "history_title_required": "A title is required.",
       "collection_not_found": "The collection does not exist or is not yours.",
       "collection_name_required": "A collection name is required.",
-      "collection_name_exists": "You already have a collection with that name."
+      "collection_name_exists": "You already have a collection with that name.",
+      "history_version_not_found": "That version does not exist.",
+      "history_version_has_no_result": "That version has no stored result to export.",
+      "export_format_unsupported": "Unsupported export format.",
+      "export_failed": "The file could not be generated."
     },
     "applications": {
       "title": "Applications",
@@ -1435,6 +1439,35 @@
     "versions": "Versions",
     "versionsHint": "Older versions are never overwritten.",
     "versionMeta": "{{panels}} panels · {{rows}} rows · ${{cost}}",
-    "versionFailed": "Version {{version}} failed"
+    "versionFailed": "Version {{version}} failed",
+    "export": "Export",
+    "exporting": "Exporting…",
+    "exported": "{{format}} file generated and saved to My Reports.",
+    "print": "Print view",
+    "printHint": "A print-friendly copy of this analysis. Use your browser's print dialog to print or save as PDF."
+  },
+  "reports": {
+    "title": "My Reports",
+    "subtitle": "Every study PDF and export you generated. Files stay linked to the analysis and version they came from.",
+    "search": "Search file or analysis",
+    "format": "Format",
+    "allFormats": "All formats",
+    "formats": {
+      "Pdf": "PDF",
+      "Docx": "Word (DOCX)",
+      "Xlsx": "Excel (XLSX)"
+    },
+    "columns": {
+      "file": "File",
+      "analysis": "Analysis",
+      "size": "Size",
+      "created": "Generated"
+    },
+    "kinds": {
+      "study": "Study",
+      "export": "Export"
+    },
+    "download": "Download",
+    "empty": "No reports yet. Open an analysis in My History and choose Export."
   }
 }

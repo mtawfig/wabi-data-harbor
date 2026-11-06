@@ -1,0 +1,18 @@
+<div class="print" [attr.dir]="language.isRtl() ? 'rtl' : 'ltr'">
+  <div class="print__bar no-print">
+    <span class="wi-muted">{{ 'history.printHint' | transloco }}</span>
+    <button mat-flat-button type="button" (click)="print()" data-testid="print-button"><mat-icon>print</mat-icon>{{ 'history.print' | transloco }}</button>
+  </div>
+  @if (error(); as e) { <p class="error" role="alert">{{ e }}</p> }
+  @if (detail(); as d) {
+    <header class="print__head">
+      <div>
+        <p class="print__brand">{{ 'common.appName' | transloco }}</p>
+        <h1>{{ d.summary.title }}</h1>
+        <p class="wi-muted">{{ language.current() === 'ar' ? d.summary.applicationNameAr : d.summary.applicationName }} · v{{ versionNumber }} · {{ d.summary.createdAt | date: 'medium' }}</p>
+      </div>
+    </header>
+    <p class="print__prompt"><strong>{{ 'history.prompt' | transloco }}:</strong> {{ d.originalPrompt }}</p>
+  }
+  @if (answer(); as a) { <app-analysis-answer [answer]="a" [reportUrl]="reportUrl" /> }
+</div>

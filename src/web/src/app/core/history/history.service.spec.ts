@@ -33,4 +33,16 @@ describe('HistoryService', () => {
     http.expectOne({ method: 'POST', url: '/api/history/h1/rerun' }).flush({});
     expect(service.versionReportUrl('h1', 3)).toBe('/api/history/h1/versions/3/report');
   });
+
+  it('exports through the version endpoint as a file and lists the reports library', () => {
+    service.export('h1', 2, 'Docx').subscribe();
+    const exp = http.expectOne({ method: 'POST', url: '/api/history/h1/versions/2/export/Docx' });
+    expect(exp.request.responseType).toBe('blob');
+    exp.flush(new Blob());
+    service.reports(1, 25, 'study', 'Pdf').subscribe();
+    const list = http.expectOne((r) => r.url === '/api/history/reports');
+    expect(list.request.params.get('format')).toBe('Pdf');
+    list.flush({ items: [], page: 1, pageSize: 25, totalCount: 0 });
+    expect(service.artifactUrl('a1')).toBe('/api/history/artifacts/a1');
+  });
 });

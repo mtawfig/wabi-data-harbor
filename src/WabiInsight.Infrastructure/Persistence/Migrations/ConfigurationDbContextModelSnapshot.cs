@@ -529,6 +529,63 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.ToTable("AnalysisHistoryVersions", (string)null);
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Analysis.ReportGenerationEvent", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ArtifactId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<double>("DurationMs")
+                        .HasColumnType("float");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<Guid>("HistoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("EventId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.HasIndex("OrganizationId", "HistoryId");
+
+                    b.ToTable("ReportGenerationEvents", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Audit.AuditLog", b =>
                 {
                     b.Property<Guid>("AuditLogId")
