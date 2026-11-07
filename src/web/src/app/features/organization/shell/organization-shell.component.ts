@@ -14,6 +14,7 @@ const USER_NAV: NavSection = {
     { labelKey: 'nav.org.favorites', icon: 'star', link: '/app/favorites' },
     { labelKey: 'nav.org.sharedWithMe', icon: 'inbox', link: '/app/shared-with-me' },
     { labelKey: 'nav.org.sharedByMe', icon: 'outbox', link: '/app/shared-by-me' },
+    { labelKey: 'nav.org.alerts', icon: 'notification_important', link: '/app/alerts' },
     { labelKey: 'nav.org.support', icon: 'support_agent', link: '/app/support' },
     { labelKey: 'nav.org.notifications', icon: 'notifications', link: '/app/notifications' },
     { labelKey: 'nav.org.profile', icon: 'person', link: '/app/profile' },
@@ -49,7 +50,13 @@ export class OrganizationShellComponent {
   private readonly profiles = inject(OrganizationProfileService);
 
   readonly profile = signal<OrganizationProfile | null>(null);
-  readonly sections = computed<NavSection[]>(() => (this.auth.isOrganizationAdmin() ? [USER_NAV, ADMIN_NAV] : [USER_NAV]));
+  readonly sections = computed<NavSection[]>(() => {
+    // Monitoring Rules sit next to Alerts for the people who author them (administrators and Management).
+    const user: NavSection = this.auth.canAuthorRules()
+      ? { ...USER_NAV, items: USER_NAV.items.flatMap((i) => (i.link === '/app/alerts' ? [i, { labelKey: 'nav.org.monitoringRules', icon: 'policy', link: '/app/monitoring/rules' }] : [i])) }
+      : USER_NAV;
+    return this.auth.isOrganizationAdmin() ? [user, ADMIN_NAV] : [user];
+  });
   readonly organizationName = computed(() => {
     const p = this.profile();
     return p ? (this.language.current() === 'ar' ? p.organizationNameAr : p.organizationName) : null;

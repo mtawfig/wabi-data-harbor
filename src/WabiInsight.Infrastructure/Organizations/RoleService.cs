@@ -101,7 +101,7 @@ public sealed partial class RoleService : IRoleService
             throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "system_role_protected");
         }
 
-        if (await _context.UserRoles.AnyAsync(ur => ur.RoleId == roleId, cancellationToken))
+        if (await _context.UserRoles.AnyAsync(ur => ur.RoleId == roleId, cancellationToken) || await _context.MonitoringRuleRecipients.AnyAsync(r => r.RoleId == roleId, cancellationToken))
         {
             throw new DomainException(OrganizationOperationOutcome.InvalidStatusTransition, "role_in_use");
         }

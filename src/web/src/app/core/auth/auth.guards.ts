@@ -32,6 +32,13 @@ export const organizationAdminGuard: CanActivateFn = () => {
   return auth.isOrganizationAdmin() ? true : router.createUrlTree([auth.homeUrl()]);
 };
 
+/** Monitoring Rules (Phase 14): Organization Administrators and Management users. */
+export const ruleAuthorGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.canAuthorRules() ? true : router.createUrlTree([auth.homeUrl()]);
+};
+
 /** Keeps signed-in users away from the public login page. */
 export const guestGuard: CanActivateFn = () => {
   const auth = inject(AuthService);

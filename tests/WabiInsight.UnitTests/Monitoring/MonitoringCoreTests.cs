@@ -167,3 +167,95 @@ public sealed class ColumnRoleSuggesterTests
         Assert.False(new DatabaseColumn().IsIdentifierLike);
     }
 }
+
+public sealed class RuleDefinitionTests
+{
+    private static readonly Guid Account = Guid.NewGuid();
+    private static readonly Guid Device = Guid.NewGuid();
+    private static readonly Guid Time = Guid.NewGuid();
+    private static readonly Guid Amount = Guid.NewGuid();
+
+    private static RuleObjectInfo SignIns(string timeType = "datetime2") => new(Guid.NewGuid(), Guid.NewGuid(), "dbo", "PortalSignIns", new Dictionary<Guid, (string, string)>
+    {
+        [Account] = ("AccountNumber", "nvarchar"),
+        [Device] = ("DeviceId", "nvarchar"),
+        [Time] = ("LoginAt", timeType),
+        [Amount] = ("Amount", "decimal"),
+    });
+
+    [Fact]
+    public void MultiDeviceTemplate_BindsToAGroupedCountDistinct_InTheQueryPlanGrammar()
+    {
+        var template = RuleTemplates.Find(RuleTemplates.MultiDeviceSameAccount)!;
+        var definition = RuleTemplates.BindData(template, Guid.NewGuid(), new Dictionary<string, Guid> { ["account"] = Account, ["device"] = Device, ["time"] = Time });
+        Assert.Empty(RuleDefinitionValidator.Validate(MonitoringRuleKind.Data, new RuleDefinition { Data = definition }));
+
+        var now = new DateTime(2026, 11, 7, 6, 0, 0);
+        var plans = DataRulePlanBuilder.Build(definition, SignIns(), now);
+        var plan = Assert.Single(plans.Plans);
+        Assert.Empty(QueryPlanValidator.Validate(plan));
+        Assert.Equal(["g0"], plan.GroupBy);
+        var measure = plan.Select.Single(s => s.Alias == "measure");
+        Assert.Equal("count_distinct", measure.Aggregate);
+        Assert.Equal("t.DeviceId", measure.Column);
+        var window = Assert.Single(plan.Filters!.Conditions);
+        Assert.Equal(("t.LoginAt", "gte", "2026-11-06 06:00:00"), (window.Column, window.Operator, window.Values[0]));
+        Assert.Equal("desc", plan.OrderBy[0].Direction);
+        Assert.Equal(200, plan.Limit);
+    }
+
+    [Fact]
+    public void PreviousPeriod_BuildsTwoAdjacentWindows_AndDateColumnsUseWholeDays()
+    {
+        var definition = new DataRuleDefinition { ObjectId = Guid.NewGuid(), TimeColumnId = Time, WindowHours = 24 * 7, Measure = new RuleMeasure { Aggregate = "sum", ColumnId = Amount }, Comparison = "previous_period", Condition = new RuleCondition { Operator = "lte", Value = -15 } };
+        Assert.Empty(RuleDefinitionValidator.Validate(MonitoringRuleKind.Data, new RuleDefinition { Data = definition }));
+        var plans = DataRulePlanBuilder.Build(definition, SignIns("date"), new DateTime(2026, 11, 7, 7, 30, 0)).Plans;
+        Assert.Equal(2, plans.Count);
+        Assert.All(plans, p => Assert.Empty(QueryPlanValidator.Validate(p)));
+        Assert.Equal("2026-10-31 00:00:00", plans[0].Filters!.Conditions.Single(c => c.Operator == "gte").Values[0]);
+        Assert.Equal("2026-10-24 00:00:00", plans[1].Filters!.Conditions.Single(c => c.Operator == "gte").Values[0]);
+        Assert.Equal("2026-10-31 00:00:00", plans[1].Filters!.Conditions.Single(c => c.Operator == "lt").Values[0]);
+        Assert.Equal(1, plans[0].Limit);
+    }
+
+    [Theory]
+    [InlineData("gt", 2, 1, true)]
+    [InlineData("gt", 1, 1, false)]
+    [InlineData("gte", 1, 1, true)]
+    [InlineData("lt", -20, -15, true)]
+    [InlineData("lte", -15, -15, true)]
+    [InlineData("eq", 0, 0, true)]
+    [InlineData("neq", 0, 0, false)]
+    [InlineData("between", 1, 1, false)]
+    public void Condition_Matches(string op, double measured, double threshold, bool expected)
+    {
+        Assert.Equal(expected, new RuleCondition { Operator = op, Value = (decimal)threshold }.Matches((decimal)measured));
+    }
+
+    [Fact]
+    public void Validator_RejectsKindMismatch_BadMeasures_AndComparisonWithGrouping()
+    {
+        Assert.Equal(["rule_definition_kind_mismatch"], RuleDefinitionValidator.Validate(MonitoringRuleKind.Access, new RuleDefinition { Data = new DataRuleDefinition() }));
+        var errors = RuleDefinitionValidator.Validate(MonitoringRuleKind.Data, new RuleDefinition
+        {
+            Data = new DataRuleDefinition { ObjectId = Guid.NewGuid(), Measure = new RuleMeasure { Aggregate = "sum" }, GroupByColumnIds = [Account], Comparison = "previous_period", Condition = new RuleCondition { Operator = "like" }, MaxGroups = 5000 },
+        });
+        Assert.Contains("rule_measure_column_required", errors);
+        Assert.Contains("rule_condition_invalid", errors);
+        Assert.Contains("rule_comparison_needs_time_without_grouping", errors);
+        Assert.Contains("rule_max_groups_invalid", errors);
+        var access = RuleDefinitionValidator.Validate(MonitoringRuleKind.Access, new RuleDefinition { Access = new AccessRuleDefinition { Signal = "identifier_filter_values", Threshold = new AccessThreshold { Mode = "baseline" } } });
+        Assert.Equal(["rule_baseline_invalid"], access);
+    }
+
+    [Fact]
+    public void Definition_RoundTripsThroughJson_AndGarbageParsesToEmpty()
+    {
+        var definition = new RuleDefinition { Access = new AccessRuleDefinition { Signal = "exports", MinClassification = DataClassification.Restricted, RoleCodes = ["Analyst"] } };
+        var parsed = RuleDefinition.Parse(definition.Serialize());
+        Assert.Equal("exports", parsed.Access!.Signal);
+        Assert.Equal(DataClassification.Restricted, parsed.Access.MinClassification);
+        Assert.Null(RuleDefinition.Parse("{not json").Access);
+        Assert.All(RuleTemplates.All, t => Assert.Empty(RuleDefinitionValidator.Validate(t.Kind, t.Kind == MonitoringRuleKind.Access ? t.Defaults : new RuleDefinition { Data = RuleTemplates.BindData(t, Guid.NewGuid(), t.Slots.ToDictionary(s => s.Slot, _ => Guid.NewGuid())) })));
+    }
+}

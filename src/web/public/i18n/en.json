@@ -24,7 +24,9 @@
     "requiredField": "This field is required.",
     "invalidEmail": "Enter a valid email address.",
     "add": "Add",
-    "delete": "Delete"
+    "delete": "Delete",
+    "close": "Close",
+    "saved": "Saved"
   },
   "landing": {
     "nav": {
@@ -315,7 +317,9 @@
         "integrations": "Integrations",
         "settings": "Organization Settings",
         "supportAccess": "Support Access"
-      }
+      },
+      "alerts": "Alerts",
+      "monitoringRules": "Monitoring Rules"
     },
     "platform": {
       "overview": "Platform Overview",
@@ -803,7 +807,49 @@
       "share_email_content_required": "A subject and a message are required.",
       "share_email_recipient_invalid": "One of the recipients is not a valid email address.",
       "share_restricted_external_blocked": "Restricted data cannot be emailed outside the organization. Remove the external addresses.",
-      "share_disclosure_approval_required": "Confidential data requires your explicit disclosure approval before it is sent."
+      "share_disclosure_approval_required": "Confidential data requires your explicit disclosure approval before it is sent.",
+      "rule_owner_inactive": "The rule's owner is no longer active.",
+      "rule_owner_invalid": "Choose an active owner for the rule.",
+      "rule_not_authorized": "The rule's owner is not permitted to read this object or these columns.",
+      "rule_object_missing": "The object is no longer in the catalogue.",
+      "rule_object_unavailable": "The object is not approved or no longer present.",
+      "rule_column_unavailable": "A column of the rule is not approved or no longer present.",
+      "rule_application_unavailable": "The application is not approved or inactive.",
+      "rule_builtin_not_supported": "Rules cannot run on the built-in Insights application.",
+      "rule_definition_invalid": "The rule's definition is not valid.",
+      "rule_definition_kind_mismatch": "The definition does not match the rule type.",
+      "rule_plan_invalid": "The rule cannot be turned into a valid query plan.",
+      "rule_name_invalid": "Enter a name (up to 200 characters).",
+      "rule_name_taken": "Another rule already has this name.",
+      "rule_template_invalid": "Unknown template.",
+      "rule_schedule_invalid": "Choose a valid schedule (intervals of at least 15 minutes).",
+      "rule_cooldown_invalid": "The cooldown must be between 0 and 720 hours.",
+      "rule_window_invalid": "The time window is out of range.",
+      "rule_measure_invalid": "Unknown measure.",
+      "rule_measure_column_required": "The measure needs a column.",
+      "rule_condition_invalid": "Unknown condition.",
+      "rule_filter_invalid": "A filter is not valid.",
+      "rule_group_by_invalid": "Up to three distinct grouping columns.",
+      "rule_comparison_invalid": "Unknown comparison.",
+      "rule_comparison_needs_time_without_grouping": "A period comparison needs a time column and no grouping.",
+      "rule_max_groups_invalid": "Between 1 and 1000 groups.",
+      "rule_signal_invalid": "Unknown signal.",
+      "rule_threshold_invalid": "The threshold must be greater than zero.",
+      "rule_baseline_invalid": "This signal cannot be compared with a baseline.",
+      "rule_new_users_invalid": "New-user window must be 1–365 days.",
+      "rule_role_invalid": "Unknown role.",
+      "rule_recipients_invalid": "Recipients must be active users or roles of the organization (up to 50).",
+      "rule_not_found": "Rule not found.",
+      "alert_not_found": "Alert not found.",
+      "alert_note_required": "Add a note to resolve or dismiss.",
+      "alert_note_too_long": "The note is too long.",
+      "alert_status_transition_invalid": "This change is not possible from the current status.",
+      "alert_has_no_subject": "This alert is not about a user.",
+      "user_not_active": "The user is not active.",
+      "settings_working_days_invalid": "Choose at least one working day.",
+      "settings_working_hours_invalid": "Working hours must start before they end.",
+      "settings_retention_invalid": "Retention is outside the allowed range.",
+      "organization_inactive": "The organization is not active."
     },
     "applications": {
       "title": "Applications",
@@ -891,7 +937,24 @@
       "editColumn": "Edit column",
       "relationships": "Relationships",
       "empty": "No objects match the filters.",
-      "neverRefreshed": "Nothing discovered yet. Refresh from source to load the catalog."
+      "neverRefreshed": "Nothing discovered yet. Refresh from source to load the catalog.",
+      "semanticRole": "Field role",
+      "suggestedRole": "Suggested: {{role}}",
+      "acceptRole": "Confirm the suggested field role",
+      "roles": {
+        "Unspecified": "No role",
+        "Identifier": "Identifier",
+        "PersonIdentifier": "Person identifier",
+        "AccountIdentifier": "Account identifier",
+        "DeviceIdentifier": "Device identifier",
+        "Timestamp": "Date / time",
+        "Amount": "Amount",
+        "Quantity": "Quantity",
+        "Status": "Status",
+        "Location": "Location",
+        "Contact": "Contact",
+        "Other": "Other"
+      }
     },
     "permissions": {
       "title": "Permissions",
@@ -1242,7 +1305,9 @@
       "SupportAccess.Expired": "Support access on ticket {{reference}} expired",
       "SupportAccess.OperationExecuted": "{{actorName}} ran \"{{operation}}\" on ticket {{reference}} ({{outcome}})",
       "Analysis.Shared": "{{actorName}} shared \"{{title}}\" with you",
-      "Analysis.ShareRevoked": "{{actorName}} stopped sharing \"{{title}}\" with you"
+      "Analysis.ShareRevoked": "{{actorName}} stopped sharing \"{{title}}\" with you",
+      "Monitoring.Alert": "High-severity alert from \"{{ruleName}}\" ({{alerts}})",
+      "Monitoring.RulePaused": "Monitoring rule \"{{ruleName}}\" was paused and needs attention"
     }
   },
   "supportAccess": {
@@ -1746,5 +1811,301 @@
       "exports": "PDF, Word and Excel exports in My Reports"
     },
     "note": "No external provider is connected; nothing leaves the platform except the emails your users send explicitly."
+  },
+  "monitoring": {
+    "eyebrow": "Proactive assistant",
+    "severity": {
+      "High": "High",
+      "Medium": "Medium",
+      "Info": "Info"
+    },
+    "status": {
+      "Open": "Open",
+      "Acknowledged": "Acknowledged",
+      "Resolved": "Resolved",
+      "Dismissed": "Dismissed"
+    },
+    "outcome": {
+      "NoMatch": "No match",
+      "Fired": "Fired",
+      "Failed": "Failed",
+      "Skipped": "Skipped"
+    },
+    "kind": {
+      "Data": "Data rule",
+      "Access": "Access rule"
+    },
+    "recurrence": {
+      "Daily": "Daily",
+      "Weekly": "Weekly",
+      "Interval": "Every N minutes"
+    },
+    "days": {
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+      "7": "Sunday"
+    },
+    "operators": {
+      "gt": "greater than",
+      "gte": "at least",
+      "lt": "less than",
+      "lte": "at most",
+      "eq": "equal to",
+      "neq": "not equal to"
+    },
+    "slots": {
+      "account": "Account",
+      "device": "Device",
+      "time": "Date / time",
+      "entity": "Account or person",
+      "amount": "Amount",
+      "measure": "Value"
+    },
+    "signals": {
+      "analyses": "Analyses",
+      "rows": "Rows read",
+      "restricted_touches": "Restricted reads",
+      "exports": "Exports",
+      "unauthorized": "Unauthorized attempts",
+      "identifier_filter_values": "Specific identifiers filtered",
+      "accesses": "Accesses"
+    },
+    "basis": {
+      "user": "the user's own baseline",
+      "role": "the role's baseline",
+      "absolute": "a fixed limit"
+    },
+    "summary": {
+      "measure": "Value",
+      "previous": "Previous period",
+      "changePercent": "Change %",
+      "threshold": "Threshold",
+      "expected": "Usual for this window",
+      "basis": "Compared with",
+      "signal": "Signal",
+      "windowHours": "Window (hours)",
+      "reason": "Reason"
+    },
+    "userStatus": {
+      "Active": "Active",
+      "Inactive": "Suspended",
+      "PendingInvitation": "Invited"
+    },
+    "events": {
+      "Raised": "Raised",
+      "Repeated": "Seen again",
+      "Acknowledged": "Acknowledged",
+      "Resolved": "Resolved",
+      "Dismissed": "Dismissed",
+      "Reopened": "Reopened",
+      "UserSuspended": "User suspended"
+    },
+    "unavailable": {
+      "template_needs_roles": "Needs an approved object with these field roles that the owner may read. Set column roles in Metadata.",
+      "template_admin_only": "Organization Administrators only.",
+      "template_needs_restricted_columns": "Needs at least one column classified Restricted."
+    },
+    "alerts": {
+      "title": "Alerts",
+      "subtitle": "What your Monitoring Rules found. Each alert informs; a person decides what happens next.",
+      "previewDigest": "Preview my daily digest",
+      "openCount": "Open alerts",
+      "openHighCount": "Open high-severity",
+      "humanDecision": "Alerts never suspend anyone automatically.",
+      "digestEmpty": "Nothing in the last 24 hours.",
+      "redactedShort": "Details hidden",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "severity": "Severity",
+      "allSeverities": "All severities",
+      "times": "{{count}} times",
+      "empty": "No alerts here.",
+      "rule": "Rule",
+      "deletedRule": "Deleted rule",
+      "rulePaused": "The rule was paused: {{reason}} Fix it and resume the rule.",
+      "redacted": "You receive this alert, but you are not permitted to read the rule's data, so only the title and counts are shown.",
+      "groupKey": "Group",
+      "firstSeen": "First seen",
+      "lastSeen": "Last seen",
+      "occurrences": "Occurrences",
+      "subject": "User",
+      "note": "Note",
+      "noteHint": "Required to resolve or dismiss.",
+      "acknowledge": "Acknowledge",
+      "resolve": "Resolve",
+      "dismiss": "Dismiss",
+      "reopen": "Reopen",
+      "suspend": "Suspend user",
+      "suspendConfirm": "Suspend {{name}}? They are signed out at once and cannot sign in until an administrator reactivates them. This is recorded in the audit log.",
+      "suspendYes": "Yes, suspend",
+      "timeline": "Timeline"
+    },
+    "rules": {
+      "title": "Monitoring Rules",
+      "subtitleAdmin": "Rules watch your organization's own data and how it is used. Each rule runs under its owner's permissions and never sees more than the owner may.",
+      "subtitleManagement": "Create rules that watch the data you are permitted to read. Alerts come to you in the app and in your daily digest.",
+      "new": "New rule",
+      "edit": "Edit rule",
+      "chooseTemplate": "Choose a template",
+      "owner": "Rule owner (runs with their permissions)",
+      "ownerSelf": "Me",
+      "objectsCount": "{{count}} readable objects",
+      "ownerHint": "The rule reads data exactly as this user would. Administrator rights alone include no data access.",
+      "dataTemplates": "Data rules",
+      "accessTemplates": "Access rules (how data is used)",
+      "candidates": "{{count}} matching object(s)",
+      "rolesHint": "Templates appear when your catalogue has columns with the needed field roles.",
+      "custom": "Custom definition",
+      "name": "Name",
+      "description": "Description",
+      "binding": "Data and fields",
+      "object": "Object",
+      "windowHours": "Window (hours, ending now)",
+      "condition": "Alert when the value is",
+      "changePercent": "Change (%)",
+      "threshold": "Threshold",
+      "runsAsOwner": "Runs through the same validated, read-only query path as a question, with the owner's row scopes.",
+      "accessSignal": "Signal",
+      "multiplier": "Multiple of the usual",
+      "baselineHint": "Compared with the user's 28-day pattern; new users are not compared until they have five active days.",
+      "customHint": "This rule was defined through the API; its definition is kept as is. You can change the name, schedule, severity and recipients.",
+      "schedule": "Schedule",
+      "recurrence": "Runs",
+      "intervalMinutes": "Every (minutes, at least 15)",
+      "time": "At (organization time)",
+      "day": "Day",
+      "cooldown": "Cooldown (hours)",
+      "recipients": "Recipients",
+      "recipientUsers": "Users",
+      "recipientRoles": "Roles (every active member)",
+      "recipientsHint": "The owner always receives the alerts. Recipients without permission on the data see titles and counts only.",
+      "selfRecipient": "Alerts from your rules come to you.",
+      "active": "Active",
+      "testNow": "Test now",
+      "testResult": "Test result",
+      "testSummary": "{{matches}} match(es) · {{rows}} result row(s) checked",
+      "testRedacted": "You are not permitted to read this rule's data, so only the number of matches is shown.",
+      "wholeObject": "Whole object",
+      "lastRun": "Last run",
+      "openAlerts": "Open alerts",
+      "paused": "Paused",
+      "nextRun": "Next run",
+      "recipientsShort": "recipient(s)",
+      "neverRun": "Not run yet",
+      "pause": "Pause",
+      "resume": "Resume",
+      "empty": "No rules yet. Start from a template.",
+      "deleteConfirm": "Delete \"{{name}}\"? Its alerts stay in the alert centre.",
+      "everyMinutes": "Every {{minutes}} min",
+      "weeklyAt": "{{day}} at {{time}}",
+      "dailyAt": "Daily at {{time}}",
+      "bindAll": "Choose a column for every field.",
+      "ownerShort": "Owner"
+    },
+    "settings": {
+      "title": "Monitoring settings",
+      "subtitle": "Times are in the organization time zone ({{zone}}).",
+      "digestTime": "Daily digest at",
+      "workStart": "Working hours start",
+      "workEnd": "Working hours end",
+      "retention": "Keep history (months)",
+      "retentionHint": "Up to {{max}} months.",
+      "workingDays": "Working days"
+    },
+    "templates": {
+      "multi_device_same_account": {
+        "name": "Same account, several devices",
+        "description": "The same account used from more than one device within the window (for example, a day). Sent to the cyber-security team."
+      },
+      "many_events_per_entity": {
+        "name": "Many events for one record",
+        "description": "One account, person or record appears more often than usual within the window."
+      },
+      "amount_above_threshold": {
+        "name": "Amount above a threshold",
+        "description": "The total amount for one account or person over the window exceeds a limit."
+      },
+      "change_vs_previous_period": {
+        "name": "Change versus the previous period",
+        "description": "A total moves by more than a percentage compared with the previous window (for example, week over week)."
+      },
+      "restricted_filtered_access": {
+        "name": "Targeted look-ups on restricted data",
+        "description": "A user filters restricted data by many specific identifiers (for example, particular customers' bank accounts)."
+      },
+      "repeated_unauthorized_attempts": {
+        "name": "Repeated unauthorized attempts",
+        "description": "A user keeps asking for data they are not permitted to read."
+      },
+      "exports_above_baseline": {
+        "name": "Exports above the usual",
+        "description": "A user exports far more than their own (or their role's) normal daily pattern."
+      },
+      "queries_above_baseline": {
+        "name": "Rows read above the usual",
+        "description": "A user reads far more rows than their normal daily pattern."
+      },
+      "sensitive_outside_working_hours": {
+        "name": "Sensitive data outside working hours",
+        "description": "Confidential or restricted data read outside the organization's working hours."
+      },
+      "new_user_sensitive_access": {
+        "name": "New user reading restricted data",
+        "description": "An account created in the last days reads restricted data."
+      }
+    },
+    "errors": {
+      "rule_owner_inactive": "The rule's owner is no longer active.",
+      "rule_owner_invalid": "Choose an active owner for the rule.",
+      "rule_not_authorized": "The rule's owner is not permitted to read this object or these columns.",
+      "rule_object_missing": "The object is no longer in the catalogue.",
+      "rule_object_unavailable": "The object is not approved or no longer present.",
+      "rule_column_unavailable": "A column of the rule is not approved or no longer present.",
+      "rule_application_unavailable": "The application is not approved or inactive.",
+      "rule_builtin_not_supported": "Rules cannot run on the built-in Insights application.",
+      "rule_definition_invalid": "The rule's definition is not valid.",
+      "rule_definition_kind_mismatch": "The definition does not match the rule type.",
+      "rule_plan_invalid": "The rule cannot be turned into a valid query plan.",
+      "rule_name_invalid": "Enter a name (up to 200 characters).",
+      "rule_name_taken": "Another rule already has this name.",
+      "rule_template_invalid": "Unknown template.",
+      "rule_schedule_invalid": "Choose a valid schedule (intervals of at least 15 minutes).",
+      "rule_cooldown_invalid": "The cooldown must be between 0 and 720 hours.",
+      "rule_window_invalid": "The time window is out of range.",
+      "rule_measure_invalid": "Unknown measure.",
+      "rule_measure_column_required": "The measure needs a column.",
+      "rule_condition_invalid": "Unknown condition.",
+      "rule_filter_invalid": "A filter is not valid.",
+      "rule_group_by_invalid": "Up to three distinct grouping columns.",
+      "rule_comparison_invalid": "Unknown comparison.",
+      "rule_comparison_needs_time_without_grouping": "A period comparison needs a time column and no grouping.",
+      "rule_max_groups_invalid": "Between 1 and 1000 groups.",
+      "rule_signal_invalid": "Unknown signal.",
+      "rule_threshold_invalid": "The threshold must be greater than zero.",
+      "rule_baseline_invalid": "This signal cannot be compared with a baseline.",
+      "rule_new_users_invalid": "New-user window must be 1–365 days.",
+      "rule_role_invalid": "Unknown role.",
+      "rule_recipients_invalid": "Recipients must be active users or roles of the organization (up to 50).",
+      "rule_not_found": "Rule not found.",
+      "alert_not_found": "Alert not found.",
+      "alert_note_required": "Add a note to resolve or dismiss.",
+      "alert_note_too_long": "The note is too long.",
+      "alert_status_transition_invalid": "This change is not possible from the current status.",
+      "alert_has_no_subject": "This alert is not about a user.",
+      "user_not_active": "The user is not active.",
+      "settings_working_days_invalid": "Choose at least one working day.",
+      "settings_working_hours_invalid": "Working hours must start before they end.",
+      "settings_retention_invalid": "Retention is outside the allowed range.",
+      "organization_inactive": "The organization is not active.",
+      "query_timeout": "The query took too long.",
+      "query_failed": "The source database returned an error.",
+      "source_permission_denied": "The application's login cannot read this object.",
+      "source_schema_changed": "The source schema changed; refresh the metadata.",
+      "unknown": "Unknown reason."
+    }
   }
 }

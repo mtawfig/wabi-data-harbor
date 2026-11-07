@@ -85,7 +85,15 @@ export interface ColumnInfo {
   classification: DataClassification;
   isApproved: boolean;
   isPresent: boolean;
+  /** Field role confirmed by the administrator (Phase 14): what Monitoring Rule templates bind to. */
+  semanticRole?: ColumnSemanticRole;
+  /** The role the catalogue suggests from the name and type; shown until the administrator confirms one. */
+  suggestedSemanticRole?: ColumnSemanticRole;
 }
+
+export type ColumnSemanticRole = 'Unspecified' | 'Identifier' | 'PersonIdentifier' | 'AccountIdentifier' | 'DeviceIdentifier' | 'Timestamp' | 'Amount' | 'Quantity' | 'Status' | 'Location' | 'Contact' | 'Other';
+
+export const SEMANTIC_ROLES: ColumnSemanticRole[] = ['Identifier', 'PersonIdentifier', 'AccountIdentifier', 'DeviceIdentifier', 'Timestamp', 'Amount', 'Quantity', 'Status', 'Location', 'Contact', 'Other'];
 
 export interface Relationship {
   relationshipId: string;
@@ -126,4 +134,6 @@ export interface UpdateObjectRequest {
 
 export interface UpdateColumnRequest extends UpdateObjectRequest {
   classification: DataClassification;
+  /** Omitted: unchanged. 'Unspecified': cleared. */
+  semanticRole?: ColumnSemanticRole;
 }

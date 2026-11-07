@@ -17,4 +17,8 @@ GO
 DENY UPDATE, DELETE ON dbo.AuditLogs TO [wabi_insight_app];
 DENY UPDATE, DELETE ON dbo.UsageEvents TO [wabi_insight_app];
 DENY UPDATE, DELETE ON dbo.SupportTicketEvents TO [wabi_insight_app];
+-- Phase 14 ledgers: never edited; DELETE stays granted for the nightly retention purge (owner decision D3, 24 months).
+DENY UPDATE ON dbo.AnalysisAccessFacts TO [wabi_insight_app];
+DENY UPDATE ON dbo.RuleEvaluations TO [wabi_insight_app];
+DENY UPDATE ON dbo.AlertEvents TO [wabi_insight_app];
 GO

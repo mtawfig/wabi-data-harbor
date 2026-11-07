@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, organizationAdminGuard, organizationUserGuard, platformAdministratorGuard } from './core/auth/auth.guards';
+import { authGuard, guestGuard, organizationAdminGuard, organizationUserGuard, platformAdministratorGuard, ruleAuthorGuard } from './core/auth/auth.guards';
 
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./features/public/landing/landing.component').then((m) => m.LandingComponent) },
@@ -27,6 +27,8 @@ export const routes: Routes = [
       { path: 'support/new', loadComponent: () => import('./features/support/ticket-form.component').then((m) => m.TicketFormComponent) },
       { path: 'support/:id', loadComponent: () => import('./features/support/ticket-detail.component').then((m) => m.TicketDetailComponent), data: { area: 'app' } },
       { path: 'notifications', loadComponent: () => import('./features/support/notification-center.component').then((m) => m.NotificationCenterComponent), data: { area: 'app' } },
+      { path: 'alerts', loadComponent: () => import('./features/monitoring/alerts.component').then((m) => m.AlertsComponent) },
+      { path: 'monitoring/rules', canActivate: [ruleAuthorGuard], loadComponent: () => import('./features/monitoring/rules.component').then((m) => m.RulesComponent) },
       { path: 'profile', loadComponent: () => import('./features/organization/profile/profile.component').then((m) => m.ProfileComponent) },
       {
         path: 'admin',

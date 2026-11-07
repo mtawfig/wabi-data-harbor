@@ -28,6 +28,9 @@ export class AuthService {
   readonly isPlatformAdministrator = computed(() => this.session()?.principalType === 'PlatformAdministrator');
   readonly isOrganizationUser = computed(() => this.session()?.principalType === 'OrganizationUser');
   readonly isOrganizationAdmin = computed(() => this.session()?.roles.includes(ORGANIZATION_ADMIN_ROLE) ?? false);
+  readonly isManagement = computed(() => this.session()?.roles.includes('Management') ?? false);
+  /** Monitoring Rules (Phase 14): Organization Administrators and Management users author rules. */
+  readonly canAuthorRules = computed(() => this.isOrganizationAdmin() || this.isManagement());
   readonly mustChangePassword = computed(() => this.session()?.mustChangePassword ?? false);
 
   /** Called once at startup: fetch an antiforgery token and restore the session if the cookie is valid. */

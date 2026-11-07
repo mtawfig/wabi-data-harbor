@@ -15,7 +15,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { Application, CLASSIFICATIONS, ColumnInfo, DataClassification, ObjectDetail, ObjectSummary } from '../../../core/organizations/applications.models';
+import { Application, CLASSIFICATIONS, ColumnInfo, ColumnSemanticRole, DataClassification, ObjectDetail, ObjectSummary, SEMANTIC_ROLES } from '../../../core/organizations/applications.models';
 import { ApplicationsService } from '../../../core/organizations/applications.service';
 import { problemMessage } from '../../../core/problem-message';
 
@@ -27,6 +27,7 @@ interface ColumnDraft {
   businessDescription: string;
   classification: DataClassification;
   isApproved: boolean;
+  semanticRole: ColumnSemanticRole;
 }
 
 /** Metadata catalog (specification §17): discovered objects and columns, EN/AR names, descriptions, classification and approval. */
@@ -46,6 +47,7 @@ export class MetadataComponent {
   readonly application = input<string | undefined>(undefined);
 
   readonly classifications = CLASSIFICATIONS;
+  readonly semanticRoles = SEMANTIC_ROLES;
   readonly objectColumns = ['object', 'type', 'names', 'columns', 'status'];
   readonly apps = signal<Application[]>([]);
   readonly selected = signal<string | null>(null);
@@ -62,7 +64,7 @@ export class MetadataComponent {
   readonly detail = signal<ObjectDetail | null>(null);
   readonly objectDraft = signal({ displayNameEn: '', displayNameAr: '', businessDescription: '', isApproved: false });
   readonly editingColumn = signal<string | null>(null);
-  readonly columnDraft = signal<ColumnDraft>({ displayNameEn: '', displayNameAr: '', businessDescription: '', classification: 'Internal', isApproved: false });
+  readonly columnDraft = signal<ColumnDraft>({ displayNameEn: '', displayNameAr: '', businessDescription: '', classification: 'Internal', isApproved: false, semanticRole: 'Unspecified' });
 
   readonly selectedApp = computed(() => this.apps().find((a) => a.applicationId === this.selected()) ?? null);
   readonly selectable = computed(() => this.apps().filter((a) => !a.isBuiltIn));
@@ -198,7 +200,7 @@ export class MetadataComponent {
 
   editColumn(c: ColumnInfo): void {
     this.editingColumn.set(c.columnId);
-    this.columnDraft.set({ displayNameEn: c.displayNameEn ?? '', displayNameAr: c.displayNameAr ?? '', businessDescription: c.businessDescription ?? '', classification: c.classification, isApproved: c.isApproved });
+    this.columnDraft.set({ displayNameEn: c.displayNameEn ?? '', displayNameAr: c.displayNameAr ?? '', businessDescription: c.businessDescription ?? '', classification: c.classification, isApproved: c.isApproved, semanticRole: c.semanticRole ?? 'Unspecified' });
   }
 
   setColumnField<K extends keyof ColumnDraft>(name: K, value: ColumnDraft[K]): void {
@@ -212,7 +214,7 @@ export class MetadataComponent {
     const v = this.columnDraft();
     this.busy.set(true);
     this.error.set(null);
-    this.applications.updateColumn(c.columnId, { displayNameEn: v.displayNameEn || undefined, displayNameAr: v.displayNameAr || undefined, businessDescription: v.businessDescription || undefined, classification: v.classification, isApproved: v.isApproved }).subscribe({
+    this.applications.updateColumn(c.columnId, { displayNameEn: v.displayNameEn || undefined, displayNameAr: v.displayNameAr || undefined, businessDescription: v.businessDescription || undefined, classification: v.classification, isApproved: v.isApproved, semanticRole: v.semanticRole }).subscribe({
       next: (updated) => {
         this.detail.update((d) => (d ? { ...d, columns: d.columns.map((x) => (x.columnId === updated.columnId ? updated : x)) } : d));
         this.editingColumn.set(null);
@@ -230,6 +232,21 @@ export class MetadataComponent {
         this.detail.update((d) => (d ? { ...d, columns: d.columns.map((x) => (x.columnId === updated.columnId ? updated : x)) } : d));
         this.busy.set(false);
         this.load();
+      },
+      error: (response: HttpErrorResponse) => this.fail(response),
+    });
+  }
+
+  /** Confirms the suggested role in one click (the role picker stays available in the column form). */
+  acceptSuggestedRole(c: ColumnInfo): void {
+    if (!c.suggestedSemanticRole || this.busy()) {
+      return;
+    }
+    this.busy.set(true);
+    this.applications.updateColumn(c.columnId, { displayNameEn: c.displayNameEn, displayNameAr: c.displayNameAr, businessDescription: c.businessDescription, classification: c.classification, isApproved: c.isApproved, semanticRole: c.suggestedSemanticRole }).subscribe({
+      next: (updated) => {
+        this.detail.update((d) => (d ? { ...d, columns: d.columns.map((x) => (x.columnId === updated.columnId ? updated : x)) } : d));
+        this.busy.set(false);
       },
       error: (response: HttpErrorResponse) => this.fail(response),
     });

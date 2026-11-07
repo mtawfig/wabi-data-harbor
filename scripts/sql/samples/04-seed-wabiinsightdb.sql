@@ -11,14 +11,19 @@
 --   * organization "Gulf Aviation Services" (code GAS) with the three standard roles and the built-in Platform Insights application;
 --   * the departments and sections of HumanResourcesDB (codes match, so DEPARTMENT / SECTION / SELF row scopes work);
 --   * four users (employee numbers match HumanResourcesDB):
---       E1001 Faisal Al Shamsi   IT Manager            role OrganizationAdmin   (manages the organization, no data access by itself)
+--       E1001 Faisal Al Shamsi   IT Manager            roles OrganizationAdmin  (manages the organization, no data access by itself)
+--                                                            and CyberSecurity      (employee-portal sign-ins only)
 --       E1002 Khalid Al Suwaidi  CEO                   role Management          (reads every approved object, all rows)
 --       E1003 Arjun Nair         Operations Controller role OperationsAnalyst   (flights + procurement all rows; own attendance, leave and payslips)
 --       E1004 Sara Khoury        Payroll Specialist    role HRPayrollOfficer    (HR all rows without Restricted columns; own department's purchases and store issues)
 --     Initial password for all four: Wabi#Sample#2026 — every user must change it at first sign-in. Edit the e-mail
 --     variables below to real mailboxes if the organization should receive Wabi Insight notifications.
 --   * three applications (FLIGHT-OPS, HR-PAYROLL, PROCUREMENT) with every table catalogued, approved, described (EN/AR)
---     and classified (Internal / Confidential / Restricted), foreign-key relationships, row-scope mappings and role permissions.
+--     and classified (Internal / Confidential / Restricted), foreign-key relationships, row-scope mappings and role permissions;
+--   * field roles on key columns (account, device, date/time, amount ...) so Monitoring Rule templates are offered (Phase 14);
+--   * the Monitoring Rule "Same account, several devices (employee portal)": owned by E1002 (runs with the CEO's read access),
+--     daily at 06:00, High, sent to the Cyber Security role. It reads vw_EmployeePortalSignInsLive, whose last day is always
+--     today, so its first run finds the four planted accounts.
 --
 -- One step stays in the application, by design: connection strings are encrypted with the deployment's Data Protection
 -- key ring and can never be written by SQL. After this script, sign in as the organization administrator and, for each
@@ -44,7 +49,7 @@ DECLARE @OrgCode       nvarchar(32)  = N'GAS',
         @InitialPasswordHash nvarchar(512) = N'AQAAAAIAAYagAAAAEETy/99eckKEanTcWITTTOPP6JGVZqBqe69qf5tkJ4xaB63ZZbNF3r2unaowrHc7tA==';
 DECLARE @Now datetimeoffset(7) = SYSDATETIMEOFFSET(), @OrgId uniqueidentifier, @AdminUserId uniqueidentifier, @Sql nvarchar(max);
 
-IF OBJECT_ID(N'dbo.AnalysisShares', N'U') IS NULL
+IF OBJECT_ID(N'dbo.MonitoringRules', N'U') IS NULL
     THROW 50001, N'WabiInsightDB is not migrated to the current version: run "dotnet WabiInsight.Api.dll migrate" first.', 1;
 IF DB_ID(@FlightDb) IS NULL OR DB_ID(@HrDb) IS NULL OR DB_ID(@ProcDb) IS NULL
     THROW 50002, N'Run 01-, 02- and 03-create-*.sql on this server first: FlightOperationsDB, HumanResourcesDB and ProcurementStoresDB are required.', 1;
@@ -150,6 +155,8 @@ INSERT INTO #ObjectDocs VALUES
 (N'HR-PAYROLL', N'PayrollPeriods', N'Payroll periods', N'فترات الرواتب', N'Monthly payroll periods of 2025 (YYYY-MM) with pay date, number of employees paid and total gross, deductions and net pay in AED.'),
 (N'HR-PAYROLL', N'Payslips', N'Payslips', N'قسائم الرواتب', N'Monthly payslip per employee in 2025 (AED): prorated basic and allowances, overtime hours and pay (125 % of the hourly basic), absence deduction, pension (UAE nationals), salary-advance repayment, gross, total deductions and net pay.'),
 (N'HR-PAYROLL', N'PayslipLines', N'Payslip lines', N'بنود قسائم الرواتب', N'Payslip broken down by pay element (one row per non-zero earning or deduction).'),
+(N'HR-PAYROLL', N'EmployeePortalSignIns', N'Employee portal sign-ins', N'عمليات الدخول إلى بوابة الموظفين', N'Every sign-in attempt to the employee self-service portal by office staff in December 2025: account, device (LT = work laptop, MB = registered phone, UNK = unregistered device), device type, channel, IP address, city, local time and whether it succeeded.'),
+(N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'Employee portal sign-ins (live)', N'عمليات الدخول إلى بوابة الموظفين (مباشر)', N'The same sign-ins with dates moved forward so that 31 December 2025 is today. Used by Monitoring Rules that look at the last 24 hours.'),
 -- Procurement and stores
 (N'PROCUREMENT', N'Calendar', N'Calendar 2025', N'التقويم 2025', N'One row per day of 2025 with month, week, weekday (1 = Monday), UAE weekend and public holidays.'),
 (N'PROCUREMENT', N'CostCenters', N'Cost centres', N'مراكز التكلفة', N'Cost centre of each department (department codes match the HR application).'),
@@ -222,6 +229,14 @@ INSERT INTO #ColumnDocs VALUES
 (N'HR-PAYROLL', N'AttendanceRecords', N'Status', N'Attendance status', N'حالة الحضور', N'Present, Late (checked in after the scheduled start), Absent (no show, unpaid) or On Leave (approved leave).', NULL),
 (N'HR-PAYROLL', N'AttendanceRecords', N'OvertimeMinutes', N'Overtime (minutes)', N'العمل الإضافي (دقائق)', N'Minutes worked after the scheduled end of the shift.', NULL),
 (N'HR-PAYROLL', N'AttendanceRecords', N'LateMinutes', N'Late (minutes)', N'التأخير (دقائق)', N'Minutes after the scheduled start at check-in.', NULL),
+(N'HR-PAYROLL', N'EmployeePortalSignIns', N'AccountName', N'Portal account', N'حساب البوابة', N'Sign-in account, GAS\<employee number>.', NULL),
+(N'HR-PAYROLL', N'EmployeePortalSignIns', N'DeviceId', N'Device', N'الجهاز', N'LT-… work laptop, MB-… registered phone, UNK-… a device the company does not know.', NULL),
+(N'HR-PAYROLL', N'EmployeePortalSignIns', N'IpAddress', N'IP address', N'عنوان IP', NULL, N'Confidential'),
+(N'HR-PAYROLL', N'EmployeePortalSignIns', N'LoginAt', N'Signed in at', N'وقت الدخول', N'Local time (Asia/Dubai).', NULL),
+(N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'AccountName', N'Portal account', N'حساب البوابة', N'Sign-in account, GAS\<employee number>.', NULL),
+(N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'DeviceId', N'Device', N'الجهاز', N'LT-… work laptop, MB-… registered phone, UNK-… a device the company does not know.', NULL),
+(N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'IpAddress', N'IP address', N'عنوان IP', NULL, N'Confidential'),
+(N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'LoginAt', N'Signed in at', N'وقت الدخول', N'Local time, shifted so the last day is today.', NULL),
 (N'PROCUREMENT', N'PurchaseRequisitions', N'Priority', N'Priority', N'الأولوية', N'Routine, Urgent or AOG (aircraft on ground: an aircraft cannot fly until the part arrives).', NULL),
 (N'PROCUREMENT', N'PurchaseRequisitions', N'Status', N'Status', N'الحالة', N'Submitted, Approved, Rejected or Converted (a purchase order was issued).', NULL),
 (N'PROCUREMENT', N'PurchaseOrders', N'Status', N'Status', N'الحالة', N'Open (nothing received), Partially received, Received, Closed (received and invoice paid) or Cancelled.', NULL),
@@ -258,7 +273,8 @@ BEGIN TRY
     SELECT NEWID(), @OrgId, v.RoleCode, v.NameEn, v.NameAr, v.Description, 0, 1, NULL, @Now
     FROM (VALUES
         (N'OperationsAnalyst', N'Operations Analyst', N'محلل العمليات', N'Flight operations and procurement data (all rows); own attendance, leave and payslips.'),
-        (N'HRPayrollOfficer', N'HR and Payroll Officer', N'مسؤول الموارد البشرية والرواتب', N'HR, payroll and attendance (all rows, without Restricted personal identifiers); own department''s purchases and store issues.')) v(RoleCode, NameEn, NameAr, Description)
+        (N'HRPayrollOfficer', N'HR and Payroll Officer', N'مسؤول الموارد البشرية والرواتب', N'HR, payroll and attendance (all rows, without Restricted personal identifiers); own department''s purchases and store issues.'),
+        (N'CyberSecurity', N'Cyber Security', N'الأمن السيبراني', N'Employee-portal sign-ins (all rows); receives the alerts of the sign-in Monitoring Rules.')) v(RoleCode, NameEn, NameAr, Description)
     WHERE NOT EXISTS (SELECT 1 FROM dbo.Roles r WHERE r.OrganizationId = @OrgId AND r.RoleCode = v.RoleCode);
 
     INSERT INTO dbo.Applications (ApplicationId, OrganizationId, ApplicationName, ApplicationNameAr, ApplicationCode, Description, DatabaseType, IsBuiltIn, BuiltInCode, IsActive, IsApproved, CreatedAt)
@@ -296,6 +312,10 @@ BEGIN TRY
     SELECT u.UserId, r.RoleId, @OrgId, @Now FROM #Users u JOIN dbo.Roles r ON r.OrganizationId = @OrgId AND r.RoleCode = u.RoleCode
     WHERE NOT EXISTS (SELECT 1 FROM dbo.UserRoles x WHERE x.UserId = u.UserId AND x.RoleId = r.RoleId);
     SELECT @AdminUserId = UserId FROM #Users WHERE RoleCode = N'OrganizationAdmin';
+    -- The IT manager also belongs to Cyber Security (sign-in data only), so the sign-in alerts reach a person who may read them.
+    INSERT INTO dbo.UserRoles (UserId, RoleId, OrganizationId, AssignedAt)
+    SELECT @AdminUserId, r.RoleId, @OrgId, @Now FROM dbo.Roles r
+    WHERE r.OrganizationId = @OrgId AND r.RoleCode = N'CyberSecurity' AND NOT EXISTS (SELECT 1 FROM dbo.UserRoles x WHERE x.UserId = @AdminUserId AND x.RoleId = r.RoleId);
 
     -- ------------------------------------------------------------------------------------------ applications and catalogued metadata
     INSERT INTO dbo.Applications (ApplicationId, OrganizationId, ApplicationName, ApplicationNameAr, ApplicationCode, Description, DatabaseType, IsBuiltIn, IsActive, IsApproved,
@@ -332,6 +352,28 @@ BEGIN TRY
     FROM dbo.DatabaseColumns c JOIN dbo.DatabaseObjects o ON o.ObjectId = c.ObjectId JOIN #Apps a ON a.ApplicationId = o.ApplicationId
     JOIN #ColumnDocs d ON d.AppCode = a.AppCode AND d.ObjectName = o.ObjectName AND d.ColumnName = c.ColumnName;
 
+    -- Field roles (Phase 14): what Monitoring Rule templates bind to. Values follow ColumnSemanticRole (1 Identifier, 2 Person,
+    -- 3 Account, 4 Device, 5 Date/time, 6 Amount, 7 Quantity, 8 Status, 9 Location). An administrator's later choice is kept.
+    UPDATE c SET SemanticRole = v.SemanticRole, UpdatedAt = @Now
+    FROM (VALUES
+        (N'HR-PAYROLL', N'EmployeePortalSignIns', N'AccountName', 3), (N'HR-PAYROLL', N'EmployeePortalSignIns', N'EmployeeNumber', 2),
+        (N'HR-PAYROLL', N'EmployeePortalSignIns', N'DeviceId', 4), (N'HR-PAYROLL', N'EmployeePortalSignIns', N'IpAddress', 4),
+        (N'HR-PAYROLL', N'EmployeePortalSignIns', N'City', 9), (N'HR-PAYROLL', N'EmployeePortalSignIns', N'LoginAt', 5),
+        (N'HR-PAYROLL', N'EmployeePortalSignIns', N'Succeeded', 8),
+        (N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'AccountName', 3), (N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'EmployeeNumber', 2),
+        (N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'DeviceId', 4), (N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'IpAddress', 4),
+        (N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'City', 9), (N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'LoginAt', 5),
+        (N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'Succeeded', 8),
+        (N'HR-PAYROLL', N'Employees', N'EmployeeNumber', 2), (N'HR-PAYROLL', N'EmployeeBankAccounts', N'IBAN', 3),
+        (N'HR-PAYROLL', N'Payslips', N'EmployeeNumber', 2), (N'HR-PAYROLL', N'Payslips', N'NetPay', 6), (N'HR-PAYROLL', N'Payslips', N'GrossPay', 6),
+        (N'HR-PAYROLL', N'AttendanceRecords', N'EmployeeNumber', 2), (N'HR-PAYROLL', N'AttendanceRecords', N'Status', 8),
+        (N'FLIGHT-OPS', N'Flights', N'ScheduledTime', 5), (N'FLIGHT-OPS', N'Flights', N'Passengers', 7), (N'FLIGHT-OPS', N'Flights', N'Status', 8),
+        (N'PROCUREMENT', N'SupplierInvoices', N'TotalAmount', 6), (N'PROCUREMENT', N'SupplierInvoices', N'InvoiceDate', 5)) v(AppCode, ObjectName, ColumnName, SemanticRole)
+    JOIN #Apps a ON a.AppCode = v.AppCode
+    JOIN dbo.DatabaseObjects o ON o.ApplicationId = a.ApplicationId AND o.SchemaName = N'dbo' AND o.ObjectName = v.ObjectName
+    JOIN dbo.DatabaseColumns c ON c.ObjectId = o.ObjectId AND c.ColumnName = v.ColumnName
+    WHERE c.SemanticRole IS NULL;
+
     -- ------------------------------------------------------------------------------------------ row-scope mappings
     -- SELF compares the employee column with the user's employee number, DEPARTMENT / SECTION with the user's department / section code.
     INSERT INTO dbo.RowScopeColumnMappings (ObjectId, OrganizationId, EmployeeColumnId, DepartmentColumnId, SectionColumnId, UpdatedAt, UpdatedByUserId)
@@ -365,7 +407,8 @@ BEGIN TRY
         (N'HRPayrollOfficer', N'HR-PAYROLL', NULL, N'All', 1),               -- every HR table, Restricted columns withheld
         (N'HRPayrollOfficer', N'PROCUREMENT', N'PurchaseRequisitions', N'Department', 0), (N'HRPayrollOfficer', N'PROCUREMENT', N'StoreIssues', N'Department', 0),
         (N'HRPayrollOfficer', N'PROCUREMENT', N'Items', N'All', 0), (N'HRPayrollOfficer', N'PROCUREMENT', N'ItemCategories', N'All', 0),
-        (N'HRPayrollOfficer', N'PROCUREMENT', N'Warehouses', N'All', 0), (N'HRPayrollOfficer', N'PROCUREMENT', N'CostCenters', N'All', 0);
+        (N'HRPayrollOfficer', N'PROCUREMENT', N'Warehouses', N'All', 0), (N'HRPayrollOfficer', N'PROCUREMENT', N'CostCenters', N'All', 0),
+        (N'CyberSecurity', N'HR-PAYROLL', N'EmployeePortalSignIns', N'All', 0), (N'CyberSecurity', N'HR-PAYROLL', N'vw_EmployeePortalSignInsLive', N'All', 0);
     SELECT g.RoleCode, r.RoleId, o.ObjectId, g.Scope, g.ExcludeRestricted
     INTO #ObjectGrants
     FROM #Grants g
@@ -386,10 +429,38 @@ BEGIN TRY
     SELECT og.RoleId, og.ObjectId, @OrgId, og.Scope FROM #ObjectGrants og
     WHERE NOT EXISTS (SELECT 1 FROM dbo.RoleRowPermissions x WHERE x.RoleId = og.RoleId AND x.ObjectId = og.ObjectId);
 
+    -- ------------------------------------------------------------------------------------------ monitoring rule (Phase 14)
+    -- The owner's example: the same portal account used from more than one device within 24 hours, daily at 06:00 (organization
+    -- time), High, to the Cyber Security role. It runs with the owner's (E1002, Management) permissions; the definition binds the
+    -- catalogued columns by id, exactly as the rule editor saves it.
+    DECLARE @SignIns uniqueidentifier, @Account uniqueidentifier, @Device uniqueidentifier, @LoginAt uniqueidentifier, @RuleId uniqueidentifier,
+            @OwnerId uniqueidentifier = (SELECT UserId FROM #Users WHERE EmployeeNumber = N'E1002'),
+            @CyberRoleId uniqueidentifier = (SELECT RoleId FROM dbo.Roles WHERE OrganizationId = @OrgId AND RoleCode = N'CyberSecurity');
+    SELECT @SignIns = o.ObjectId FROM dbo.DatabaseObjects o JOIN #Apps a ON a.ApplicationId = o.ApplicationId
+    WHERE a.AppCode = N'HR-PAYROLL' AND o.SchemaName = N'dbo' AND o.ObjectName = N'vw_EmployeePortalSignInsLive';
+    SELECT @Account = ColumnId FROM dbo.DatabaseColumns WHERE ObjectId = @SignIns AND ColumnName = N'AccountName';
+    SELECT @Device = ColumnId FROM dbo.DatabaseColumns WHERE ObjectId = @SignIns AND ColumnName = N'DeviceId';
+    SELECT @LoginAt = ColumnId FROM dbo.DatabaseColumns WHERE ObjectId = @SignIns AND ColumnName = N'LoginAt';
+    IF @SignIns IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.MonitoringRules WHERE OrganizationId = @OrgId AND Name = N'Same account, several devices (employee portal)')
+    BEGIN
+        SET @RuleId = NEWID();
+        INSERT INTO dbo.MonitoringRules (RuleId, OrganizationId, OwnerUserId, CreatedByUserId, Name, Description, Kind, TemplateCode, DefinitionJson, Severity,
+                                         RecurrenceKind, IntervalMinutes, TimeOfDay, DayOfWeek, CooldownHours, IsActive, CreatedAt)
+        VALUES (@RuleId, @OrgId, @OwnerId, @AdminUserId, N'Same account, several devices (employee portal)',
+                N'A portal account signed in from more than one device within 24 hours. For the Cyber Security team to review; nobody is suspended automatically.',
+                N'Data', N'multi_device_same_account',
+                CONCAT(N'{"data":{"objectId":"', LOWER(CONVERT(nvarchar(36), @SignIns)), N'","timeColumnId":"', LOWER(CONVERT(nvarchar(36), @LoginAt)),
+                       N'","windowHours":24,"groupByColumnIds":["', LOWER(CONVERT(nvarchar(36), @Account)), N'"],"measure":{"aggregate":"count_distinct","columnId":"',
+                       LOWER(CONVERT(nvarchar(36), @Device)), N'"},"filters":[],"condition":{"operator":"gt","value":1},"comparison":"none","maxGroups":200}}'),
+                N'High', N'Daily', 0, '06:00', NULL, 24, 1, @Now);
+        INSERT INTO dbo.MonitoringRuleRecipients (RecipientId, OrganizationId, RuleId, UserId, RoleId) VALUES (NEWID(), @OrgId, @RuleId, NULL, @CyberRoleId);
+        -- The API's scheduler creates the rule's job on its next tick (one minute at most).
+    END;
+
     -- ------------------------------------------------------------------------------------------ audit trail
     INSERT INTO dbo.AuditLogs (AuditLogId, OrganizationId, ActorType, ActorId, ActorDisplayName, EventType, EntityType, EntityId, DetailsJson, CreatedAt)
     VALUES (NEWID(), @OrgId, N'PlatformAdministrator', NULL, N'Sample data seed (04-seed-wabiinsightdb.sql)', N'SampleData.Seeded', N'Organization', CONVERT(nvarchar(64), @OrgId),
-            CONCAT(N'{"organization":"', @OrgCode, N'","applications":["FLIGHT-OPS","HR-PAYROLL","PROCUREMENT"],"users":4}'), @Now);
+            CONCAT(N'{"organization":"', @OrgCode, N'","applications":["FLIGHT-OPS","HR-PAYROLL","PROCUREMENT"],"users":4,"monitoringRules":1}'), @Now);
 
     COMMIT TRANSACTION;
 END TRY
@@ -419,4 +490,7 @@ PRINT N'"Replace connection", "Test connection", then "Approve". Read-only conne
 SELECT a.AppCode AS ApplicationCode,
        CONCAT(N'Server=', @Server, N';Database=', a.DbName, N';User Id=', a.ReaderLogin, N';Password=', a.ReaderPassword, N';Encrypt=True;TrustServerCertificate=True;') AS ReadOnlyConnectionString
 FROM #Apps a ORDER BY a.AppCode;
+PRINT N'';
+PRINT N'Monitoring: the rule "Same account, several devices (employee portal)" runs daily at 06:00 (Asia/Dubai) once HR-PAYROLL is connected and approved.';
+PRINT N'Open Monitoring Rules and choose "Test now" to see the four planted accounts at once; alerts reach E1002 and the Cyber Security role (E1001).';
 GO

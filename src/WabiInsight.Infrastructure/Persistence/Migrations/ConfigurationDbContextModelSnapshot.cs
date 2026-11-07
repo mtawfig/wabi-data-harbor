@@ -1341,6 +1341,118 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.ToTable("AccessBaselines", (string)null);
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.Alert", b =>
+                {
+                    b.Property<Guid>("AlertId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("GroupKey")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("Occurrences")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset?>("StatusChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("StatusChangedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SubjectUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SummaryJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("AlertId");
+
+                    b.HasIndex("OrganizationId", "Status", "LastSeenAt");
+
+                    b.HasIndex("OrganizationId", "RuleId", "GroupKey", "Status");
+
+                    b.ToTable("Alerts", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.AlertEvent", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AlertId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("EventId");
+
+                    b.HasIndex("OrganizationId", "AlertId", "CreatedAt");
+
+                    b.ToTable("AlertEvents", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.AnalysisAccessFact", b =>
                 {
                     b.Property<Guid>("FactId")
@@ -1442,6 +1554,178 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrganizationId", "UserId", "AccessedAt");
 
                     b.ToTable("AnalysisAccessFacts", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.MonitoringRule", b =>
+                {
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CooldownHours")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DefinitionJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("IntervalMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset?>("LastEvaluatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastOutcome")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RecurrenceKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("TemplateCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<TimeOnly>("TimeOfDay")
+                        .HasColumnType("time");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("RuleId");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "OwnerUserId");
+
+                    b.ToTable("MonitoringRules", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.MonitoringRuleRecipient", b =>
+                {
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RecipientId");
+
+                    b.HasIndex("OrganizationId", "RoleId");
+
+                    b.HasIndex("OrganizationId", "UserId");
+
+                    b.HasIndex("OrganizationId", "RuleId", "UserId", "RoleId")
+                        .IsUnique();
+
+                    b.ToTable("MonitoringRuleRecipients", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MonitoringRuleRecipients_OneTarget", "([UserId] IS NULL AND [RoleId] IS NOT NULL) OR ([UserId] IS NOT NULL AND [RoleId] IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.RuleEvaluation", b =>
+                {
+                    b.Property<Guid>("EvaluationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AlertsRaised")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("FinishedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsTest")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MatchCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<long>("RowsExamined")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("EvaluationId");
+
+                    b.HasIndex("OrganizationId", "RuleId", "StartedAt");
+
+                    b.ToTable("RuleEvaluations", (string)null);
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.ScheduledJob", b =>
@@ -2327,6 +2611,9 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<TimeOnly>("MonitoringDigestTime")
+                        .HasColumnType("time");
+
                     b.Property<int>("MonitoringRetentionMonths")
                         .HasColumnType("int");
 
@@ -2369,6 +2656,17 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("UpdatedByAdministratorId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("WorkingDays")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<TimeOnly>("WorkingHoursEnd")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly>("WorkingHoursStart")
+                        .HasColumnType("time");
 
                     b.HasKey("OrganizationId");
 
@@ -3225,6 +3523,25 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.Alert", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.AlertEvent", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Monitoring.Alert", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "AlertId")
+                        .HasPrincipalKey("OrganizationId", "AlertId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.AnalysisAccessFact", b =>
                 {
                     b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
@@ -3238,6 +3555,53 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .HasForeignKey("OrganizationId", "UserId")
                         .HasPrincipalKey("OrganizationId", "UserId")
                         .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.MonitoringRule", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OwnerUserId")
+                        .HasPrincipalKey("OrganizationId", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.MonitoringRuleRecipient", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.Role", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RoleId")
+                        .HasPrincipalKey("OrganizationId", "RoleId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("WabiInsight.Core.Entities.Monitoring.MonitoringRule", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RuleId")
+                        .HasPrincipalKey("OrganizationId", "RuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "UserId")
+                        .HasPrincipalKey("OrganizationId", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.RuleEvaluation", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

@@ -135,6 +135,12 @@ Ten sections: sticky header (wordmark with tagline, section links, language swit
 - User *Dashboard*: four count tiles (saved analyses, files in My Reports, shared with me, favorites) linking to their pages, a *Recent analyses* card and the support ticket widget — the "coming soon" card is gone.
 - *Integrations* (organization administration): Google Drive and Microsoft OneDrive cards marked *Next version* with the owner's deferral explained, and an *Available today* card listing in-app sharing, email delivery and exports.
 
+## Monitoring Rules and Alerts (P14.2)
+Severity is a filled pill (High `#c0262d`, Medium `#b26a00`, Info ocean); status and run outcome are tinted chips. Templates are cards that state the field roles they need; an unavailable template stays visible, greyed, with the reason. The alert centre is a list plus a detail panel (stacked on narrow screens) with facts, a note field, the actions and the timeline; redacted details show an explanatory callout instead of values. Suspension asks for confirmation inline in a red callout. Field roles show as light-blue tags in Metadata, with a dashed one-click suggestion until confirmed. The digest email follows the notification template with one row per alert.
+
+## Screenshots (P14.2)
+`docs/screenshots/p14-2-*.png`, captured from the running app with the sample organization (Gulf Aviation Services): rules list (EN/AR), test run of the seeded rule, monitoring settings, template picker (EN/AR), rule editor and draft test, alert centre with a data alert (EN/AR) and the redacted view of a recipient without permission, suspension confirmation, digest preview, field roles in Metadata, mobile alert centre and detail (AR), and the digest emails as received (EN/AR).
+
 ## Screenshots (P11.2)
 `docs/screenshots/screens/NN-slug-{en|ar}-{desktop|mobile}.png`: the 42 screens of specification §32 (public 1–4, platform 5–15, organization administrator 16–29, organization user 30–42) captured by `scripts/screenshots/capture.js`; `docs/SCREENSHOTS.md` is the index. `docs/screenshots/p11-1-*.png`: brand sheet and the full landing page (EN, AR, mobile).
 

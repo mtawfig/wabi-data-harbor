@@ -137,4 +137,93 @@ public static class EmailTemplates
         var text = $"{(ar ? $"مرحبًا {toName}،" : $"Hello {toName},")}\n\n{(ar ? $"أرسل {ownerName} هذا التحليل من وابي إنسايت: {analysisTitle}" : $"{ownerName} sent you this analysis from Wabi Insight: {analysisTitle}")}\n\n{body}{textLink}\n\n{footer}\n";
         return new EmailMessage(toEmail, toName, subject, html, text, ar ? "ar" : "en") { ReplyTo = string.IsNullOrWhiteSpace(replyTo) ? null : replyTo };
     }
+
+    /// <summary>
+    /// The daily alert digest (owner decision D4): one email per recipient, grouped by severity. Each line carries the
+    /// rule, the alert title and the repeat count; group keys and measures only when the recipient may read them.
+    /// </summary>
+    public static EmailMessage AlertDigest(string toEmail, string toName, string language, string organizationName, IReadOnlyList<Monitoring.DigestLine> lines, string linkUrl, string replyTo = "")
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+        var ar = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase);
+        var subject = DigestSubject(ar, lines.Count);
+        var greeting = ar ? $"مرحبًا {WebUtility.HtmlEncode(toName)}،" : $"Hello {WebUtility.HtmlEncode(toName)},";
+        var intro = ar
+            ? $"هذه تنبيهات {WebUtility.HtmlEncode(organizationName)} منذ الملخص السابق. لا يتضمن البريد أي بيانات خام؛ افتح مركز التنبيهات للمراجعة واتخاذ الإجراء."
+            : $"These are the alerts for {WebUtility.HtmlEncode(organizationName)} since the previous digest. No raw data is included; open the alert centre to review and act.";
+        var open = ar ? "فتح مركز التنبيهات" : "Open the alert centre";
+        var footer = ar ? "وابي إنسايت — المساعد الاستباقي. التنبيه يُعلِم فقط؛ القرار للإنسان." : "Wabi Insight — proactive assistant. Alerts inform; people decide.";
+        var dir = ar ? "rtl" : "ltr";
+        var font = ar ? "'IBM Plex Sans Arabic', Arial, sans-serif" : "Inter, Arial, sans-serif";
+        string SeverityLabel(Entities.Monitoring.AlertSeverity severity) => (severity, ar) switch
+        {
+            (Entities.Monitoring.AlertSeverity.High, true) => "عالية",
+            (Entities.Monitoring.AlertSeverity.Medium, true) => "متوسطة",
+            (_, true) => "معلومة",
+            (Entities.Monitoring.AlertSeverity.High, false) => "High",
+            (Entities.Monitoring.AlertSeverity.Medium, false) => "Medium",
+            _ => "Info",
+        };
+        string Color(Entities.Monitoring.AlertSeverity severity) => severity switch
+        {
+            Entities.Monitoring.AlertSeverity.High => "#c0262d",
+            Entities.Monitoring.AlertSeverity.Medium => "#b26a00",
+            _ => "#087df2",
+        };
+        string Detail(Monitoring.DigestLine line)
+        {
+            if (line.Redacted)
+            {
+                return ar ? "التفاصيل مخفية: لا تملك صلاحية قراءة بيانات هذه القاعدة." : "Details hidden: you are not permitted to read this rule's data.";
+            }
+
+            var parts = new List<string>();
+            if (!string.IsNullOrEmpty(line.GroupKey) && line.GroupKey != "*")
+            {
+                parts.Add(line.GroupKey);
+            }
+
+            if (line.Measure is { } m)
+            {
+                parts.Add((ar ? "القيمة: " : "Value: ") + m.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            return string.Join(" · ", parts);
+        }
+
+        var ordered = lines.OrderByDescending(l => l.Severity).ThenBy(l => l.RuleName, StringComparer.Ordinal).ToList();
+        var rows = string.Join(string.Empty, ordered.Select(line =>
+        {
+            var times = line.Occurrences > 1 ? (ar ? $" (×{line.Occurrences})" : $" (×{line.Occurrences})") : string.Empty;
+            return $"""
+                <tr>
+                  <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;vertical-align:top;white-space:nowrap;"><span style="display:inline-block;padding:2px 10px;border-radius:999px;background:{Color(line.Severity)};color:#fff;font-size:12px;">{SeverityLabel(line.Severity)}</span></td>
+                  <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:14px;line-height:1.5;"><strong>{WebUtility.HtmlEncode(line.Title)}</strong>{times}<br><span style="color:#475569;font-size:13px;">{WebUtility.HtmlEncode(Detail(line))}</span></td>
+                </tr>
+                """;
+        }));
+        var url = WebUtility.HtmlEncode(linkUrl);
+        var html = $"""
+            <!doctype html>
+            <html lang="{(ar ? "ar" : "en")}" dir="{dir}">
+            <body style="margin:0;background:#f5f8fc;font-family:{font};color:#0b1f3a;">
+              <div style="max-width:640px;margin:24px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:32px;direction:{dir};text-align:start;">
+                <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#087df2;margin:0 0 12px;">Wabi Insight · AP-AIR</p>
+                <p style="font-size:16px;margin:0 0 12px;">{greeting}</p>
+                <p style="font-size:15px;line-height:1.6;margin:0 0 16px;">{intro}</p>
+                <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px;">{rows}</table>
+                <p style="margin:0 0 24px;"><a href="{url}" style="display:inline-block;background:#087df2;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px;">{open}</a></p>
+                <p style="font-size:12px;color:#94a3b8;margin:0;">{footer}</p>
+              </div>
+            </body>
+            </html>
+            """;
+        var textLines = string.Join("\n", ordered.Select(l => $"- [{SeverityLabel(l.Severity)}] {l.Title}{(l.Occurrences > 1 ? $" (×{l.Occurrences})" : string.Empty)} {Detail(l)}".TrimEnd()));
+        var text = $"{(ar ? $"مرحبًا {toName}،" : $"Hello {toName},")}\n\n{(ar ? $"تنبيهات {organizationName} منذ الملخص السابق:" : $"Alerts for {organizationName} since the previous digest:")}\n\n{textLines}\n\n{open}: {linkUrl}\n\n{footer}\n";
+        return new EmailMessage(toEmail, toName, subject, html, text, ar ? "ar" : "en") { ReplyTo = string.IsNullOrWhiteSpace(replyTo) ? null : replyTo };
+    }
+
+    public static string DigestSubject(bool arabic, int count) => arabic
+        ? $"وابي إنسايت — ملخص التنبيهات اليومي ({count})"
+        : $"Wabi Insight — daily alert digest ({count})";
 }

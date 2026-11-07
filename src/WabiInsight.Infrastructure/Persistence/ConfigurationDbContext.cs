@@ -132,6 +132,16 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<ScheduledJob> ScheduledJobs => Set<ScheduledJob>();
 
+    public DbSet<MonitoringRule> MonitoringRules => Set<MonitoringRule>();
+
+    public DbSet<MonitoringRuleRecipient> MonitoringRuleRecipients => Set<MonitoringRuleRecipient>();
+
+    public DbSet<RuleEvaluation> RuleEvaluations => Set<RuleEvaluation>();
+
+    public DbSet<Alert> Alerts => Set<Alert>();
+
+    public DbSet<AlertEvent> AlertEvents => Set<AlertEvent>();
+
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;
 
@@ -188,7 +198,7 @@ public class ConfigurationDbContext : DbContext
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent or ReportGenerationEvent or EmailDraftEvent or AnalysisAccessFact && entry.State is EntityState.Modified or EntityState.Deleted)
+            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent or ReportGenerationEvent or EmailDraftEvent or AnalysisAccessFact or RuleEvaluation or AlertEvent && entry.State is EntityState.Modified or EntityState.Deleted)
             {
                 throw new InvalidOperationException($"{entry.Metadata.ClrType.Name} rows are append-only.");
             }
