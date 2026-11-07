@@ -1,5 +1,5 @@
 # WABI INSIGHT — Enterprise AI Intelligence Platform
-## Product Specification v1.1 (Multi-Organization Edition, revised)
+## Product Specification v1.2 (Multi-Organization Edition, revised; v1.2 adds §35 Proactive Agent)
 
 | | |
 |---|---|
@@ -335,6 +335,7 @@ Tables, KPI cards, bar/line/area/donut/comparative charts, time-series dashboard
 **Organization identity/security:** `OrganizationUsers`, `Departments`, `Sections`, `Roles`, `UserRoles`, `RoleTablePermissions`, `RoleColumnPermissions`, `RoleRowPermissions`, `RowScopeColumnMappings`, `OrganizationSettings`, `InvitationTokens`.
 **Business data configuration:** `Applications`, `DatabaseObjects`, `DatabaseColumns`, `DatabaseRelationships`, `AIProviderConfigurations`.
 **Analysis and collaboration:** `AnalysisHistories`, `AnalysisHistoryVersions`, `AnalysisArtifacts`, `AnalysisShares`, `ExternalShareRecords`, `ExternalProviderConnections`, `AnalysisCollections`, `AnalysisCollectionItems`, `Notifications`.
+**Proactive agent (v1.2, §35):** `MonitoringRules`, `MonitoringRuleRecipients`, `RuleEvaluations` (append-only), `Alerts`, `AlertEvents` (append-only), `AnalysisAccessFacts` (append-only), `AccessBaselines`, `ReportSubscriptions`, `ReportSubscriptionRecipients`, `ReportDeliveries`, `ScheduledJobs`; `DatabaseColumns.SemanticRole`.
 **Support desk:** `SupportTickets`, `TicketSequences`, `SupportTicketEvents`, `SupportTicketComments`, `SupportTicketAttachments`, `SupportAccessGrants`, `SupportSessions`.
 **Usage and audit [Revised]:** `UsageEvents` (single append-only event stream, nullable `OrganizationId`), `AnalysisExecutionMetrics`, `IntegrationOperationLogs`, `EmailMessages` (outbox, draft vs sent). `insights.*` views over these for Platform Insights.
 Conventions: uuid v7 keys, UTC `datetime2`, `RowVersion` on editable aggregates, organization-scoped unique constraints, composite FKs carrying `OrganizationId` where cross-tenant references are possible, indexes on every `(OrganizationId, …)` access path; migrations run under an elevated login, the runtime login has no UPDATE/DELETE on append-only tables.
@@ -362,7 +363,7 @@ Unit: compilers (snapshot per dialect), plan validator, permission resolver, tic
 ---
 
 ## 31. Implementation phases
-See [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md). Order: 1 Foundation and identity → 2 Onboarding → 3 Platform dashboard → 4 Support desk → 5 Support access → 6 Organization data configuration → 7 Platform Insights and organization dashboard → 8 Secure AI engine → 9 Workspace and history → 10 Collaboration and integrations → 11 Landing page and polish → 12 Hardening and QA.
+See [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md). Order: 1 Foundation and identity → 2 Onboarding → 3 Platform dashboard → 4 Support desk → 5 Support access → 6 Organization data configuration → 7 Platform Insights and organization dashboard → 8 Secure AI engine → 9 Workspace and history → 10 Collaboration and integrations → 11 Landing page and polish → 12 Hardening and QA → 13 Sample data and deployment → 14 Proactive agent (§35).
 
 ---
 
@@ -378,3 +379,24 @@ One Angular frontend; one ASP.NET Core Web API; one SQL Server configuration dat
 
 ## 34. Non-negotiable requirements
 All items of the original §34 stand, with these clarifications: the built-in Platform Insights application is one tenant-owned row per organization over a global catalog; "Completed / Resolved" is the single status `RESOLVED`; shared physical business databases are out of scope for v1; migrations are applied at deployment, not by the bootstrap request; the sample development password is rejected outside the Development environment.
+
+---
+
+## 35. Proactive agent: Monitoring Rules, Alerts, Periodic Reports (v1.2)
+Full design: [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). Owner decisions of 2026-11-07: feature names **Monitoring Rules** (قواعد الرصد), **Alerts** (التنبيهات), **Periodic Reports** (التقارير الدورية); suspension of a user is a **human decision** from inside an alert, never an automatic rule action; retention **24 months** for access facts, evaluations and alerts (organization setting within a platform maximum); alert emails as a **daily digest**, with an immediate in-app notification for `High` severity only.
+
+### 35.1 Monitoring Rules
+A rule is a typed, validated document (grammar like the §19 query plan) whose every reference is an approved `ObjectId`/`ColumnId` of the organization or a platform usage signal; the engine contains no business logic. Three kinds: **Data** (business data through the §19 path: validation → authorization → dialect compiler → parameterized read-only SQL, executed under the **rule owner's** permissions; threshold, change versus a comparison window, pattern = group-by with a measure), **Access behaviour** (over `AnalysisAccessFacts`: objects, columns, filters, row counts, exports, outcomes per analysis; fixed limits or baselines per user and per role over 28 days), **System** (connection failures, AI budget, email failures, metadata drift). Each rule: scope, signal, condition, schedule (inline on every operation, hourly, daily, weekly), severity `Info`/`Medium`/`High`, recipients (users and roles of the organization), cooldown per group key, active flag.
+**Generic by construction:** optional `DatabaseColumns.SemanticRole` (`Identifier`, `PersonIdentifier`, `AccountIdentifier`, `DeviceIdentifier`, `Timestamp`, `Amount`, `Quantity`, `Status`, `Location`, `Contact`, `Other`; hints, never permissions) lets **templates** declare the field roles they need; the catalogue offers a template only when the organization's approved, permitted columns satisfy those roles (for example "same account used from multiple devices in one day" needs an account identifier, a device identifier and a timestamp on one table). Rules whose objects disappear are paused with a `RuleInvalid` alert. **Natural-language authoring** (`wabi_monitoring_rule` schema): the planner proposes a bound rule from the authorized metadata snapshot; it is shown for confirmation and then validated and authorized like every plan; nothing runs or is saved unconfirmed.
+
+### 35.2 Alerts
+`Alerts` (`Open`/`Acknowledged`/`Resolved`/`Dismissed`, group key, subject user, summary of aggregates and configured group keys, occurrences, cooldown) with append-only `AlertEvents` and `RuleEvaluations`. Delivery: immediate in-app `Notifications` for `High`; one **daily digest** email per recipient at the organization's digest time through the `EmailMessages` outbox, grouped by severity and rule, showing details only for objects the recipient may read (title and count otherwise); never raw rows. Human actions from the alert centre: acknowledge, resolve with note, dismiss, open subject user, **suspend user** (existing status, confirmation, audited). Everything is written to `AuditLogs`.
+
+### 35.3 Periodic Reports
+`ReportSubscriptions` over saved analyses (§23): `Daily`/`Weekly`/`Monthly`, time in the organization time zone, PDF/XLSX, language, active/paused, recipients from active users of the same organization; `ReportDeliveries` per recipient per run. The agent re-runs the analysis **once per recipient under that recipient's permissions** (§23 re-run semantics), renders it with the §25 exporters, stores the artifact through `IArtifactStorage` and emails it with a link; a recipient without permission receives a "no data available for your permissions" message. Three consecutive failures pause the subscription and alert the creator. **Who:** the Organization Administrator creates and manages subscriptions for any users; `Management` users create subscriptions for themselves only; other users receive (delivered files appear in My Reports).
+
+### 35.4 Scheduler and retention
+One `BackgroundService` in the API ticking every minute over `ScheduledJobs` with atomic leases (several instances never run a job twice; missed runs execute once). Nightly jobs: baselines, retention purge (24 months default), digests. Inline access rules run when a fact is written.
+
+### 35.5 Permissions and tenancy
+Rules, alerts, facts and subscriptions are tenant-owned and ownership-checked; rules never widen their owner's permissions; recipients see details only for objects they may read; the Platform Administrator never sees an organization's rules, alerts or subscriptions and receives counts only in Platform Insights. New usage events: `Monitoring.RuleEvaluated`, `Monitoring.AlertRaised`, `Monitoring.DigestSent`, `Reports.SubscriptionDelivered`, `Reports.SubscriptionFailed`.

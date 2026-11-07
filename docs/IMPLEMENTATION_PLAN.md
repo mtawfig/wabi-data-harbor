@@ -1,7 +1,7 @@
 # Wabi Insight — Implementation Plan (Phases and Pull Requests)
 
-**Status:** Proposed — awaiting owner approval before coding starts.
-**Specification:** [`docs/WABI_INSIGHT_SPECIFICATION.md`](./WABI_INSIGHT_SPECIFICATION.md) (revised v1.1).
+**Status:** Phases 1–13 merged. Phase 14 (Proactive Agent) approved by the owner on 2026-11-07; design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md).
+**Specification:** [`docs/WABI_INSIGHT_SPECIFICATION.md`](./WABI_INSIGHT_SPECIFICATION.md) (v1.2; §35 added for Phase 14).
 **Review of the original prompt:** [`docs/SPEC_REVIEW.md`](./SPEC_REVIEW.md).
 
 ## Working agreement
@@ -138,6 +138,17 @@
 | P13.4 — Windows server layout | `C:\wabitex-apps\wabi-insight` (`src`, `web\app`, `web\api`) and `D:\wabi-insight\files` per kind, in the Windows deployment and DevOps guides and the deploy script; moving an existing installation. |
 | P13.3 — CI/CD with manual deployments | Reusable release build, `Deploy (Linux)` / `Deploy (Windows)` workflows started by hand (frontend / backend / both, migration switch), self-hosted runner + server-side deploy scripts with backup, health check and automatic restore, DevOps guides for both platforms. |
 | P13.2 — Step-by-step deployment guides | Windows Server 2019 (IIS + ARR) and Ubuntu 24.04 (nginx + systemd) guides from a fresh server to the live site, with SQL Server Express, a check and a verification for every step; reverse-proxy fixes found along the way. |
+
+### Phase 14 — Proactive Agent: Monitoring Rules, Alerts, Periodic Reports
+**Acceptance:** An organization defines rules inside the tool over its own catalogued data and over platform usage, receives in-app alerts (immediate for High) and one daily digest email, acts on alerts by hand (acknowledge, resolve, suspend user), and receives saved analyses on a schedule rendered under each recipient's own permissions. Nothing in the engine is specific to a business domain; templates appear only when the organization's metadata has the fields they need. Design and owner decisions: [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md); specification §35.
+
+| PR | Scope |
+|---|---|
+| P14.0 — Design and documentation | `PROACTIVE_AGENT.md`, specification §35, this phase, README/CLAUDE/ARCHITECTURE updates. No application code. |
+| P14.1 — Access ledger and scheduler | `AnalysisAccessFacts` written with every analysis (including rejected plans), nightly `AccessBaselines`, `ScheduledJobs` with atomic leases, 24-month retention job, `DatabaseColumns.SemanticRole` with suggestions, migrations, usage events. |
+| P14.2 — Monitoring Rules and Alerts | Typed rule document, validation/authorization, data-rule compiler on the dialect compilers, access-rule evaluator (limits and baselines), template catalogue filtered by metadata, `Alerts`/`AlertEvents`, cooldown, immediate in-app for High, daily digest email, human actions incl. suspend, API, Angular pages (rules, templates, editor, test run, alert centre), EN/AR, platform counts. |
+| P14.3 — Periodic Reports | Subscriptions, per-recipient execution under the recipient's permissions, PDF/XLSX, outbox delivery with attachment and link, delivery log, pause after three failures, administrator pages, Management self-service, "sent to me" in My Reports. |
+| P14.4 — Natural-language rules and system rules | `wabi_monitoring_rule` schema and prompt, draft → confirm → save, system rules (connections, AI budget, email, metadata drift), `RuleInvalid` rule-health alerts, screenshots and docs. |
 
 ## Milestone verification (every PR)
 
