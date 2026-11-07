@@ -131,14 +131,17 @@ public sealed class RetentionPurgeJob : IScheduledJobHandler
     private readonly IUsageEventWriter _usage;
     private readonly MonitoringOptions _options;
 
-    public RetentionPurgeJob(ConfigurationDbContext context, ITenantContext tenantContext, IClock clock, IUsageEventWriter usage, IOptions<MonitoringOptions> options)
+    public RetentionPurgeJob(ConfigurationDbContext context, ITenantContext tenantContext, IClock clock, IUsageEventWriter usage, IOptions<MonitoringOptions> options, Core.Storage.IArtifactStorage storage)
     {
+        _storage = storage;
         _context = context;
         _tenantContext = tenantContext;
         _clock = clock;
         _usage = usage;
         _options = options.Value;
     }
+
+    private readonly Core.Storage.IArtifactStorage _storage;
 
     public ScheduledJobType JobType => ScheduledJobType.RetentionPurge;
 
@@ -162,8 +165,20 @@ public sealed class RetentionPurgeJob : IScheduledJobHandler
             .Where(a => a.OrganizationId == organizationId && a.LastSeenAt < cutoff && (a.Status == AlertStatus.Resolved || a.Status == AlertStatus.Dismissed))
             .ExecuteDeleteAsync(cancellationToken);
 
+        // Periodic report deliveries: the files first, then the log rows.
+        var expiredFiles = await _context.ReportDeliveries.AsPlatformScope(_tenantContext).AsNoTracking()
+            .Where(d => d.OrganizationId == organizationId && d.CreatedAt < cutoff && d.StorageKey != null).Select(d => d.StorageKey!).ToListAsync(cancellationToken);
+        foreach (var key in expiredFiles)
+        {
+            await _storage.DeleteAsync(key, cancellationToken);
+        }
+
+        var deliveries = await _context.ReportDeliveries.AsPlatformScope(_tenantContext)
+            .Where(d => d.OrganizationId == organizationId && d.CreatedAt < cutoff)
+            .ExecuteDeleteAsync(cancellationToken);
+
         await _usage.AppendAndSaveAsync(UsageEventTypes.RetentionPurged, "Organization", organizationId.ToString(), quantity: deleted,
-            metadata: new { months, cutoff, evaluations, alerts }, organizationId: organizationId, cancellationToken: cancellationToken);
+            metadata: new { months, cutoff, evaluations, alerts, deliveries }, organizationId: organizationId, cancellationToken: cancellationToken);
     }
 
     public static int EffectiveRetentionMonths(Organization organization, MonitoringOptions options)

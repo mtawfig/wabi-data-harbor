@@ -1683,6 +1683,192 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.ReportDelivery", b =>
+                {
+                    b.Property<Guid>("DeliveryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AnalysisTitle")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("EmailMessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<bool>("IsManualRun")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReportName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("StorageKey")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<Guid>("SubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("DeliveryId");
+
+                    b.HasIndex("OrganizationId", "RecipientUserId", "CreatedAt");
+
+                    b.HasIndex("OrganizationId", "SubscriptionId", "CreatedAt");
+
+                    b.ToTable("ReportDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.ReportSubscription", b =>
+                {
+                    b.Property<Guid>("SubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("DayOfMonth")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<Guid>("HistoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTimeOffset?>("LastRunAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PausedReason")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("RecurrenceKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<TimeOnly>("TimeOfDay")
+                        .HasColumnType("time");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("SubscriptionId");
+
+                    b.HasIndex("HistoryId");
+
+                    b.HasIndex("OrganizationId", "CreatedByUserId");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ReportSubscriptions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ReportSubscriptions_Format", "[Format] IN ('Pdf','Xlsx')");
+
+                            t.HasCheckConstraint("CK_ReportSubscriptions_Language", "[Language] IN ('en','ar','recipient')");
+                        });
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.ReportSubscriptionRecipient", b =>
+                {
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RecipientId");
+
+                    b.HasIndex("OrganizationId", "UserId");
+
+                    b.HasIndex("OrganizationId", "SubscriptionId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("ReportSubscriptionRecipients", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.RuleEvaluation", b =>
                 {
                     b.Property<Guid>("EvaluationId")
@@ -3594,6 +3780,61 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .HasForeignKey("OrganizationId", "UserId")
                         .HasPrincipalKey("OrganizationId", "UserId")
                         .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.ReportDelivery", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RecipientUserId")
+                        .HasPrincipalKey("OrganizationId", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.ReportSubscription", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Analysis.AnalysisHistory", null)
+                        .WithMany()
+                        .HasForeignKey("HistoryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "CreatedByUserId")
+                        .HasPrincipalKey("OrganizationId", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.ReportSubscriptionRecipient", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Monitoring.ReportSubscription", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SubscriptionId")
+                        .HasPrincipalKey("OrganizationId", "SubscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "UserId")
+                        .HasPrincipalKey("OrganizationId", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.RuleEvaluation", b =>

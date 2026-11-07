@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using WabiInsight.Core.Entities.Analysis;
 using WabiInsight.Core.Entities.Monitoring;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
@@ -152,5 +153,68 @@ internal sealed class AlertEventConfiguration : IEntityTypeConfiguration<AlertEv
         builder.Property(e => e.EventType).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(e => e.Note).HasMaxLength(2000);
         builder.HasIndex(e => new { e.OrganizationId, e.AlertId, e.CreatedAt });
+    }
+}
+
+internal sealed class ReportSubscriptionConfiguration : IEntityTypeConfiguration<ReportSubscription>
+{
+    public void Configure(EntityTypeBuilder<ReportSubscription> builder)
+    {
+        builder.ToTable("ReportSubscriptions", t =>
+        {
+            t.HasCheckConstraint("CK_ReportSubscriptions_Format", "[Format] IN ('Pdf','Xlsx')");
+            t.HasCheckConstraint("CK_ReportSubscriptions_Language", "[Language] IN ('en','ar','recipient')");
+        });
+        builder.HasKey(s => s.SubscriptionId);
+        builder.Property(s => s.SubscriptionId).ValueGeneratedNever();
+        builder.HasAlternateKey(s => new { s.OrganizationId, s.SubscriptionId });
+        builder.HasOne<Organization>().WithMany().HasForeignKey(s => s.OrganizationId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<AnalysisHistory>().WithMany().HasForeignKey(s => s.HistoryId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne<OrganizationUser>().WithMany().HasForeignKey(s => new { s.OrganizationId, s.CreatedByUserId }).HasPrincipalKey(u => new { u.OrganizationId, u.UserId }).OnDelete(DeleteBehavior.NoAction);
+        builder.Property(s => s.Name).HasMaxLength(200).IsRequired();
+        builder.Property(s => s.RecurrenceKind).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(s => s.Format).HasConversion<string>().HasMaxLength(10).IsRequired();
+        builder.Property(s => s.Language).HasMaxLength(10).IsRequired();
+        builder.Property(s => s.PausedReason).HasMaxLength(100);
+        builder.Property(s => s.RowVersion).IsRowVersion();
+        builder.HasIndex(s => new { s.OrganizationId, s.Name }).IsUnique();
+        builder.HasIndex(s => new { s.OrganizationId, s.CreatedByUserId });
+    }
+}
+
+internal sealed class ReportSubscriptionRecipientConfiguration : IEntityTypeConfiguration<ReportSubscriptionRecipient>
+{
+    public void Configure(EntityTypeBuilder<ReportSubscriptionRecipient> builder)
+    {
+        builder.ToTable("ReportSubscriptionRecipients");
+        builder.HasKey(r => r.RecipientId);
+        builder.Property(r => r.RecipientId).ValueGeneratedNever();
+        builder.HasOne<ReportSubscription>().WithMany().HasForeignKey(r => new { r.OrganizationId, r.SubscriptionId }).HasPrincipalKey(s => new { s.OrganizationId, s.SubscriptionId }).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<OrganizationUser>().WithMany().HasForeignKey(r => new { r.OrganizationId, r.UserId }).HasPrincipalKey(u => new { u.OrganizationId, u.UserId }).OnDelete(DeleteBehavior.NoAction);
+        builder.HasIndex(r => new { r.OrganizationId, r.SubscriptionId, r.UserId }).IsUnique();
+        builder.HasIndex(r => new { r.OrganizationId, r.UserId });
+    }
+}
+
+internal sealed class ReportDeliveryConfiguration : IEntityTypeConfiguration<ReportDelivery>
+{
+    public void Configure(EntityTypeBuilder<ReportDelivery> builder)
+    {
+        builder.ToTable("ReportDeliveries");
+        builder.HasKey(d => d.DeliveryId);
+        builder.Property(d => d.DeliveryId).ValueGeneratedNever();
+        builder.HasOne<Organization>().WithMany().HasForeignKey(d => d.OrganizationId).OnDelete(DeleteBehavior.Cascade);
+        // No foreign key to the subscription: the log and the delivered files outlive a deleted subscription until retention.
+        builder.HasOne<OrganizationUser>().WithMany().HasForeignKey(d => new { d.OrganizationId, d.RecipientUserId }).HasPrincipalKey(u => new { u.OrganizationId, u.UserId }).OnDelete(DeleteBehavior.NoAction);
+        builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(d => d.ReportName).HasMaxLength(200).IsRequired();
+        builder.Property(d => d.AnalysisTitle).HasMaxLength(300).IsRequired();
+        builder.Property(d => d.StorageKey).HasMaxLength(260);
+        builder.Property(d => d.FileName).HasMaxLength(260);
+        builder.Property(d => d.ContentType).HasMaxLength(100);
+        builder.Property(d => d.Language).HasMaxLength(2).IsRequired();
+        builder.Property(d => d.ErrorCode).HasMaxLength(100);
+        builder.HasIndex(d => new { d.OrganizationId, d.SubscriptionId, d.CreatedAt });
+        builder.HasIndex(d => new { d.OrganizationId, d.RecipientUserId, d.CreatedAt });
     }
 }

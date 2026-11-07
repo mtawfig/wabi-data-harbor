@@ -53,7 +53,7 @@ export class OrganizationShellComponent {
   readonly sections = computed<NavSection[]>(() => {
     // Monitoring Rules sit next to Alerts for the people who author them (administrators and Management).
     const user: NavSection = this.auth.canAuthorRules()
-      ? { ...USER_NAV, items: USER_NAV.items.flatMap((i) => (i.link === '/app/alerts' ? [i, { labelKey: 'nav.org.monitoringRules', icon: 'policy', link: '/app/monitoring/rules' }] : [i])) }
+      ? { ...USER_NAV, items: USER_NAV.items.flatMap((i) => (i.link === '/app/alerts' ? [i, { labelKey: 'nav.org.monitoringRules', icon: 'policy', link: '/app/monitoring/rules' }, { labelKey: 'nav.org.periodicReports', icon: 'schedule_send', link: '/app/periodic-reports' }] : [i])) }
       : USER_NAV;
     return this.auth.isOrganizationAdmin() ? [user, ADMIN_NAV] : [user];
   });

@@ -226,4 +226,42 @@ public static class EmailTemplates
     public static string DigestSubject(bool arabic, int count) => arabic
         ? $"وابي إنسايت — ملخص التنبيهات اليومي ({count})"
         : $"Wabi Insight — daily alert digest ({count})";
+
+    /// <summary>
+    /// A Periodic Report delivery (specification §35.3). With data: the file is attached and a link opens "sent to me"
+    /// in the app. Without permission: a short note, never anyone else's figures.
+    /// </summary>
+    public static EmailMessage PeriodicReport(string toEmail, string toName, string language, string reportName, string organizationName, bool hasData, string fileFormat, string linkUrl, string replyTo = "")
+    {
+        var ar = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase);
+        var subject = ar ? $"وابي إنسايت — {reportName}" : $"Wabi Insight — {reportName}";
+        var greeting = ar ? $"مرحبًا {toName}،" : $"Hello {toName},";
+        var body = hasData
+            ? (ar
+                ? $"تقريرك الدوري \"{reportName}\" من {organizationName} مرفق ({fileFormat}). أُعدّت الأرقام وفق صلاحياتك أنت، وقد تختلف عن أرقام زملائك."
+                : $"Your periodic report \"{reportName}\" from {organizationName} is attached ({fileFormat}). The figures were prepared under your own permissions and may differ from your colleagues'.")
+            : (ar
+                ? $"لا توجد بيانات متاحة لصلاحياتك في التقرير الدوري \"{reportName}\". لم يُرفق أي ملف. تواصل مع مدير المؤسسة إذا كنت تحتاج إلى هذه البيانات."
+                : $"No data is available for your permissions in the periodic report \"{reportName}\", so no file is attached. Contact your organization administrator if you need this data.");
+        var open = ar ? "فتح تقاريري" : "Open My Reports";
+        var footer = ar ? "وابي إنسايت — التقارير الدورية. لا تُعد توجيه هذه الرسالة دون إذن." : "Wabi Insight — Periodic Reports. Do not forward without permission.";
+        var dir = ar ? "rtl" : "ltr";
+        var font = ar ? "'IBM Plex Sans Arabic', Arial, sans-serif" : "Inter, Arial, sans-serif";
+        var html = $"""
+            <!doctype html>
+            <html lang="{(ar ? "ar" : "en")}" dir="{dir}">
+            <body style="margin:0;background:#f5f8fc;font-family:{font};color:#0b1f3a;">
+              <div style="max-width:560px;margin:24px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:32px;direction:{dir};text-align:start;">
+                <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#087df2;margin:0 0 12px;">Wabi Insight · AP-AIR</p>
+                <p style="font-size:16px;margin:0 0 12px;">{WebUtility.HtmlEncode(greeting)}</p>
+                <p style="font-size:15px;line-height:1.6;margin:0 0 20px;">{WebUtility.HtmlEncode(body)}</p>
+                <p style="margin:0 0 24px;"><a href="{WebUtility.HtmlEncode(linkUrl)}" style="display:inline-block;background:#087df2;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px;">{open}</a></p>
+                <p style="font-size:12px;color:#94a3b8;margin:0;">{footer}</p>
+              </div>
+            </body>
+            </html>
+            """;
+        var text = $"{greeting}\n\n{body}\n\n{open}: {linkUrl}\n\n{footer}\n";
+        return new EmailMessage(toEmail, toName, subject, html, text, ar ? "ar" : "en") { ReplyTo = string.IsNullOrWhiteSpace(replyTo) ? null : replyTo };
+    }
 }

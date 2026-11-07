@@ -1,0 +1,197 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'monitoring.eyebrow' | transloco }}</p>
+      <h1>{{ 'periodic.title' | transloco }}</h1>
+      <p class="wi-muted">{{ (isAdmin() ? 'periodic.subtitleAdmin' : 'periodic.subtitleManagement') | transloco }}</p>
+    </div>
+    <div class="header-actions">
+      <a mat-stroked-button routerLink="/app/reports" [queryParams]="{ tab: 'received' }"><mat-icon>inbox</mat-icon>{{ 'periodic.sentToMe' | transloco }}</a>
+      <button mat-flat-button type="button" (click)="startNew()" [disabled]="analyses().length === 0" data-testid="periodic-new"><mat-icon>add</mat-icon>{{ 'periodic.new' | transloco }}</button>
+    </div>
+  </header>
+
+  <div class="callout"><mat-icon>verified_user</mat-icon><span>{{ 'periodic.perRecipient' | transloco }}</span></div>
+  @if (analyses().length === 0 && !loading()) { <p class="callout callout--warn"><mat-icon>info</mat-icon>{{ 'periodic.noAnalyses' | transloco }}</p> }
+  @if (error(); as e) { <div class="form-error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  @if (form(); as f) {
+    <form class="wi-card editor" (ngSubmit)="save()" data-testid="periodic-form">
+      <div class="detail__head">
+        <h3>{{ (f.subscriptionId ? 'periodic.edit' : 'periodic.new') | transloco }}</h3>
+        <span class="wi-ms-auto"></span>
+        <button mat-icon-button type="button" (click)="form.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="grid2">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span2">
+          <mat-label>{{ 'periodic.analysis' | transloco }}</mat-label>
+          <mat-select name="analysis" [value]="f.historyId" (valueChange)="patch({ historyId: $event })" data-testid="periodic-analysis">
+            <mat-select-trigger>{{ analysisName(f.historyId) }}</mat-select-trigger>
+            @for (a of analyses(); track a.historyId) { <mat-option [value]="a.historyId">{{ analysisLabel(a) }}</mat-option> }
+          </mat-select>
+          <mat-hint>{{ 'periodic.analysisHint' | transloco }}</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span2"><mat-label>{{ 'periodic.name' | transloco }}</mat-label><input matInput name="name" required maxlength="200" [ngModel]="f.name" (ngModelChange)="patch({ name: $event })" data-testid="periodic-name" /></mat-form-field>
+      </div>
+
+      <fieldset class="block">
+        <legend>{{ 'monitoring.rules.schedule' | transloco }}</legend>
+        <div class="grid4">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'monitoring.rules.recurrence' | transloco }}</mat-label>
+            <mat-select name="recurrence" [value]="f.recurrenceKind" (valueChange)="patch({ recurrenceKind: $event })">
+              <mat-select-trigger>{{ 'periodic.recurrence.' + f.recurrenceKind | transloco }}</mat-select-trigger>
+              @for (r of ['Daily', 'Weekly', 'Monthly']; track r) { <mat-option [value]="r">{{ 'periodic.recurrence.' + r | transloco }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          @if (f.recurrenceKind === 'Weekly') {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'monitoring.rules.day' | transloco }}</mat-label>
+              <mat-select name="dow" [value]="f.dayOfWeek" (valueChange)="patch({ dayOfWeek: $event })">
+                <mat-select-trigger>{{ 'monitoring.days.' + f.dayOfWeek | transloco }}</mat-select-trigger>
+                @for (d of days; track d) { <mat-option [value]="d">{{ 'monitoring.days.' + d | transloco }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+          }
+          @if (f.recurrenceKind === 'Monthly') {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'periodic.dayOfMonth' | transloco }}</mat-label><input matInput type="number" min="1" max="31" name="dom" [ngModel]="f.dayOfMonth" (ngModelChange)="patch({ dayOfMonth: +$event })" /><mat-hint>{{ 'periodic.dayOfMonthHint' | transloco }}</mat-hint></mat-form-field>
+          }
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.rules.time' | transloco }}</mat-label><input matInput type="time" name="time" [ngModel]="f.time" (ngModelChange)="patch({ time: $event })" /></mat-form-field>
+        </div>
+      </fieldset>
+
+      <fieldset class="block">
+        <legend>{{ 'periodic.delivery' | transloco }}</legend>
+        <div class="grid2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'periodic.format' | transloco }}</mat-label>
+            <mat-select name="format" [value]="f.format" (valueChange)="patch({ format: $event })">
+              <mat-select-trigger>{{ 'reports.formats.' + f.format | transloco }}</mat-select-trigger>
+              <mat-option value="Pdf">{{ 'reports.formats.Pdf' | transloco }}</mat-option>
+              <mat-option value="Xlsx">{{ 'reports.formats.Xlsx' | transloco }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'periodic.language' | transloco }}</mat-label>
+            <mat-select name="language" [value]="f.language" (valueChange)="patch({ language: $event })">
+              <mat-select-trigger>{{ 'periodic.languages.' + f.language | transloco }}</mat-select-trigger>
+              @for (l of ['recipient', 'en', 'ar']; track l) { <mat-option [value]="l">{{ 'periodic.languages.' + l | transloco }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          @if (isAdmin()) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span2">
+              <mat-label>{{ 'periodic.recipients' | transloco }}</mat-label>
+              <mat-select multiple name="recipients" [value]="f.recipientUserIds" (valueChange)="patch({ recipientUserIds: $event })" data-testid="periodic-recipients">
+                @for (u of users(); track u.userId) { <mat-option [value]="u.userId">{{ u.fullName }} <span class="wi-muted wi-ltr">{{ u.email }}</span></mat-option> }
+              </mat-select>
+              <mat-hint>{{ 'periodic.recipientsHint' | transloco }}</mat-hint>
+            </mat-form-field>
+          }
+        </div>
+        @if (!isAdmin()) { <p class="wi-muted small"><mat-icon class="tiny">person</mat-icon>{{ 'periodic.selfOnly' | transloco }}</p> }
+      </fieldset>
+
+      <div class="actions end">
+        <mat-slide-toggle name="active" [checked]="f.isActive" (change)="patch({ isActive: $event.checked })">{{ 'monitoring.rules.active' | transloco }}</mat-slide-toggle>
+        <span class="wi-ms-auto"></span>
+        <button mat-button type="button" (click)="form.set(null)">{{ 'common.cancel' | transloco }}</button>
+        <button mat-flat-button type="submit" [disabled]="busy() || !f.historyId" data-testid="periodic-save">{{ 'common.save' | transloco }}</button>
+      </div>
+      @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+    </form>
+  }
+
+  @if (run(); as r) {
+    <div class="wi-card test" data-testid="periodic-run-result">
+      <div class="detail__head">
+        <h3>{{ 'periodic.runResult' | transloco: { name: r.name } }}</h3>
+        <span class="wi-ms-auto"></span>
+        <button mat-icon-button type="button" (click)="run.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+      </div>
+      <p>{{ 'periodic.runSummary' | transloco: { delivered: r.result.delivered, noData: r.result.noData, failed: r.result.failed } }}</p>
+      @if (r.result.errorCode) { <p class="callout callout--warn"><mat-icon>error_outline</mat-icon>{{ 'periodic.errors.' + r.result.errorCode | transloco }}</p> }
+      <div class="scroll">
+        <table class="plain">
+          <thead><tr><th>{{ 'periodic.recipient' | transloco }}</th><th>{{ 'monitoring.alerts.status' | transloco }}</th><th class="num">{{ 'periodic.rows' | transloco }}</th><th>{{ 'periodic.file' | transloco }}</th></tr></thead>
+          <tbody>
+            @for (d of r.result.deliveries; track d.deliveryId) {
+              <tr><td>{{ d.recipientName }}</td><td><span class="chip delivery" [attr.data-status]="d.status">{{ 'periodic.status.' + d.status | transloco }}</span>@if (d.errorCode && d.status === 'Failed') { <div class="err small">{{ 'periodic.errors.' + d.errorCode | transloco }}</div> }</td><td class="num">{{ d.status === 'Delivered' ? d.rowCount : '—' }}</td><td class="wi-ltr small">{{ d.fileName ?? '—' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="wi-muted small"><mat-icon class="tiny">lock</mat-icon>{{ 'periodic.ownFiguresOnly' | transloco }}</p>
+    </div>
+  }
+
+  @if (log(); as l) {
+    <div class="wi-card test" data-testid="periodic-log">
+      <div class="detail__head">
+        <h3>{{ 'periodic.log' | transloco: { name: l.subscription.name } }}</h3>
+        <span class="wi-ms-auto"></span>
+        <button mat-icon-button type="button" (click)="log.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="scroll">
+        <table class="plain">
+          <thead><tr><th>{{ 'periodic.when' | transloco }}</th><th>{{ 'periodic.recipient' | transloco }}</th><th>{{ 'monitoring.alerts.status' | transloco }}</th><th class="num">{{ 'periodic.rows' | transloco }}</th></tr></thead>
+          <tbody>
+            @for (d of l.items; track d.deliveryId) {
+              <tr><td>{{ d.createdAt | date: 'short' }}@if (d.isManualRun) { <span class="chip">{{ 'periodic.manual' | transloco }}</span> }</td><td>{{ d.recipientName }}</td><td><span class="chip delivery" [attr.data-status]="d.status">{{ 'periodic.status.' + d.status | transloco }}</span></td><td class="num">{{ d.status === 'Delivered' ? d.rowCount : '—' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (l.items.length === 0) { <p class="wi-muted">{{ 'periodic.logEmpty' | transloco }}</p> }
+    </div>
+  }
+
+  <div class="wi-card">
+    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+    <div class="scroll">
+      <table class="plain rules" data-testid="periodic-table">
+        <thead>
+          <tr>
+            <th>{{ 'periodic.name' | transloco }}</th>
+            <th>{{ 'monitoring.rules.schedule' | transloco }}</th>
+            <th>{{ 'periodic.recipients' | transloco }}</th>
+            <th>{{ 'monitoring.rules.lastRun' | transloco }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of subscriptions(); track s.subscriptionId) {
+            <tr [class.off]="!s.isActive" [attr.data-testid]="'periodic-row-' + s.name">
+              <td>
+                <strong>{{ s.name }}</strong>
+                <div class="wi-muted small"><span class="chip kind">{{ 'reports.formats.' + s.format | transloco }}</span>{{ s.historyTitle }}</div>
+              </td>
+              <td>{{ schedule(s) }}
+                @if (!s.isActive) { <div><span class="chip">{{ 'monitoring.rules.paused' | transloco }}</span></div>@if (s.pausedReason) { <div class="err small">{{ 'periodic.errors.' + s.pausedReason | transloco }}</div> } }
+                @else if (s.nextRunAt) { <div class="wi-muted small">{{ 'monitoring.rules.nextRun' | transloco }}: {{ s.nextRunAt | date: 'short' }}</div> }
+              </td>
+              <td><span class="small">{{ recipientsLabel(s) }}</span></td>
+              <td>
+                @if (s.lastRun; as lr) {
+                  <span class="small">{{ lr.runAt | date: 'short' }}</span>
+                  <div class="small"><span class="chip delivery" data-status="Delivered">{{ lr.delivered }}</span> <span class="chip delivery" data-status="NoData">{{ lr.noData }}</span> @if (lr.failed > 0) { <span class="chip delivery" data-status="Failed">{{ lr.failed }}</span> }</div>
+                } @else { <span class="wi-muted small">{{ 'monitoring.rules.neverRun' | transloco }}</span> }
+              </td>
+              <td class="row-actions">
+                <button mat-icon-button type="button" (click)="runNow(s)" [disabled]="busy()" [attr.aria-label]="'periodic.runNow' | transloco" [attr.data-testid]="'periodic-run-' + s.name"><mat-icon>send</mat-icon></button>
+                <button mat-icon-button type="button" (click)="openLog(s)" [attr.aria-label]="'periodic.logShort' | transloco"><mat-icon>receipt_long</mat-icon></button>
+                @if (s.canEdit) {
+                  <button mat-icon-button type="button" (click)="edit(s)" [attr.aria-label]="'periodic.edit' | transloco"><mat-icon>edit</mat-icon></button>
+                  <button mat-icon-button type="button" (click)="toggle(s)" [disabled]="busy()" [attr.aria-label]="(s.isActive ? 'monitoring.rules.pause' : 'monitoring.rules.resume') | transloco"><mat-icon>{{ s.isActive ? 'pause' : 'play_arrow' }}</mat-icon></button>
+                  <button mat-icon-button type="button" (click)="remove(s)" [disabled]="busy()" [attr.aria-label]="'common.delete' | transloco"><mat-icon>delete</mat-icon></button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (subscriptions().length === 0 && !loading()) {
+      <div class="empty-state"><mat-icon>schedule_send</mat-icon><p>{{ 'periodic.empty' | transloco }}</p></div>
+    }
+  </div>
+</section>

@@ -138,6 +138,9 @@ Ten sections: sticky header (wordmark with tagline, section links, language swit
 ## Monitoring Rules and Alerts (P14.2)
 Severity is a filled pill (High `#c0262d`, Medium `#b26a00`, Info ocean); status and run outcome are tinted chips. Templates are cards that state the field roles they need; an unavailable template stays visible, greyed, with the reason. The alert centre is a list plus a detail panel (stacked on narrow screens) with facts, a note field, the actions and the timeline; redacted details show an explanatory callout instead of values. Suspension asks for confirmation inline in a red callout. Field roles show as light-blue tags in Metadata, with a dashed one-click suggestion until confirmed. The digest email follows the notification template with one row per alert.
 
+## Screenshots (P14.3)
+`docs/screenshots/p14-3-*.png` from the sample organization: the periodic report editor (administrator, monthly, four recipients), "send now" with per-recipient results (10 / 1 / no data / 10 rows), the delivery log, the Arabic list, Management's self-only editor, the mobile list, "Sent to me" (EN/AR), the delivered and the "no data" emails, and the first PDF page for Sara (HR only) and Khalid (all departments, Arabic).
+
 ## Screenshots (P14.2)
 `docs/screenshots/p14-2-*.png`, captured from the running app with the sample organization (Gulf Aviation Services): rules list (EN/AR), test run of the seeded rule, monitoring settings, template picker (EN/AR), rule editor and draft test, alert centre with a data alert (EN/AR) and the redacted view of a recipient without permission, suspension confirmation, digest preview, field roles in Metadata, mobile alert centre and detail (AR), and the digest emails as received (EN/AR).
 
