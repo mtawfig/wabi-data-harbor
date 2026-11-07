@@ -42,7 +42,7 @@ public sealed class SchedulerTests : IDisposable
         services.AddScoped<IUsageEventWriter, UsageEventWriter>();
         services.AddScoped<IScheduledJobHandler, AccessBaselineJob>();
         services.AddScoped<IScheduledJobHandler, RetentionPurgeJob>();
-        services.AddScoped(sp => new ScheduledJobRunner(sp.GetRequiredService<ConfigurationDbContext>(), sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<IClock>(), sp.GetRequiredService<IOptions<MonitoringOptions>>(), NullLogger<ScheduledJobRunner>.Instance));
+        services.AddScoped(sp => new ScheduledJobRunner(sp.GetRequiredService<ConfigurationDbContext>(), sp.GetRequiredService<ITenantContext>(), sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<IClock>(), sp.GetRequiredService<IOptions<MonitoringOptions>>(), NullLogger<ScheduledJobRunner>.Instance));
         _services = services.BuildServiceProvider();
     }
 

@@ -24,7 +24,9 @@
     "requiredField": "هذا الحقل مطلوب.",
     "invalidEmail": "أدخل بريدًا إلكترونيًا صحيحًا.",
     "add": "إضافة",
-    "delete": "حذف"
+    "delete": "حذف",
+    "close": "إغلاق",
+    "saved": "تم الحفظ"
   },
   "landing": {
     "nav": {
@@ -315,7 +317,9 @@
         "integrations": "التكاملات",
         "settings": "إعدادات المؤسسة",
         "supportAccess": "وصول الدعم"
-      }
+      },
+      "alerts": "التنبيهات",
+      "monitoringRules": "قواعد الرصد"
     },
     "platform": {
       "overview": "نظرة عامة على المنصة",
@@ -803,7 +807,49 @@
       "share_email_content_required": "الموضوع والرسالة مطلوبان.",
       "share_email_recipient_invalid": "أحد المستلمين ليس عنوان بريد إلكتروني صالحًا.",
       "share_restricted_external_blocked": "لا يمكن إرسال البيانات المقيّدة بالبريد خارج المؤسسة. أزل العناوين الخارجية.",
-      "share_disclosure_approval_required": "تتطلب البيانات السرية موافقتك الصريحة على الإفصاح قبل الإرسال."
+      "share_disclosure_approval_required": "تتطلب البيانات السرية موافقتك الصريحة على الإفصاح قبل الإرسال.",
+      "rule_owner_inactive": "مالك القاعدة لم يعد نشطًا.",
+      "rule_owner_invalid": "اختر مالكًا نشطًا للقاعدة.",
+      "rule_not_authorized": "مالك القاعدة لا يملك صلاحية قراءة هذا الكائن أو هذه الأعمدة.",
+      "rule_object_missing": "الكائن لم يعد موجودًا في الفهرس.",
+      "rule_object_unavailable": "الكائن غير معتمد أو لم يعد موجودًا.",
+      "rule_column_unavailable": "أحد أعمدة القاعدة غير معتمد أو لم يعد موجودًا.",
+      "rule_application_unavailable": "التطبيق غير معتمد أو غير نشط.",
+      "rule_builtin_not_supported": "لا يمكن تشغيل القواعد على تطبيق الرؤى المدمج.",
+      "rule_definition_invalid": "تعريف القاعدة غير صالح.",
+      "rule_definition_kind_mismatch": "التعريف لا يطابق نوع القاعدة.",
+      "rule_plan_invalid": "لا يمكن تحويل القاعدة إلى خطة استعلام صالحة.",
+      "rule_name_invalid": "أدخل اسمًا (حتى 200 حرف).",
+      "rule_name_taken": "توجد قاعدة أخرى بهذا الاسم.",
+      "rule_template_invalid": "قالب غير معروف.",
+      "rule_schedule_invalid": "اختر جدولًا صالحًا (فاصل 15 دقيقة على الأقل).",
+      "rule_cooldown_invalid": "يجب أن تكون فترة التهدئة بين 0 و720 ساعة.",
+      "rule_window_invalid": "النافذة الزمنية خارج النطاق.",
+      "rule_measure_invalid": "مقياس غير معروف.",
+      "rule_measure_column_required": "يحتاج المقياس إلى عمود.",
+      "rule_condition_invalid": "شرط غير معروف.",
+      "rule_filter_invalid": "أحد المرشحات غير صالح.",
+      "rule_group_by_invalid": "حتى ثلاثة أعمدة تجميع مختلفة.",
+      "rule_comparison_invalid": "مقارنة غير معروفة.",
+      "rule_comparison_needs_time_without_grouping": "المقارنة بالفترة السابقة تحتاج عمود وقت وبدون تجميع.",
+      "rule_max_groups_invalid": "بين 1 و1000 مجموعة.",
+      "rule_signal_invalid": "إشارة غير معروفة.",
+      "rule_threshold_invalid": "يجب أن تكون العتبة أكبر من صفر.",
+      "rule_baseline_invalid": "لا يمكن مقارنة هذه الإشارة بخط الأساس.",
+      "rule_new_users_invalid": "يجب أن تكون فترة المستخدمين الجدد 1–365 يومًا.",
+      "rule_role_invalid": "دور غير معروف.",
+      "rule_recipients_invalid": "يجب أن يكون المستلمون مستخدمين نشطين أو أدوارًا في المؤسسة (حتى 50).",
+      "rule_not_found": "القاعدة غير موجودة.",
+      "alert_not_found": "التنبيه غير موجود.",
+      "alert_note_required": "أضف ملاحظة للحل أو التجاهل.",
+      "alert_note_too_long": "الملاحظة طويلة جدًا.",
+      "alert_status_transition_invalid": "هذا التغيير غير ممكن من الحالة الحالية.",
+      "alert_has_no_subject": "هذا التنبيه لا يخص مستخدمًا.",
+      "user_not_active": "المستخدم غير نشط.",
+      "settings_working_days_invalid": "اختر يوم عمل واحدًا على الأقل.",
+      "settings_working_hours_invalid": "يجب أن تبدأ ساعات العمل قبل انتهائها.",
+      "settings_retention_invalid": "مدة الاحتفاظ خارج النطاق المسموح.",
+      "organization_inactive": "المؤسسة غير نشطة."
     },
     "applications": {
       "title": "التطبيقات",
@@ -891,7 +937,24 @@
       "editColumn": "تعديل العمود",
       "relationships": "العلاقات",
       "empty": "لا توجد كائنات مطابقة.",
-      "neverRefreshed": "لم يُكتشف شيء بعد. حدّث من المصدر لتحميل الفهرس."
+      "neverRefreshed": "لم يُكتشف شيء بعد. حدّث من المصدر لتحميل الفهرس.",
+      "semanticRole": "دور الحقل",
+      "suggestedRole": "المقترح: {{role}}",
+      "acceptRole": "تأكيد دور الحقل المقترح",
+      "roles": {
+        "Unspecified": "بدون دور",
+        "Identifier": "معرّف",
+        "PersonIdentifier": "معرّف شخص",
+        "AccountIdentifier": "معرّف حساب",
+        "DeviceIdentifier": "معرّف جهاز",
+        "Timestamp": "تاريخ / وقت",
+        "Amount": "مبلغ",
+        "Quantity": "كمية",
+        "Status": "حالة",
+        "Location": "موقع",
+        "Contact": "وسيلة اتصال",
+        "Other": "أخرى"
+      }
     },
     "permissions": {
       "title": "الصلاحيات",
@@ -1242,7 +1305,9 @@
       "SupportAccess.Expired": "انتهى وصول الدعم على التذكرة {{reference}}",
       "SupportAccess.OperationExecuted": "نفّذ {{actorName}} \"{{operation}}\" على التذكرة {{reference}} ({{outcome}})",
       "Analysis.Shared": "شارك {{actorName}} \"{{title}}\" معك",
-      "Analysis.ShareRevoked": "أوقف {{actorName}} مشاركة \"{{title}}\" معك"
+      "Analysis.ShareRevoked": "أوقف {{actorName}} مشاركة \"{{title}}\" معك",
+      "Monitoring.Alert": "تنبيه عالي الخطورة من \"{{ruleName}}\" ({{alerts}})",
+      "Monitoring.RulePaused": "أُوقفت قاعدة الرصد \"{{ruleName}}\" مؤقتًا وتحتاج إلى مراجعة"
     }
   },
   "supportAccess": {
@@ -1746,5 +1811,301 @@
       "exports": "تصدير PDF وWord وExcel في تقاريري"
     },
     "note": "لا يوجد مزود خارجي متصل؛ لا يغادر شيء المنصة إلا الرسائل التي يرسلها مستخدموك صراحةً."
+  },
+  "monitoring": {
+    "eyebrow": "المساعد الاستباقي",
+    "severity": {
+      "High": "عالية",
+      "Medium": "متوسطة",
+      "Info": "معلومة"
+    },
+    "status": {
+      "Open": "مفتوح",
+      "Acknowledged": "قيد المراجعة",
+      "Resolved": "محلول",
+      "Dismissed": "متجاهَل"
+    },
+    "outcome": {
+      "NoMatch": "لا تطابق",
+      "Fired": "أطلق تنبيهًا",
+      "Failed": "فشل",
+      "Skipped": "تخطّي"
+    },
+    "kind": {
+      "Data": "قاعدة بيانات",
+      "Access": "قاعدة وصول"
+    },
+    "recurrence": {
+      "Daily": "يوميًا",
+      "Weekly": "أسبوعيًا",
+      "Interval": "كل عدد من الدقائق"
+    },
+    "days": {
+      "1": "الاثنين",
+      "2": "الثلاثاء",
+      "3": "الأربعاء",
+      "4": "الخميس",
+      "5": "الجمعة",
+      "6": "السبت",
+      "7": "الأحد"
+    },
+    "operators": {
+      "gt": "أكبر من",
+      "gte": "على الأقل",
+      "lt": "أقل من",
+      "lte": "على الأكثر",
+      "eq": "يساوي",
+      "neq": "لا يساوي"
+    },
+    "slots": {
+      "account": "الحساب",
+      "device": "الجهاز",
+      "time": "التاريخ / الوقت",
+      "entity": "الحساب أو الشخص",
+      "amount": "المبلغ",
+      "measure": "القيمة"
+    },
+    "signals": {
+      "analyses": "التحليلات",
+      "rows": "الصفوف المقروءة",
+      "restricted_touches": "قراءات مقيدة",
+      "exports": "عمليات التصدير",
+      "unauthorized": "محاولات غير مصرح بها",
+      "identifier_filter_values": "معرّفات محددة مرشّحة",
+      "accesses": "عمليات الوصول"
+    },
+    "basis": {
+      "user": "خط الأساس الخاص بالمستخدم",
+      "role": "خط الأساس للدور",
+      "absolute": "حد ثابت"
+    },
+    "summary": {
+      "measure": "القيمة",
+      "previous": "الفترة السابقة",
+      "changePercent": "نسبة التغير %",
+      "threshold": "العتبة",
+      "expected": "المعتاد لهذه النافذة",
+      "basis": "مقارنة مع",
+      "signal": "الإشارة",
+      "windowHours": "النافذة (ساعات)",
+      "reason": "السبب"
+    },
+    "userStatus": {
+      "Active": "نشط",
+      "Inactive": "موقوف",
+      "PendingInvitation": "مدعو"
+    },
+    "events": {
+      "Raised": "أُطلق",
+      "Repeated": "تكرر",
+      "Acknowledged": "قيد المراجعة",
+      "Resolved": "حُلّ",
+      "Dismissed": "تُجوهل",
+      "Reopened": "أُعيد فتحه",
+      "UserSuspended": "أُوقف المستخدم"
+    },
+    "unavailable": {
+      "template_needs_roles": "يحتاج إلى كائن معتمد يحتوي أعمدة بهذه الأدوار ويستطيع المالك قراءته. حدّد أدوار الأعمدة في البيانات الوصفية.",
+      "template_admin_only": "لمديري المؤسسة فقط.",
+      "template_needs_restricted_columns": "يحتاج عمودًا واحدًا على الأقل مصنفًا مقيدًا."
+    },
+    "alerts": {
+      "title": "التنبيهات",
+      "subtitle": "ما وجدته قواعد الرصد. كل تنبيه يُعلِم فقط؛ والقرار للإنسان.",
+      "previewDigest": "معاينة ملخصي اليومي",
+      "openCount": "تنبيهات مفتوحة",
+      "openHighCount": "مفتوحة عالية الخطورة",
+      "humanDecision": "لا توقف التنبيهات أي مستخدم تلقائيًا.",
+      "digestEmpty": "لا شيء خلال آخر 24 ساعة.",
+      "redactedShort": "التفاصيل مخفية",
+      "status": "الحالة",
+      "allStatuses": "كل الحالات",
+      "severity": "الخطورة",
+      "allSeverities": "كل المستويات",
+      "times": "{{count}} مرات",
+      "empty": "لا توجد تنبيهات هنا.",
+      "rule": "القاعدة",
+      "deletedRule": "قاعدة محذوفة",
+      "rulePaused": "أوقفت القاعدة مؤقتًا: {{reason}} أصلحها ثم استأنفها.",
+      "redacted": "أنت مستلم لهذا التنبيه لكنك لا تملك صلاحية قراءة بيانات القاعدة، لذا يظهر العنوان والأعداد فقط.",
+      "groupKey": "المجموعة",
+      "firstSeen": "أول ظهور",
+      "lastSeen": "آخر ظهور",
+      "occurrences": "مرات الظهور",
+      "subject": "المستخدم",
+      "note": "ملاحظة",
+      "noteHint": "مطلوبة للحل أو التجاهل.",
+      "acknowledge": "مراجعة",
+      "resolve": "حل",
+      "dismiss": "تجاهل",
+      "reopen": "إعادة فتح",
+      "suspend": "إيقاف المستخدم",
+      "suspendConfirm": "إيقاف {{name}}؟ سيُسجَّل خروجه فورًا ولن يستطيع الدخول حتى يعيد مدير تفعيله. يُسجَّل ذلك في سجل التدقيق.",
+      "suspendYes": "نعم، أوقفه",
+      "timeline": "التسلسل الزمني"
+    },
+    "rules": {
+      "title": "قواعد الرصد",
+      "subtitleAdmin": "تراقب القواعد بيانات مؤسستك وطريقة استخدامها. تعمل كل قاعدة بصلاحيات مالكها ولا ترى أكثر مما يحق له.",
+      "subtitleManagement": "أنشئ قواعد تراقب البيانات التي يحق لك قراءتها. تصلك التنبيهات داخل التطبيق وفي ملخصك اليومي.",
+      "new": "قاعدة جديدة",
+      "edit": "تعديل القاعدة",
+      "chooseTemplate": "اختر قالبًا",
+      "owner": "مالك القاعدة (تعمل بصلاحياته)",
+      "ownerSelf": "أنا",
+      "objectsCount": "{{count}} كائنات قابلة للقراءة",
+      "ownerHint": "تقرأ القاعدة البيانات تمامًا كما يقرؤها هذا المستخدم. صلاحيات المدير وحدها لا تتضمن الوصول إلى البيانات.",
+      "dataTemplates": "قواعد البيانات",
+      "accessTemplates": "قواعد الوصول (طريقة استخدام البيانات)",
+      "candidates": "{{count}} كائن مطابق",
+      "rolesHint": "تظهر القوالب عندما يحتوي الفهرس أعمدة بالأدوار المطلوبة.",
+      "custom": "تعريف مخصص",
+      "name": "الاسم",
+      "description": "الوصف",
+      "binding": "البيانات والحقول",
+      "object": "الكائن",
+      "windowHours": "النافذة (ساعات حتى الآن)",
+      "condition": "نبّه عندما تكون القيمة",
+      "changePercent": "التغير (%)",
+      "threshold": "العتبة",
+      "runsAsOwner": "تعمل عبر مسار الاستعلام نفسه المُتحقق منه وللقراءة فقط، مع نطاقات الصفوف الخاصة بالمالك.",
+      "accessSignal": "الإشارة",
+      "multiplier": "مضاعف المعتاد",
+      "baselineHint": "مقارنة بنمط المستخدم خلال 28 يومًا؛ لا يُقارن المستخدمون الجدد قبل خمسة أيام نشاط.",
+      "customHint": "عُرّفت هذه القاعدة عبر واجهة البرمجة ويُحتفظ بتعريفها كما هو. يمكنك تغيير الاسم والجدول والخطورة والمستلمين.",
+      "schedule": "الجدول",
+      "recurrence": "التشغيل",
+      "intervalMinutes": "كل (دقائق، 15 على الأقل)",
+      "time": "في (توقيت المؤسسة)",
+      "day": "اليوم",
+      "cooldown": "فترة التهدئة (ساعات)",
+      "recipients": "المستلمون",
+      "recipientUsers": "المستخدمون",
+      "recipientRoles": "الأدوار (كل الأعضاء النشطين)",
+      "recipientsHint": "يتلقى المالك التنبيهات دائمًا. المستلمون دون صلاحية على البيانات يرون العناوين والأعداد فقط.",
+      "selfRecipient": "تصلك تنبيهات قواعدك.",
+      "active": "نشطة",
+      "testNow": "اختبر الآن",
+      "testResult": "نتيجة الاختبار",
+      "testSummary": "{{matches}} تطابق · تم فحص {{rows}} صف من النتائج",
+      "testRedacted": "لا تملك صلاحية قراءة بيانات هذه القاعدة، لذا يظهر عدد التطابقات فقط.",
+      "wholeObject": "الكائن كاملًا",
+      "lastRun": "آخر تشغيل",
+      "openAlerts": "تنبيهات مفتوحة",
+      "paused": "موقوفة مؤقتًا",
+      "nextRun": "التشغيل التالي",
+      "recipientsShort": "مستلم",
+      "neverRun": "لم تُشغَّل بعد",
+      "pause": "إيقاف مؤقت",
+      "resume": "استئناف",
+      "empty": "لا توجد قواعد بعد. ابدأ من قالب.",
+      "deleteConfirm": "حذف \"{{name}}\"؟ تبقى تنبيهاتها في مركز التنبيهات.",
+      "everyMinutes": "كل {{minutes}} دقيقة",
+      "weeklyAt": "{{day}} الساعة {{time}}",
+      "dailyAt": "يوميًا الساعة {{time}}",
+      "bindAll": "اختر عمودًا لكل حقل.",
+      "ownerShort": "المالك"
+    },
+    "settings": {
+      "title": "إعدادات الرصد",
+      "subtitle": "الأوقات بتوقيت المؤسسة ({{zone}}).",
+      "digestTime": "الملخص اليومي الساعة",
+      "workStart": "بداية ساعات العمل",
+      "workEnd": "نهاية ساعات العمل",
+      "retention": "مدة الاحتفاظ (أشهر)",
+      "retentionHint": "حتى {{max}} شهرًا.",
+      "workingDays": "أيام العمل"
+    },
+    "templates": {
+      "multi_device_same_account": {
+        "name": "حساب واحد من عدة أجهزة",
+        "description": "استخدام الحساب نفسه من أكثر من جهاز خلال النافذة الزمنية (مثل يوم واحد). يُرسل إلى فريق الأمن السيبراني."
+      },
+      "many_events_per_entity": {
+        "name": "أحداث كثيرة لسجل واحد",
+        "description": "حساب أو شخص أو سجل يظهر أكثر من المعتاد خلال النافذة الزمنية."
+      },
+      "amount_above_threshold": {
+        "name": "مبلغ يتجاوز حدًا",
+        "description": "إجمالي المبلغ لحساب أو شخص خلال النافذة يتجاوز حدًا معينًا."
+      },
+      "change_vs_previous_period": {
+        "name": "تغير مقارنة بالفترة السابقة",
+        "description": "إجمالي يتغير بأكثر من نسبة مئوية مقارنة بالنافذة السابقة (مثل أسبوع مقابل أسبوع)."
+      },
+      "restricted_filtered_access": {
+        "name": "استعلامات موجّهة على بيانات مقيدة",
+        "description": "مستخدم يرشح بيانات مقيدة بعدد كبير من المعرّفات المحددة (مثل حسابات بنكية لعملاء بعينهم)."
+      },
+      "repeated_unauthorized_attempts": {
+        "name": "محاولات غير مصرح بها متكررة",
+        "description": "مستخدم يطلب مرارًا بيانات لا يملك صلاحية قراءتها."
+      },
+      "exports_above_baseline": {
+        "name": "تصدير أعلى من المعتاد",
+        "description": "مستخدم يصدّر أكثر بكثير من نمطه اليومي المعتاد (أو نمط دوره)."
+      },
+      "queries_above_baseline": {
+        "name": "قراءة صفوف أعلى من المعتاد",
+        "description": "مستخدم يقرأ صفوفًا أكثر بكثير من نمطه اليومي المعتاد."
+      },
+      "sensitive_outside_working_hours": {
+        "name": "بيانات حساسة خارج ساعات العمل",
+        "description": "قراءة بيانات سرية أو مقيدة خارج ساعات عمل المؤسسة."
+      },
+      "new_user_sensitive_access": {
+        "name": "مستخدم جديد يقرأ بيانات مقيدة",
+        "description": "حساب أنشئ خلال الأيام الأخيرة يقرأ بيانات مقيدة."
+      }
+    },
+    "errors": {
+      "rule_owner_inactive": "مالك القاعدة لم يعد نشطًا.",
+      "rule_owner_invalid": "اختر مالكًا نشطًا للقاعدة.",
+      "rule_not_authorized": "مالك القاعدة لا يملك صلاحية قراءة هذا الكائن أو هذه الأعمدة.",
+      "rule_object_missing": "الكائن لم يعد موجودًا في الفهرس.",
+      "rule_object_unavailable": "الكائن غير معتمد أو لم يعد موجودًا.",
+      "rule_column_unavailable": "أحد أعمدة القاعدة غير معتمد أو لم يعد موجودًا.",
+      "rule_application_unavailable": "التطبيق غير معتمد أو غير نشط.",
+      "rule_builtin_not_supported": "لا يمكن تشغيل القواعد على تطبيق الرؤى المدمج.",
+      "rule_definition_invalid": "تعريف القاعدة غير صالح.",
+      "rule_definition_kind_mismatch": "التعريف لا يطابق نوع القاعدة.",
+      "rule_plan_invalid": "لا يمكن تحويل القاعدة إلى خطة استعلام صالحة.",
+      "rule_name_invalid": "أدخل اسمًا (حتى 200 حرف).",
+      "rule_name_taken": "توجد قاعدة أخرى بهذا الاسم.",
+      "rule_template_invalid": "قالب غير معروف.",
+      "rule_schedule_invalid": "اختر جدولًا صالحًا (فاصل 15 دقيقة على الأقل).",
+      "rule_cooldown_invalid": "يجب أن تكون فترة التهدئة بين 0 و720 ساعة.",
+      "rule_window_invalid": "النافذة الزمنية خارج النطاق.",
+      "rule_measure_invalid": "مقياس غير معروف.",
+      "rule_measure_column_required": "يحتاج المقياس إلى عمود.",
+      "rule_condition_invalid": "شرط غير معروف.",
+      "rule_filter_invalid": "أحد المرشحات غير صالح.",
+      "rule_group_by_invalid": "حتى ثلاثة أعمدة تجميع مختلفة.",
+      "rule_comparison_invalid": "مقارنة غير معروفة.",
+      "rule_comparison_needs_time_without_grouping": "المقارنة بالفترة السابقة تحتاج عمود وقت وبدون تجميع.",
+      "rule_max_groups_invalid": "بين 1 و1000 مجموعة.",
+      "rule_signal_invalid": "إشارة غير معروفة.",
+      "rule_threshold_invalid": "يجب أن تكون العتبة أكبر من صفر.",
+      "rule_baseline_invalid": "لا يمكن مقارنة هذه الإشارة بخط الأساس.",
+      "rule_new_users_invalid": "يجب أن تكون فترة المستخدمين الجدد 1–365 يومًا.",
+      "rule_role_invalid": "دور غير معروف.",
+      "rule_recipients_invalid": "يجب أن يكون المستلمون مستخدمين نشطين أو أدوارًا في المؤسسة (حتى 50).",
+      "rule_not_found": "القاعدة غير موجودة.",
+      "alert_not_found": "التنبيه غير موجود.",
+      "alert_note_required": "أضف ملاحظة للحل أو التجاهل.",
+      "alert_note_too_long": "الملاحظة طويلة جدًا.",
+      "alert_status_transition_invalid": "هذا التغيير غير ممكن من الحالة الحالية.",
+      "alert_has_no_subject": "هذا التنبيه لا يخص مستخدمًا.",
+      "user_not_active": "المستخدم غير نشط.",
+      "settings_working_days_invalid": "اختر يوم عمل واحدًا على الأقل.",
+      "settings_working_hours_invalid": "يجب أن تبدأ ساعات العمل قبل انتهائها.",
+      "settings_retention_invalid": "مدة الاحتفاظ خارج النطاق المسموح.",
+      "organization_inactive": "المؤسسة غير نشطة.",
+      "query_timeout": "استغرق الاستعلام وقتًا طويلًا.",
+      "query_failed": "أعادت قاعدة البيانات المصدر خطأً.",
+      "source_permission_denied": "حساب التطبيق لا يستطيع قراءة هذا الكائن.",
+      "source_schema_changed": "تغيّر مخطط المصدر؛ حدّث البيانات الوصفية.",
+      "unknown": "سبب غير معروف."
+    }
   }
 }

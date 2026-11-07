@@ -1,0 +1,310 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'monitoring.eyebrow' | transloco }}</p>
+      <h1>{{ 'monitoring.rules.title' | transloco }}</h1>
+      <p class="wi-muted">{{ (isAdmin() ? 'monitoring.rules.subtitleAdmin' : 'monitoring.rules.subtitleManagement') | transloco }}</p>
+    </div>
+    <div class="header-actions">
+      @if (isAdmin()) { <button mat-stroked-button type="button" (click)="settingsOpen.set(!settingsOpen())" data-testid="rules-settings"><mat-icon>tune</mat-icon>{{ 'monitoring.settings.title' | transloco }}</button> }
+      <button mat-flat-button type="button" (click)="startNew()" data-testid="rules-new"><mat-icon>add</mat-icon>{{ 'monitoring.rules.new' | transloco }}</button>
+    </div>
+  </header>
+
+  @if (error(); as e) { <div class="form-error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  @if (settingsOpen() && settings(); as s) {
+    <div class="wi-card settings" data-testid="rules-settings-card">
+      <h3>{{ 'monitoring.settings.title' | transloco }}</h3>
+      <p class="wi-muted small">{{ 'monitoring.settings.subtitle' | transloco: { zone: s.timeZone } }}</p>
+      <div class="grid4">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.settings.digestTime' | transloco }}</mat-label><input matInput type="time" [ngModel]="s.digestTime.slice(0, 5)" (ngModelChange)="setSetting('digestTime', $event)" /></mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.settings.workStart' | transloco }}</mat-label><input matInput type="time" [ngModel]="s.workingHoursStart.slice(0, 5)" (ngModelChange)="setSetting('workingHoursStart', $event)" /></mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.settings.workEnd' | transloco }}</mat-label><input matInput type="time" [ngModel]="s.workingHoursEnd.slice(0, 5)" (ngModelChange)="setSetting('workingHoursEnd', $event)" /></mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.settings.retention' | transloco }}</mat-label><input matInput type="number" min="1" [max]="s.maxRetentionMonths" [ngModel]="s.retentionMonths" (ngModelChange)="setSetting('retentionMonths', +$event)" /><mat-hint>{{ 'monitoring.settings.retentionHint' | transloco: { max: s.maxRetentionMonths } }}</mat-hint></mat-form-field>
+      </div>
+      <div class="days">
+        <span class="wi-muted small">{{ 'monitoring.settings.workingDays' | transloco }}</span>
+        @for (d of days; track d) { <mat-checkbox [checked]="s.workingDays.includes('' + d)" (change)="toggleDay(d, $event.checked)">{{ 'monitoring.days.' + d | transloco }}</mat-checkbox> }
+      </div>
+      <div class="actions end">
+        @if (settingsSaved()) { <span class="saved"><mat-icon>check_circle</mat-icon>{{ 'common.saved' | transloco }}</span> }
+        <button mat-flat-button type="button" (click)="saveSettings()" [disabled]="busy()">{{ 'common.save' | transloco }}</button>
+      </div>
+    </div>
+  }
+
+  @if (picking()) {
+    <div class="wi-card" data-testid="rules-templates">
+      <div class="detail__head"><h3>{{ 'monitoring.rules.chooseTemplate' | transloco }}</h3><span class="wi-ms-auto"></span><button mat-icon-button type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button></div>
+      @if (isAdmin()) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="owner">
+          <mat-label>{{ 'monitoring.rules.owner' | transloco }}</mat-label>
+          <mat-select [value]="ownerDraft()" (valueChange)="pickOwner($event)" data-testid="rules-owner-pick">
+            <mat-select-trigger>{{ ownerName(ownerDraft()) }}</mat-select-trigger>
+            <mat-option [value]="null">{{ 'monitoring.rules.ownerSelf' | transloco }}</mat-option>
+            @for (o of owners(); track o.userId) { <mat-option [value]="o.userId">{{ o.fullName }} · {{ 'monitoring.rules.objectsCount' | transloco: { count: o.permittedObjects } }}</mat-option> }
+          </mat-select>
+          <mat-hint>{{ 'monitoring.rules.ownerHint' | transloco }}</mat-hint>
+        </mat-form-field>
+      }
+      <h4>{{ 'monitoring.rules.dataTemplates' | transloco }}</h4>
+      <div class="templates">
+        @for (t of dataTemplates(); track t.code) {
+          <button type="button" class="template" [class.template--off]="!t.available" (click)="pick(t)" [disabled]="!t.available" [attr.data-testid]="'template-' + t.code">
+            <span class="template__head"><mat-icon>dataset</mat-icon><strong>{{ 'monitoring.templates.' + t.code + '.name' | transloco }}</strong><span class="sev" [attr.data-sev]="t.severity">{{ 'monitoring.severity.' + t.severity | transloco }}</span></span>
+            <span class="template__text">{{ 'monitoring.templates.' + t.code + '.description' | transloco }}</span>
+            <span class="template__needs">
+              @for (s of t.slots; track s.slot) { <span class="chip role">{{ 'monitoring.slots.' + s.slot | transloco }}: {{ 'admin.metadata.roles.' + s.roles[0] | transloco }}</span> }
+            </span>
+            @if (!t.available) { <span class="template__off"><mat-icon>info</mat-icon>{{ 'monitoring.unavailable.' + t.unavailableReason | transloco }}</span> }
+            @else { <span class="template__on">{{ 'monitoring.rules.candidates' | transloco: { count: t.candidates.length } }}</span> }
+          </button>
+        }
+      </div>
+      @if (isAdmin()) {
+        <h4>{{ 'monitoring.rules.accessTemplates' | transloco }}</h4>
+        <div class="templates">
+          @for (t of accessTemplates(); track t.code) {
+            <button type="button" class="template" [class.template--off]="!t.available" (click)="pick(t)" [disabled]="!t.available" [attr.data-testid]="'template-' + t.code">
+              <span class="template__head"><mat-icon>shield_person</mat-icon><strong>{{ 'monitoring.templates.' + t.code + '.name' | transloco }}</strong><span class="sev" [attr.data-sev]="t.severity">{{ 'monitoring.severity.' + t.severity | transloco }}</span></span>
+              <span class="template__text">{{ 'monitoring.templates.' + t.code + '.description' | transloco }}</span>
+              @if (!t.available) { <span class="template__off"><mat-icon>info</mat-icon>{{ 'monitoring.unavailable.' + t.unavailableReason | transloco }}</span> }
+            </button>
+          }
+        </div>
+      }
+      <p class="wi-muted small"><mat-icon class="tiny">sell</mat-icon>{{ 'monitoring.rules.rolesHint' | transloco }} @if (isAdmin()) { <a routerLink="/app/admin/metadata">{{ 'nav.org.admin.metadata' | transloco }}</a> }</p>
+    </div>
+  }
+
+  @if (form(); as f) {
+    <form class="wi-card editor" (ngSubmit)="save()" data-testid="rule-form">
+      <div class="detail__head">
+        <h3>{{ (f.ruleId ? 'monitoring.rules.edit' : 'monitoring.rules.new') | transloco }} · {{ f.template ? ('monitoring.templates.' + f.template.code + '.name' | transloco) : ('monitoring.rules.custom' | transloco) }}</h3>
+        <span class="wi-ms-auto"></span>
+        <button mat-icon-button type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div class="grid2">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.rules.name' | transloco }}</mat-label><input matInput name="name" required maxlength="200" [ngModel]="f.name" (ngModelChange)="patch({ name: $event })" data-testid="rule-name" /></mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'monitoring.alerts.severity' | transloco }}</mat-label>
+          <mat-select name="severity" [value]="f.severity" (valueChange)="patch({ severity: $event })">
+            @for (s of severities; track s) { <mat-option [value]="s">{{ 'monitoring.severity.' + s | transloco }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span2"><mat-label>{{ 'monitoring.rules.description' | transloco }}</mat-label><input matInput name="description" maxlength="2000" [ngModel]="f.description" (ngModelChange)="patch({ description: $event })" /></mat-form-field>
+      </div>
+
+      @if (isAdmin() && f.kind === 'Data') {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="owner">
+          <mat-label>{{ 'monitoring.rules.owner' | transloco }}</mat-label>
+          <mat-select name="owner" [value]="f.ownerUserId" (valueChange)="changeOwner($event)" data-testid="rule-owner">
+            <mat-select-trigger>{{ ownerName(f.ownerUserId) }}</mat-select-trigger>
+            <mat-option [value]="null">{{ 'monitoring.rules.ownerSelf' | transloco }}</mat-option>
+            @for (o of owners(); track o.userId) { <mat-option [value]="o.userId">{{ o.fullName }} · {{ 'monitoring.rules.objectsCount' | transloco: { count: o.permittedObjects } }}</mat-option> }
+          </mat-select>
+          <mat-hint>{{ 'monitoring.rules.ownerHint' | transloco }}</mat-hint>
+        </mat-form-field>
+      }
+
+      @if (f.template?.kind === 'Data') {
+        <fieldset class="block">
+          <legend>{{ 'monitoring.rules.binding' | transloco }}</legend>
+          @if (f.template!.candidates.length === 0) {
+            <p class="callout callout--warn"><mat-icon>info</mat-icon>{{ 'monitoring.unavailable.template_needs_roles' | transloco }}</p>
+          } @else {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+              <mat-label>{{ 'monitoring.rules.object' | transloco }}</mat-label>
+              <mat-select name="object" [value]="f.objectId" (valueChange)="changeObject($event)" data-testid="rule-object">
+                @for (c of f.template!.candidates; track c.objectId) { <mat-option [value]="c.objectId">{{ objectLabel(c) }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+            @if (candidate(); as c) {
+              <div class="grid3">
+                @for (s of f.template!.slots; track s.slot) {
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'monitoring.slots.' + s.slot | transloco }}</mat-label>
+                    <mat-select [value]="f.bindings[s.slot]" (valueChange)="bind(s.slot, $event)" [attr.data-testid]="'rule-slot-' + s.slot">
+                      @for (o of c.slots[s.slot]; track o.columnId) { <mat-option [value]="o.columnId"><span class="wi-ltr">{{ columnLabel(o) }}</span></mat-option> }
+                    </mat-select>
+                  </mat-form-field>
+                }
+              </div>
+            }
+          }
+          <div class="grid3">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.rules.windowHours' | transloco }}</mat-label><input matInput type="number" min="1" name="window" [ngModel]="f.windowHours" (ngModelChange)="patch({ windowHours: +$event })" /></mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'monitoring.rules.condition' | transloco }}</mat-label>
+              <mat-select name="op" [value]="f.conditionOperator" (valueChange)="patch({ conditionOperator: $event })">
+                @for (o of operators; track o) { <mat-option [value]="o">{{ 'monitoring.operators.' + o | transloco }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ (f.template!.defaults.data?.comparison === 'previous_period' ? 'monitoring.rules.changePercent' : 'monitoring.rules.threshold') | transloco }}</mat-label><input matInput type="number" name="value" [ngModel]="f.conditionValue" (ngModelChange)="patch({ conditionValue: +$event })" data-testid="rule-threshold" /></mat-form-field>
+          </div>
+          <p class="wi-muted small"><mat-icon class="tiny">lock</mat-icon>{{ 'monitoring.rules.runsAsOwner' | transloco }}</p>
+        </fieldset>
+      }
+
+      @if (f.template?.kind === 'Access') {
+        <fieldset class="block">
+          <legend>{{ 'monitoring.rules.accessSignal' | transloco }}: {{ 'monitoring.signals.' + f.template!.defaults.access!.signal | transloco }}</legend>
+          <div class="grid3">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.rules.windowHours' | transloco }}</mat-label><input matInput type="number" min="1" name="window" [ngModel]="f.windowHours" (ngModelChange)="patch({ windowHours: +$event })" /></mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ (f.template!.defaults.access!.threshold.mode === 'baseline' ? 'monitoring.rules.multiplier' : 'monitoring.rules.threshold') | transloco }}</mat-label>
+              <input matInput type="number" min="0" step="0.5" name="threshold" [ngModel]="f.thresholdValue" (ngModelChange)="patch({ thresholdValue: +$event })" data-testid="rule-threshold" />
+              @if (f.template!.defaults.access!.threshold.mode === 'baseline') { <mat-hint>{{ 'monitoring.rules.baselineHint' | transloco }}</mat-hint> }
+            </mat-form-field>
+          </div>
+        </fieldset>
+      }
+
+      @if (!f.template) { <p class="callout"><mat-icon>code</mat-icon>{{ 'monitoring.rules.customHint' | transloco }}</p> }
+
+      <fieldset class="block">
+        <legend>{{ 'monitoring.rules.schedule' | transloco }}</legend>
+        <div class="grid4">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'monitoring.rules.recurrence' | transloco }}</mat-label>
+            <mat-select name="recurrence" [value]="f.recurrenceKind" (valueChange)="patch({ recurrenceKind: $event })">
+              <mat-option value="Daily">{{ 'monitoring.recurrence.Daily' | transloco }}</mat-option>
+              <mat-option value="Weekly">{{ 'monitoring.recurrence.Weekly' | transloco }}</mat-option>
+              <mat-option value="Interval">{{ 'monitoring.recurrence.Interval' | transloco }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          @if (f.recurrenceKind === 'Interval') {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.rules.intervalMinutes' | transloco }}</mat-label><input matInput type="number" min="15" name="interval" [ngModel]="f.intervalMinutes" (ngModelChange)="patch({ intervalMinutes: +$event })" /></mat-form-field>
+          } @else {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.rules.time' | transloco }}</mat-label><input matInput type="time" name="time" [ngModel]="f.time" (ngModelChange)="patch({ time: $event })" /></mat-form-field>
+          }
+          @if (f.recurrenceKind === 'Weekly') {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'monitoring.rules.day' | transloco }}</mat-label>
+              <mat-select name="day" [value]="f.dayOfWeek" (valueChange)="patch({ dayOfWeek: $event })">
+                @for (d of days; track d) { <mat-option [value]="d">{{ 'monitoring.days.' + d | transloco }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+          }
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.rules.cooldown' | transloco }}</mat-label><input matInput type="number" min="0" max="720" name="cooldown" [ngModel]="f.cooldownHours" (ngModelChange)="patch({ cooldownHours: +$event })" /></mat-form-field>
+        </div>
+      </fieldset>
+
+      @if (isAdmin()) {
+        <fieldset class="block">
+          <legend>{{ 'monitoring.rules.recipients' | transloco }}</legend>
+          <div class="grid2">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'monitoring.rules.recipientUsers' | transloco }}</mat-label>
+              <mat-select multiple name="users" [value]="f.recipientUserIds" (valueChange)="patch({ recipientUserIds: $event })" data-testid="rule-recipient-users">
+                @for (u of users(); track u.userId) { <mat-option [value]="u.userId">{{ u.fullName }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'monitoring.rules.recipientRoles' | transloco }}</mat-label>
+              <mat-select multiple name="roles" [value]="f.recipientRoleIds" (valueChange)="patch({ recipientRoleIds: $event })" data-testid="rule-recipient-roles">
+                @for (r of roles(); track r.roleId) { <mat-option [value]="r.roleId">{{ language.current() === 'ar' ? r.nameAr : r.nameEn }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <p class="wi-muted small">{{ 'monitoring.rules.recipientsHint' | transloco }}</p>
+        </fieldset>
+      } @else {
+        <p class="wi-muted small"><mat-icon class="tiny">person</mat-icon>{{ 'monitoring.rules.selfRecipient' | transloco }}</p>
+      }
+
+      <div class="actions end">
+        <mat-slide-toggle name="active" [checked]="f.isActive" (change)="patch({ isActive: $event.checked })">{{ 'monitoring.rules.active' | transloco }}</mat-slide-toggle>
+        <span class="wi-ms-auto"></span>
+        <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
+        <button mat-stroked-button type="button" (click)="testDraft()" [disabled]="busy()" data-testid="rule-test"><mat-icon>science</mat-icon>{{ 'monitoring.rules.testNow' | transloco }}</button>
+        <button mat-flat-button type="submit" [disabled]="busy()" data-testid="rule-save">{{ 'common.save' | transloco }}</button>
+      </div>
+      @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+    </form>
+  }
+
+  @if (test(); as t) {
+    <div class="wi-card test" data-testid="rule-test-result">
+      <div class="detail__head">
+        <h3>{{ 'monitoring.rules.testResult' | transloco }}</h3>
+        <span class="chip outcome" [attr.data-outcome]="t.result.outcome">{{ 'monitoring.outcome.' + t.result.outcome | transloco }}</span>
+        <span class="wi-ms-auto"></span>
+        <button mat-icon-button type="button" (click)="test.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+      </div>
+      <p>{{ 'monitoring.rules.testSummary' | transloco: { matches: t.result.matchCount, rows: (t.result.rowsExamined | number) } }}</p>
+      @if (t.result.errorCode) { <p class="callout callout--warn"><mat-icon>error_outline</mat-icon>{{ 'monitoring.errors.' + t.result.errorCode | transloco }}</p> }
+      @if (t.result.redacted) { <p class="callout"><mat-icon>visibility_off</mat-icon>{{ 'monitoring.rules.testRedacted' | transloco }}</p> }
+      @if (t.result.matches.length > 0) {
+        <div class="scroll">
+          <table class="plain">
+            <thead><tr><th>{{ 'monitoring.alerts.groupKey' | transloco }}</th><th class="num">{{ 'monitoring.summary.measure' | transloco }}</th><th class="num">{{ 'monitoring.summary.threshold' | transloco }}</th>@if (t.result.matches[0].previous !== undefined) { <th class="num">{{ 'monitoring.summary.previous' | transloco }}</th> }</tr></thead>
+            <tbody>
+              @for (m of t.result.matches; track $index) {
+                <tr><td class="wi-ltr">{{ m.subjectName ?? (m.groupKey === '*' ? ('monitoring.rules.wholeObject' | transloco) : m.groupKey) }}</td><td class="num">{{ m.measure | number: '1.0-2' }}</td><td class="num">{{ m.threshold | number: '1.0-2' }}</td>@if (m.previous !== undefined) { <td class="num">{{ m.previous | number: '1.0-2' }}</td> }</tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="wi-card">
+    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+    <div class="scroll">
+      <table class="plain rules" data-testid="rules-table">
+        <thead>
+          <tr>
+            <th>{{ 'monitoring.rules.name' | transloco }}</th>
+            <th>{{ 'monitoring.alerts.severity' | transloco }}</th>
+            <th>{{ 'monitoring.rules.schedule' | transloco }}</th>
+            <th>{{ 'monitoring.rules.ownerShort' | transloco }}</th>
+            <th>{{ 'monitoring.rules.lastRun' | transloco }}</th>
+            <th class="num">{{ 'monitoring.rules.openAlerts' | transloco }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rules(); track r.ruleId) {
+            <tr [class.off]="!r.isActive" [attr.data-testid]="'rule-row-' + r.name">
+              <td>
+                <strong>{{ r.name }}</strong>
+                <div class="wi-muted small">
+                  <span class="chip kind">{{ 'monitoring.kind.' + r.kind | transloco }}</span>
+                  @if (r.templateCode) { {{ 'monitoring.templates.' + r.templateCode + '.name' | transloco }} }
+                  @if (r.objectName) { · <span class="wi-ltr">{{ r.objectName }}</span> }
+                </div>
+              </td>
+              <td><span class="sev" [attr.data-sev]="r.severity">{{ 'monitoring.severity.' + r.severity | transloco }}</span></td>
+              <td>{{ schedule(r) }}@if (!r.isActive) { <div><span class="chip">{{ 'monitoring.rules.paused' | transloco }}</span></div> } @else if (r.nextRunAt) { <div class="wi-muted small">{{ 'monitoring.rules.nextRun' | transloco }}: {{ r.nextRunAt | date: 'short' }}</div> }</td>
+              <td>{{ r.ownerName }}@if (r.recipients.length > 0) { <div class="wi-muted small">+{{ r.recipients.length }} {{ 'monitoring.rules.recipientsShort' | transloco }}</div> }</td>
+              <td>
+                @if (r.lastOutcome) { <span class="chip outcome" [attr.data-outcome]="r.lastOutcome">{{ 'monitoring.outcome.' + r.lastOutcome | transloco }}</span><div class="wi-muted small">{{ r.lastEvaluatedAt | date: 'short' }}</div> }
+                @else { <span class="wi-muted small">{{ 'monitoring.rules.neverRun' | transloco }}</span> }
+                @if (r.lastError) { <div class="err small">{{ 'monitoring.errors.' + r.lastError | transloco }}</div> }
+              </td>
+              <td class="num">@if (r.openAlerts > 0) { <a routerLink="/app/alerts" class="open-alerts">{{ r.openAlerts }}</a> } @else { 0 }</td>
+              <td class="row-actions">
+                <button mat-icon-button type="button" (click)="testSaved(r)" [disabled]="busy()" [attr.aria-label]="'monitoring.rules.testNow' | transloco" [attr.data-testid]="'rule-test-' + r.name"><mat-icon>science</mat-icon></button>
+                @if (r.canEdit) {
+                  <button mat-icon-button type="button" (click)="edit(r)" [attr.aria-label]="'monitoring.rules.edit' | transloco"><mat-icon>edit</mat-icon></button>
+                  <button mat-icon-button type="button" (click)="toggle(r)" [disabled]="busy()" [attr.aria-label]="(r.isActive ? 'monitoring.rules.pause' : 'monitoring.rules.resume') | transloco"><mat-icon>{{ r.isActive ? 'pause' : 'play_arrow' }}</mat-icon></button>
+                  <button mat-icon-button type="button" (click)="remove(r)" [disabled]="busy()" [attr.aria-label]="'common.delete' | transloco"><mat-icon>delete</mat-icon></button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (rules().length === 0 && !loading()) {
+      <div class="empty-state">
+        <mat-icon>policy</mat-icon>
+        <p>{{ 'monitoring.rules.empty' | transloco }}</p>
+      </div>
+    }
+  </div>
+</section>

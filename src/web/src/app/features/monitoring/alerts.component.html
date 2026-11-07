@@ -1,0 +1,167 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'monitoring.eyebrow' | transloco }}</p>
+      <h1>{{ 'monitoring.alerts.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'monitoring.alerts.subtitle' | transloco }}</p>
+    </div>
+    <button mat-stroked-button type="button" (click)="previewDigest()" data-testid="alerts-digest"><mat-icon>mark_email_unread</mat-icon>{{ 'monitoring.alerts.previewDigest' | transloco }}</button>
+  </header>
+
+  @if (page(); as p) {
+    <div class="kpis" data-testid="alerts-kpis">
+      <div class="kpi"><span class="kpi__value">{{ p.openCount }}</span><span class="kpi__label">{{ 'monitoring.alerts.openCount' | transloco }}</span></div>
+      <div class="kpi kpi--high"><span class="kpi__value">{{ p.openHighCount }}</span><span class="kpi__label">{{ 'monitoring.alerts.openHighCount' | transloco }}</span></div>
+      <p class="kpi-note wi-muted"><mat-icon>verified_user</mat-icon>{{ 'monitoring.alerts.humanDecision' | transloco }}</p>
+    </div>
+  }
+
+  @if (digest(); as d) {
+    <div class="wi-card digest" data-testid="alerts-digest-preview">
+      <div class="digest__head"><strong>{{ d.subject }}</strong><button mat-icon-button type="button" (click)="digest.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button></div>
+      @if (d.lines.length === 0) { <p class="wi-muted">{{ 'monitoring.alerts.digestEmpty' | transloco }}</p> }
+      <ul>
+        @for (l of d.lines; track $index) {
+          <li><span class="sev" [attr.data-sev]="l.severity">{{ 'monitoring.severity.' + l.severity | transloco }}</span> {{ l.title }}@if (l.occurrences > 1) { (×{{ l.occurrences }}) }
+            <span class="wi-muted">@if (l.redacted) { {{ 'monitoring.alerts.redactedShort' | transloco }} } @else { @if (l.groupKey) { <span class="wi-ltr">{{ l.groupKey }}</span> } @if (l.measure !== undefined && l.measure !== null) { · {{ l.measure | number: '1.0-2' }} } }</span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <div class="filters">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>{{ 'monitoring.alerts.status' | transloco }}</mat-label>
+      <mat-select [value]="status()" (valueChange)="setStatus($event)" data-testid="alerts-status">
+        <mat-select-trigger>{{ (status() ? 'monitoring.status.' + status() : 'monitoring.alerts.allStatuses') | transloco }}</mat-select-trigger>
+        <mat-option [value]="null">{{ 'monitoring.alerts.allStatuses' | transloco }}</mat-option>
+        @for (s of statuses; track s) { <mat-option [value]="s">{{ 'monitoring.status.' + s | transloco }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>{{ 'monitoring.alerts.severity' | transloco }}</mat-label>
+      <mat-select [value]="severity()" (valueChange)="setSeverity($event)">
+        <mat-select-trigger>{{ (severity() ? 'monitoring.severity.' + severity() : 'monitoring.alerts.allSeverities') | transloco }}</mat-select-trigger>
+        <mat-option [value]="null">{{ 'monitoring.alerts.allSeverities' | transloco }}</mat-option>
+        @for (s of severities; track s) { <mat-option [value]="s">{{ 'monitoring.severity.' + s | transloco }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div class="split" [class.split--open]="selected() !== null">
+    <div class="wi-card list">
+      @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+      <ul class="alerts" data-testid="alerts-list">
+        @for (a of page()?.items ?? []; track a.alertId) {
+          <li>
+            <button type="button" class="alert-row" [class.alert-row--active]="selected()?.alert?.alertId === a.alertId" (click)="open(a.alertId)" [attr.data-testid]="'alert-' + a.alertId">
+              <span class="sev" [attr.data-sev]="a.severity">{{ 'monitoring.severity.' + a.severity | transloco }}</span>
+              <span class="alert-row__body">
+                <span class="alert-row__title">{{ a.title }}</span>
+                <span class="wi-muted small">
+                  @if (a.redacted) { <mat-icon class="tiny">visibility_off</mat-icon>{{ 'monitoring.alerts.redactedShort' | transloco }} }
+                  @else if (a.groupKey && a.groupKey !== '*' && a.groupKey !== 'rule_invalid') { <span class="wi-ltr">{{ a.groupKey }}</span> }
+                  @if (a.occurrences > 1) { · {{ 'monitoring.alerts.times' | transloco: { count: a.occurrences } }} }
+                  · {{ a.lastSeenAt | date: 'medium' }}
+                </span>
+              </span>
+              <span class="chip status" [attr.data-status]="a.status">{{ 'monitoring.status.' + a.status | transloco }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+      @if ((page()?.items?.length ?? 0) === 0 && !loading()) {
+        <div class="empty-state">
+          <mat-icon>task_alt</mat-icon>
+          <p>{{ 'monitoring.alerts.empty' | transloco }}</p>
+        </div>
+      }
+      @if ((page()?.total ?? 0) > 25) {
+        <mat-paginator [length]="page()?.total ?? 0" [pageSize]="25" [pageIndex]="pageIndex() - 1" [hidePageSize]="true" (page)="onPage($event)" />
+      }
+    </div>
+
+    @if (selected(); as d) {
+      <aside class="wi-card detail" data-testid="alert-detail">
+        <div class="detail__head">
+          <span class="sev" [attr.data-sev]="d.alert.severity">{{ 'monitoring.severity.' + d.alert.severity | transloco }}</span>
+          <span class="chip status" [attr.data-status]="d.alert.status">{{ 'monitoring.status.' + d.alert.status | transloco }}</span>
+          <span class="wi-ms-auto"></span>
+          <button mat-icon-button type="button" (click)="close()" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+        </div>
+        <h2>{{ d.alert.title }}</h2>
+        <p class="wi-muted small">{{ 'monitoring.alerts.rule' | transloco }}: {{ d.alert.ruleName || ('monitoring.alerts.deletedRule' | transloco) }}</p>
+
+        @if (error(); as e) { <div class="form-error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+        @if (d.alert.groupKey === 'rule_invalid') {
+          <div class="callout callout--warn"><mat-icon>pause_circle</mat-icon><span>{{ 'monitoring.alerts.rulePaused' | transloco: { reason: ('monitoring.errors.' + (d.alert.summary?.['reason'] ?? 'unknown') | transloco) } }}</span></div>
+        } @else if (d.alert.redacted) {
+          <div class="callout"><mat-icon>visibility_off</mat-icon><span>{{ 'monitoring.alerts.redacted' | transloco }}</span></div>
+        } @else {
+          <dl class="facts">
+            @if (d.alert.groupKey && d.alert.groupKey !== '*') { <dt>{{ 'monitoring.alerts.groupKey' | transloco }}</dt><dd class="wi-ltr" data-testid="alert-group-key">{{ d.alert.groupKey }}</dd> }
+            @for (r of summaryRows(); track r.key) {
+              @if (r.key !== 'reason') { <dt>{{ 'monitoring.summary.' + r.key | transloco }}</dt><dd>{{ r.key === 'signal' ? ('monitoring.signals.' + r.value | transloco) : r.key === 'basis' ? ('monitoring.basis.' + r.value | transloco) : r.value }}</dd> }
+            }
+          </dl>
+        }
+
+        <dl class="facts">
+          <dt>{{ 'monitoring.alerts.firstSeen' | transloco }}</dt><dd>{{ d.alert.firstSeenAt | date: 'medium' }}</dd>
+          <dt>{{ 'monitoring.alerts.lastSeen' | transloco }}</dt><dd>{{ d.alert.lastSeenAt | date: 'medium' }}</dd>
+          <dt>{{ 'monitoring.alerts.occurrences' | transloco }}</dt><dd>{{ d.alert.occurrences }}</dd>
+          @if (d.alert.subject; as s) {
+            <dt>{{ 'monitoring.alerts.subject' | transloco }}</dt>
+            <dd>{{ s.fullName }} <span class="wi-muted wi-ltr">{{ s.email }}</span> <span class="chip" [attr.data-on]="s.status === 'Active'">{{ 'monitoring.userStatus.' + s.status | transloco }}</span></dd>
+          }
+        </dl>
+
+        @if (d.alert.canAct) {
+          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+            <mat-label>{{ 'monitoring.alerts.note' | transloco }}</mat-label>
+            <textarea matInput rows="2" maxlength="2000" [ngModel]="note()" (ngModelChange)="note.set($event)" data-testid="alert-note"></textarea>
+            <mat-hint>{{ 'monitoring.alerts.noteHint' | transloco }}</mat-hint>
+          </mat-form-field>
+          <div class="actions">
+            @if (d.alert.status === 'Open') { <button mat-stroked-button type="button" (click)="act('acknowledge')" [disabled]="busy()" data-testid="alert-ack"><mat-icon>visibility</mat-icon>{{ 'monitoring.alerts.acknowledge' | transloco }}</button> }
+            @if (d.alert.status === 'Open' || d.alert.status === 'Acknowledged') {
+              <button mat-flat-button type="button" (click)="act('resolve')" [disabled]="busy()" data-testid="alert-resolve"><mat-icon>task_alt</mat-icon>{{ 'monitoring.alerts.resolve' | transloco }}</button>
+              <button mat-stroked-button type="button" (click)="act('dismiss')" [disabled]="busy()" data-testid="alert-dismiss"><mat-icon>do_not_disturb_on</mat-icon>{{ 'monitoring.alerts.dismiss' | transloco }}</button>
+            } @else {
+              <button mat-stroked-button type="button" (click)="act('reopen')" [disabled]="busy()"><mat-icon>replay</mat-icon>{{ 'monitoring.alerts.reopen' | transloco }}</button>
+            }
+            @if (d.alert.canSuspendSubject) {
+              <button mat-stroked-button type="button" class="danger" (click)="confirmSuspend.set(true)" [disabled]="busy()" data-testid="alert-suspend"><mat-icon>person_off</mat-icon>{{ 'monitoring.alerts.suspend' | transloco }}</button>
+            }
+          </div>
+          @if (confirmSuspend()) {
+            <div class="callout callout--danger" role="alertdialog" data-testid="alert-suspend-confirm">
+              <mat-icon>warning</mat-icon>
+              <div>
+                <p>{{ 'monitoring.alerts.suspendConfirm' | transloco: { name: d.alert.subject?.fullName } }}</p>
+                <div class="actions">
+                  <button mat-button type="button" (click)="confirmSuspend.set(false)">{{ 'common.cancel' | transloco }}</button>
+                  <button mat-flat-button type="button" class="danger-fill" (click)="suspend()" [disabled]="busy()" data-testid="alert-suspend-yes">{{ 'monitoring.alerts.suspendYes' | transloco }}</button>
+                </div>
+              </div>
+            </div>
+          }
+        }
+
+        <h3>{{ 'monitoring.alerts.timeline' | transloco }}</h3>
+        <ol class="timeline" data-testid="alert-timeline">
+          @for (e of d.events; track $index) {
+            <li><span class="timeline__dot" [attr.data-event]="e.eventType"></span>
+              <div><strong>{{ 'monitoring.events.' + e.eventType | transloco }}</strong>@if (e.actorName) { · {{ e.actorName }} }
+                <span class="wi-muted small"> · {{ e.createdAt | date: 'medium' }}</span>
+                @if (e.note) { <p class="small">{{ e.eventType === 'Raised' && d.alert.groupKey === 'rule_invalid' ? ('monitoring.errors.' + e.note | transloco) : e.note }}</p> }
+              </div>
+            </li>
+          }
+        </ol>
+      </aside>
+    }
+  </div>
+</section>

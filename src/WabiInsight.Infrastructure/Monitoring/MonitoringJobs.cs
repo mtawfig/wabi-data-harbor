@@ -154,8 +154,16 @@ public sealed class RetentionPurgeJob : IScheduledJobHandler
             .Where(f => f.OrganizationId == organizationId && f.AccessedAt < cutoff)
             .ExecuteDeleteAsync(cancellationToken);
 
+        // Rule evaluations and closed alerts follow the same retention (D3); open alerts stay until a person closes them.
+        var evaluations = await _context.RuleEvaluations.AsPlatformScope(_tenantContext)
+            .Where(e => e.OrganizationId == organizationId && e.StartedAt < cutoff)
+            .ExecuteDeleteAsync(cancellationToken);
+        var alerts = await _context.Alerts.AsPlatformScope(_tenantContext)
+            .Where(a => a.OrganizationId == organizationId && a.LastSeenAt < cutoff && (a.Status == AlertStatus.Resolved || a.Status == AlertStatus.Dismissed))
+            .ExecuteDeleteAsync(cancellationToken);
+
         await _usage.AppendAndSaveAsync(UsageEventTypes.RetentionPurged, "Organization", organizationId.ToString(), quantity: deleted,
-            metadata: new { months, cutoff }, organizationId: organizationId, cancellationToken: cancellationToken);
+            metadata: new { months, cutoff, evaluations, alerts }, organizationId: organizationId, cancellationToken: cancellationToken);
     }
 
     public static int EffectiveRetentionMonths(Organization organization, MonitoringOptions options)

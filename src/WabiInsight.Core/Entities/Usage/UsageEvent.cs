@@ -73,6 +73,9 @@ public static class UsageEventTypes
     public const string AnalysisShared = "Share.Created";
     public const string AnalysisEmailed = "Share.EmailSent";
     public const string BaselinesComputed = "Monitoring.BaselinesComputed";
+    public const string RuleEvaluated = "Monitoring.RuleEvaluated";
+    public const string AlertRaised = "Monitoring.AlertRaised";
+    public const string DigestSent = "Monitoring.DigestSent";
     public const string RetentionPurged = "Monitoring.RetentionPurged";
     public const string ScheduledJobFailed = "Scheduler.JobFailed";
 }

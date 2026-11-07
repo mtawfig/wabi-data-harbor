@@ -42,11 +42,11 @@ public sealed class SampleDatabaseScriptTests : IClassFixture<SampleDatabaseScri
             JOIN dbo.UserRoles ur ON ur.UserId = ou.UserId JOIN dbo.Roles r ON r.RoleId = ur.RoleId
             JOIN dbo.Departments d ON d.DepartmentId = ou.DepartmentId
             JOIN dbo.LoginIdentities li ON li.NormalizedEmail = ou.NormalizedEmail AND li.OrganizationId = ou.OrganizationId
-            ORDER BY ou.EmployeeNumber
+            ORDER BY ou.EmployeeNumber, r.RoleCode
             """);
 
         Assert.Equal(
-            ["E1001:OrganizationAdmin:IT", "E1002:Management:EXEC", "E1003:OperationsAnalyst:OPS", "E1004:HRPayrollOfficer:HR"],
+            ["E1001:CyberSecurity:IT", "E1001:OrganizationAdmin:IT", "E1002:Management:EXEC", "E1003:OperationsAnalyst:OPS", "E1004:HRPayrollOfficer:HR"],
             users.Select(u => $"{u[0]}:{u[1]}:{u[2]}"));
         var hasher = new IdentityPasswordHashingService();
         Assert.All(users, u =>
@@ -108,6 +108,35 @@ public sealed class SampleDatabaseScriptTests : IClassFixture<SampleDatabaseScri
             """));
         Assert.Equal(0, await _fixture.ScalarAsync<int>(
             "SELECT COUNT(*) FROM dbo.RoleTablePermissions p JOIN dbo.Roles r ON r.RoleId = p.RoleId WHERE r.RoleCode IN (N'OrganizationAdmin', N'Management')"));
+    }
+
+    [Fact]
+    public async Task Seed_AddsTheOwnersMonitoringExample_WithFieldRoles_AndThePlantedSignInsAreFound()
+    {
+        // P14.2: the same portal account used from several devices; the live view always ends today.
+        var rule = await _fixture.RowsAsync(
+            """
+            SELECT mr.DefinitionJson, mr.Kind, mr.Severity, mr.TemplateCode, owner.EmployeeNumber, r.RoleCode
+            FROM dbo.MonitoringRules mr
+            JOIN dbo.OrganizationUsers owner ON owner.UserId = mr.OwnerUserId
+            JOIN dbo.MonitoringRuleRecipients rr ON rr.RuleId = mr.RuleId JOIN dbo.Roles r ON r.RoleId = rr.RoleId
+            WHERE mr.Name = N'Same account, several devices (employee portal)'
+            """);
+        var row = Assert.Single(rule);
+        Assert.Equal(("Data", "High", "multi_device_same_account", "E1002", "CyberSecurity"), ((string)row[1], (string)row[2], (string)row[3], (string)row[4], (string)row[5]));
+        var definition = Core.Monitoring.RuleDefinition.Parse((string)row[0]);
+        Assert.Empty(Core.Monitoring.RuleDefinitionValidator.Validate(Core.Entities.Monitoring.MonitoringRuleKind.Data, definition));
+        Assert.Equal(definition.Data!.ObjectId, await _fixture.ScalarAsync<Guid>("SELECT ObjectId FROM dbo.DatabaseObjects WHERE ObjectName = N'vw_EmployeePortalSignInsLive'"));
+        Assert.Equal(3, await _fixture.ScalarAsync<int>(
+            $"SELECT COUNT(*) FROM dbo.DatabaseColumns WHERE ColumnId IN ('{definition.Data.TimeColumnId}', '{definition.Data.GroupByColumnIds[0]}', '{definition.Data.Measure.ColumnId}') AND SemanticRole IN (3, 4, 5)"));
+
+        var planted = await _fixture.ScalarAsync<int>(
+            $"""
+            SELECT COUNT(*) FROM (SELECT AccountName FROM [{_fixture.HrDb}].dbo.vw_EmployeePortalSignInsLive
+            WHERE LoginAt >= DATEADD(hour, -24, CONVERT(datetime2(0), SYSDATETIMEOFFSET() AT TIME ZONE 'Arabian Standard Time'))
+            GROUP BY AccountName HAVING COUNT(DISTINCT DeviceId) > 1) x
+            """);
+        Assert.Equal(4, planted); // the four planted accounts at any hour (Dubai time, like the rule): normal staff keep one device on the last days
     }
 
     [Fact]

@@ -142,7 +142,19 @@ Organization Administration → **Monitoring Rules** (list, template catalogue w
 
 Each PR updates `PROGRESS.md`, keeps the full test matrix green (two organizations in every multi-tenant test), and adds screens to `SCREENSHOTS.md`.
 
-## 15. Why this matters
+## 15. Implementation notes (P14.2)
+
+What shipped, and where it differs from the design above:
+
+- **Access rules are scheduled, not inline.** §9 planned inline evaluation for access rules "on every operation". P14.2 evaluates them on a schedule like data rules (interval of at least 15 minutes, daily or weekly), which keeps the analysis path fast and makes the cooldown simpler; the templates that need speed run hourly.
+- **Rule evaluations are not ledger facts.** A data rule reads data as its owner, but its run is recorded in `RuleEvaluations`, not in `AnalysisAccessFacts`, so automated runs do not distort the owner's behaviour baseline.
+- **Rule health.** A rule whose owner is no longer active, or whose object, columns or the owner's permissions no longer hold, is paused and raises a rule-health alert (`GroupKey = rule_invalid`) to its owner and author. An application that is not (yet) approved fails the run without pausing the rule (an administrator's pending step). Resuming re-validates.
+- **Templates in v1:** data — same account, several devices; many events for one record; amount above a threshold; change versus the previous period. Access — targeted look-ups on restricted data; repeated unauthorized attempts; exports above the usual; rows read above the usual; sensitive data outside working hours; new user reading restricted data. Custom data definitions are accepted by the API with the same validation; the editor works from templates (natural-language drafts follow in P14.4).
+- **Recipients.** The owner always receives the rule's alerts; administrators add users and roles. Management rules go to their owner only.
+- **API.** `/api/monitoring/templates`, `/owners`, `/rules` (CRUD, `pause`, `resume`, `test`, draft `rules/test`), `/settings`, `/alerts` (list, detail, `acknowledge`, `resolve`, `dismiss`, `reopen`, `suspend-user`, `digest-preview`), `/api/platform/monitoring/summary`. Field roles stay on the existing column update (`PUT /api/metadata/columns/{id}`).
+- **Sample.** `HumanResourcesDB.EmployeePortalSignIns` and the view `vw_EmployeePortalSignInsLive` (last day = today in Asia/Dubai) let the owner's example fire on the sample organization; see `scripts/sql/samples/README.md`.
+
+## 16. Why this matters
 
 - **Platform:** daily, unattended value (alerts and reports arrive without anyone asking) and a governance layer most analytics tools lack: the platform that grants data access also watches how that access is used.
 - **Competition (Create AI Agents Championship, Best Business AI Agent):** matches the agent definition (multi-step plans, tools, integration with the organization's systems, autonomous work toward an outcome), turns "protect data and prevent leakage" into a product feature, and gives measurable value (incidents detected, reports delivered, analyst hours saved). The live demo on the sample databases: an analyst queries colleagues' payslips; the administrator's alert appears in front of the jury.

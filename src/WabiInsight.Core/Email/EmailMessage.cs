@@ -30,6 +30,7 @@ public static class EmailTemplateCodes
     public const string SupportNotification = "Support.Notification";
     public const string AnalysisShared = "Analysis.Shared";
     public const string AnalysisEmailed = "Analysis.Emailed";
+    public const string MonitoringDigest = "Monitoring.Digest";
 }
 
 /// <summary>

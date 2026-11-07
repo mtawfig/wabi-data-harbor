@@ -71,6 +71,13 @@ public static class AuditEvents
     public const string ShareRevoked = "Share.Revoked";
     public const string ShareEmailSent = "Share.EmailSent";
     public const string ShareEmailBlocked = "Share.EmailBlocked";
+    public const string MonitoringRuleSaved = "Monitoring.RuleSaved";
+    public const string MonitoringRuleDeleted = "Monitoring.RuleDeleted";
+    public const string MonitoringRuleActivation = "Monitoring.RuleActivation";
+    public const string MonitoringRuleTested = "Monitoring.RuleTested";
+    public const string MonitoringSettingsSaved = "Monitoring.SettingsSaved";
+    public const string AlertStatusChanged = "Alert.StatusChanged";
+    public const string AlertUserSuspended = "Alert.UserSuspended";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>

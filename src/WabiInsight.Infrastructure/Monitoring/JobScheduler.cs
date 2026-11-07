@@ -34,30 +34,36 @@ public sealed partial class ScheduledJobRunner
     public static readonly TenantPrincipal SchedulerPrincipal = SupportAccessExpiryWorker.SchedulerPrincipal;
 
     private readonly ConfigurationDbContext _context;
+    private readonly ITenantContext _tenantContext;
     private readonly IServiceScopeFactory _scopes;
     private readonly IClock _clock;
     private readonly MonitoringOptions _options;
     private readonly ILogger<ScheduledJobRunner> _logger;
 
-    public ScheduledJobRunner(ConfigurationDbContext context, IServiceScopeFactory scopes, IClock clock, IOptions<MonitoringOptions> options, ILogger<ScheduledJobRunner> logger)
+    public ScheduledJobRunner(ConfigurationDbContext context, ITenantContext tenantContext, IServiceScopeFactory scopes, IClock clock, IOptions<MonitoringOptions> options, ILogger<ScheduledJobRunner> logger)
     {
         _context = context;
+        _tenantContext = tenantContext;
         _scopes = scopes;
         _clock = clock;
         _options = options.Value;
         _logger = logger;
     }
 
-    /// <summary>Every organization gets a nightly baselines job (02:15 local) and a nightly retention purge (03:30 local); time zones follow the organization.</summary>
+    /// <summary>
+    /// Every organization gets a nightly baselines job (02:15 local), a nightly retention purge (03:30 local) and the
+    /// daily alert digest (its digest time); time zones follow the organization. Every active Monitoring Rule has an
+    /// enabled job on its own schedule; jobs of paused or deleted rules are disabled.
+    /// </summary>
     public async Task<int> EnsureStandingJobsAsync(CancellationToken cancellationToken = default)
     {
-        var organizations = await _context.Organizations.AsNoTracking().Select(o => new { o.OrganizationId, o.TimeZone }).ToListAsync(cancellationToken);
-        var existing = await _context.ScheduledJobs.Where(j => j.OrganizationId != null && j.TargetId == null && (j.JobType == ScheduledJobType.AccessBaselines || j.JobType == ScheduledJobType.RetentionPurge)).ToListAsync(cancellationToken);
+        var organizations = await _context.Organizations.AsNoTracking().Select(o => new { o.OrganizationId, o.TimeZone, o.MonitoringDigestTime }).ToListAsync(cancellationToken);
+        var existing = await _context.ScheduledJobs.Where(j => j.OrganizationId != null && j.TargetId == null && (j.JobType == ScheduledJobType.AccessBaselines || j.JobType == ScheduledJobType.RetentionPurge || j.JobType == ScheduledJobType.AlertDigest)).ToListAsync(cancellationToken);
         var now = _clock.UtcNow;
         var created = 0;
         foreach (var organization in organizations)
         {
-            foreach (var (type, time) in new[] { (ScheduledJobType.AccessBaselines, new TimeOnly(2, 15)), (ScheduledJobType.RetentionPurge, new TimeOnly(3, 30)) })
+            foreach (var (type, time) in new[] { (ScheduledJobType.AccessBaselines, new TimeOnly(2, 15)), (ScheduledJobType.RetentionPurge, new TimeOnly(3, 30)), (ScheduledJobType.AlertDigest, organization.MonitoringDigestTime) })
             {
                 var job = existing.FirstOrDefault(j => j.OrganizationId == organization.OrganizationId && j.JobType == type);
                 if (job is null)
@@ -76,18 +82,51 @@ public sealed partial class ScheduledJobRunner
                     _context.ScheduledJobs.Add(job);
                     created++;
                 }
-                else if (!string.Equals(job.TimeZone, organization.TimeZone, StringComparison.Ordinal))
+                else if (!string.Equals(job.TimeZone, organization.TimeZone, StringComparison.Ordinal) || job.TimeOfDay != time)
                 {
                     job.TimeZone = organization.TimeZone;
+                    job.TimeOfDay = time;
                     job.NextRunAt = JobRecurrence.NextRun(job, now);
                     job.UpdatedAt = now;
                 }
             }
         }
 
+        created += await SyncRuleJobsAsync(organizations.ToDictionary(o => o.OrganizationId, o => o.TimeZone), now, cancellationToken);
+
         if (_context.ChangeTracker.HasChanges())
         {
             await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return created;
+    }
+
+    private async Task<int> SyncRuleJobsAsync(Dictionary<Guid, string> timeZones, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var rules = await _context.MonitoringRules.AsPlatformScope(_tenantContext).AsNoTracking()
+            .Select(r => new { r.RuleId, r.OrganizationId, r.IsActive, r.RecurrenceKind, r.IntervalMinutes, r.TimeOfDay, r.DayOfWeek })
+            .ToListAsync(cancellationToken);
+        var jobs = await _context.ScheduledJobs.Where(j => j.JobType == ScheduledJobType.MonitoringRule).ToListAsync(cancellationToken);
+        var created = 0;
+        foreach (var rule in rules.Where(r => r.IsActive && timeZones.ContainsKey(r.OrganizationId)))
+        {
+            if (jobs.Any(j => j.TargetId == rule.RuleId && j.OrganizationId == rule.OrganizationId))
+            {
+                continue;
+            }
+
+            var job = new ScheduledJob { JobId = Ids.New(), JobType = ScheduledJobType.MonitoringRule, OrganizationId = rule.OrganizationId, TargetId = rule.RuleId, CreatedAt = now };
+            MonitoringSchedules.Apply(job, rule.RecurrenceKind, rule.IntervalMinutes, rule.TimeOfDay, rule.DayOfWeek, timeZones[rule.OrganizationId], true, now);
+            _context.ScheduledJobs.Add(job);
+            created++;
+        }
+
+        var active = rules.Where(r => r.IsActive).Select(r => r.RuleId).ToHashSet();
+        foreach (var job in jobs.Where(j => j.IsEnabled && (j.TargetId is not { } target || !active.Contains(target))))
+        {
+            job.IsEnabled = false;
+            job.UpdatedAt = now;
         }
 
         return created;
@@ -236,4 +275,22 @@ public sealed partial class JobSchedulerWorker : BackgroundService
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Scheduler tick failed.")]
     private static partial void LogTickFailed(ILogger logger, Exception exception);
+}
+
+/// <summary>Maps a rule's schedule onto its job (used by the rule service on save and by the standing-job sync).</summary>
+public static class MonitoringSchedules
+{
+    public static void Apply(ScheduledJob job, JobRecurrenceKind kind, int intervalMinutes, TimeOnly timeOfDay, int? dayOfWeek, string timeZone, bool enabled, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+        job.RecurrenceKind = kind;
+        job.IntervalMinutes = kind == JobRecurrenceKind.Interval ? intervalMinutes : 0;
+        job.TimeOfDay = timeOfDay;
+        job.DayOfWeek = kind == JobRecurrenceKind.Weekly ? dayOfWeek : null;
+        job.DayOfMonth = null;
+        job.TimeZone = timeZone;
+        job.IsEnabled = enabled;
+        job.NextRunAt = JobRecurrence.NextRun(job, now);
+        job.UpdatedAt = now;
+    }
 }

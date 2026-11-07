@@ -65,3 +65,92 @@ internal sealed class ScheduledJobConfiguration : IEntityTypeConfiguration<Sched
         builder.HasIndex(j => new { j.OrganizationId, j.JobType, j.TargetId });
     }
 }
+
+internal sealed class MonitoringRuleConfiguration : IEntityTypeConfiguration<MonitoringRule>
+{
+    public void Configure(EntityTypeBuilder<MonitoringRule> builder)
+    {
+        builder.ToTable("MonitoringRules");
+        builder.HasKey(r => r.RuleId);
+        builder.Property(r => r.RuleId).ValueGeneratedNever();
+        builder.HasAlternateKey(r => new { r.OrganizationId, r.RuleId });
+        builder.HasOne<Organization>().WithMany().HasForeignKey(r => r.OrganizationId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<OrganizationUser>().WithMany().HasForeignKey(r => new { r.OrganizationId, r.OwnerUserId }).HasPrincipalKey(u => new { u.OrganizationId, u.UserId }).OnDelete(DeleteBehavior.NoAction);
+        builder.Property(r => r.Name).HasMaxLength(200).IsRequired();
+        builder.Property(r => r.Description).HasMaxLength(2000);
+        builder.Property(r => r.Kind).HasConversion<string>().HasMaxLength(10).IsRequired();
+        builder.Property(r => r.TemplateCode).HasMaxLength(64);
+        builder.Property(r => r.DefinitionJson).HasMaxLength(8000).IsRequired();
+        builder.Property(r => r.Severity).HasConversion<string>().HasMaxLength(10).IsRequired();
+        builder.Property(r => r.RecurrenceKind).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(r => r.LastOutcome).HasConversion<string>().HasMaxLength(16);
+        builder.Property(r => r.LastError).HasMaxLength(200);
+        builder.Property(r => r.RowVersion).IsRowVersion();
+        builder.HasIndex(r => new { r.OrganizationId, r.OwnerUserId });
+        builder.HasIndex(r => new { r.OrganizationId, r.Name }).IsUnique();
+    }
+}
+
+internal sealed class MonitoringRuleRecipientConfiguration : IEntityTypeConfiguration<MonitoringRuleRecipient>
+{
+    public void Configure(EntityTypeBuilder<MonitoringRuleRecipient> builder)
+    {
+        builder.ToTable("MonitoringRuleRecipients", t => t.HasCheckConstraint("CK_MonitoringRuleRecipients_OneTarget", "([UserId] IS NULL AND [RoleId] IS NOT NULL) OR ([UserId] IS NOT NULL AND [RoleId] IS NULL)"));
+        builder.HasKey(r => r.RecipientId);
+        builder.Property(r => r.RecipientId).ValueGeneratedNever();
+        builder.HasOne<MonitoringRule>().WithMany().HasForeignKey(r => new { r.OrganizationId, r.RuleId }).HasPrincipalKey(r => new { r.OrganizationId, r.RuleId }).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<OrganizationUser>().WithMany().HasForeignKey(r => new { r.OrganizationId, r.UserId }).HasPrincipalKey(u => new { u.OrganizationId, u.UserId }).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne<Role>().WithMany().HasForeignKey(r => new { r.OrganizationId, r.RoleId }).HasPrincipalKey(r => new { r.OrganizationId, r.RoleId }).OnDelete(DeleteBehavior.NoAction);
+        builder.HasIndex(r => new { r.OrganizationId, r.RuleId, r.UserId, r.RoleId }).IsUnique().HasFilter(null);
+    }
+}
+
+internal sealed class RuleEvaluationConfiguration : IEntityTypeConfiguration<RuleEvaluation>
+{
+    public void Configure(EntityTypeBuilder<RuleEvaluation> builder)
+    {
+        builder.ToTable("RuleEvaluations");
+        builder.HasKey(e => e.EvaluationId);
+        builder.Property(e => e.EvaluationId).ValueGeneratedNever();
+        builder.HasOne<Organization>().WithMany().HasForeignKey(e => e.OrganizationId).OnDelete(DeleteBehavior.Cascade);
+        // No foreign key to the rule: evaluations outlive a deleted rule until retention removes them.
+        builder.Property(e => e.Outcome).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(e => e.ErrorCode).HasMaxLength(100);
+        builder.HasIndex(e => new { e.OrganizationId, e.RuleId, e.StartedAt });
+    }
+}
+
+internal sealed class AlertConfiguration : IEntityTypeConfiguration<Alert>
+{
+    public void Configure(EntityTypeBuilder<Alert> builder)
+    {
+        builder.ToTable("Alerts");
+        builder.HasKey(a => a.AlertId);
+        builder.Property(a => a.AlertId).ValueGeneratedNever();
+        builder.HasAlternateKey(a => new { a.OrganizationId, a.AlertId });
+        builder.HasOne<Organization>().WithMany().HasForeignKey(a => a.OrganizationId).OnDelete(DeleteBehavior.Cascade);
+        builder.Property(a => a.Severity).HasConversion<string>().HasMaxLength(10).IsRequired();
+        builder.Property(a => a.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(a => a.GroupKey).HasMaxLength(400).IsRequired();
+        builder.Property(a => a.Title).HasMaxLength(300).IsRequired();
+        builder.Property(a => a.SummaryJson).HasMaxLength(4000).IsRequired();
+        builder.Property(a => a.Note).HasMaxLength(2000);
+        builder.Property(a => a.RowVersion).IsRowVersion();
+        builder.HasIndex(a => new { a.OrganizationId, a.Status, a.LastSeenAt });
+        builder.HasIndex(a => new { a.OrganizationId, a.RuleId, a.GroupKey, a.Status });
+    }
+}
+
+internal sealed class AlertEventConfiguration : IEntityTypeConfiguration<AlertEvent>
+{
+    public void Configure(EntityTypeBuilder<AlertEvent> builder)
+    {
+        builder.ToTable("AlertEvents");
+        builder.HasKey(e => e.EventId);
+        builder.Property(e => e.EventId).ValueGeneratedNever();
+        builder.HasOne<Alert>().WithMany().HasForeignKey(e => new { e.OrganizationId, e.AlertId }).HasPrincipalKey(a => new { a.OrganizationId, a.AlertId }).OnDelete(DeleteBehavior.Cascade);
+        builder.Property(e => e.EventType).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(e => e.Note).HasMaxLength(2000);
+        builder.HasIndex(e => new { e.OrganizationId, e.AlertId, e.CreatedAt });
+    }
+}

@@ -19,6 +19,8 @@ const ICONS: Record<string, string> = {
   'Ticket.AttachmentAdded': 'attach_file',
   'Analysis.Shared': 'share',
   'Analysis.ShareRevoked': 'link_off',
+  'Monitoring.Alert': 'notification_important',
+  'Monitoring.RulePaused': 'pause_circle',
 };
 
 /** Notification centre: localized from codes and parameters; clicking opens the related ticket and marks the item read. */
@@ -112,6 +114,10 @@ export class NotificationCenterComponent {
       void this.router.navigate(['/app/shared-with-me', n.entityId]);
     } else if (n.notificationType === 'Analysis.ShareRevoked') {
       void this.router.navigate(['/app/shared-with-me']);
+    } else if (n.notificationType === 'Monitoring.Alert' && n.entityId) {
+      void this.router.navigate(['/app/alerts'], { queryParams: { alert: n.entityId } });
+    } else if (n.notificationType === 'Monitoring.RulePaused') {
+      void this.router.navigate(['/app/monitoring/rules']);
     }
   }
 }

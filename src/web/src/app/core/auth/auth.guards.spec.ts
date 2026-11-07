@@ -3,7 +3,7 @@ import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRo
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideTestTransloco } from '../../testing/transloco-testing';
-import { authGuard, guestGuard, organizationAdminGuard, platformAdministratorGuard } from './auth.guards';
+import { authGuard, guestGuard, organizationAdminGuard, platformAdministratorGuard, ruleAuthorGuard } from './auth.guards';
 import { AuthService } from './auth.service';
 import { Session } from './session.model';
 
@@ -44,6 +44,15 @@ describe('auth guards', () => {
 
     auth.session.set({ ...base, principalType: 'PlatformAdministrator', organizationId: undefined });
     expect(run(platformAdministratorGuard)).toBe(true);
+  });
+
+  it('opens Monitoring Rules to administrators and Management users only', () => {
+    auth.session.set({ ...base, roles: ['Analyst'] });
+    expect(router.serializeUrl(run(ruleAuthorGuard) as UrlTree)).toBe('/app/ask');
+    auth.session.set({ ...base, roles: ['Management'] });
+    expect(run(ruleAuthorGuard)).toBe(true);
+    auth.session.set({ ...base, roles: ['OrganizationAdmin'] });
+    expect(run(ruleAuthorGuard)).toBe(true);
   });
 
   it('sends signed-in users away from the login page', () => {

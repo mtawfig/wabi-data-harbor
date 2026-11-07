@@ -81,6 +81,11 @@
                   <span class="cols__name wi-ltr">@if (c.isPrimaryKey) { <mat-icon class="pk" [title]="'admin.metadata.primaryKey' | transloco">key</mat-icon> }{{ c.columnName }}</span>
                   <span class="cols__type wi-ltr wi-muted">{{ typeLabel(c) }}{{ c.isNullable ? '' : ' NOT NULL' }}</span>
                   <span class="chip cls" [attr.data-cls]="c.classification">{{ 'admin.metadata.classifications.' + c.classification | transloco }}</span>
+                  @if (c.semanticRole) {
+                    <span class="chip role" [attr.data-testid]="'meta-col-role-' + c.columnName"><mat-icon>sell</mat-icon>{{ 'admin.metadata.roles.' + c.semanticRole | transloco }}</span>
+                  } @else if (c.suggestedSemanticRole && c.suggestedSemanticRole !== 'Other') {
+                    <button type="button" class="chip role role--suggested" (click)="acceptSuggestedRole(c)" [disabled]="busy()" [title]="'admin.metadata.acceptRole' | transloco" [attr.data-testid]="'meta-col-suggest-' + c.columnName"><mat-icon>auto_fix_high</mat-icon>{{ 'admin.metadata.roles.' + c.suggestedSemanticRole | transloco }}?</button>
+                  }
                   <span class="cols__labels wi-muted">{{ c.displayNameEn || '' }}@if (c.displayNameAr) { · <span dir="rtl">{{ c.displayNameAr }}</span> }</span>
                   <button mat-icon-button type="button" (click)="editingColumn() === c.columnId ? editingColumn.set(null) : editColumn(c)" [attr.aria-label]="'admin.metadata.editColumn' | transloco" [attr.data-testid]="'meta-col-edit-' + c.columnName"><mat-icon>{{ editingColumn() === c.columnId ? 'expand_less' : 'edit' }}</mat-icon></button>
                 </div>
@@ -93,6 +98,14 @@
                       <mat-select [value]="columnDraft().classification" (valueChange)="setColumnField('classification', $event)">
                         @for (k of classifications; track k) { <mat-option [value]="k">{{ 'admin.metadata.classifications.' + k | transloco }}</mat-option> }
                       </mat-select>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>{{ 'admin.metadata.semanticRole' | transloco }}</mat-label>
+                      <mat-select [value]="columnDraft().semanticRole" (valueChange)="setColumnField('semanticRole', $event)" [attr.data-testid]="'meta-col-role-select-' + c.columnName">
+                        <mat-option value="Unspecified">{{ 'admin.metadata.roles.Unspecified' | transloco }}</mat-option>
+                        @for (r of semanticRoles; track r) { <mat-option [value]="r">{{ 'admin.metadata.roles.' + r | transloco }}</mat-option> }
+                      </mat-select>
+                      @if (c.suggestedSemanticRole && !c.semanticRole) { <mat-hint>{{ 'admin.metadata.suggestedRole' | transloco: { role: ('admin.metadata.roles.' + c.suggestedSemanticRole | transloco) } }}</mat-hint> }
                     </mat-form-field>
                     <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span"><mat-label>{{ 'admin.metadata.businessDescription' | transloco }}</mat-label><input matInput [ngModel]="columnDraft().businessDescription" (ngModelChange)="setColumnField('businessDescription', $event)" maxlength="2000" /></mat-form-field>
                     <mat-checkbox [checked]="columnDraft().isApproved" (change)="setColumnField('isApproved', $event.checked)" [disabled]="!c.isPresent">{{ 'admin.metadata.approvedForQueries' | transloco }}</mat-checkbox>

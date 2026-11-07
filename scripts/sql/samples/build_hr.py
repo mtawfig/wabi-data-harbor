@@ -2,6 +2,7 @@
 import datetime as dt
 from build_common import insert, prologue, epilogue, drop_tables, calendar_table, UAE_HOLIDAYS_2025, rng
 from build_people import DEPARTMENTS, SECTIONS, GRADES, POSITIONS, NATIONALITIES, SHIFTS, staff
+from build_signins import portal_signins
 
 DB, OWNER, READER = "HumanResourcesDB", "hr_owner", "hr_reader"
 
@@ -222,12 +223,15 @@ CREATE INDEX IX_EmployeeContracts_Employee ON dbo.EmployeeContracts (EmployeeNum
 GO
 """)
     sql.append(GENERATED_SQL)
+    signins_sql, signins = portal_signins(people)
+    sql.append(signins_sql)
     sql.append(epilogue(DB, """SELECT N'Employees' AS TableName, COUNT(*) AS RowsLoaded FROM dbo.Employees
 UNION ALL SELECT N'AttendanceRecords', COUNT(*) FROM dbo.AttendanceRecords
 UNION ALL SELECT N'LeaveRequests', COUNT(*) FROM dbo.LeaveRequests
 UNION ALL SELECT N'Payslips', COUNT(*) FROM dbo.Payslips
-UNION ALL SELECT N'PayslipLines', COUNT(*) FROM dbo.PayslipLines;"""))
-    return "\n".join(sql), len(people), len(contracts)
+UNION ALL SELECT N'PayslipLines', COUNT(*) FROM dbo.PayslipLines
+UNION ALL SELECT N'EmployeePortalSignIns', COUNT(*) FROM dbo.EmployeePortalSignIns;"""))
+    return "\n".join(sql), len(people), len(contracts), signins
 
 
 GENERATED_SQL = r"""-- Leave requests: two to three annual-leave requests (summer-heavy), sick days, and occasional emergency, maternity or unpaid leave.
