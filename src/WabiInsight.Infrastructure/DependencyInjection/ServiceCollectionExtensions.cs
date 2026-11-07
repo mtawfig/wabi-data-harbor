@@ -228,6 +228,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMonitoringRuleService, MonitoringRuleService>();
         services.AddScoped<IAlertService, AlertService>();
         services.AddScoped<IPlatformMonitoringService, PlatformMonitoringService>();
+        services.AddScoped<IScheduledJobHandler, ReportSubscriptionJob>();
+        services.AddScoped<PeriodicReportRenderer>();
+        services.AddScoped<PeriodicReportRunner>();
+        services.AddScoped<IPeriodicReportService, PeriodicReportService>();
         services.AddHostedService<JobSchedulerWorker>();
 
         return services;

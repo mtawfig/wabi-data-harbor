@@ -42,6 +42,7 @@ public sealed class SchedulerTests : IDisposable
         services.AddScoped<IUsageEventWriter, UsageEventWriter>();
         services.AddScoped<IScheduledJobHandler, AccessBaselineJob>();
         services.AddScoped<IScheduledJobHandler, RetentionPurgeJob>();
+        services.AddSingleton<Core.Storage.IArtifactStorage, NoFilesStorage>();
         services.AddScoped(sp => new ScheduledJobRunner(sp.GetRequiredService<ConfigurationDbContext>(), sp.GetRequiredService<ITenantContext>(), sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<IClock>(), sp.GetRequiredService<IOptions<MonitoringOptions>>(), NullLogger<ScheduledJobRunner>.Instance));
         _services = services.BuildServiceProvider();
     }
@@ -232,4 +233,14 @@ public sealed class SchedulerTests : IDisposable
         HighestClassification = restricted ? DataClassification.Restricted : DataClassification.Internal,
         Outcome = AccessOutcome.Succeeded,
     };
+}
+
+/// <summary>The scheduler tests store no files; retention only asks to delete them.</summary>
+internal sealed class NoFilesStorage : Core.Storage.IArtifactStorage
+{
+    public Task<string> SaveAsync(string category, Stream content, CancellationToken cancellationToken = default) => Task.FromResult($"{category}/{Guid.NewGuid():N}");
+
+    public Task<Stream?> OpenReadAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult<Stream?>(null);
+
+    public Task DeleteAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

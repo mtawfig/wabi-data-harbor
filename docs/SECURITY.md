@@ -118,6 +118,14 @@ Shares are explicit grants inside one organization: the recipient must be an act
 - **Append-only and retention.** `RuleEvaluations` and `AlertEvents` refuse updates and deletes through the DbContext; the runtime login denies `UPDATE` on them and on `AnalysisAccessFacts`. The nightly retention job removes evaluations and closed alerts older than the organization's retention, set-based.
 - **Tenancy.** Rules, recipients, evaluations, alerts and events are tenant-owned (EF filters, write guards, composite foreign keys to the organization's users and roles). Scheduled runs use the platform scheduler principal with explicit organization predicates; evaluation itself always runs as an organization user of that organization.
 
+## Periodic Reports (P14.3)
+
+- **Each recipient's own figures.** A run never reuses the stored result. For every recipient, the analysis's stored plan is re-validated and re-authorized against that recipient's permissions and row scopes in a scope signed in as the recipient, then executed read-only. Recipients without permission receive a "no data for your permissions" email without a file. The owner's AI narrative and written study describe the owner's figures, so they are left out of every delivered file.
+- **Consent and authority (D6).** Only Organization Administrators (any active users of the organization, up to 50) and Management users (themselves only) create subscriptions. The analysis must be the author's own or explicitly shared with the author by its owner; resuming re-checks this.
+- **Files.** Delivered files live in artifact storage and are downloadable only by their recipient (`/api/subscriptions/received/{id}/file`); not the author, not an administrator. Emails carry the attachment and a link to the app; the outbox keeps attachments in memory only.
+- **Log and failures.** `ReportDeliveries` is append-only (DbContext guard); retention removes old files and rows. Three failed scheduled runs pause the subscription and notify its creator. Changes are audited (`Reports.Subscription*`); runs are usage events (`Reports.SubscriptionDelivered` / `Failed`).
+- **Tenancy.** Subscriptions, recipients and deliveries are tenant-owned with composite foreign keys to the organization's users; Platform Administrators are refused on every subscription endpoint.
+
 ## Audit
 `AuditLogs` is append-only (application guard plus `scripts/sql/create-runtime-login.sql`). Records carry actor type/id, event code, entity, JSON details without secrets, correlation id and client IP.
 

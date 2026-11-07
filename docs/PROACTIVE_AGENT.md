@@ -154,6 +154,13 @@ What shipped, and where it differs from the design above:
 - **API.** `/api/monitoring/templates`, `/owners`, `/rules` (CRUD, `pause`, `resume`, `test`, draft `rules/test`), `/settings`, `/alerts` (list, detail, `acknowledge`, `resolve`, `dismiss`, `reopen`, `suspend-user`, `digest-preview`), `/api/platform/monitoring/summary`. Field roles stay on the existing column update (`PUT /api/metadata/columns/{id}`).
 - **Sample.** `HumanResourcesDB.EmployeePortalSignIns` and the view `vw_EmployeePortalSignInsLive` (last day = today in Asia/Dubai) let the owner's example fire on the sample organization; see `scripts/sql/samples/README.md`.
 
+### P14.3 (Periodic Reports)
+
+- **Stored plan, not a new AI call.** §6 speaks of the §23 re-run path; P14.3 re-executes the analysis's latest completed plan for each recipient after re-validating and re-authorizing it for that recipient (`AuthorizeStoredAsync`). This gives the same queries at no model cost, deterministically. The owner's narrative and written study are excluded from delivered files, because they describe the owner's figures.
+- **Which analyses.** The author may schedule their own analyses or ones shared with them (P10.1 shares), which records the owner's consent.
+- **Failures.** Three failed scheduled runs pause the subscription and send an in-app notification to its creator. The system-rule alert follows with the system rules in P14.4.
+- **Deliveries are not ledger facts.** The delivery log records who received what, when and how many rows. Behaviour baselines stay based on interactive use.
+
 ## 16. Why this matters
 
 - **Platform:** daily, unattended value (alerts and reports arrive without anyone asking) and a governance layer most analytics tools lack: the platform that grants data access also watches how that access is used.

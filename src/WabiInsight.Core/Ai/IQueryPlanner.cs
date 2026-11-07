@@ -56,4 +56,11 @@ public interface IQueryPlanner
 
     /// <summary>Permitted-object counts per askable application for the current user, from one permission resolution (P12.2: the application list must not build a full snapshot per application).</summary>
     Task<IReadOnlyDictionary<Guid, int>> CountPermittedObjectsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Re-validates and re-authorizes a stored plan (no model call) for the current user, exactly like a fresh plan:
+    /// shape, then every query against the caller's permissions and row scopes. Throws <see cref="PlanRejectedException"/>.
+    /// Used by Periodic Reports to re-run a saved analysis under each recipient's permissions.
+    /// </summary>
+    Task<IReadOnlyList<AuthorizedPlan>> AuthorizeStoredAsync(Guid applicationId, AnalysisPlan plan, CancellationToken cancellationToken = default);
 }

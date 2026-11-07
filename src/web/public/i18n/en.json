@@ -319,7 +319,8 @@
         "supportAccess": "Support Access"
       },
       "alerts": "Alerts",
-      "monitoringRules": "Monitoring Rules"
+      "monitoringRules": "Monitoring Rules",
+      "periodicReports": "Periodic Reports"
     },
     "platform": {
       "overview": "Platform Overview",
@@ -849,7 +850,15 @@
       "settings_working_days_invalid": "Choose at least one working day.",
       "settings_working_hours_invalid": "Working hours must start before they end.",
       "settings_retention_invalid": "Retention is outside the allowed range.",
-      "organization_inactive": "The organization is not active."
+      "organization_inactive": "The organization is not active.",
+      "subscription_name_invalid": "Enter a name (up to 200 characters).",
+      "subscription_name_taken": "Another periodic report already has this name.",
+      "subscription_schedule_invalid": "Choose a valid schedule.",
+      "subscription_format_invalid": "Choose PDF or Excel.",
+      "subscription_language_invalid": "Choose a language.",
+      "subscription_analysis_not_available": "Choose one of your saved analyses or one shared with you.",
+      "subscription_recipients_invalid": "Choose 1 to 50 active users of the organization.",
+      "subscription_not_found": "Periodic report not found."
     },
     "applications": {
       "title": "Applications",
@@ -1307,7 +1316,8 @@
       "Analysis.Shared": "{{actorName}} shared \"{{title}}\" with you",
       "Analysis.ShareRevoked": "{{actorName}} stopped sharing \"{{title}}\" with you",
       "Monitoring.Alert": "High-severity alert from \"{{ruleName}}\" ({{alerts}})",
-      "Monitoring.RulePaused": "Monitoring rule \"{{ruleName}}\" was paused and needs attention"
+      "Monitoring.RulePaused": "Monitoring rule \"{{ruleName}}\" was paused and needs attention",
+      "Reports.SubscriptionPaused": "Periodic report \"{{name}}\" was paused after three failed runs"
     }
   },
   "supportAccess": {
@@ -1679,14 +1689,24 @@
       "file": "File",
       "analysis": "Analysis",
       "size": "Size",
-      "created": "Generated"
+      "created": "Generated",
+      "report": "Periodic report",
+      "status": "Status",
+      "delivered": "Delivered"
     },
     "kinds": {
       "study": "Study",
       "export": "Export"
     },
     "download": "Download",
-    "empty": "No reports yet. Open an analysis in My History and choose Export."
+    "empty": "No reports yet. Open an analysis in My History and choose Export.",
+    "tabs": {
+      "mine": "My files",
+      "received": "Sent to me"
+    },
+    "receivedNote": "Periodic reports delivered to you, computed under your own permissions.",
+    "noDataShort": "No file",
+    "receivedEmpty": "No periodic reports have been sent to you yet."
   },
   "sharing": {
     "classifications": {
@@ -2100,6 +2120,75 @@
       "settings_working_days_invalid": "Choose at least one working day.",
       "settings_working_hours_invalid": "Working hours must start before they end.",
       "settings_retention_invalid": "Retention is outside the allowed range.",
+      "organization_inactive": "The organization is not active.",
+      "query_timeout": "The query took too long.",
+      "query_failed": "The source database returned an error.",
+      "source_permission_denied": "The application's login cannot read this object.",
+      "source_schema_changed": "The source schema changed; refresh the metadata.",
+      "unknown": "Unknown reason."
+    }
+  },
+  "periodic": {
+    "title": "Periodic Reports",
+    "subtitleAdmin": "Saved analyses emailed on a schedule. Each recipient receives figures computed under their own permissions.",
+    "subtitleManagement": "Have a saved analysis emailed to you on a schedule.",
+    "sentToMe": "Sent to me",
+    "new": "New periodic report",
+    "edit": "Edit periodic report",
+    "perRecipient": "Every run re-executes the analysis once per recipient under that recipient's permissions and row scopes. Nobody receives someone else's figures; a recipient without access gets a short \"no data\" email.",
+    "noAnalyses": "Save an analysis first (Ask Wabi Insight), or ask a colleague to share one with you.",
+    "analysis": "Saved analysis",
+    "analysisHint": "Your own analyses and those shared with you. The current version's queries are re-run; the AI narrative is not included.",
+    "name": "Name",
+    "delivery": "Delivery",
+    "format": "File",
+    "language": "Language",
+    "languages": {
+      "recipient": "Each recipient's language",
+      "en": "English",
+      "ar": "Arabic"
+    },
+    "recipients": "Recipients",
+    "recipientsHint": "Active users of the organization (up to 50).",
+    "selfOnly": "Periodic reports you create are sent to you only.",
+    "recurrence": {
+      "Daily": "Daily",
+      "Weekly": "Weekly",
+      "Monthly": "Monthly"
+    },
+    "dayOfMonth": "Day of the month",
+    "dayOfMonthHint": "31 means the last day of shorter months.",
+    "monthlyAt": "Monthly on day {{day}} at {{time}}",
+    "runResult": "Sent now: {{name}}",
+    "runSummary": "{{delivered}} delivered · {{noData}} without data · {{failed}} failed",
+    "recipient": "Recipient",
+    "rows": "Rows",
+    "file": "File",
+    "ownFiguresOnly": "Row counts differ because each recipient's report follows their own permissions.",
+    "log": "Delivery log: {{name}}",
+    "logShort": "Delivery log",
+    "logEmpty": "Nothing delivered yet.",
+    "when": "When",
+    "manual": "Sent now",
+    "status": {
+      "Delivered": "Delivered",
+      "NoData": "No data for permissions",
+      "Failed": "Failed"
+    },
+    "runNow": "Send now",
+    "deleteConfirm": "Delete \"{{name}}\"? Recipients keep the reports already delivered.",
+    "sharedBy": "shared by {{name}}",
+    "empty": "No periodic reports yet.",
+    "errors": {
+      "subscription_analysis_missing": "The analysis was deleted or is no longer available.",
+      "subscription_analysis_has_no_plan": "The analysis has no completed version to re-run.",
+      "subscription_no_active_recipients": "None of the recipients is active.",
+      "subscription_application_unavailable": "The application is not approved or inactive.",
+      "subscription_delivery_failed": "Every delivery failed.",
+      "report_plan_invalid": "The saved analysis no longer passes validation; re-run it in My History.",
+      "report_not_permitted": "No permission on the analysis data.",
+      "report_render_failed": "The file could not be produced.",
+      "export_format_unsupported": "This format is not supported.",
       "organization_inactive": "The organization is not active.",
       "query_timeout": "The query took too long.",
       "query_failed": "The source database returned an error.",

@@ -78,6 +78,10 @@ public static class AuditEvents
     public const string MonitoringSettingsSaved = "Monitoring.SettingsSaved";
     public const string AlertStatusChanged = "Alert.StatusChanged";
     public const string AlertUserSuspended = "Alert.UserSuspended";
+    public const string SubscriptionSaved = "Reports.SubscriptionSaved";
+    public const string SubscriptionDeleted = "Reports.SubscriptionDeleted";
+    public const string SubscriptionActivation = "Reports.SubscriptionActivation";
+    public const string SubscriptionRunNow = "Reports.SubscriptionRunNow";
 }
 
 /// <summary>Appends an audit record attributed to the current principal (or anonymous). Never writes secrets.</summary>

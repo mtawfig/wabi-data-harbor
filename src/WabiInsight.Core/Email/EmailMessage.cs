@@ -31,6 +31,7 @@ public static class EmailTemplateCodes
     public const string AnalysisShared = "Analysis.Shared";
     public const string AnalysisEmailed = "Analysis.Emailed";
     public const string MonitoringDigest = "Monitoring.Digest";
+    public const string PeriodicReport = "Reports.Periodic";
 }
 
 /// <summary>

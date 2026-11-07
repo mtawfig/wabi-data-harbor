@@ -28,6 +28,7 @@ export const routes: Routes = [
       { path: 'support/:id', loadComponent: () => import('./features/support/ticket-detail.component').then((m) => m.TicketDetailComponent), data: { area: 'app' } },
       { path: 'notifications', loadComponent: () => import('./features/support/notification-center.component').then((m) => m.NotificationCenterComponent), data: { area: 'app' } },
       { path: 'alerts', loadComponent: () => import('./features/monitoring/alerts.component').then((m) => m.AlertsComponent) },
+      { path: 'periodic-reports', canActivate: [ruleAuthorGuard], loadComponent: () => import('./features/monitoring/periodic-reports.component').then((m) => m.PeriodicReportsComponent) },
       { path: 'monitoring/rules', canActivate: [ruleAuthorGuard], loadComponent: () => import('./features/monitoring/rules.component').then((m) => m.RulesComponent) },
       { path: 'profile', loadComponent: () => import('./features/organization/profile/profile.component').then((m) => m.ProfileComponent) },
       {

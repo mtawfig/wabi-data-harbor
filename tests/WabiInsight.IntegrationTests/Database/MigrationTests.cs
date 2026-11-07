@@ -32,6 +32,14 @@ public class MigrationTests
     [InlineData("AnalysisAccessFacts")]
     [InlineData("AccessBaselines")]
     [InlineData("ScheduledJobs")]
+    [InlineData("MonitoringRules")]
+    [InlineData("MonitoringRuleRecipients")]
+    [InlineData("RuleEvaluations")]
+    [InlineData("Alerts")]
+    [InlineData("AlertEvents")]
+    [InlineData("ReportSubscriptions")]
+    [InlineData("ReportSubscriptionRecipients")]
+    [InlineData("ReportDeliveries")]
     public async Task Migration_CreatesExpectedTable(string table)
     {
         await using var context = _db.CreateContext(TestData.SystemPrincipal);

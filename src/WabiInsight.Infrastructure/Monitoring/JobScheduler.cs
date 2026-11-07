@@ -92,7 +92,9 @@ public sealed partial class ScheduledJobRunner
             }
         }
 
-        created += await SyncRuleJobsAsync(organizations.ToDictionary(o => o.OrganizationId, o => o.TimeZone), now, cancellationToken);
+        var timeZones = organizations.ToDictionary(o => o.OrganizationId, o => o.TimeZone);
+        created += await SyncRuleJobsAsync(timeZones, now, cancellationToken);
+        created += await SyncSubscriptionJobsAsync(timeZones, now, cancellationToken);
 
         if (_context.ChangeTracker.HasChanges())
         {
@@ -123,6 +125,36 @@ public sealed partial class ScheduledJobRunner
         }
 
         var active = rules.Where(r => r.IsActive).Select(r => r.RuleId).ToHashSet();
+        foreach (var job in jobs.Where(j => j.IsEnabled && (j.TargetId is not { } target || !active.Contains(target))))
+        {
+            job.IsEnabled = false;
+            job.UpdatedAt = now;
+        }
+
+        return created;
+    }
+
+    private async Task<int> SyncSubscriptionJobsAsync(Dictionary<Guid, string> timeZones, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var subscriptions = await _context.ReportSubscriptions.AsPlatformScope(_tenantContext).AsNoTracking()
+            .Select(s => new { s.SubscriptionId, s.OrganizationId, s.IsActive, s.RecurrenceKind, s.TimeOfDay, s.DayOfWeek, s.DayOfMonth })
+            .ToListAsync(cancellationToken);
+        var jobs = await _context.ScheduledJobs.Where(j => j.JobType == ScheduledJobType.ReportSubscription).ToListAsync(cancellationToken);
+        var created = 0;
+        foreach (var subscription in subscriptions.Where(s => s.IsActive && timeZones.ContainsKey(s.OrganizationId)))
+        {
+            if (jobs.Any(j => j.TargetId == subscription.SubscriptionId && j.OrganizationId == subscription.OrganizationId))
+            {
+                continue;
+            }
+
+            var job = new ScheduledJob { JobId = Ids.New(), JobType = ScheduledJobType.ReportSubscription, OrganizationId = subscription.OrganizationId, TargetId = subscription.SubscriptionId, CreatedAt = now };
+            MonitoringSchedules.Apply(job, subscription.RecurrenceKind, 0, subscription.TimeOfDay, subscription.DayOfWeek, timeZones[subscription.OrganizationId], true, now, subscription.DayOfMonth);
+            _context.ScheduledJobs.Add(job);
+            created++;
+        }
+
+        var active = subscriptions.Where(s => s.IsActive).Select(s => s.SubscriptionId).ToHashSet();
         foreach (var job in jobs.Where(j => j.IsEnabled && (j.TargetId is not { } target || !active.Contains(target))))
         {
             job.IsEnabled = false;
@@ -280,14 +312,14 @@ public sealed partial class JobSchedulerWorker : BackgroundService
 /// <summary>Maps a rule's schedule onto its job (used by the rule service on save and by the standing-job sync).</summary>
 public static class MonitoringSchedules
 {
-    public static void Apply(ScheduledJob job, JobRecurrenceKind kind, int intervalMinutes, TimeOnly timeOfDay, int? dayOfWeek, string timeZone, bool enabled, DateTimeOffset now)
+    public static void Apply(ScheduledJob job, JobRecurrenceKind kind, int intervalMinutes, TimeOnly timeOfDay, int? dayOfWeek, string timeZone, bool enabled, DateTimeOffset now, int? dayOfMonth = null)
     {
         ArgumentNullException.ThrowIfNull(job);
         job.RecurrenceKind = kind;
         job.IntervalMinutes = kind == JobRecurrenceKind.Interval ? intervalMinutes : 0;
         job.TimeOfDay = timeOfDay;
         job.DayOfWeek = kind == JobRecurrenceKind.Weekly ? dayOfWeek : null;
-        job.DayOfMonth = null;
+        job.DayOfMonth = kind == JobRecurrenceKind.Monthly ? dayOfMonth : null;
         job.TimeZone = timeZone;
         job.IsEnabled = enabled;
         job.NextRunAt = JobRecurrence.NextRun(job, now);

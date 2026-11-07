@@ -140,6 +140,44 @@ public sealed class QueryPlanner : IQueryPlanner
         return new PlanResponse(plan, authorizedPlans, usage, HighestClassification(plan, authorizedPlans, permissions));
     }
 
+    public async Task<IReadOnlyList<AuthorizedPlan>> AuthorizeStoredAsync(Guid applicationId, AnalysisPlan plan, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var organizationId = _tenantContext.RequireOrganizationId();
+        var shapeErrors = QueryPlanValidator.ValidateAnalysis(plan);
+        if (shapeErrors.Count > 0)
+        {
+            throw new PlanRejectedException("shape", shapeErrors) { Plan = plan };
+        }
+
+        var (snapshot, permissions, mappings) = await BuildSnapshotAsync(applicationId, cancellationToken);
+        var authorizedPlans = new List<AuthorizedPlan>(plan.Queries.Count);
+        var errors = new List<PlanError>();
+        foreach (var query in plan.Queries)
+        {
+            var (authorized, queryErrors) = QueryPlanAuthorizer.Authorize(query, applicationId, permissions, mappings);
+            errors.AddRange(queryErrors);
+            if (authorized is null)
+            {
+                continue;
+            }
+
+            if (snapshot.DatabaseType == "PlatformInsights")
+            {
+                authorized = authorized with { Objects = authorized.Objects.Select(o => o with { RowPredicates = [new RowPredicate(InsightsSqlBuilder.OrganizationColumn, InsightsSqlBuilder.TenantParameter, organizationId.ToString())] }).ToList() };
+            }
+
+            authorizedPlans.Add(authorized);
+        }
+
+        if (authorizedPlans.Count != plan.Queries.Count)
+        {
+            throw new PlanRejectedException("authorization", errors) { Plan = plan };
+        }
+
+        return authorizedPlans;
+    }
+
     /// <summary>The highest classification among the permitted columns the queries reference; stored on the history entry (specification §23).</summary>
     internal static Core.Entities.Metadata.DataClassification HighestClassification(AnalysisPlan plan, IReadOnlyList<AuthorizedPlan> authorized, EffectivePermissions permissions)
     {

@@ -319,7 +319,8 @@
         "supportAccess": "وصول الدعم"
       },
       "alerts": "التنبيهات",
-      "monitoringRules": "قواعد الرصد"
+      "monitoringRules": "قواعد الرصد",
+      "periodicReports": "التقارير الدورية"
     },
     "platform": {
       "overview": "نظرة عامة على المنصة",
@@ -849,7 +850,15 @@
       "settings_working_days_invalid": "اختر يوم عمل واحدًا على الأقل.",
       "settings_working_hours_invalid": "يجب أن تبدأ ساعات العمل قبل انتهائها.",
       "settings_retention_invalid": "مدة الاحتفاظ خارج النطاق المسموح.",
-      "organization_inactive": "المؤسسة غير نشطة."
+      "organization_inactive": "المؤسسة غير نشطة.",
+      "subscription_name_invalid": "أدخل اسمًا (حتى 200 حرف).",
+      "subscription_name_taken": "يوجد تقرير دوري آخر بهذا الاسم.",
+      "subscription_schedule_invalid": "اختر جدولًا صالحًا.",
+      "subscription_format_invalid": "اختر PDF أو Excel.",
+      "subscription_language_invalid": "اختر لغة.",
+      "subscription_analysis_not_available": "اختر أحد تحليلاتك المحفوظة أو تحليلًا شوركته معك.",
+      "subscription_recipients_invalid": "اختر من 1 إلى 50 مستخدمًا نشطًا في المؤسسة.",
+      "subscription_not_found": "التقرير الدوري غير موجود."
     },
     "applications": {
       "title": "التطبيقات",
@@ -1307,7 +1316,8 @@
       "Analysis.Shared": "شارك {{actorName}} \"{{title}}\" معك",
       "Analysis.ShareRevoked": "أوقف {{actorName}} مشاركة \"{{title}}\" معك",
       "Monitoring.Alert": "تنبيه عالي الخطورة من \"{{ruleName}}\" ({{alerts}})",
-      "Monitoring.RulePaused": "أُوقفت قاعدة الرصد \"{{ruleName}}\" مؤقتًا وتحتاج إلى مراجعة"
+      "Monitoring.RulePaused": "أُوقفت قاعدة الرصد \"{{ruleName}}\" مؤقتًا وتحتاج إلى مراجعة",
+      "Reports.SubscriptionPaused": "أُوقف التقرير الدوري \"{{name}}\" بعد ثلاث محاولات فاشلة"
     }
   },
   "supportAccess": {
@@ -1679,14 +1689,24 @@
       "file": "الملف",
       "analysis": "التحليل",
       "size": "الحجم",
-      "created": "تاريخ الإنشاء"
+      "created": "تاريخ الإنشاء",
+      "report": "التقرير الدوري",
+      "status": "الحالة",
+      "delivered": "تاريخ التسليم"
     },
     "kinds": {
       "study": "دراسة",
       "export": "تصدير"
     },
     "download": "تنزيل",
-    "empty": "لا توجد تقارير بعد. افتح تحليلًا في سجلّي واختر تصدير."
+    "empty": "لا توجد تقارير بعد. افتح تحليلًا في سجلّي واختر تصدير.",
+    "tabs": {
+      "mine": "ملفاتي",
+      "received": "أُرسلت إليّ"
+    },
+    "receivedNote": "التقارير الدورية المرسلة إليك، محسوبة وفق صلاحياتك.",
+    "noDataShort": "بدون ملف",
+    "receivedEmpty": "لم تُرسل إليك تقارير دورية بعد."
   },
   "sharing": {
     "classifications": {
@@ -2100,6 +2120,75 @@
       "settings_working_days_invalid": "اختر يوم عمل واحدًا على الأقل.",
       "settings_working_hours_invalid": "يجب أن تبدأ ساعات العمل قبل انتهائها.",
       "settings_retention_invalid": "مدة الاحتفاظ خارج النطاق المسموح.",
+      "organization_inactive": "المؤسسة غير نشطة.",
+      "query_timeout": "استغرق الاستعلام وقتًا طويلًا.",
+      "query_failed": "أعادت قاعدة البيانات المصدر خطأً.",
+      "source_permission_denied": "حساب التطبيق لا يستطيع قراءة هذا الكائن.",
+      "source_schema_changed": "تغيّر مخطط المصدر؛ حدّث البيانات الوصفية.",
+      "unknown": "سبب غير معروف."
+    }
+  },
+  "periodic": {
+    "title": "التقارير الدورية",
+    "subtitleAdmin": "تحليلات محفوظة تُرسل بالبريد وفق جدول. يتلقى كل مستلم أرقامًا محسوبة وفق صلاحياته هو.",
+    "subtitleManagement": "استلم تحليلًا محفوظًا عبر البريد وفق جدول.",
+    "sentToMe": "أُرسلت إليّ",
+    "new": "تقرير دوري جديد",
+    "edit": "تعديل التقرير الدوري",
+    "perRecipient": "في كل تشغيل يُعاد تنفيذ التحليل مرة لكل مستلم وفق صلاحياته ونطاقات الصفوف الخاصة به. لا يتلقى أحد أرقام غيره؛ ومن لا يملك صلاحية يتلقى رسالة قصيرة بعدم توفر بيانات.",
+    "noAnalyses": "احفظ تحليلًا أولًا (اسأل وابي إنسايت)، أو اطلب من زميل مشاركة تحليل معك.",
+    "analysis": "التحليل المحفوظ",
+    "analysisHint": "تحليلاتك والتحليلات المشتركة معك. تُعاد استعلامات الإصدار الحالي ولا يُضمَّن سرد الذكاء الاصطناعي.",
+    "name": "الاسم",
+    "delivery": "التسليم",
+    "format": "الملف",
+    "language": "اللغة",
+    "languages": {
+      "recipient": "لغة كل مستلم",
+      "en": "الإنجليزية",
+      "ar": "العربية"
+    },
+    "recipients": "المستلمون",
+    "recipientsHint": "مستخدمون نشطون في المؤسسة (حتى 50).",
+    "selfOnly": "التقارير الدورية التي تنشئها تُرسل إليك فقط.",
+    "recurrence": {
+      "Daily": "يوميًا",
+      "Weekly": "أسبوعيًا",
+      "Monthly": "شهريًا"
+    },
+    "dayOfMonth": "يوم الشهر",
+    "dayOfMonthHint": "31 تعني آخر يوم في الأشهر الأقصر.",
+    "monthlyAt": "شهريًا في اليوم {{day}} الساعة {{time}}",
+    "runResult": "أُرسل الآن: {{name}}",
+    "runSummary": "{{delivered}} سُلّم · {{noData}} بدون بيانات · {{failed}} فشل",
+    "recipient": "المستلم",
+    "rows": "الصفوف",
+    "file": "الملف",
+    "ownFiguresOnly": "تختلف أعداد الصفوف لأن تقرير كل مستلم يتبع صلاحياته.",
+    "log": "سجل التسليم: {{name}}",
+    "logShort": "سجل التسليم",
+    "logEmpty": "لم يُسلَّم شيء بعد.",
+    "when": "الوقت",
+    "manual": "أُرسل الآن",
+    "status": {
+      "Delivered": "سُلِّم",
+      "NoData": "لا بيانات للصلاحيات",
+      "Failed": "فشل"
+    },
+    "runNow": "أرسل الآن",
+    "deleteConfirm": "حذف \"{{name}}\"؟ يحتفظ المستلمون بالتقارير التي سُلّمت.",
+    "sharedBy": "شاركه {{name}}",
+    "empty": "لا توجد تقارير دورية بعد.",
+    "errors": {
+      "subscription_analysis_missing": "حُذف التحليل أو لم يعد متاحًا.",
+      "subscription_analysis_has_no_plan": "لا يوجد للتحليل إصدار مكتمل لإعادة تشغيله.",
+      "subscription_no_active_recipients": "لا يوجد مستلم نشط.",
+      "subscription_application_unavailable": "التطبيق غير معتمد أو غير نشط.",
+      "subscription_delivery_failed": "فشلت جميع عمليات التسليم.",
+      "report_plan_invalid": "لم يعد التحليل المحفوظ يجتاز التحقق؛ أعد تشغيله من سجلي.",
+      "report_not_permitted": "لا توجد صلاحية على بيانات التحليل.",
+      "report_render_failed": "تعذّر إنشاء الملف.",
+      "export_format_unsupported": "هذه الصيغة غير مدعومة.",
       "organization_inactive": "المؤسسة غير نشطة.",
       "query_timeout": "استغرق الاستعلام وقتًا طويلًا.",
       "query_failed": "أعادت قاعدة البيانات المصدر خطأً.",

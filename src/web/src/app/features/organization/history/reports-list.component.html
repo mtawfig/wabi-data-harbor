@@ -8,6 +8,28 @@
     <a mat-stroked-button routerLink="/app/history"><mat-icon>history</mat-icon>{{ 'nav.org.history' | transloco }}</a>
   </header>
 
+  <mat-button-toggle-group class="tabs" [value]="view()" [attr.aria-label]="'reports.title' | transloco">
+    <mat-button-toggle value="mine" (change)="showMine()" data-testid="reports-tab-mine"><mat-icon>folder</mat-icon> {{ 'reports.tabs.mine' | transloco }}</mat-button-toggle>
+    <mat-button-toggle value="received" (change)="showReceived()" data-testid="reports-tab-received"><mat-icon>schedule_send</mat-icon> {{ 'reports.tabs.received' | transloco }}</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  @if (view() === 'received') {
+    <div class="wi-card" data-testid="reports-received">
+      <p class="wi-muted small"><mat-icon class="tiny">verified_user</mat-icon>{{ 'reports.receivedNote' | transloco }}</p>
+      @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+      <table mat-table [dataSource]="received()" class="reports__table">
+        <ng-container matColumnDef="report"><th mat-header-cell *matHeaderCellDef>{{ 'reports.columns.report' | transloco }}</th><td mat-cell *matCellDef="let r"><strong>{{ r.subscriptionName }}</strong><br /><span class="wi-muted small">{{ r.historyTitle }}</span></td></ng-container>
+        <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'reports.columns.status' | transloco }}</th><td mat-cell *matCellDef="let r"><span class="chip" [class.chip--muted]="r.status !== 'Delivered'">{{ 'periodic.status.' + r.status | transloco }}</span></td></ng-container>
+        <ng-container matColumnDef="size"><th mat-header-cell *matHeaderCellDef class="num">{{ 'reports.columns.size' | transloco }}</th><td mat-cell *matCellDef="let r" class="num"><span class="wi-ltr">{{ r.status === 'Delivered' ? (r.sizeBytes / 1024 | number: '1.0-0') + ' KB' : '—' }}</span></td></ng-container>
+        <ng-container matColumnDef="created"><th mat-header-cell *matHeaderCellDef>{{ 'reports.columns.delivered' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.createdAt | date: 'medium' }}</td></ng-container>
+        <ng-container matColumnDef="download"><th mat-header-cell *matHeaderCellDef></th><td mat-cell *matCellDef="let r">@if (r.status === 'Delivered') { <a mat-stroked-button [href]="periodic.receivedFileUrl(r.deliveryId)" target="_blank" rel="noopener" [attr.data-testid]="'received-download-' + r.deliveryId"><mat-icon>download</mat-icon>{{ 'reports.download' | transloco }}</a> } @else { <span class="wi-muted small">{{ 'reports.noDataShort' | transloco }}</span> }</td></ng-container>
+        <tr mat-header-row *matHeaderRowDef="receivedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: receivedColumns"></tr>
+      </table>
+      @if (!loading() && received().length === 0) { <p class="empty wi-muted">{{ 'reports.receivedEmpty' | transloco }}</p> }
+      @if (receivedTotal() > 25) { <mat-paginator [length]="receivedTotal()" [pageIndex]="receivedPage() - 1" [pageSize]="25" [hidePageSize]="true" (page)="onReceivedPage($event)" /> }
+    </div>
+  } @else {
   <div class="wi-card">
     <div class="filters">
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filters__search">
@@ -31,7 +53,7 @@
       <ng-container matColumnDef="file"><th mat-header-cell *matHeaderCellDef>{{ 'reports.columns.file' | transloco }}</th><td mat-cell *matCellDef="let r"><div class="reports__file"><mat-icon [class]="'fmt fmt--' + r.format.toLowerCase()">{{ icon(r.format) }}</mat-icon><span class="wi-ltr">{{ r.fileName }}</span></div></td></ng-container>
       <ng-container matColumnDef="analysis"><th mat-header-cell *matHeaderCellDef>{{ 'reports.columns.analysis' | transloco }}</th><td mat-cell *matCellDef="let r"><a [routerLink]="['/app/history', r.historyId]" class="reports__link">{{ r.historyTitle }}</a><br /><span class="wi-muted small">v{{ r.versionNumber }} · {{ (r.kind === 'ReportPdf' ? 'reports.kinds.study' : 'reports.kinds.export') | transloco }}</span></td></ng-container>
       <ng-container matColumnDef="format"><th mat-header-cell *matHeaderCellDef>{{ 'reports.format' | transloco }}</th><td mat-cell *matCellDef="let r"><span class="chip">{{ 'reports.formats.' + r.format | transloco }}</span></td></ng-container>
-      <ng-container matColumnDef="size"><th mat-header-cell *matHeaderCellDef class="num">{{ 'reports.columns.size' | transloco }}</th><td mat-cell *matCellDef="let r" class="num">{{ r.sizeBytes / 1024 | number: '1.0-0' }} KB</td></ng-container>
+      <ng-container matColumnDef="size"><th mat-header-cell *matHeaderCellDef class="num">{{ 'reports.columns.size' | transloco }}</th><td mat-cell *matCellDef="let r" class="num"><span class="wi-ltr">{{ r.sizeBytes / 1024 | number: '1.0-0' }} KB</span></td></ng-container>
       <ng-container matColumnDef="created"><th mat-header-cell *matHeaderCellDef>{{ 'reports.columns.created' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.createdAt | date: 'medium' }}</td></ng-container>
       <ng-container matColumnDef="download"><th mat-header-cell *matHeaderCellDef></th><td mat-cell *matCellDef="let r"><a mat-stroked-button [href]="history.artifactUrl(r.artifactId)" target="_blank" rel="noopener" [attr.data-testid]="'report-download-' + r.artifactId"><mat-icon>download</mat-icon>{{ 'reports.download' | transloco }}</a></td></ng-container>
       <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -40,4 +62,5 @@
     @if (!loading() && items().length === 0) { <p class="empty wi-muted">{{ 'reports.empty' | transloco }}</p> }
     <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50]" (page)="onPage($event)" />
   </div>
+  }
 </section>

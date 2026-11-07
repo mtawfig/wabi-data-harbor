@@ -21,6 +21,7 @@ const ICONS: Record<string, string> = {
   'Analysis.ShareRevoked': 'link_off',
   'Monitoring.Alert': 'notification_important',
   'Monitoring.RulePaused': 'pause_circle',
+  'Reports.SubscriptionPaused': 'schedule_send',
 };
 
 /** Notification centre: localized from codes and parameters; clicking opens the related ticket and marks the item read. */
@@ -118,6 +119,8 @@ export class NotificationCenterComponent {
       void this.router.navigate(['/app/alerts'], { queryParams: { alert: n.entityId } });
     } else if (n.notificationType === 'Monitoring.RulePaused') {
       void this.router.navigate(['/app/monitoring/rules']);
+    } else if (n.notificationType === 'Reports.SubscriptionPaused') {
+      void this.router.navigate(['/app/periodic-reports']);
     }
   }
 }

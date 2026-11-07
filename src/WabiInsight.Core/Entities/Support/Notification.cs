@@ -48,4 +48,5 @@ public static class NotificationTypes
     public const string AnalysisShareRevoked = "Analysis.ShareRevoked";
     public const string MonitoringAlert = "Monitoring.Alert";
     public const string MonitoringRulePaused = "Monitoring.RulePaused";
+    public const string ReportSubscriptionPaused = "Reports.SubscriptionPaused";
 }
