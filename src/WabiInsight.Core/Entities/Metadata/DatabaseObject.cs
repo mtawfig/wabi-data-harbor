@@ -17,6 +17,28 @@ public enum DataClassification
     Restricted = 3,
 }
 
+/// <summary>
+/// Optional meaning of a column, set by the Organization Administrator (Phase 14, specification §35.1). A hint that
+/// lets rule templates and the natural-language planner bind to the right fields in any business; never a permission.
+/// Stable codes; labels are localized in the web app.
+/// </summary>
+public enum ColumnSemanticRole
+{
+    /// <summary>Clears the role (stored as NULL).</summary>
+    Unspecified = 0,
+    Identifier = 1,
+    PersonIdentifier = 2,
+    AccountIdentifier = 3,
+    DeviceIdentifier = 4,
+    Timestamp = 5,
+    Amount = 6,
+    Quantity = 7,
+    Status = 8,
+    Location = 9,
+    Contact = 10,
+    Other = 11,
+}
+
 /// <summary>A discovered table or view of an organization's application (specification §17). Only approved objects are ever exposed to AI or queries.</summary>
 public class DatabaseObject : AuditableEntity, ITenantOwned
 {
@@ -87,6 +109,9 @@ public class DatabaseColumn : AuditableEntity, ITenantOwned
 
     public DataClassification Classification { get; set; } = DataClassification.Internal;
 
+    /// <summary>Null until the Organization Administrator chooses one; <see cref="ColumnSemanticRole.Unspecified"/> is never stored.</summary>
+    public ColumnSemanticRole? SemanticRole { get; set; }
+
     public bool IsApproved { get; set; }
 
     public bool IsPresent { get; set; } = true;
@@ -96,6 +121,9 @@ public class DatabaseColumn : AuditableEntity, ITenantOwned
     public DateTimeOffset LastSeenAt { get; set; }
 
     public DateTimeOffset? RemovedAt { get; set; }
+
+    /// <summary>Identifier-like for the ledger: primary keys and identifier roles count "specific records" in filters.</summary>
+    public bool IsIdentifierLike => IsPrimaryKey || SemanticRole is ColumnSemanticRole.Identifier or ColumnSemanticRole.PersonIdentifier or ColumnSemanticRole.AccountIdentifier or ColumnSemanticRole.DeviceIdentifier;
 }
 
 /// <summary>Foreign-key relationship between two discovered objects of the same application.</summary>

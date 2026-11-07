@@ -40,6 +40,9 @@ public sealed class PlanRejectedException : Exception
     /// <summary>"shape", "authorization" or "format".</summary>
     public string Stage { get; }
 
+    /// <summary>The parsed plan when rejection happened after parsing (shape or authorization), so the access ledger can record what was attempted.</summary>
+    public AnalysisPlan? Plan { get; init; }
+
     public IReadOnlyList<PlanError> Errors { get; }
 }
 

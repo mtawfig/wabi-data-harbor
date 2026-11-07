@@ -43,6 +43,8 @@ using WabiInsight.Core.Insights;
 using WabiInsight.Infrastructure.Insights;
 using WabiInsight.Core.Ai;
 using WabiInsight.Infrastructure.Ai;
+using WabiInsight.Core.Monitoring;
+using WabiInsight.Infrastructure.Monitoring;
 
 namespace WabiInsight.Infrastructure.DependencyInjection;
 
@@ -132,7 +134,8 @@ public static class ServiceCollectionExtensions
             .AddCheck<ApiSelfHealthCheck>("api", tags: ["live", "ready"])
             .AddDbContextCheck<ConfigurationDbContext>("configuration-database", tags: ["ready"])
             .AddCheck<EmailConfigurationHealthCheck>("email-provider", tags: ["ops"])
-            .AddCheck<EmailOutboxHealthCheck>("email-outbox", tags: ["ops"]);
+            .AddCheck<EmailOutboxHealthCheck>("email-outbox", tags: ["ops"])
+            .AddCheck<SchedulerHealthCheck>("scheduler", tags: ["ops"]);
 
         services.AddScoped<IUsageEventWriter, UsageEventWriter>();
         services.AddScoped<IPlatformMetricsService, PlatformMetricsService>();
@@ -210,6 +213,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<PermissionService>();
         services.AddScoped<IPermissionResolver, PermissionResolver>();
+
+        // Phase 14 proactive agent: access ledger, nightly baselines and retention, DB-backed scheduler with leases.
+        services.AddOptions<MonitoringOptions>().Bind(configuration.GetSection(MonitoringOptions.SectionName));
+        services.AddScoped<IAccessFactRecorder, AccessFactRecorder>();
+        services.AddScoped<ScheduledJobRunner>();
+        services.AddScoped<IScheduledJobHandler, AccessBaselineJob>();
+        services.AddScoped<IScheduledJobHandler, RetentionPurgeJob>();
+        services.AddHostedService<JobSchedulerWorker>();
 
         return services;
     }

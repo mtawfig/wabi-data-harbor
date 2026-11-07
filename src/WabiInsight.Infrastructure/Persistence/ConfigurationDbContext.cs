@@ -7,6 +7,7 @@ using WabiInsight.Core.Entities.Metadata;
 using WabiInsight.Core.Entities.Ai;
 using WabiInsight.Core.Entities.Analysis;
 using WabiInsight.Core.Entities.Insights;
+using WabiInsight.Core.Entities.Monitoring;
 using WabiInsight.Core.Entities.Permissions;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
@@ -125,6 +126,12 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<EmailDraftEvent> EmailDraftEvents => Set<EmailDraftEvent>();
 
+    public DbSet<AnalysisAccessFact> AnalysisAccessFacts => Set<AnalysisAccessFact>();
+
+    public DbSet<AccessBaseline> AccessBaselines => Set<AccessBaseline>();
+
+    public DbSet<ScheduledJob> ScheduledJobs => Set<ScheduledJob>();
+
     /// <summary>Evaluated per query as a parameter; null (anonymous or platform administrator) matches no tenant rows.</summary>
     private Guid? CurrentOrganizationId => _tenantContext.OrganizationId;
 
@@ -181,7 +188,7 @@ public class ConfigurationDbContext : DbContext
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent or ReportGenerationEvent or EmailDraftEvent && entry.State is EntityState.Modified or EntityState.Deleted)
+            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent or ReportGenerationEvent or EmailDraftEvent or AnalysisAccessFact && entry.State is EntityState.Modified or EntityState.Deleted)
             {
                 throw new InvalidOperationException($"{entry.Metadata.ClrType.Name} rows are append-only.");
             }

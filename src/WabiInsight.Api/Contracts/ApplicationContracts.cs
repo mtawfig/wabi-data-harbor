@@ -23,6 +23,7 @@ public sealed record SetApplicationApprovalRequest(bool IsApproved);
 
 public sealed record UpdateObjectRequest([MaxLength(200)] string? DisplayNameEn, [MaxLength(200)] string? DisplayNameAr, [MaxLength(2000)] string? BusinessDescription, bool IsApproved);
 
-public sealed record UpdateColumnRequest([MaxLength(200)] string? DisplayNameEn, [MaxLength(200)] string? DisplayNameAr, [MaxLength(2000)] string? BusinessDescription, DataClassification Classification, bool IsApproved);
+/// <summary>SemanticRole omitted or null leaves the column's role unchanged; "Unspecified" clears it.</summary>
+public sealed record UpdateColumnRequest([MaxLength(200)] string? DisplayNameEn, [MaxLength(200)] string? DisplayNameAr, [MaxLength(2000)] string? BusinessDescription, DataClassification Classification, bool IsApproved, ColumnSemanticRole? SemanticRole = null);
 
 public sealed record ApproveObjectRequest(bool Approve);

@@ -105,7 +105,7 @@ public sealed class QueryPlanner : IQueryPlanner
         if (shapeErrors.Count > 0)
         {
             await RejectAsync(request, usage, "shape", shapeErrors, cancellationToken);
-            throw new PlanRejectedException("shape", shapeErrors);
+            throw new PlanRejectedException("shape", shapeErrors) { Plan = plan };
         }
 
         // Every query is authorized on its own; one unauthorized reference rejects the whole answer.
@@ -132,7 +132,7 @@ public sealed class QueryPlanner : IQueryPlanner
         if (authorizedPlans.Count != plan.Queries.Count)
         {
             await RejectAsync(request, usage, "authorization", authErrors, cancellationToken);
-            throw new PlanRejectedException("authorization", authErrors);
+            throw new PlanRejectedException("authorization", authErrors) { Plan = plan };
         }
 
         await _usage.AppendAndSaveAsync(UsageEventTypes.AiPlanGenerated, "Application", request.ApplicationId.ToString(), quantity: usage.InputTokens + usage.OutputTokens,

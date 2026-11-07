@@ -226,6 +226,9 @@ Startup: `provideAppInitializer` initializes the language and calls `GET /api/au
 
 See `docs/WABI_INSIGHT_SPECIFICATION.md` §4, §10, §27 and `docs/SECURITY.md` (written in P1.3).
 
-### Proactive agent (Phase 14, planned)
+### Proactive agent (Phase 14)
+
+**P14.1 (delivered):** `IAccessFactRecorder` writes `AnalysisAccessFacts` from `AnalysisService` (success, rejection, authorization failure, execution failure) and from `AnalysisHistoryService.ExportAsync`; `AccessFactExtractor` (Core, pure) turns query plans into per-object column, filter and row summaries. `ScheduledJobRunner` provisions per-organization standing jobs (baselines 02:15, retention 03:30, organization time zone), leases due jobs with a conditional `ExecuteUpdate`, and dispatches to `IScheduledJobHandler`s (`AccessBaselineJob`, `RetentionPurgeJob`); `JobSchedulerWorker` ticks it every minute when `Monitoring:SchedulerEnabled`. `JobRecurrence` computes next runs in local time. `ColumnRoleSuggester` proposes `DatabaseColumns.SemanticRole` values returned on `ColumnDto`. Migration `AddAccessLedgerAndScheduler`.
+
 
 Design: [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). Inside the same API: an append-only `AnalysisAccessFacts` ledger written with every analysis, a `ScheduledJobs` table with atomic leases driven by one `BackgroundService` (like the email outbox worker), a typed monitoring-rule document validated and authorized like the query plan and compiled by the same dialect compilers for data rules, an access-rule evaluator over facts and 28-day baselines, `Alerts` with a daily digest through the `EmailMessages` outbox and immediate `Notifications` for High severity, and `ReportSubscriptions` that re-run saved analyses per recipient under that recipient's permissions and deliver PDF/XLSX through the outbox. No new process, broker or service.

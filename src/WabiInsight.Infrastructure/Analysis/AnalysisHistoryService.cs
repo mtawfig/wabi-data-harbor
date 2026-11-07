@@ -31,9 +31,11 @@ public sealed class AnalysisHistoryService : IAnalysisHistoryService
     private readonly IClock _clock;
     private readonly IReportRenderer _pdf;
     private readonly Dictionary<ExportFormat, IAnswerExporter> _exporters;
+    private readonly Core.Monitoring.IAccessFactRecorder _accessFacts;
 
-    public AnalysisHistoryService(ConfigurationDbContext context, ITenantContext tenantContext, IAnalysisService analysis, IArtifactStorage storage, IAuditWriter audit, IClock clock, IReportRenderer pdf, IEnumerable<IAnswerExporter> exporters)
+    public AnalysisHistoryService(ConfigurationDbContext context, ITenantContext tenantContext, IAnalysisService analysis, IArtifactStorage storage, IAuditWriter audit, IClock clock, IReportRenderer pdf, IEnumerable<IAnswerExporter> exporters, Core.Monitoring.IAccessFactRecorder accessFacts)
     {
+        _accessFacts = accessFacts;
         _pdf = pdf;
         _exporters = exporters.ToDictionary(e => e.Format);
         _context = context;
@@ -272,6 +274,10 @@ public sealed class AnalysisHistoryService : IAnalysisHistoryService
             generation.SizeBytes = bytes.LongLength;
             generation.DurationMs = watch.Elapsed.TotalMilliseconds;
             _context.ReportGenerationEvents.Add(generation);
+            // Phase 14 ledger: an export is an access with the rows that left the platform as a file.
+            await _accessFacts.RecordAsync(new Core.Monitoring.AccessFactRecording(entry.ApplicationId,
+                answer.Panels.Select(p => new Core.Monitoring.PlanExecution(p.Plan, p.Result.RowCount)).ToList(),
+                Core.Entities.Monitoring.AccessOutcome.Succeeded, version.VersionId, version.MetricId, IsExport: true, ExportFormat: format), cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
             return new ArtifactDownload(new MemoryStream(bytes, writable: false), fileName, contentType);
         }
