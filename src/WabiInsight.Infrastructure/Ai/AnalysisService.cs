@@ -9,7 +9,9 @@ using WabiInsight.Core.Entities.Ai;
 using WabiInsight.Core.Entities.Analysis;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
+using WabiInsight.Core.Entities.Monitoring;
 using WabiInsight.Core.Entities.Usage;
+using WabiInsight.Core.Monitoring;
 using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Tenancy;
 using WabiInsight.Core.Usage;
@@ -47,9 +49,11 @@ public sealed partial class AnalysisService : IAnalysisService
     private readonly ReportComposer _reports;
     private readonly IReportRenderer _renderer;
     private readonly IArtifactStorage _storage;
+    private readonly IAccessFactRecorder _accessFacts;
 
-    public AnalysisService(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IAiProviderResolver providers, IUsageEventWriter usage, IClock clock, ILogger<AnalysisService> logger, ReportComposer reports, IReportRenderer renderer, IArtifactStorage storage)
+    public AnalysisService(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IAiProviderResolver providers, IUsageEventWriter usage, IClock clock, ILogger<AnalysisService> logger, ReportComposer reports, IReportRenderer renderer, IArtifactStorage storage, IAccessFactRecorder accessFacts)
     {
+        _accessFacts = accessFacts;
         _reports = reports;
         _renderer = renderer;
         _storage = storage;
@@ -91,7 +95,15 @@ public sealed partial class AnalysisService : IAnalysisService
         }
         catch (PlanRejectedException ex)
         {
-            await FailAsync(metric, AnalysisStatus.Rejected, ex.Stage, ex.Errors.Count > 0 ? ex.Errors[0].Code : "plan_rejected", total, cancellationToken, request.HistoryId);
+            var code = ex.Errors.Count > 0 ? ex.Errors[0].Code : "plan_rejected";
+            if (ex.Plan is not null)
+            {
+                // The ledger records what was attempted: an unauthorized reference is a signal for access-behaviour rules (§35).
+                await _accessFacts.RecordAsync(new AccessFactRecording(request.ApplicationId, ex.Plan.Queries.Select(q => new PlanExecution(q, 0)).ToList(),
+                    ex.Stage == "authorization" ? AccessOutcome.Unauthorized : AccessOutcome.Rejected, MetricId: metric.MetricId, FailureCode: code), cancellationToken);
+            }
+
+            await FailAsync(metric, AnalysisStatus.Rejected, ex.Stage, code, total, cancellationToken, request.HistoryId);
             throw;
         }
         catch (AiProviderException ex)
@@ -123,12 +135,14 @@ public sealed partial class AnalysisService : IAnalysisService
         }
         catch (DomainException ex)
         {
+            await _accessFacts.RecordAsync(new AccessFactRecording(request.ApplicationId, planned.Authorized.Select(a => new PlanExecution(a.Plan, 0)).ToList(), AccessOutcome.Rejected, MetricId: metric.MetricId, FailureCode: ex.Message), cancellationToken);
             await FailAsync(metric, AnalysisStatus.Rejected, "compile", ex.Message, total, cancellationToken, request.HistoryId);
             throw new PlanRejectedException("compile", [new PlanError(ex.Message, string.Empty)]);
         }
         catch (AnalysisExecutionException ex)
         {
             LogExecutionFailed(_logger, ex.Code, ex);
+            await _accessFacts.RecordAsync(new AccessFactRecording(request.ApplicationId, planned.Authorized.Select(a => new PlanExecution(a.Plan, 0)).ToList(), AccessOutcome.Failed, MetricId: metric.MetricId, FailureCode: ex.Code), cancellationToken);
             await FailAsync(metric, AnalysisStatus.Failed, "execute", ex.Code, total, cancellationToken, request.HistoryId);
             throw;
         }
@@ -200,6 +214,8 @@ public sealed partial class AnalysisService : IAnalysisService
         var version = history.Version;
         var response = new AskResponse(metric.MetricId, history.Entry.HistoryId, version.VersionNumber, planned.Plan.Objective, planned.Plan.Assumptions, panels, interpretation, report, emailDraft, planned.Usage, metric.EstimatedCost, total.Elapsed.TotalMilliseconds);
         await StoreVersionAsync(history.Entry, version, metric, planned, panels, interpretation, response, reportSha, cancellationToken);
+        // Phase 14 ledger: one fact per object touched, in the same unit of work as the analysis.
+        await _accessFacts.RecordAsync(new AccessFactRecording(request.ApplicationId, panels.Select(p => new PlanExecution(p.Plan, p.Result.RowCount)).ToList(), AccessOutcome.Succeeded, version.VersionId, metric.MetricId), cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         return response;
     }

@@ -38,6 +38,9 @@ public class Organization : AuditableEntity
     /// <summary>When true, a requester who is an OrganizationAdmin cannot approve their own support-access grant (review A12).</summary>
     public bool RequireSecondAdminApprovalForSupportAccess { get; set; }
 
+    /// <summary>Months the access ledger, rule evaluations and alerts are kept (Phase 14, owner decision D3: 24; capped by the platform maximum).</summary>
+    public int MonitoringRetentionMonths { get; set; } = 24;
+
     /// <summary>Provider this organization's AI requests use; null means the platform default (specification §18).</summary>
     public Guid? AiProviderConfigurationId { get; set; }
 

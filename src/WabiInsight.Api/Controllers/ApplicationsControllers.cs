@@ -98,5 +98,5 @@ public sealed class MetadataController : ControllerBase
 
     [HttpPut("columns/{columnId:guid}")]
     public async Task<ActionResult<ColumnDto>> UpdateColumn(Guid columnId, [FromBody] UpdateColumnRequest request, CancellationToken cancellationToken)
-        => Ok(await _metadata.UpdateColumnAsync(columnId, new UpdateColumnCommand(request.DisplayNameEn, request.DisplayNameAr, request.BusinessDescription, request.Classification, request.IsApproved), cancellationToken));
+        => Ok(await _metadata.UpdateColumnAsync(columnId, new UpdateColumnCommand(request.DisplayNameEn, request.DisplayNameAr, request.BusinessDescription, request.Classification, request.IsApproved, request.SemanticRole), cancellationToken));
 }

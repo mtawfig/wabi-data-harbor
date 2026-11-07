@@ -1115,6 +1115,9 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<int?>("Scale")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SemanticRole")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -1265,6 +1268,263 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("DatabaseRelationships", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.AccessBaseline", b =>
+                {
+                    b.Property<Guid>("BaselineId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ActiveDays")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("ComputedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<double>("ExportsPerDayMedian")
+                        .HasColumnType("float");
+
+                    b.Property<double>("ExportsPerDayP95")
+                        .HasColumnType("float");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("QueriesPerDayMedian")
+                        .HasColumnType("float");
+
+                    b.Property<double>("QueriesPerDayP95")
+                        .HasColumnType("float");
+
+                    b.Property<double>("RestrictedTouchesPerDayMedian")
+                        .HasColumnType("float");
+
+                    b.Property<double>("RestrictedTouchesPerDayP95")
+                        .HasColumnType("float");
+
+                    b.Property<string>("RoleCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<double>("RowsPerDayMedian")
+                        .HasColumnType("float");
+
+                    b.Property<double>("RowsPerDayP95")
+                        .HasColumnType("float");
+
+                    b.Property<string>("SubjectKind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<double>("UnauthorizedPerDayMedian")
+                        .HasColumnType("float");
+
+                    b.Property<double>("UnauthorizedPerDayP95")
+                        .HasColumnType("float");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("WindowDays")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("WindowEnd")
+                        .HasColumnType("date");
+
+                    b.HasKey("BaselineId");
+
+                    b.HasIndex("OrganizationId", "SubjectKind", "UserId", "RoleCode")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL AND [RoleCode] IS NOT NULL");
+
+                    b.ToTable("AccessBaselines", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.AnalysisAccessFact", b =>
+                {
+                    b.Property<Guid>("FactId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("AccessedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ColumnCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ColumnIdsJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ExportFormat")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FilterColumnIdsJson")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("FilterValueCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HighestClassification")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid?>("HistoryVersionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("IdentifierFilterValueCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsExport")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrimaryObject")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("MetricId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ObjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ObjectName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("RoleCodes")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SchemaName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("FactId");
+
+                    b.HasIndex("OrganizationId", "AccessedAt");
+
+                    b.HasIndex("OrganizationId", "ObjectId", "AccessedAt");
+
+                    b.HasIndex("OrganizationId", "Outcome", "AccessedAt");
+
+                    b.HasIndex("OrganizationId", "UserId", "AccessedAt");
+
+                    b.ToTable("AnalysisAccessFacts", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.ScheduledJob", b =>
+                {
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("DayOfMonth")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IntervalMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("JobType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<double>("LastDurationMs")
+                        .HasColumnType("float");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("LastOutcome")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset?>("LastRunAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("NextRunAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RecurrenceKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid?>("TargetId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeOnly>("TimeOfDay")
+                        .HasColumnType("time");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("JobId");
+
+                    b.HasIndex("IsEnabled", "NextRunAt");
+
+                    b.HasIndex("OrganizationId", "JobType", "TargetId");
+
+                    b.ToTable("ScheduledJobs", (string)null);
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.Application", b =>
@@ -2066,6 +2326,9 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<string>("LogoContentType")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("MonitoringRetentionMonths")
+                        .HasColumnType("int");
 
                     b.Property<string>("OrganizationCode")
                         .IsRequired()
@@ -2951,6 +3214,39 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("OrganizationId", "ObjectId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.AccessBaseline", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.AnalysisAccessFact", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WabiInsight.Core.Entities.Organizations.OrganizationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "UserId")
+                        .HasPrincipalKey("OrganizationId", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Monitoring.ScheduledJob", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Organizations.Application", b =>

@@ -72,4 +72,7 @@ public static class UsageEventTypes
     public const string AnalysisFailed = "Ai.AnalysisFailed";
     public const string AnalysisShared = "Share.Created";
     public const string AnalysisEmailed = "Share.EmailSent";
+    public const string BaselinesComputed = "Monitoring.BaselinesComputed";
+    public const string RetentionPurged = "Monitoring.RetentionPurged";
+    public const string ScheduledJobFailed = "Scheduler.JobFailed";
 }

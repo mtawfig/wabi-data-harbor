@@ -282,7 +282,12 @@ public sealed partial class MetadataService : IMetadataService
         column.BusinessDescription = Clean(command.BusinessDescription);
         column.Classification = command.Classification;
         column.IsApproved = command.IsApproved;
-        _audit.Append(AuditEvents.MetadataColumnUpdated, "DatabaseColumn", columnId.ToString(), new { column.ColumnName, column.IsApproved, column.Classification }, organizationId);
+        if (command.SemanticRole is { } role)
+        {
+            column.SemanticRole = role == ColumnSemanticRole.Unspecified ? null : role;
+        }
+
+        _audit.Append(AuditEvents.MetadataColumnUpdated, "DatabaseColumn", columnId.ToString(), new { column.ColumnName, column.IsApproved, column.Classification, column.SemanticRole }, organizationId);
         await _context.SaveChangesAsync(cancellationToken);
         return ToDto(column);
     }
@@ -348,7 +353,8 @@ public sealed partial class MetadataService : IMetadataService
             o.DiscoveredAt, o.LastSeenAt));
 
     private static ColumnDto ToDto(DatabaseColumn c)
-        => new(c.ColumnId, c.ColumnName, c.DataType, c.MaxLength, c.Precision, c.Scale, c.IsNullable, c.IsPrimaryKey, c.OrdinalPosition, c.DisplayNameEn, c.DisplayNameAr, c.BusinessDescription, c.Classification, c.IsApproved, c.IsPresent);
+        => new(c.ColumnId, c.ColumnName, c.DataType, c.MaxLength, c.Precision, c.Scale, c.IsNullable, c.IsPrimaryKey, c.OrdinalPosition, c.DisplayNameEn, c.DisplayNameAr, c.BusinessDescription, c.Classification, c.IsApproved, c.IsPresent,
+            c.SemanticRole, c.SemanticRole ?? Core.Monitoring.ColumnRoleSuggester.Suggest(c.ColumnName, c.DataType, c.IsPrimaryKey));
 
     private IQueryable<T> Scoped<T>(IQueryable<T> query)
         where T : class, ITenantOwned

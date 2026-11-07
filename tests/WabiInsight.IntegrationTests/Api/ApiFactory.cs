@@ -43,6 +43,8 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Security:BootstrapRateLimitPerMinute", "1000");
         // Re-validate the security stamp on every request so session-invalidation tests are deterministic.
         builder.UseSetting("Security:SecurityStampValidationMinutes", "0");
+        // Phase 14: the background scheduler stays off in tests; SchedulerTests drive ScheduledJobRunner directly.
+        builder.UseSetting("Monitoring:SchedulerEnabled", "false");
 
         // Email: the outbox worker runs for real, delivery is captured in memory.
         builder.UseSetting("Email:Provider", "Test");

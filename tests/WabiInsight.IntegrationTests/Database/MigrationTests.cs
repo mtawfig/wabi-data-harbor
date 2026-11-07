@@ -29,6 +29,9 @@ public class MigrationTests
     [InlineData("SystemInitialization")]
     [InlineData("PlatformSettings")]
     [InlineData("AuditLogs")]
+    [InlineData("AnalysisAccessFacts")]
+    [InlineData("AccessBaselines")]
+    [InlineData("ScheduledJobs")]
     public async Task Migration_CreatesExpectedTable(string table)
     {
         await using var context = _db.CreateContext(TestData.SystemPrincipal);
