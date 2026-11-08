@@ -77,6 +77,52 @@ Accounts default to the demo users (`WI_PLATFORM_*`, `WI_ORGADMIN_*`, `WI_USER_*
 | 41 | Support ticket detail | Organization user | [en-desktop](screenshots/screens/41-support-ticket-detail-en-desktop.png) | [ar-desktop](screenshots/screens/41-support-ticket-detail-ar-desktop.png) | [en-mobile](screenshots/screens/41-support-ticket-detail-en-mobile.png) | [ar-mobile](screenshots/screens/41-support-ticket-detail-ar-mobile.png) |
 | 42 | Profile | Organization user | [en-desktop](screenshots/screens/42-profile-en-desktop.png) | [ar-desktop](screenshots/screens/42-profile-ar-desktop.png) | [en-mobile](screenshots/screens/42-profile-en-mobile.png) | [ar-mobile](screenshots/screens/42-profile-ar-mobile.png) |
 
+## Phase 14 — Proactive agent
+
+Captured from the running app with the sample organization Gulf Aviation Services (`scripts/sql/samples`); drafts in P14.4 come from the real model. Recorded demo: [`docs/demo/p14-5-proactive-agent-alert.gif`](demo/p14-5-proactive-agent-alert.gif) — an analyst looks up six colleagues' pay, row scope shows him none of it, the access rule raises a High alert and the administrator acknowledges it (script and story: `scripts/demo/proactive-agent/README.md`).
+
+### P14.2 — Monitoring Rules and Alerts
+
+| Screen | Signed in as | Files |
+|---|---|---|
+| Monitoring Rules list | Organization Administrator | [p14-2-rules-en](screenshots/p14-2-rules-en.png) · [p14-2-rules-ar](screenshots/p14-2-rules-ar.png) |
+| Template picker (field roles, unavailable templates greyed) | Organization Administrator | [p14-2-templates-en](screenshots/p14-2-templates-en.png) · [p14-2-templates-ar](screenshots/p14-2-templates-ar.png) |
+| Rule editor and test of an unsaved draft | Organization Administrator | [p14-2-rule-editor-en](screenshots/p14-2-rule-editor-en.png) · [p14-2-rule-draft-test-en](screenshots/p14-2-rule-draft-test-en.png) |
+| Test run of the seeded "same account, several devices" rule | Organization Administrator | [p14-2-rule-test-en](screenshots/p14-2-rule-test-en.png) |
+| Monitoring settings (digest time, working hours, retention) | Organization Administrator | [p14-2-monitoring-settings-en](screenshots/p14-2-monitoring-settings-en.png) |
+| Alert centre with a data alert | Rule owner | [p14-2-alerts-en](screenshots/p14-2-alerts-en.png) · [p14-2-alerts-ar](screenshots/p14-2-alerts-ar.png) |
+| Redacted alert (recipient without permission on the data) | Recipient | [p14-2-alerts-redacted-en](screenshots/p14-2-alerts-redacted-en.png) |
+| Suspension confirmation (human decision) | Organization Administrator | [p14-2-alert-suspend-confirm-en](screenshots/p14-2-alert-suspend-confirm-en.png) |
+| Daily digest preview and emails as received | Recipients | [p14-2-digest-preview-en](screenshots/p14-2-digest-preview-en.png) · [p14-2-digest-email-en](screenshots/p14-2-digest-email-en.png) · [p14-2-digest-email-ar](screenshots/p14-2-digest-email-ar.png) |
+| Field roles in Metadata | Organization Administrator | [p14-2-metadata-field-roles-en](screenshots/p14-2-metadata-field-roles-en.png) |
+| Alert centre and detail on a phone | Rule owner | [p14-2-alerts-mobile-ar](screenshots/p14-2-alerts-mobile-ar.png) · [p14-2-alert-detail-mobile-ar](screenshots/p14-2-alert-detail-mobile-ar.png) |
+
+### P14.3 — Periodic Reports
+
+| Screen | Signed in as | Files |
+|---|---|---|
+| Periodic report editor (monthly, four recipients) | Organization Administrator | [p14-3-periodic-editor-en](screenshots/p14-3-periodic-editor-en.png) |
+| "Send now" with per-recipient results | Organization Administrator | [p14-3-periodic-run-en](screenshots/p14-3-periodic-run-en.png) |
+| Delivery log | Organization Administrator | [p14-3-periodic-log-en](screenshots/p14-3-periodic-log-en.png) |
+| Periodic reports list | Organization Administrator | [p14-3-periodic-reports-ar](screenshots/p14-3-periodic-reports-ar.png) · [p14-3-periodic-mobile-en](screenshots/p14-3-periodic-mobile-en.png) |
+| Management's self-only editor | Management | [p14-3-periodic-management-en](screenshots/p14-3-periodic-management-en.png) |
+| "Sent to me" in My Reports | Recipient | [p14-3-sent-to-me-en](screenshots/p14-3-sent-to-me-en.png) · [p14-3-sent-to-me-ar](screenshots/p14-3-sent-to-me-ar.png) |
+| Delivered and "no data for your permissions" emails | Recipients | [p14-3-email-delivered-en](screenshots/p14-3-email-delivered-en.png) · [p14-3-email-no-data-en](screenshots/p14-3-email-no-data-en.png) |
+| First PDF page per recipient (HR only vs all departments) | Recipients | [p14-3-pdf-sara-hr-only-en](screenshots/p14-3-pdf-sara-hr-only-en.png) · [p14-3-pdf-khalid-all-departments-ar](screenshots/p14-3-pdf-khalid-all-departments-ar.png) |
+
+### P14.4 — Natural-language and system rules
+
+| Screen | Signed in as | Files |
+|---|---|---|
+| Describe a rule in Arabic: proposed rule, nothing saved yet | Management | [p14-4-draft-ar](screenshots/p14-4-draft-ar.png) · [p14-4-draft-ar-mobile](screenshots/p14-4-draft-ar-mobile.png) |
+| Describe a rule in English (with a filter) | Organization Administrator | [p14-4-draft-en](screenshots/p14-4-draft-en.png) |
+| Review and save the draft (columns fixed) | Organization Administrator | [p14-4-draft-review-en](screenshots/p14-4-draft-review-en.png) |
+| System templates | Organization Administrator | [p14-4-templates-en](screenshots/p14-4-templates-en.png) |
+| Monitoring settings with the monthly AI budget | Organization Administrator | [p14-4-settings-budget-en](screenshots/p14-4-settings-budget-en.png) |
+| Rules list with system rules and a paused rule | Organization Administrator | [p14-4-rules-en](screenshots/p14-4-rules-en.png) |
+| AI budget alert | Organization Administrator | [p14-4-ai-budget-alert-en](screenshots/p14-4-ai-budget-alert-en.png) |
+| Rule paused after a column was un-approved | Organization Administrator | [p14-4-rule-paused-alert-en](screenshots/p14-4-rule-paused-alert-en.png) |
+
 ## Feature screenshots by PR
 
 Earlier PRs keep their own captures under `docs/screenshots/p<phase>-<n>-*.png` (listed per PR in `docs/DESIGN_SYSTEM.md`), the recorded demo under `docs/demo/`, and the brand sheet at `docs/screenshots/p11-1-brand-sheet.png`.

@@ -99,6 +99,41 @@ public sealed class SchedulerTests : IDisposable
     }
 
     [Fact]
+    public async Task AWorkerTick_ReleasesTheLease_SoAJobMadeDueAgainRunsAtOnce()
+    {
+        // The worker ensures the standing jobs and runs the due ones in one scope, so the job rows are already tracked
+        // when the lease is taken with a set-based update. The lease must still be released when the run ends.
+        await using (var scope = SchedulerScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ScheduledJobRunner>().EnsureStandingJobsAsync();
+        }
+
+        // Retention only removes rows older than the organization's months, so running it here changes nothing other tests use.
+        var jobId = await MakeDueAsync(_db.Data.OrganizationBId, ScheduledJobType.RetentionPurge);
+        for (var run = 0; run < 2; run++)
+        {
+            await using (var scope = SchedulerScope())
+            {
+                var runner = scope.ServiceProvider.GetRequiredService<ScheduledJobRunner>();
+                await runner.EnsureStandingJobsAsync();
+                Assert.Equal(1, await runner.RunDueJobsAsync("worker-tick"));
+            }
+
+            await using var context = _db.CreateContext(TestData.SystemPrincipal);
+            var job = await context.ScheduledJobs.SingleAsync(j => j.JobId == jobId);
+            Assert.Equal(JobOutcome.Succeeded, job.LastOutcome);
+            Assert.Null(job.LeaseOwner);
+            Assert.Null(job.LeaseUntil);
+            if (run == 0)
+            {
+                // Due again right away (an edited rule, "make due" in a demo): it must not wait for the old lease to expire.
+                job.NextRunAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+                await context.SaveChangesAsync();
+            }
+        }
+    }
+
+    [Fact]
     public async Task Baselines_AreComputedPerUserAndRole_FromTheLedger_InsideOneOrganization()
     {
         var today = DateTimeOffset.UtcNow;

@@ -203,6 +203,9 @@ public sealed partial class ScheduledJobRunner
     private async Task RunLeasedAsync(Guid jobId, string owner, CancellationToken cancellationToken)
     {
         var job = await _context.ScheduledJobs.SingleAsync(j => j.JobId == jobId, cancellationToken);
+        // The lease was taken with a set-based update; when this scope already tracks the row (the worker ensures the
+        // standing jobs first), reload it so clearing the lease below is a real change and gets saved.
+        await _context.Entry(job).ReloadAsync(cancellationToken);
         var watch = Stopwatch.StartNew();
         string? error = null;
         try
