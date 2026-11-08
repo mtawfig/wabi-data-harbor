@@ -363,8 +363,6 @@
     "noRows": "The query returned no rows.",
     "how": "How this was computed",
     "assumptions": "Assumptions",
-    "sql": "Query (parameters hidden)",
-    "usage": "{{model}} · {{tokens}} tokens · about ${{cost}} · {{ms}} ms · {{rows}} rows",
     "rejected": {
       "format": "The model did not return a usable plan. Try rephrasing the question.",
       "shape": "The plan was rejected by the safety checks.",
@@ -420,7 +418,6 @@
     "charts": "Charts",
     "tables": "Details",
     "rowsOf": "{{count}} rows",
-    "queryOf": "Query — {{title}}",
     "panelsNote": "{{count}} queries ran read-only on your data; every number below comes from them.",
     "report": {
       "title": "Report (PDF)",
@@ -444,7 +441,62 @@
       "Department": "your department ({{value}})",
       "Section": "your section ({{value}})"
     },
-    "interpretationIncomplete": "The written explanation could not be finished this time. The figures, charts and tables above are verified; ask again to get the explanation."
+    "interpretationIncomplete": "The written explanation could not be finished this time. The figures, charts and tables above are verified; ask again to get the explanation.",
+    "plan": {
+      "from": "Data from",
+      "measures": "Calculated",
+      "columns": "Columns shown",
+      "groups": "Grouped by",
+      "filters": "Only rows where",
+      "having": "Only groups where",
+      "order": "Sorted by",
+      "rows": "Rows",
+      "limit": "At most {{count}}",
+      "checked": "Wabi Insight checked this query against your permissions and ran it read-only. The exact query is kept on the server for accuracy reviews.",
+      "and": "and",
+      "or": "or",
+      "yes": "yes",
+      "no": "no",
+      "asc": "{{column}} (ascending)",
+      "desc": "{{column}} (descending)",
+      "dateTrunc": "{{column}} by {{unit}}",
+      "unit": {
+        "day": "day",
+        "week": "week",
+        "month": "month",
+        "quarter": "quarter",
+        "year": "year"
+      },
+      "agg": {
+        "countRows": "Number of rows",
+        "count": "Number of {{column}}",
+        "count_distinct": "Number of different {{column}}",
+        "sum": "Total {{column}}",
+        "avg": "Average {{column}}",
+        "min": "Minimum {{column}}",
+        "max": "Maximum {{column}}"
+      },
+      "asker": {
+        "employee": "your employee number",
+        "department": "your department",
+        "section": "your section"
+      },
+      "op": {
+        "eq": "{{column}} is {{value}}",
+        "neq": "{{column}} is not {{value}}",
+        "gt": "{{column}} is more than {{value}}",
+        "gte": "{{column}} is at least {{value}}",
+        "lt": "{{column}} is less than {{value}}",
+        "lte": "{{column}} is at most {{value}}",
+        "in": "{{column}} is one of {{value}}",
+        "not_in": "{{column}} is none of {{value}}",
+        "between": "{{column}} is between {{from}} and {{to}}",
+        "contains": "{{column}} contains “{{value}}”",
+        "starts_with": "{{column}} starts with “{{value}}”",
+        "is_null": "{{column}} is empty",
+        "not_null": "{{column}} is not empty"
+      }
+    }
   },
   "platform": {
     "overview": {

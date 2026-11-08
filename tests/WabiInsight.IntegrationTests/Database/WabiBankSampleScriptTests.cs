@@ -57,6 +57,13 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
         Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Transactions WHERE BalanceAfter < 0"));
         Assert.True(await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Transactions") > 500_000);
 
+        // Contact details and identity numbers are visibly fictional: no real-looking e-mail, phone or Emirates ID anywhere.
+        var personnel = _fixture.Db("WabiBankPersonnelDB");
+        Assert.Equal(0, await _fixture.ScalarAsync<int>(
+            $"SELECT COUNT(*) FROM [{personnel}].dbo.Employees WHERE MobileNumber NOT LIKE N'+000 %' OR EmiratesIdNumber NOT LIKE N'000-%' OR (WorkEmail IS NOT NULL AND WorkEmail <> LOWER(EmployeeNumber) + N'@wabibank.example')"));
+        Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Customers WHERE MobileNumber NOT LIKE N'+000 %'"));
+        Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.KycDocuments WHERE DocumentType = N'EmiratesId' AND DocumentNumber NOT LIKE N'000-%'"));
+
         // Counter cash looks like a branch: dozens of postings per teller a day, mostly small amounts.
         var perTellerDay = await _fixture.ScalarAsync<decimal>(
             $"SELECT CAST(COUNT(*) * 1.0 / COUNT(DISTINCT CONCAT(PostedByUserId, CAST(PostedAt AS date))) AS decimal(9,2)) FROM [{core}].dbo.Transactions WHERE Channel = N'Branch' AND TransactionCode IN (N'CDP', N'CWD')");
@@ -66,7 +73,7 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
             $"SELECT COUNT(*) FROM [{core}].dbo.MonthEndLoanBalances b JOIN [{core}].dbo.Loans l ON l.LoanNumber = b.LoanNumber WHERE b.OutstandingPrincipal > l.Principal OR b.OutstandingPrincipal < 0 OR b.BranchCode <> l.BranchCode"));
 
         // Nobody processes their own account; the planted exception is one Abu Dhabi teller's three postings.
-        Assert.Equal(["KIYER", "KIYER", "KIYER"], await _fixture.ListAsync<string>(
+        Assert.Equal(["ILINFORD", "ILINFORD", "ILINFORD"], await _fixture.ListAsync<string>(
             $"""
             SELECT t.PostedByUserId FROM [{core}].dbo.Transactions t JOIN [{core}].dbo.Accounts a ON a.AccountNumber = t.AccountNumber
             JOIN [{core}].dbo.Customers c ON c.CIF = a.CIF JOIN [{core}].dbo.Users u ON u.EmployeeNumber = c.StaffEmployeeNumber
@@ -95,6 +102,13 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
             ["W1001:CyberSecurity:ITD:ITD-SEC", "W1001:OrganizationAdmin:ITD:ITD-SEC", "W1002:Management:CEO:-", "W1003:BranchManager:BR-DXB01:-", "W1004:Teller:BR-DXB01:BR-DXB01-TLR",
              "W1005:HROfficer:HRD:HRD-PSV", "W1006:BudgetController:FIN:FIN-BGP", "W1007:ComplianceOfficer:CMP:CMP-AML", "W1008:ServiceDeskManager:ITD:ITD-SD"],
             users.Select(u => $"{u[0]}:{u[1]}:{u[2]}:{u[3]}"));
+        // Generic, clearly fictional names (bank_names.py); the sign-in is the Personnel work e-mail, the employee number at the fictional domain.
+        Assert.Equal(
+            ["W1001 Clara Ashby w1001@wabibank.example", "W1002 Victor Lindley w1002@wabibank.example", "W1003 Daniel Hartwell w1003@wabibank.example",
+             "W1004 Emily Carver w1004@wabibank.example", "W1005 Sophie Langley w1005@wabibank.example", "W1006 Martin Calder w1006@wabibank.example",
+             "W1007 Laura Bexley w1007@wabibank.example", "W1008 Simon Varley w1008@wabibank.example"],
+            await _fixture.ListAsync<string>(
+                "SELECT CONCAT(ou.EmployeeNumber, ' ', ou.FullName, ' ', ou.Email) FROM dbo.OrganizationUsers ou JOIN dbo.Organizations o ON o.OrganizationId = ou.OrganizationId AND o.OrganizationCode = N'WBK' ORDER BY ou.EmployeeNumber"));
         var hasher = new IdentityPasswordHashingService();
         Assert.All(users, u =>
         {
@@ -222,7 +236,7 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
 
         // The planted cases, read like the rules read them (Dubai time, window ending now).
         const string now = "CONVERT(datetime2(0), SYSDATETIMEOFFSET() AT TIME ZONE 'Arabian Standard Time')";
-        Assert.Equal(["anjali00484"], await _fixture.ListAsync<string>(
+        Assert.Equal(["hannah00484"], await _fixture.ListAsync<string>(
             $"SELECT Username FROM [{_fixture.Db("WabiBankDigitalDB")}].dbo.vw_SignInsLive WHERE SignInAt > DATEADD(HOUR, -24, {now}) AND SignInAt <= {now} GROUP BY Username HAVING COUNT(DISTINCT DeviceId) > 2"));
         Assert.Equal(["C100503"], await _fixture.ListAsync<string>(
             $"""
@@ -247,9 +261,37 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
                           (SELECT COUNT(*) FROM dbo.MonitoringRules), ',', (SELECT COUNT(*) FROM dbo.Departments), ',', (SELECT COUNT(*) FROM dbo.Sections), ',',
                           (SELECT CHECKSUM_AGG(CHECKSUM(BusinessDescription)) FROM dbo.DatabaseColumns), ',', (SELECT SUM(CAST(LEN(BusinessDescription) AS bigint)) FROM dbo.DatabaseColumns))
             """;
+        // An organization seeded by an earlier version: W1004 still has an old sample name and e-mail, W1006 a real mailbox.
+        const string wbkUser = "FROM dbo.OrganizationUsers ou JOIN dbo.Organizations o ON o.OrganizationId = ou.OrganizationId AND o.OrganizationCode = N'WBK'";
+        Assert.Equal(1, await _fixture.ScalarAsync<int>(
+            $"""
+            UPDATE li SET NormalizedEmail = N'OLD.SAMPLE@WABIBANK.EXAMPLE' FROM dbo.LoginIdentities li JOIN dbo.OrganizationUsers ou ON ou.UserId = li.PrincipalId AND ou.EmployeeNumber = N'W1004'
+            JOIN dbo.Organizations o ON o.OrganizationId = ou.OrganizationId AND o.OrganizationCode = N'WBK';
+            UPDATE ou SET FullName = N'Old Sample Name', Email = N'old.sample@wabibank.example', NormalizedEmail = N'OLD.SAMPLE@WABIBANK.EXAMPLE', PhoneNumber = N'+971 50 1234567' {wbkUser} WHERE ou.EmployeeNumber = N'W1004';
+            SELECT @@ROWCOUNT;
+            """));
+        Assert.Equal(1, await _fixture.ScalarAsync<int>(
+            $"""
+            UPDATE li SET NormalizedEmail = N'CONTROLLER@MAIL.EXAMPLE' FROM dbo.LoginIdentities li JOIN dbo.OrganizationUsers ou ON ou.UserId = li.PrincipalId AND ou.EmployeeNumber = N'W1006'
+            JOIN dbo.Organizations o ON o.OrganizationId = ou.OrganizationId AND o.OrganizationCode = N'WBK';
+            UPDATE ou SET FullName = N'Old Sample Name', Email = N'controller@mail.example', NormalizedEmail = N'CONTROLLER@MAIL.EXAMPLE' {wbkUser} WHERE ou.EmployeeNumber = N'W1006';
+            SELECT @@ROWCOUNT;
+            """));
         var before = await _fixture.ScalarAsync<string>(countsSql);
         await _fixture.RunScriptAsync("06-seed-wabiinsightdb.sql");
         Assert.Equal(before, await _fixture.ScalarAsync<string>(countsSql));
+
+        // Re-running renames the sample users after Personnel and moves a sample e-mail (and its sign-in) along; a real mailbox is kept.
+        Assert.Equal(
+            ["W1004|Emily Carver|W1004@WABIBANK.EXAMPLE|W1004@WABIBANK.EXAMPLE", "W1006|Martin Calder|CONTROLLER@MAIL.EXAMPLE|CONTROLLER@MAIL.EXAMPLE"],
+            await _fixture.ListAsync<string>(
+                $"""
+                SELECT CONCAT(ou.EmployeeNumber, '|', ou.FullName, '|', ou.NormalizedEmail, '|', li.NormalizedEmail) {wbkUser}
+                JOIN dbo.LoginIdentities li ON li.PrincipalType = N'OrganizationUser' AND li.PrincipalId = ou.UserId
+                WHERE ou.EmployeeNumber IN (N'W1004', N'W1006') ORDER BY ou.EmployeeNumber
+                """));
+        Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) {wbkUser} WHERE ou.FullName = N'Old Sample Name'"));
+        Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) {wbkUser} WHERE ou.EmployeeNumber <> N'W1006' AND ou.PhoneNumber NOT LIKE N'+000 %'"));
 
         Assert.Equal((21, 69), (await _fixture.ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Departments d JOIN dbo.Organizations o ON o.OrganizationId = d.OrganizationId AND o.OrganizationCode = N'WBK'"),
                                 await _fixture.ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Sections s JOIN dbo.Organizations o ON o.OrganizationId = s.OrganizationId AND o.OrganizationCode = N'WBK'")));

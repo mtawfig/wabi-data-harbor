@@ -13,8 +13,11 @@ public sealed record RowMappingColumns(string? EmployeeColumn, string? Departmen
 /// </summary>
 public sealed record RowPredicate(string Column, string ParameterName, string Value, RowScope? Scope = null);
 
-/// <summary>An object the plan may touch, with the predicates the compiler must apply at the source-table level.</summary>
-public sealed record AuthorizedObject(string Alias, Guid ObjectId, string Schema, string ObjectName, IReadOnlyList<RowPredicate> RowPredicates, IReadOnlyDictionary<string, string> ColumnTypes);
+/// <summary>
+/// An object the plan may touch, with the predicates the compiler must apply at the source-table level. <see cref="Label"/> and
+/// <see cref="ColumnLabels"/> carry the catalogue's display names, used only to explain the query to the asker.
+/// </summary>
+public sealed record AuthorizedObject(string Alias, Guid ObjectId, string Schema, string ObjectName, IReadOnlyList<RowPredicate> RowPredicates, IReadOnlyDictionary<string, string> ColumnTypes, DisplayLabel? Label = null, IReadOnlyDictionary<string, DisplayLabel>? ColumnLabels = null);
 
 /// <summary>
 /// A plan cleared for compilation. <see cref="AskerValues"/> maps each <see cref="Ai.AskerValues"/> placeholder the plan uses to
@@ -83,7 +86,9 @@ public static class QueryPlanAuthorizer
                 }
             }
 
-            objects[alias] = (access, new AuthorizedObject(alias, access.ObjectId, access.SchemaName, access.ObjectName, predicates, access.Columns.ToDictionary(c => c.ColumnName, c => c.DataType, StringComparer.OrdinalIgnoreCase)));
+            objects[alias] = (access, new AuthorizedObject(alias, access.ObjectId, access.SchemaName, access.ObjectName, predicates, access.Columns.ToDictionary(c => c.ColumnName, c => c.DataType, StringComparer.OrdinalIgnoreCase),
+                new DisplayLabel(access.DisplayNameEn, access.DisplayNameAr),
+                access.Columns.ToDictionary(c => c.ColumnName, c => new DisplayLabel(c.DisplayNameEn, c.DisplayNameAr), StringComparer.OrdinalIgnoreCase)));
         }
 
         foreach (var reference in QueryPlanValidator.ReferencedColumns(plan))

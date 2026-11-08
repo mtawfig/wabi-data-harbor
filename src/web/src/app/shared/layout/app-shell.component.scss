@@ -24,6 +24,5 @@
 @media (max-width: 600px) {
   .shell-header { gap: 4px; padding-inline: 8px; }
   .shell-header__brand ::ng-deep .logo__name { display: none; }
-  .shell-header ::ng-deep app-language-switcher .switcher { min-width: 0; padding-inline: 10px; .mdc-button__label { display: none; } }
   .shell-header__user { min-width: 0; padding-inline: 6px; }
 }

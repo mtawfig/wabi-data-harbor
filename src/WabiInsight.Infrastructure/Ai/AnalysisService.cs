@@ -104,12 +104,12 @@ public sealed partial class AnalysisService : IAnalysisService
                     ex.Stage == "authorization" ? AccessOutcome.Unauthorized : AccessOutcome.Rejected, MetricId: metric.MetricId, FailureCode: code), cancellationToken);
             }
 
-            await FailAsync(metric, AnalysisStatus.Rejected, ex.Stage, code, total, cancellationToken, request.HistoryId);
+            await FailAsync(metric, AnalysisStatus.Rejected, ex.Stage, code, total, cancellationToken, request.HistoryId, QueryLog(request, metric, ex.Plan, []));
             throw;
         }
         catch (AiProviderException ex)
         {
-            await FailAsync(metric, AnalysisStatus.Failed, "provider", ex.Code, total, cancellationToken, request.HistoryId);
+            await FailAsync(metric, AnalysisStatus.Failed, "provider", ex.Code, total, cancellationToken, request.HistoryId, QueryLog(request, metric, null, []));
             throw;
         }
 
@@ -124,27 +124,31 @@ public sealed partial class AnalysisService : IAnalysisService
         var application = await _context.Applications.AsNoTracking().SingleAsync(a => a.ApplicationId == request.ApplicationId, cancellationToken);
         var compiler = _compilers.Resolve(application.DatabaseType);
         var panels = new List<AnalysisPanel>(planned.Authorized.Count);
+        // The SQL never goes to the browser; it is kept with the question in AnalysisQueryLogs, including when a query fails.
+        var queries = new List<LoggedQuery>(planned.Authorized.Count);
         try
         {
             // Every query is compiled and executed on its own, in order; one failure fails the answer so nothing partial is shown as verified.
             foreach (var authorized in planned.Authorized)
             {
                 var compiled = compiler.Compile(authorized);
+                queries.Add(new LoggedQuery(authorized.Plan.Title, compiled.RedactedPreview, compiled.Parameters, null, false));
                 var result = await _executor.ExecuteAsync(request.ApplicationId, compiled, authorized.Plan.Visualization, cancellationToken);
-                panels.Add(new AnalysisPanel(authorized.Plan.Title, authorized.Plan, compiled.RedactedPreview, result, PanelAccess.From(authorized)));
+                queries[^1] = queries[^1] with { RowCount = result.RowCount, Truncated = result.Truncated };
+                panels.Add(new AnalysisPanel(authorized.Plan.Title, authorized.Plan, result, PanelAccess.From(authorized), PanelLabels.From(authorized)));
             }
         }
         catch (DomainException ex)
         {
             await _accessFacts.RecordAsync(new AccessFactRecording(request.ApplicationId, planned.Authorized.Select(a => new PlanExecution(a.Plan, 0)).ToList(), AccessOutcome.Rejected, MetricId: metric.MetricId, FailureCode: ex.Message), cancellationToken);
-            await FailAsync(metric, AnalysisStatus.Rejected, "compile", ex.Message, total, cancellationToken, request.HistoryId);
+            await FailAsync(metric, AnalysisStatus.Rejected, "compile", ex.Message, total, cancellationToken, request.HistoryId, QueryLog(request, metric, planned.Plan, queries));
             throw new PlanRejectedException("compile", [new PlanError(ex.Message, string.Empty)]);
         }
         catch (AnalysisExecutionException ex)
         {
             LogExecutionFailed(_logger, ex.Code, ex);
             await _accessFacts.RecordAsync(new AccessFactRecording(request.ApplicationId, planned.Authorized.Select(a => new PlanExecution(a.Plan, 0)).ToList(), AccessOutcome.Failed, MetricId: metric.MetricId, FailureCode: ex.Code), cancellationToken);
-            await FailAsync(metric, AnalysisStatus.Failed, "execute", ex.Code, total, cancellationToken, request.HistoryId);
+            await FailAsync(metric, AnalysisStatus.Failed, "execute", ex.Code, total, cancellationToken, request.HistoryId, QueryLog(request, metric, planned.Plan, queries));
             throw;
         }
 
@@ -214,7 +218,12 @@ public sealed partial class AnalysisService : IAnalysisService
             metadata: new { metric.MetricId, metric.Model, metric.RowCount, metric.Truncated, metric.EstimatedCost, planMs = metric.PlanMs, executeMs = metric.ExecuteMs, interpretMs = metric.InterpretMs, panels = panels.Count, report = report is not null, email = emailDraft is not null, language });
         var version = history.Version;
         var response = new AskResponse(metric.MetricId, history.Entry.HistoryId, version.VersionNumber, planned.Plan.Objective, planned.Plan.Assumptions, panels, interpretation, report, emailDraft, planned.Usage, metric.EstimatedCost, total.Elapsed.TotalMilliseconds);
-        await StoreVersionAsync(history.Entry, version, metric, planned, panels, interpretation, response, reportSha, cancellationToken);
+        await StoreVersionAsync(history.Entry, version, metric, planned, queries, interpretation, response, reportSha, cancellationToken);
+        var log = QueryLog(request, metric, planned.Plan, queries);
+        log.Status = AnalysisStatus.Completed;
+        log.HistoryId = history.Entry.HistoryId;
+        log.VersionNumber = version.VersionNumber;
+        _context.AnalysisQueryLogs.Add(log);
         // Phase 14 ledger: one fact per object touched, in the same unit of work as the analysis.
         await _accessFacts.RecordAsync(new AccessFactRecording(request.ApplicationId, panels.Select(p => new PlanExecution(p.Plan, p.Result.RowCount)).ToList(), AccessOutcome.Succeeded, version.VersionId, metric.MetricId), cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
@@ -278,10 +287,10 @@ public sealed partial class AnalysisService : IAnalysisService
         return new HistoryWork(entry, version);
     }
 
-    private async Task StoreVersionAsync(AnalysisHistory entry, AnalysisHistoryVersion version, AnalysisExecutionMetric metric, PlanResponse planned, List<AnalysisPanel> panels, Interpretation? interpretation, AskResponse response, string? reportSha, CancellationToken cancellationToken)
+    private async Task StoreVersionAsync(AnalysisHistory entry, AnalysisHistoryVersion version, AnalysisExecutionMetric metric, PlanResponse planned, List<LoggedQuery> queries, Interpretation? interpretation, AskResponse response, string? reportSha, CancellationToken cancellationToken)
     {
         version.QueryPlanJson = JsonSerializer.Serialize(planned.Plan, JsonOptions);
-        version.CompiledSqlPreview = string.Join("\n\n", panels.Select(p => $"-- {p.Title}\n{p.CompiledSqlPreview}"));
+        version.CompiledSqlPreview = string.Join("\n\n", queries.Select(q => $"-- {q.Title}\n{q.Sql}"));
         version.ResultSummary = JsonSerializer.Serialize(new { narrative = interpretation?.Narrative ?? string.Empty, highlights = interpretation?.Highlights ?? [] }, JsonOptions);
         version.MetricId = metric.MetricId;
         version.ModelProviderId = metric.ProviderId;
@@ -290,7 +299,7 @@ public sealed partial class AnalysisService : IAnalysisService
         version.OutputTokens = metric.PlanOutputTokens + metric.InterpretOutputTokens + metric.ReportOutputTokens;
         version.EstimatedCost = metric.EstimatedCost;
         version.DurationMs = response.TotalDurationMs;
-        version.PanelCount = panels.Count;
+        version.PanelCount = queries.Count;
         version.RowCount = metric.RowCount;
         version.CompletedAt = _clock.UtcNow;
 
@@ -462,7 +471,33 @@ public sealed partial class AnalysisService : IAnalysisService
         return new Interpretation(narrative, highlights, usage, Incomplete: narrative.Length == 0 || (cutOff && parsed is null));
     }
 
-    private async Task FailAsync(AnalysisExecutionMetric metric, AnalysisStatus status, string stage, string code, Stopwatch total, CancellationToken cancellationToken, Guid? historyId = null)
+    /// <summary>One executed (or attempted) query of the answer, as recorded in <see cref="AnalysisQueryLog.QueriesJson"/>.</summary>
+    private sealed record LoggedQuery(string Title, string Sql, IReadOnlyList<SqlParameter> Parameters, int? RowCount, bool Truncated);
+
+    /// <summary>The query log row of this run: the question, the plan, and the SQL each panel ran with its bound values; never shown to users.</summary>
+    private AnalysisQueryLog QueryLog(AskRequest request, AnalysisExecutionMetric metric, AnalysisPlan? plan, IReadOnlyList<LoggedQuery> queries) => new()
+    {
+        LogId = Ids.New(),
+        OrganizationId = metric.OrganizationId,
+        UserId = metric.UserId,
+        ApplicationId = request.ApplicationId,
+        MetricId = metric.MetricId,
+        HistoryId = request.HistoryId,
+        Question = PromptBuilder.Sanitize(request.Question, PromptBuilder.MaxQuestionLength),
+        Language = metric.Language,
+        PlanJson = plan is null ? "{}" : JsonSerializer.Serialize(plan, JsonOptions),
+        QueriesJson = JsonSerializer.Serialize(queries.Select(q => new
+        {
+            title = q.Title,
+            sql = q.Sql,
+            parameters = q.Parameters.Select(p => new { name = p.Name, value = p.Value }),
+            rowCount = q.RowCount,
+            truncated = q.Truncated,
+        }), JsonOptions),
+        CreatedAt = _clock.UtcNow,
+    };
+
+    private async Task FailAsync(AnalysisExecutionMetric metric, AnalysisStatus status, string stage, string code, Stopwatch total, CancellationToken cancellationToken, Guid? historyId = null, AnalysisQueryLog? log = null)
     {
         metric.Status = status;
         metric.FailureStage = stage;
@@ -479,7 +514,20 @@ public sealed partial class AnalysisService : IAnalysisService
                 entry.UpdatedAt = _clock.UtcNow;
                 entry.Status = AnalysisHistoryStatus.Failed;
                 _context.AnalysisHistoryVersions.Add(new AnalysisHistoryVersion { VersionId = Ids.New(), HistoryId = entry.HistoryId, OrganizationId = entry.OrganizationId, VersionNumber = entry.CurrentVersionNumber, RunByUserId = userId, CreatedAt = _clock.UtcNow, CompletedAt = _clock.UtcNow, Status = AnalysisHistoryStatus.Failed, FailureStage = stage, FailureCode = code, MetricId = metric.MetricId, ModelName = metric.Model, InputTokens = metric.PlanInputTokens, OutputTokens = metric.PlanOutputTokens, EstimatedCost = metric.EstimatedCost, DurationMs = total.Elapsed.TotalMilliseconds });
+                if (log is not null)
+                {
+                    log.VersionNumber = entry.CurrentVersionNumber;
+                }
             }
+        }
+
+        if (log is not null)
+        {
+            // Failures are the runs most worth reviewing: the question, the plan and any SQL that was compiled are kept.
+            log.Status = status;
+            log.FailureStage = stage;
+            log.FailureCode = code;
+            _context.AnalysisQueryLogs.Add(log);
         }
 
         _usage.Append(UsageEventTypes.AnalysisFailed, "Application", metric.ApplicationId.ToString(), succeeded: false, metadata: new { metric.MetricId, stage, code, totalMs = total.Elapsed.TotalMilliseconds });

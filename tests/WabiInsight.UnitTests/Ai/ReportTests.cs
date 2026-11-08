@@ -11,7 +11,7 @@ public sealed class ReportTests
     {
         var visualization = new PlanVisualization { Type = type, X = x, Y = [.. y] };
         var (kpis, series) = ResultCalculator.Calculate(columns, rows, visualization);
-        return new AnalysisPanel(title, new QueryPlan { Title = title, Objective = title, Visualization = visualization }, "SELECT ...", new AnalysisResult(columns, rows, rows.Count, false, kpis, series, 1));
+        return new AnalysisPanel(title, new QueryPlan { Title = title, Objective = title, Visualization = visualization }, new AnalysisResult(columns, rows, rows.Count, false, kpis, series, 1));
     }
 
     private static List<AnalysisPanel> SamplePanels()

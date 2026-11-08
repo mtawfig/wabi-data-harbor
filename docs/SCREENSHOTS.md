@@ -142,8 +142,8 @@ Captured from the running app with the Wabi Bank sample organization and the rea
 
 | Screen | Signed in as | Files |
 |---|---|---|
-| Condition on a total: accounts with more than two returned cheques, `HAVING COUNT(…) > ?` in the query | Compliance and AML Officer | [p13-8-totals-filter-en](screenshots/p13-8-totals-filter-en.png) |
-| "My department" in Arabic: the asker's department code is bound by the server (`[DepartmentCode] = ?`) | IT Service Desk Manager | [p13-8-my-department-ar](screenshots/p13-8-my-department-ar.png) |
+| Condition on a total: accounts with more than two returned cheques ("Only groups where … is more than 2") | Compliance and AML Officer | [p13-8-totals-filter-en](screenshots/p13-8-totals-filter-en.png) |
+| "My department" in Arabic: the asker's department code is bound by the server ("… يساوي إدارتك") | IT Service Desk Manager | [p13-8-my-department-ar](screenshots/p13-8-my-department-ar.png) |
 | Access note with the neutral wording "your department" (mobile) | Branch Manager, Deira | [p13-8-access-note-department-en-mobile](screenshots/p13-8-access-note-department-en-mobile.png) |
 
 ## P13.9 — Example questions and readable numbers
@@ -166,6 +166,17 @@ Captured from the running app with the Wabi Bank sample organization and the rea
 | The two-panel budget question whose explanation used to come back blank, now explained | Budget controller | [p13-10-explanation-en](screenshots/p13-10-explanation-en.png) |
 | Alerts in Arabic: counts, occurrences, dates and the badge in Arabic digits and month names | Compliance and AML Officer | [p13-10-alerts-ar](screenshots/p13-10-alerts-ar.png) |
 | My History in Arabic: run dates, versions and costs | HR officer | [p13-10-history-ar](screenshots/p13-10-history-ar.png) |
+
+## P13.11 — Plain-language explanation, compact language switch, generic sample names
+
+Captured from the running app with the Wabi Bank sample organization (now with generic names) and the real model. The Wabi Bank screenshots of P13.7–P13.10 and the P13.6 demo were re-captured with the new names.
+
+| Screen | Signed in as | Files |
+|---|---|---|
+| *How this was computed* in words: sources, totals, grouping, the row and group conditions, sort and row cap (no SQL) | Compliance and AML Officer | [p13-11-how-en](screenshots/p13-11-how-en.png) |
+| The same in Arabic, with Arabic dates and numbers | IT Service Desk Manager | [p13-11-how-ar](screenshots/p13-11-how-ar.png) |
+| Arabic on a phone: the list stacks | Branch Manager, Deira | [p13-11-how-ar-mobile](screenshots/p13-11-how-ar-mobile.png) |
+| Globe-only language switch on a phone, aligned with the bell and account icons, English and Arabic | Teller, Deira | [p13-11-switcher-en-mobile](screenshots/p13-11-switcher-en-mobile.png) · [p13-11-switcher-ar-mobile](screenshots/p13-11-switcher-ar-mobile.png) |
 
 ## Feature screenshots by PR
 

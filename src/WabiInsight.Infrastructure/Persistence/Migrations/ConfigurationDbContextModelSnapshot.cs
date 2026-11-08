@@ -529,6 +529,74 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.ToTable("AnalysisHistoryVersions", (string)null);
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Analysis.AnalysisQueryLog", b =>
+                {
+                    b.Property<Guid>("LogId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FailureStage")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<Guid?>("HistoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
+
+                    b.Property<Guid>("MetricId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PlanJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QueriesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("LogId");
+
+                    b.HasIndex("MetricId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.HasIndex("OrganizationId", "ApplicationId", "CreatedAt");
+
+                    b.ToTable("AnalysisQueryLogs", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Analysis.AnalysisShare", b =>
                 {
                     b.Property<Guid>("ShareId")
@@ -3579,6 +3647,15 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("History");
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Analysis.AnalysisQueryLog", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Analysis.AnalysisShare", b =>

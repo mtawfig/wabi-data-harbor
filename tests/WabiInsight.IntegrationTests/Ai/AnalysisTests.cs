@@ -96,7 +96,9 @@ public sealed class AnalysisTests : IDisposable
             }
         }
 
-        var preview = response.GetProperty("panels")[0].GetProperty("compiledSqlPreview").GetString()!;
+        // The SQL is kept for reference and accuracy checks in AnalysisQueryLogs, never sent to the browser.
+        var preview = await LoggedSqlAsync(response);
+        Assert.Equal(JsonValueKind.Object, response.GetProperty("panels")[0].GetProperty("labels").ValueKind);
         Assert.StartsWith("SELECT TOP (101) [t].[Status] AS [status], COUNT(*) AS [tickets] FROM [dbo].[SupportTickets] [t] WHERE [t].[Impact] <> ?", preview, StringComparison.Ordinal);
         Assert.DoesNotContain("Critical", preview, StringComparison.Ordinal);
         Assert.False(response.GetProperty("panels")[0].GetProperty("result").GetProperty("truncated").GetBoolean());
@@ -131,7 +133,7 @@ public sealed class AnalysisTests : IDisposable
         var scoped = await analyst.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Tickets by status", interpret = false });
         Assert.True(scoped.StatusCode == HttpStatusCode.OK, await scoped.Content.ReadAsStringAsync());
         var scopedResponse = await scoped.ReadJsonAsync();
-        Assert.Contains("FROM (SELECT * FROM [dbo].[SupportTickets] WHERE [Impact] = ?) [t]", scopedResponse.GetProperty("panels")[0].GetProperty("compiledSqlPreview").GetString(), StringComparison.Ordinal);
+        Assert.Contains("FROM (SELECT * FROM [dbo].[SupportTickets] WHERE [Impact] = ?) [t]", await LoggedSqlAsync(scopedResponse), StringComparison.Ordinal);
         var scopedTotal = scopedResponse.GetProperty("panels")[0].GetProperty("result").GetProperty("rows").EnumerateArray().Sum(r => r[1].GetInt64());
         await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
         {
@@ -159,6 +161,12 @@ public sealed class AnalysisTests : IDisposable
         await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
         {
             Assert.True(await context.AnalysisExecutionMetrics.IgnoreQueryFilters().AnyAsync(m => m.Status == Core.Entities.Ai.AnalysisStatus.Rejected && m.FailureStage == "authorization"));
+            // Rejected questions are kept too, with the plan the model proposed, so the tool's accuracy can be reviewed.
+            var rejectedLog = await context.AnalysisQueryLogs.IgnoreQueryFilters().Where(l => l.Question == "Show something that does not exist").OrderByDescending(l => l.CreatedAt).FirstAsync();
+            Assert.Equal((Core.Entities.Ai.AnalysisStatus.Rejected, "authorization", "column_not_permitted"), (rejectedLog.Status, rejectedLog.FailureStage, rejectedLog.FailureCode));
+            Assert.Contains("t.NoSuchColumn", rejectedLog.PlanJson, StringComparison.Ordinal);
+            Assert.Equal("[]", rejectedLog.QueriesJson);
+            Assert.Equal(_db.Data.OrganizationAId, rejectedLog.OrganizationId);
         }
 
         // Truncation: a limit of 1 on a multi-row (non-aggregated) result flags truncated and returns one row.
@@ -191,7 +199,7 @@ public sealed class AnalysisTests : IDisposable
         Assert.Equal(totalTickets, panels[1].GetProperty("result").GetProperty("rows").EnumerateArray().Sum(r => r[1].GetInt64()));
         Assert.Equal(totalTickets, panels[2].GetProperty("result").GetProperty("rows").EnumerateArray().Sum(r => r[1].GetInt64()));
         Assert.Single(panels[1].GetProperty("result").GetProperty("series").EnumerateArray());
-        Assert.Contains("COUNT(*) AS [tickets] FROM [dbo].[SupportTickets] [t]", panels[0].GetProperty("compiledSqlPreview").GetString(), StringComparison.Ordinal);
+        Assert.Contains("COUNT(*) AS [tickets] FROM [dbo].[SupportTickets] [t]", await LoggedSqlAsync(dashboard), StringComparison.Ordinal);
         Assert.Equal("Dashboard narrative.", dashboard.GetProperty("interpretation").GetProperty("narrative").GetString());
         var dashboardInterpret = FakeAiProvider.Requests.Last(r => r.SchemaName == "wabi_interpretation");
         Assert.Contains("\"title\":\"Tickets by impact\"", dashboardInterpret.UserContent, StringComparison.Ordinal);
@@ -257,8 +265,9 @@ public sealed class AnalysisTests : IDisposable
             """;
         var totals = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Which impacts have at least two tickets?", interpret = false });
         Assert.True(totals.StatusCode == HttpStatusCode.OK, await totals.Content.ReadAsStringAsync());
-        var totalsPanel = (await totals.ReadJsonAsync()).GetProperty("panels")[0];
-        Assert.Contains("WHERE [t].[LastActivityAt] >= [t].[CreatedAt] GROUP BY [t].[Impact] HAVING COUNT(*) >= ?", totalsPanel.GetProperty("compiledSqlPreview").GetString(), StringComparison.Ordinal);
+        var totalsResponse = await totals.ReadJsonAsync();
+        var totalsPanel = totalsResponse.GetProperty("panels")[0];
+        Assert.Contains("WHERE [t].[LastActivityAt] >= [t].[CreatedAt] GROUP BY [t].[Impact] HAVING COUNT(*) >= ?", await LoggedSqlAsync(totalsResponse), StringComparison.Ordinal);
         var totalsRows = totalsPanel.GetProperty("result").GetProperty("rows").EnumerateArray().Select(r => (Impact: r[0].GetString()!, Count: r[1].GetInt64())).ToList();
         await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
         {
@@ -279,8 +288,11 @@ public sealed class AnalysisTests : IDisposable
         FakeAiProvider.Script = (_) => myDepartmentPlan;
         var mine = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "How many tickets does my department have?", interpret = false });
         Assert.True(mine.StatusCode == HttpStatusCode.OK, await mine.Content.ReadAsStringAsync());
-        var minePanel = (await mine.ReadJsonAsync()).GetProperty("panels")[0];
-        Assert.Contains("WHERE [t].[Impact] = ?", minePanel.GetProperty("compiledSqlPreview").GetString(), StringComparison.Ordinal);
+        var mineResponse = await mine.ReadJsonAsync();
+        var minePanel = mineResponse.GetProperty("panels")[0];
+        Assert.Contains("WHERE [t].[Impact] = ?", await LoggedSqlAsync(mineResponse), StringComparison.Ordinal);
+        // The log keeps the bound value (the asker's own department code) for accuracy checks; the answer keeps only the placeholder.
+        Assert.Contains(await LoggedParametersAsync(mineResponse), v => string.Equals(v, "Medium", StringComparison.OrdinalIgnoreCase));
         Assert.Equal("$asker.department", minePanel.GetProperty("plan").GetProperty("filters").GetProperty("conditions")[0].GetProperty("values")[0].GetString());
         await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
         {
@@ -306,6 +318,12 @@ public sealed class AnalysisTests : IDisposable
         var mismatch = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "x", interpret = false });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, mismatch.StatusCode);
         Assert.Contains((await mismatch.ReadJsonAsync()).GetProperty("errors").EnumerateArray(), e => e.GetProperty("code").GetString() == "plan_compare_type_mismatch");
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var compileLog = await context.AnalysisQueryLogs.IgnoreQueryFilters().Where(l => l.FailureCode == "plan_compare_type_mismatch").OrderByDescending(l => l.CreatedAt).FirstAsync();
+            Assert.Equal((Core.Entities.Ai.AnalysisStatus.Rejected, "compile"), (compileLog.Status, compileLog.FailureStage));
+            Assert.Contains("\"compareTo\":\"t.CreatedAt\"", compileLog.PlanJson, StringComparison.Ordinal);
+        }
 
         // Second organization: Bob cannot ask against organization A's application at all.
         using var bob = await LoginAsync(TestData.BobEmail);
@@ -357,7 +375,7 @@ public sealed class AnalysisTests : IDisposable
         var ask = await alice.PostJsonAsync("/api/ai/ask", new { applicationId, question = "How many users per status?", interpret = false });
         Assert.True(ask.StatusCode == HttpStatusCode.OK, await ask.Content.ReadAsStringAsync());
         var response = await ask.ReadJsonAsync();
-        Assert.Contains("FROM (SELECT * FROM [insights].[Users] WHERE [OrganizationId] = ?) [u]", response.GetProperty("panels")[0].GetProperty("compiledSqlPreview").GetString(), StringComparison.Ordinal);
+        Assert.Contains("FROM (SELECT * FROM [insights].[Users] WHERE [OrganizationId] = ?) [u]", await LoggedSqlAsync(response), StringComparison.Ordinal);
         var total = response.GetProperty("panels")[0].GetProperty("result").GetProperty("rows").EnumerateArray().Sum(r => r[1].GetInt64());
         await using var context = _db.CreateContext(_db.Data.PlatformAdministrator);
         Assert.Equal(await context.OrganizationUsers.IgnoreQueryFilters().LongCountAsync(u => u.OrganizationId == _db.Data.OrganizationAId), total);
@@ -460,6 +478,31 @@ public sealed class AnalysisTests : IDisposable
         {
             FakeAiProvider.Script = null;
         }
+    }
+
+    /// <summary>The SQL a panel ran, read from <c>AnalysisQueryLogs</c>: answers sent to the browser never carry it.</summary>
+    private async Task<string> LoggedSqlAsync(JsonElement response, int panel = 0)
+    {
+        Assert.False(response.GetProperty("panels")[panel].TryGetProperty("compiledSqlPreview", out _));
+        var metricId = response.GetProperty("analysisId").GetGuid();
+        await using var context = _db.CreateContext(_db.Data.PlatformAdministrator);
+        var log = await context.AnalysisQueryLogs.IgnoreQueryFilters().SingleAsync(l => l.MetricId == metricId);
+        Assert.Equal(Core.Entities.Ai.AnalysisStatus.Completed, log.Status);
+        Assert.Equal(response.GetProperty("historyId").GetGuid(), log.HistoryId);
+        using var queries = JsonDocument.Parse(log.QueriesJson);
+        Assert.Equal(response.GetProperty("panels")[panel].GetProperty("result").GetProperty("rowCount").GetInt32(), queries.RootElement[panel].GetProperty("rowCount").GetInt32());
+        return queries.RootElement[panel].GetProperty("sql").GetString()!;
+    }
+
+    /// <summary>The values bound to a logged panel's parameters, in order, as text.</summary>
+    private async Task<List<string>> LoggedParametersAsync(JsonElement response, int panel = 0)
+    {
+        var metricId = response.GetProperty("analysisId").GetGuid();
+        await using var context = _db.CreateContext(_db.Data.PlatformAdministrator);
+        var log = await context.AnalysisQueryLogs.IgnoreQueryFilters().SingleAsync(l => l.MetricId == metricId);
+        using var queries = JsonDocument.Parse(log.QueriesJson);
+        return queries.RootElement[panel].GetProperty("parameters").EnumerateArray()
+            .Select(p => p.GetProperty("value").ValueKind == JsonValueKind.String ? p.GetProperty("value").GetString()! : p.GetProperty("value").GetRawText()).ToList();
     }
 
     private async Task<(Guid ApplicationId, List<JsonElement> Columns)> PrepareApplicationAsync(HttpClient alice, string tag)

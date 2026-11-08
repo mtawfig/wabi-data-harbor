@@ -18,7 +18,14 @@
 .ask__table-wrap { overflow: auto; max-height: 480px; border: 1px solid var(--wi-border); border-radius: var(--wi-radius-sm); }
 .ask__table { width: 100%; border-collapse: collapse; font-size: 14px; th { position: sticky; top: 0; background: #f8fafc; text-align: start; font-size: 12px; color: var(--wi-muted); padding: 8px 10px; border-bottom: 1px solid var(--wi-border); } td { padding: 6px 10px; border-bottom: 1px solid var(--wi-border); white-space: nowrap; } .num { text-align: end; font-variant-numeric: tabular-nums; } }
 .ask__how { margin-top: 16px; box-shadow: none; border: 1px solid var(--wi-border); h4 { margin: 12px 0 6px; font-size: 13px; } }
-.ask__sql { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: var(--wi-radius-sm); font-size: 12px; white-space: pre-wrap; direction: ltr; text-align: left; margin: 0 0 8px; }
+.ask__how-query + .ask__how-query { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--wi-border); }
+.ask__how-list { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 6px 16px; margin: 0 0 8px; font-size: 14px; }
+.ask__how-list dt { color: #64748b; font-weight: 500; }
+.ask__how-list dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .ask__how-list { grid-template-columns: 1fr; gap: 2px; }
+  .ask__how-list dd { margin-bottom: 8px; }
+}
 @media (max-width: 900px) { .ask__charts { grid-template-columns: minmax(0, 1fr); } }
 .ask__report, .ask__email { border-inline-start: 4px solid var(--wi-ocean); h2 { margin: 4px 0 4px; font-size: 20px; } }
 .ask__report-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; }
