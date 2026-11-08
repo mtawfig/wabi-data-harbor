@@ -407,9 +407,14 @@
       "plan_rejected": "The plan was rejected.",
       "row_mapping_type_mismatch": "The row-scope mapping column cannot hold your department, section or employee code. Ask your administrator to map a code column.",
       "plan_queries_invalid": "The plan contained no query.",
-      "plan_too_many_queries": "The plan asked for more than eight queries.",
+      "plan_too_many_queries": "The plan asked for more than ten queries.",
       "plan_query_title_invalid": "A panel title is too long.",
-      "plan_output_truncated": "The answer plan did not fit in the output budget. Ask for fewer panels, or raise the provider's max output tokens."
+      "plan_output_truncated": "The answer plan did not fit in the output budget. Ask for fewer panels, or raise the provider's max output tokens.",
+      "plan_having_invalid": "A condition on a total or count is invalid.",
+      "plan_compare_invalid": "A comparison between two columns is invalid.",
+      "plan_compare_type_mismatch": "Two compared columns hold different kinds of values.",
+      "plan_asker_value_invalid": "Your own code can only be used as an equality filter.",
+      "asker_value_missing": "The question refers to your own employee, department or section code, but your profile has none. Ask your organization administrator to complete it."
     },
     "kpis": "Headline numbers",
     "charts": "Charts",
@@ -436,7 +441,7 @@
     "access": {
       "title": "Rows limited to what you may see:",
       "Self": "your own records",
-      "Department": "your department or branch ({{value}})",
+      "Department": "your department ({{value}})",
       "Section": "your section ({{value}})"
     },
     "interpretationIncomplete": "The written explanation could not be finished this time. The figures, charts and tables above are verified; ask again to get the explanation."
@@ -2094,7 +2099,7 @@
       },
       "restricted_filtered_access": {
         "name": "Targeted look-ups on restricted data",
-        "description": "A user filters restricted data by many specific identifiers (for example, particular customers' bank accounts)."
+        "description": "A user filters restricted data by many specific identifiers (for example, particular customers' accounts)."
       },
       "repeated_unauthorized_attempts": {
         "name": "Repeated unauthorized attempts",

@@ -50,7 +50,7 @@ public static class PanelAccess
         : "limited to what the asker may see: " + string.Join(" or ", scopes.Select(s => s.Scope switch
         {
             "Self" => $"only the asker's own records (employee {s.Value})",
-            "Department" => $"only rows of the asker's department or branch {s.Value}",
+            "Department" => $"only rows of the asker's department {s.Value}",
             "Section" => $"only rows of the asker's section {s.Value}",
             _ => $"only rows for {s.Scope} {s.Value}",
         }));

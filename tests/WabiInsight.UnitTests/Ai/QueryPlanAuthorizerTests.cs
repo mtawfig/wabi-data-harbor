@@ -46,7 +46,7 @@ public sealed class QueryPlanAuthorizerTests
 
         // The answer keeps which scopes limited it, so the interpretation and the page can say so.
         Assert.Equal([new PanelRowScope("Department", "FIN"), new PanelRowScope("Self", "E-1")], PanelAccess.From(plan));
-        Assert.Equal("limited to what the asker may see: only rows of the asker's department or branch FIN or only the asker's own records (employee E-1)", PanelAccess.Describe(PanelAccess.From(plan)));
+        Assert.Equal("limited to what the asker may see: only rows of the asker's department FIN or only the asker's own records (employee E-1)", PanelAccess.Describe(PanelAccess.From(plan)));
         Assert.Equal("unrestricted: every row of the queried objects", PanelAccess.Describe(null));
 
         var (unscoped, _) = QueryPlanAuthorizer.Authorize(Plan(), App, Permissions([RowScope.All]), Mappings);
@@ -73,5 +73,34 @@ public sealed class QueryPlanAuthorizerTests
         var (plan, errors) = QueryPlanAuthorizer.Authorize(Plan(), App, Permissions([RowScope.Section, RowScope.Self], context: new RowScopeContext(null, "FIN", "S1")), Mappings);
         Assert.Null(plan);
         Assert.Contains(errors, e => e.Code == "row_access_denied" && e.Detail == "dbo.Orders");
+    }
+
+    [Fact]
+    public void Authorize_ResolvesAskerPlaceholders_FromTheAskersOwnContext_ForEveryRowScope()
+    {
+        // "My department" also works for a user whose role reads every row: the placeholder narrows, it never widens.
+        var plan = Plan();
+        plan.Filters = new PlanFilterGroup { Conditions = [new PlanCondition { Column = "o.DeptCode", Operator = "eq", Values = [AskerValues.Department] }], Groups = [new PlanFilterGroup { Logic = "or", Conditions = [new PlanCondition { Column = "o.EmpNo", Operator = "in", Values = [AskerValues.Employee] }] }] };
+        var (authorized, errors) = QueryPlanAuthorizer.Authorize(plan, App, Permissions([RowScope.All]), Mappings);
+        Assert.Empty(errors);
+        Assert.Equal(new Dictionary<string, string> { [AskerValues.Department] = "FIN", [AskerValues.Employee] = "E-1" }, authorized!.AskerValues);
+
+        // No section code in the profile: the question cannot be answered, and the message says why.
+        plan.Filters.Conditions.Add(new PlanCondition { Column = "o.DeptCode", Operator = "eq", Values = [AskerValues.Section] });
+        var (missing, missingErrors) = QueryPlanAuthorizer.Authorize(plan, App, Permissions([RowScope.All]), Mappings);
+        Assert.Null(missing);
+        Assert.Contains(missingErrors, e => e.Code == "asker_value_missing" && e.Detail == AskerValues.Section);
+
+        var (plain, _) = QueryPlanAuthorizer.Authorize(Plan(), App, Permissions([RowScope.All]), Mappings);
+        Assert.Null(plain!.AskerValues);
+    }
+
+    [Fact]
+    public void Authorize_ChecksTheComparedColumnLikeAnyOtherReference()
+    {
+        var plan = Plan();
+        plan.Filters = new PlanFilterGroup { Conditions = [new PlanCondition { Column = "o.Amount", Operator = "gt", CompareTo = "o.Secret" }] };
+        var (_, errors) = QueryPlanAuthorizer.Authorize(plan, App, Permissions([RowScope.All]), Mappings);
+        Assert.Contains(errors, e => e.Code == "column_not_permitted" && e.Detail == "o.Secret");
     }
 }

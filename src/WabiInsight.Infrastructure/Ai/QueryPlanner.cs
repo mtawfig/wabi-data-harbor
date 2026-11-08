@@ -303,12 +303,25 @@ public sealed class QueryPlanner : IQueryPlanner
         var mappingRows = await _context.RowScopeColumnMappings.AsNoTracking().Where(m => objectIds.Contains(m.ObjectId)).ToListAsync(cancellationToken);
         var columnNames = columnRows.ToDictionary(c => c.ColumnId, c => c.ColumnName);
 
+        // The organization's row-scope columns tell the planner where "my department / section / records" applies.
+        var askerKeys = new Dictionary<Guid, string>();
+        foreach (var m in mappingRows)
+        {
+            foreach (var (columnId, key) in new[] { (m.EmployeeColumnId, "employee"), (m.DepartmentColumnId, "department"), (m.SectionColumnId, "section") })
+            {
+                if (columnId is { } id)
+                {
+                    askerKeys[id] = key;
+                }
+            }
+        }
+
         var snapshotObjects = objects.Select(o =>
         {
             var row = rows[o.ObjectId];
             var permitted = o.Columns.Select(c => c.ColumnId).ToHashSet();
             var columns = columnRows.Where(c => c.ObjectId == o.ObjectId && permitted.Contains(c.ColumnId)).OrderBy(c => c.OrdinalPosition)
-                .Select(c => new SnapshotColumn(c.ColumnName, c.DataType, c.DisplayNameEn, c.DisplayNameAr, c.BusinessDescription, c.IsPrimaryKey)).ToList();
+                .Select(c => new SnapshotColumn(c.ColumnName, c.DataType, c.DisplayNameEn, c.DisplayNameAr, c.BusinessDescription, c.IsPrimaryKey, askerKeys.GetValueOrDefault(c.ColumnId))).ToList();
             return new SnapshotObject(o.SchemaName, o.ObjectName, o.ObjectType.ToString(), o.DisplayNameEn, o.DisplayNameAr, row.BusinessDescription, columns);
         }).ToList();
         var objectNames = objects.ToDictionary(o => o.ObjectId, o => $"{o.SchemaName}.{o.ObjectName}");
