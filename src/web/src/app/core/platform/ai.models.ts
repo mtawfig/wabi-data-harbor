@@ -98,12 +98,20 @@ export interface QueryPlanView {
   limit?: number | null;
 }
 
+/** A row scope that limited a panel to what the asker may see, with the asker's own value it was bound to. */
+export interface PanelRowScope {
+  scope: 'Self' | 'Department' | 'Section';
+  value: string;
+}
+
 /** One executed query of an answer: a KPI, a chart or a table with its own verified rows and redacted SQL. */
 export interface AnalysisPanel {
   title: string;
   plan: QueryPlanView;
   compiledSqlPreview: string;
   result: AnalysisResult;
+  /** Row scopes applied to this panel; empty or absent when every row of the queried objects was read (older answers too). */
+  rowScopes?: PanelRowScope[] | null;
 }
 
 export interface ReportSection {

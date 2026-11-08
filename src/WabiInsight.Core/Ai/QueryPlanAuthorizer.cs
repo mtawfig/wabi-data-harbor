@@ -6,8 +6,12 @@ namespace WabiInsight.Core.Ai;
 /// <summary>Column names of an object's row-scope mapping (names, because predicates compile against column names).</summary>
 public sealed record RowMappingColumns(string? EmployeeColumn, string? DepartmentColumn, string? SectionColumn);
 
-/// <summary>One mandatory row predicate: <c>[Column] = @Parameter</c>; several are OR-ed on the same object.</summary>
-public sealed record RowPredicate(string Column, string ParameterName, string Value);
+/// <summary>
+/// One mandatory row predicate: <c>[Column] = @Parameter</c>; several are OR-ed on the same object. <see cref="Scope"/> is the
+/// user's row scope it came from (null for system predicates such as the organization filter on Platform Insights), so the
+/// answer can say that its rows are limited to what the asker may see.
+/// </summary>
+public sealed record RowPredicate(string Column, string ParameterName, string Value, RowScope? Scope = null);
 
 /// <summary>An object the plan may touch, with the predicates the compiler must apply at the source-table level.</summary>
 public sealed record AuthorizedObject(string Alias, Guid ObjectId, string Schema, string ObjectName, IReadOnlyList<RowPredicate> RowPredicates, IReadOnlyDictionary<string, string> ColumnTypes);
@@ -63,7 +67,7 @@ public static class QueryPlanAuthorizer
                     };
                     if (column is not null && !string.IsNullOrWhiteSpace(value))
                     {
-                        predicates.Add(new RowPredicate(column, $"@rs{parameterIndex++}", value));
+                        predicates.Add(new RowPredicate(column, $"@rs{parameterIndex++}", value, scope));
                     }
                 }
 

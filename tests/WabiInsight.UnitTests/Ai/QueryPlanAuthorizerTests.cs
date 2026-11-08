@@ -39,10 +39,18 @@ public sealed class QueryPlanAuthorizerTests
         Assert.NotNull(plan);
         var orders = plan!.Objects.Single(o => o.Alias == "o");
         Assert.Equal(2, orders.RowPredicates.Count);
-        Assert.Contains(orders.RowPredicates, p => p.Column == "DeptCode" && p.Value == "FIN");
-        Assert.Contains(orders.RowPredicates, p => p.Column == "EmpNo" && p.Value == "E-1");
+        Assert.Contains(orders.RowPredicates, p => p.Column == "DeptCode" && p.Value == "FIN" && p.Scope == RowScope.Department);
+        Assert.Contains(orders.RowPredicates, p => p.Column == "EmpNo" && p.Value == "E-1" && p.Scope == RowScope.Self);
         Assert.Empty(plan.Objects.Single(o => o.Alias == "c").RowPredicates);
         Assert.Equal(100, plan.EffectiveLimit);
+
+        // The answer keeps which scopes limited it, so the interpretation and the page can say so.
+        Assert.Equal([new PanelRowScope("Department", "FIN"), new PanelRowScope("Self", "E-1")], PanelAccess.From(plan));
+        Assert.Equal("limited to what the asker may see: only rows of the asker's department or branch FIN or only the asker's own records (employee E-1)", PanelAccess.Describe(PanelAccess.From(plan)));
+        Assert.Equal("unrestricted: every row of the queried objects", PanelAccess.Describe(null));
+
+        var (unscoped, _) = QueryPlanAuthorizer.Authorize(Plan(), App, Permissions([RowScope.All]), Mappings);
+        Assert.Empty(PanelAccess.From(unscoped!));
     }
 
     [Fact]

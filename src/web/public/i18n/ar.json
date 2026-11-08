@@ -432,7 +432,13 @@
       "subjectLabel": "الموضوع"
     },
     "savedToHistory": "حُفظ في سجلّي.",
-    "openInHistory": "فتح"
+    "openInHistory": "فتح",
+    "access": {
+      "title": "الصفوف مقتصرة على ما يحق لك رؤيته:",
+      "Self": "سجلاتك الخاصة فقط",
+      "Department": "إدارتك أو فرعك ({{value}})",
+      "Section": "قسمك ({{value}})"
+    }
   },
   "platform": {
     "overview": {
