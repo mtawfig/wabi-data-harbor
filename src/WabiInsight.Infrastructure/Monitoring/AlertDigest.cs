@@ -92,7 +92,7 @@ public sealed class AlertDigestBuilder
         }
 
         var measure = Summary(alert).GetValueOrDefault("measure") is { } m && decimal.TryParse(m.ToString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ? value : (decimal?)null;
-        if (rule.Kind == MonitoringRuleKind.Access)
+        if (rule.Kind != MonitoringRuleKind.Data)
         {
             return new DigestLine(alert.Severity, rule.Name, alert.Title, alert.Occurrences, false, null, measure);
         }

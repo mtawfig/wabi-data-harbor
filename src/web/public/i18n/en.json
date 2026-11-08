@@ -835,7 +835,7 @@
       "rule_comparison_needs_time_without_grouping": "A period comparison needs a time column and no grouping.",
       "rule_max_groups_invalid": "Between 1 and 1000 groups.",
       "rule_signal_invalid": "Unknown signal.",
-      "rule_threshold_invalid": "The threshold must be greater than zero.",
+      "rule_threshold_invalid": "The threshold is out of range for this signal.",
       "rule_baseline_invalid": "This signal cannot be compared with a baseline.",
       "rule_new_users_invalid": "New-user window must be 1–365 days.",
       "rule_role_invalid": "Unknown role.",
@@ -858,7 +858,13 @@
       "subscription_language_invalid": "Choose a language.",
       "subscription_analysis_not_available": "Choose one of your saved analyses or one shared with you.",
       "subscription_recipients_invalid": "Choose 1 to 50 active users of the organization.",
-      "subscription_not_found": "Periodic report not found."
+      "subscription_not_found": "Periodic report not found.",
+      "draft_description_invalid": "Describe the rule in 5 to 1000 characters.",
+      "draft_no_permitted_objects": "The rule owner may not read any table or view, so no rule can be drafted.",
+      "draft_unreadable": "The AI answer could not be read. Try again or rephrase.",
+      "draft_not_expressible": "This cannot be expressed as one data rule (it needs several tables, platform usage or system health). Use a template instead.",
+      "draft_reference_not_permitted": "The draft referred to a table or column the owner may not read, so it was rejected. Rephrase or choose a template.",
+      "settings_ai_budget_invalid": "The monthly AI budget must be greater than zero (or left empty)."
     },
     "applications": {
       "title": "Applications",
@@ -1853,7 +1859,8 @@
     },
     "kind": {
       "Data": "Data rule",
-      "Access": "Access rule"
+      "Access": "Access rule",
+      "System": "System rule"
     },
     "recurrence": {
       "Daily": "Daily",
@@ -1892,7 +1899,12 @@
       "exports": "Exports",
       "unauthorized": "Unauthorized attempts",
       "identifier_filter_values": "Specific identifiers filtered",
-      "accesses": "Accesses"
+      "accesses": "Accesses",
+      "connection_failures": "Source connection failures",
+      "email_failures": "Email delivery failures",
+      "ai_budget": "AI spend against the monthly budget",
+      "metadata_drift": "Catalogue changes at the source",
+      "report_failures": "Periodic report failures"
     },
     "basis": {
       "user": "the user's own baseline",
@@ -1908,7 +1920,19 @@
       "basis": "Compared with",
       "signal": "Signal",
       "windowHours": "Window (hours)",
-      "reason": "Reason"
+      "reason": "Reason",
+      "application": "Application",
+      "object": "Object",
+      "report": "Report",
+      "failedQueries": "Failed queries",
+      "connectionTestFailed": "Connection test failed",
+      "objectRemoved": "Object removed",
+      "columnsRemoved": "Columns removed",
+      "budget": "Monthly budget",
+      "spend": "Spent this month",
+      "month": "Month",
+      "yes": "Yes",
+      "no": "No"
     },
     "userStatus": {
       "Active": "Active",
@@ -2024,7 +2048,13 @@
       "weeklyAt": "{{day}} at {{time}}",
       "dailyAt": "Daily at {{time}}",
       "bindAll": "Choose a column for every field.",
-      "ownerShort": "Owner"
+      "ownerShort": "Owner",
+      "systemTemplates": "System rules (platform health, no business data)",
+      "systemSignal": "Signal",
+      "systemThreshold": "Alert when the count is above",
+      "budgetPercent": "Alert at this share of the budget (%)",
+      "budgetMissing": "Set a monthly AI budget in Monitoring settings; until then this rule is skipped.",
+      "systemNoData": "System rules count your organization's own platform events only; they read no business data."
     },
     "settings": {
       "title": "Monitoring settings",
@@ -2034,7 +2064,9 @@
       "workEnd": "Working hours end",
       "retention": "Keep history (months)",
       "retentionHint": "Up to {{max}} months.",
-      "workingDays": "Working days"
+      "workingDays": "Working days",
+      "aiBudget": "Monthly AI budget (USD)",
+      "aiSpend": "Estimated spend this month: ${{spend}}"
     },
     "templates": {
       "multi_device_same_account": {
@@ -2076,6 +2108,26 @@
       "new_user_sensitive_access": {
         "name": "New user reading restricted data",
         "description": "An account created in the last days reads restricted data."
+      },
+      "source_connection_failures": {
+        "name": "Source connection failures",
+        "description": "An application's database could not be reached: failed queries or a failed connection test within the window."
+      },
+      "email_delivery_failures": {
+        "name": "Email delivery failures",
+        "description": "Emails from the platform (digests, reports, shares) that could not be delivered."
+      },
+      "ai_budget_reached": {
+        "name": "AI budget reached",
+        "description": "This month's estimated AI spend reached a share of the monthly budget set in Monitoring settings."
+      },
+      "metadata_drift": {
+        "name": "Catalogue changes at the source",
+        "description": "Tables, views or columns that disappeared from a source at the last metadata refresh. Rules that read them are paused."
+      },
+      "report_delivery_failures": {
+        "name": "Periodic report failures",
+        "description": "Periodic reports that could not be produced or sent to a recipient."
       }
     },
     "errors": {
@@ -2125,7 +2177,56 @@
       "query_failed": "The source database returned an error.",
       "source_permission_denied": "The application's login cannot read this object.",
       "source_schema_changed": "The source schema changed; refresh the metadata.",
-      "unknown": "Unknown reason."
+      "unknown": "Unknown reason.",
+      "ai_budget_not_set": "No monthly AI budget is set in Monitoring settings."
+    },
+    "aggregates": {
+      "count": "number of rows",
+      "count_distinct": "number of distinct values",
+      "sum": "total",
+      "avg": "average",
+      "min": "minimum",
+      "max": "maximum"
+    },
+    "draft": {
+      "title": "Describe a rule",
+      "subtitle": "Write what you want to watch, in English or Arabic. Wabi Insight drafts a rule from the tables and columns the owner may read; you review it before anything is saved.",
+      "label": "What should we watch for?",
+      "placeholder": "For example: alert me when the same account signs in from more than one device on the same day",
+      "hint": "One table or view per rule. Several tables, usage of the platform and system health use the templates below.",
+      "go": "Draft the rule",
+      "proposed": "Proposed rule — review before saving",
+      "object": "Reads",
+      "parts": {
+        "time": "Time column",
+        "group": "Per",
+        "measure": "Counts",
+        "filter": "Only where"
+      },
+      "when": "Alerts when",
+      "condition": "the {{aggregate}} is {{operator}} {{value}} within the last {{hours}} hours",
+      "vsPrevious": "compared with the previous period",
+      "assumptions": "Assumptions",
+      "notSaved": "Nothing is saved yet. The rule runs only after you review and save it, with the owner's permissions.",
+      "discard": "Discard",
+      "review": "Review and save",
+      "fromDescription": "From your description",
+      "ownerFixed": "Owner: {{owner}} (the draft was bound to this owner's permissions; start again to change it)."
+    },
+    "filterOperators": {
+      "eq": "equal to",
+      "neq": "not equal to",
+      "gt": "greater than",
+      "gte": "at least",
+      "lt": "less than",
+      "lte": "at most",
+      "in": "one of",
+      "not_in": "none of",
+      "between": "between",
+      "contains": "contains",
+      "starts_with": "starts with",
+      "is_null": "is empty",
+      "not_null": "is not empty"
     }
   },
   "periodic": {

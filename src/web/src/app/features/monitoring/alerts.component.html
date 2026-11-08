@@ -59,11 +59,12 @@
               <span class="sev" [attr.data-sev]="a.severity">{{ 'monitoring.severity.' + a.severity | transloco }}</span>
               <span class="alert-row__body">
                 <span class="alert-row__title">{{ a.title }}</span>
-                <span class="wi-muted small">
-                  @if (a.redacted) { <mat-icon class="tiny">visibility_off</mat-icon>{{ 'monitoring.alerts.redactedShort' | transloco }} }
-                  @else if (a.groupKey && a.groupKey !== '*' && a.groupKey !== 'rule_invalid') { <span class="wi-ltr">{{ a.groupKey }}</span> }
-                  @if (a.occurrences > 1) { · {{ 'monitoring.alerts.times' | transloco: { count: a.occurrences } }} }
-                  · {{ a.lastSeenAt | date: 'medium' }}
+                <span class="wi-muted small alert-row__meta">
+                  @if (a.redacted) { <span><mat-icon class="tiny">visibility_off</mat-icon>{{ 'monitoring.alerts.redactedShort' | transloco }}</span> }
+                  @else if (a.groupKey === 'rule_invalid') { <span>{{ 'monitoring.rules.paused' | transloco }}</span> }
+                  @else if (a.groupKey && a.groupKey !== '*') { <span class="wi-ltr">{{ a.groupKey }}</span> }
+                  @if (a.occurrences > 1) { <span>{{ 'monitoring.alerts.times' | transloco: { count: a.occurrences } }}</span> }
+                  <span>{{ a.lastSeenAt | date: 'medium' }}</span>
                 </span>
               </span>
               <span class="chip status" [attr.data-status]="a.status">{{ 'monitoring.status.' + a.status | transloco }}</span>
@@ -103,7 +104,7 @@
           <dl class="facts">
             @if (d.alert.groupKey && d.alert.groupKey !== '*') { <dt>{{ 'monitoring.alerts.groupKey' | transloco }}</dt><dd class="wi-ltr" data-testid="alert-group-key">{{ d.alert.groupKey }}</dd> }
             @for (r of summaryRows(); track r.key) {
-              @if (r.key !== 'reason') { <dt>{{ 'monitoring.summary.' + r.key | transloco }}</dt><dd>{{ r.key === 'signal' ? ('monitoring.signals.' + r.value | transloco) : r.key === 'basis' ? ('monitoring.basis.' + r.value | transloco) : r.value }}</dd> }
+              @if (r.key !== 'reason') { <dt>{{ 'monitoring.summary.' + r.key | transloco }}</dt><dd>{{ r.key === 'signal' ? ('monitoring.signals.' + r.value | transloco) : r.key === 'basis' ? ('monitoring.basis.' + r.value | transloco) : r.value === true ? ('monitoring.summary.yes' | transloco) : r.value === false ? ('monitoring.summary.no' | transloco) : r.value }}{{ r.percent ? ' %' : '' }}</dd> }
             }
           </dl>
         }

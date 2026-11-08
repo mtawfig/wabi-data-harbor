@@ -118,6 +118,13 @@ Shares are explicit grants inside one organization: the recipient must be an act
 - **Append-only and retention.** `RuleEvaluations` and `AlertEvents` refuse updates and deletes through the DbContext; the runtime login denies `UPDATE` on them and on `AnalysisAccessFacts`. The nightly retention job removes evaluations and closed alerts older than the organization's retention, set-based.
 - **Tenancy.** Rules, recipients, evaluations, alerts and events are tenant-owned (EF filters, write guards, composite foreign keys to the organization's users and roles). Scheduled runs use the platform scheduler principal with explicit organization predicates; evaluation itself always runs as an organization user of that organization.
 
+## Natural-language and system rules (P14.4)
+
+- **No model output runs unconfirmed.** The draft endpoint returns a proposal and writes nothing. The model returns object and column names only; the server binds them to the rule owner's permitted, approved catalogue entries (an unknown or unpermitted name rejects the draft), then runs the save-time validation and the owner's authorization. The user saves through the normal rule endpoint, where the same checks run again.
+- **What the model sees.** Only the owner's permitted catalogue (names, types, field roles, display names), today's date and the description, fenced as data and sanitized (control characters, fence markers) like the §19 planner. No ids, no rows, no other organization's metadata. Drafts are rate-limited with the AI policy and recorded as usage events with tokens and estimated cost.
+- **System rules.** Administrators only (Management and analysts are refused); they count the organization's own platform events (failed executions, failed connection tests, failed outbox emails, removed catalogue entries, failed report deliveries, month-to-date AI cost) under tenant filters plus explicit organization predicates for the outbox. No business data is read or shown.
+- **Rule health.** A catalogue change that removes or unapproves an object or column pauses every dependent data rule immediately, with an alert to its owner and author; a paused rule cannot resume until its definition validates again.
+
 ## Periodic Reports (P14.3)
 
 - **Each recipient's own figures.** A run never reuses the stored result. For every recipient, the analysis's stored plan is re-validated and re-authorized against that recipient's permissions and row scopes in a scope signed in as the recipient, then executed read-only. Recipients without permission receive a "no data for your permissions" email without a file. The owner's AI narrative and written study describe the owner's figures, so they are left out of every delivered file.

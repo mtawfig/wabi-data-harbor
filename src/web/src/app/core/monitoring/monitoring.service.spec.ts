@@ -8,7 +8,9 @@ describe('MonitoringService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     service = TestBed.inject(MonitoringService);
     http = TestBed.inject(HttpTestingController);
   });
@@ -22,7 +24,11 @@ describe('MonitoringService', () => {
     templates.flush([]);
 
     service.templates(null).subscribe();
-    expect(http.expectOne((r) => r.url === '/api/monitoring/templates').request.params.has('ownerUserId')).toBe(false);
+    expect(
+      http
+        .expectOne((r) => r.url === '/api/monitoring/templates')
+        .request.params.has('ownerUserId'),
+    ).toBe(false);
 
     service.setActive('r1', false).subscribe();
     http.expectOne({ method: 'POST', url: '/api/monitoring/rules/r1/pause' }).flush({});
@@ -44,6 +50,50 @@ describe('MonitoringService', () => {
     resolve.flush({});
 
     service.act('a1', 'suspend-user').subscribe();
-    expect(http.expectOne({ method: 'POST', url: '/api/monitoring/alerts/a1/suspend-user' }).request.body).toEqual({ note: null });
+    expect(
+      http.expectOne({ method: 'POST', url: '/api/monitoring/alerts/a1/suspend-user' }).request
+        .body,
+    ).toEqual({ note: null });
+  });
+
+  it('drafts a rule from a description without saving it, and sends the AI budget with the settings', () => {
+    let drafted: string | undefined;
+    service
+      .draft({
+        description: 'نبهني عندما يُستخدم نفس الحساب من أكثر من جهاز',
+        language: 'ar',
+        ownerUserId: null,
+      })
+      .subscribe((d) => (drafted = d.rule.name));
+    const draft = http.expectOne({ method: 'POST', url: '/api/monitoring/rules/draft' });
+    expect(draft.request.body).toEqual({
+      description: 'نبهني عندما يُستخدم نفس الحساب من أكثر من جهاز',
+      language: 'ar',
+      ownerUserId: null,
+    });
+    draft.flush({
+      rule: { name: 'نفس الحساب من أكثر من جهاز' },
+      objectLabel: 'GAS · dbo.SignIns',
+      bindings: [],
+      explanation: '',
+      assumptions: [],
+    });
+    expect(drafted).toBe('نفس الحساب من أكثر من جهاز');
+    // Drafting never creates a rule: only the draft endpoint was called.
+    http.expectNone({ method: 'POST', url: '/api/monitoring/rules' });
+
+    service
+      .saveSettings({
+        digestTime: '07:00:00',
+        workingHoursStart: '08:00:00',
+        workingHoursEnd: '17:00:00',
+        workingDays: '12345',
+        retentionMonths: 24,
+        monthlyAiBudget: 250,
+      })
+      .subscribe();
+    const settings = http.expectOne({ method: 'PUT', url: '/api/monitoring/settings' });
+    expect(settings.request.body.monthlyAiBudget).toBe(250);
+    settings.flush({});
   });
 });

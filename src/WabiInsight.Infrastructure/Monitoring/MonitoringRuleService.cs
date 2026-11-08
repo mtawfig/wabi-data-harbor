@@ -28,9 +28,13 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
     private readonly IAuditWriter _audit;
     private readonly IClock _clock;
     private readonly MonitoringOptions _options;
+    private readonly IAiProviderResolver _providers;
+    private readonly Core.Usage.IUsageEventWriter _usage;
 
-    public MonitoringRuleService(ConfigurationDbContext context, ITenantContext tenantContext, IPermissionResolver permissions, RuleRunner runner, IAuditWriter audit, IClock clock, IOptions<MonitoringOptions> options)
+    public MonitoringRuleService(ConfigurationDbContext context, ITenantContext tenantContext, IPermissionResolver permissions, RuleRunner runner, IAuditWriter audit, IClock clock, IOptions<MonitoringOptions> options, IAiProviderResolver providers, Core.Usage.IUsageEventWriter usage)
     {
+        _providers = providers;
+        _usage = usage;
         _context = context;
         _tenantContext = tenantContext;
         _permissions = permissions;
@@ -63,7 +67,7 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
         var result = new List<RuleTemplateDto>();
         foreach (var template in RuleTemplates.All)
         {
-            if (template.Kind == MonitoringRuleKind.Access)
+            if (template.Kind is MonitoringRuleKind.Access or MonitoringRuleKind.System)
             {
                 var available = IsAdmin && (!template.RequiresRestrictedColumns || restricted);
                 var reason = !IsAdmin ? "template_admin_only" : available ? null : "template_needs_restricted_columns";
@@ -235,7 +239,7 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
     {
         var organizationId = RequireAdmin();
         var organization = await _context.Organizations.AsNoTracking().SingleAsync(o => o.OrganizationId == organizationId, cancellationToken);
-        return ToSettings(organization);
+        return await ToSettingsAsync(organization, cancellationToken);
     }
 
     public async Task<MonitoringSettingsDto> UpdateSettingsAsync(UpdateMonitoringSettingsCommand command, CancellationToken cancellationToken = default)
@@ -258,12 +262,18 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
             throw Invalid("settings_retention_invalid");
         }
 
+        if (command.MonthlyAiBudget is { } budget && budget is <= 0 or > 1_000_000)
+        {
+            throw Invalid("settings_ai_budget_invalid");
+        }
+
         var organization = await _context.Organizations.SingleAsync(o => o.OrganizationId == organizationId, cancellationToken);
         organization.MonitoringDigestTime = new TimeOnly(command.DigestTime.Hour, command.DigestTime.Minute);
         organization.WorkingHoursStart = new TimeOnly(command.WorkingHoursStart.Hour, command.WorkingHoursStart.Minute);
         organization.WorkingHoursEnd = new TimeOnly(command.WorkingHoursEnd.Hour, command.WorkingHoursEnd.Minute);
         organization.WorkingDays = new string(days.Order().ToArray());
         organization.MonitoringRetentionMonths = command.RetentionMonths;
+        organization.MonthlyAiBudget = command.MonthlyAiBudget;
         var now = _clock.UtcNow;
         foreach (var job in await _context.ScheduledJobs.Where(j => j.OrganizationId == organizationId && j.JobType == ScheduledJobType.AlertDigest).ToListAsync(cancellationToken))
         {
@@ -273,21 +283,161 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
             job.UpdatedAt = now;
         }
 
-        _audit.Append(AuditEvents.MonitoringSettingsSaved, "Organization", organizationId.ToString(), new { digest = organization.MonitoringDigestTime.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture), organization.WorkingDays, organization.MonitoringRetentionMonths });
+        _audit.Append(AuditEvents.MonitoringSettingsSaved, "Organization", organizationId.ToString(), new { digest = organization.MonitoringDigestTime.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture), organization.WorkingDays, organization.MonitoringRetentionMonths, organization.MonthlyAiBudget });
         await _context.SaveChangesAsync(cancellationToken);
-        return ToSettings(organization);
+        return await ToSettingsAsync(organization, cancellationToken);
     }
 
-    private MonitoringSettingsDto ToSettings(Core.Entities.Platform.Organization organization) => new(
+    private async Task<MonitoringSettingsDto> ToSettingsAsync(Core.Entities.Platform.Organization organization, CancellationToken cancellationToken) => new(
         organization.MonitoringDigestTime, organization.WorkingHoursStart, organization.WorkingHoursEnd, organization.WorkingDays,
-        RetentionPurgeJob.EffectiveRetentionMonths(organization, _options), Math.Max(1, _options.MaxRetentionMonths), organization.TimeZone);
+        RetentionPurgeJob.EffectiveRetentionMonths(organization, _options), Math.Max(1, _options.MaxRetentionMonths), organization.TimeZone,
+        organization.MonthlyAiBudget, await AiSpend.MonthToDateAsync(_context.AnalysisExecutionMetrics, organization, _clock.UtcNow, cancellationToken));
+
+    public async Task<RuleDraftDto> DraftAsync(RuleDraftRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var organizationId = RequireAuthor();
+        var description = request.Description?.Trim() ?? string.Empty;
+        if (description.Length is < 5 or > RuleDraftSchema.MaxDescriptionLength)
+        {
+            throw Invalid("draft_description_invalid");
+        }
+
+        var owner = ResolveOwner(request.OwnerUserId);
+        await RequireActiveUserAsync(owner, "rule_owner_invalid", cancellationToken);
+
+        // The model sees only what the owner may read, like the §19 planner.
+        var permissions = await _permissions.ResolveForUserAsync(organizationId, owner, cancellationToken);
+        var objects = permissions.Objects.Where(o => o.YieldsRows).ToList();
+        if (objects.Count == 0)
+        {
+            throw Invalid("draft_no_permitted_objects");
+        }
+
+        var objectIds = objects.Select(o => o.ObjectId).ToList();
+        var columns = await _context.DatabaseColumns.AsNoTracking().Where(c => objectIds.Contains(c.ObjectId) && c.IsApproved && c.IsPresent).ToListAsync(cancellationToken);
+        var objectRows = await _context.DatabaseObjects.AsNoTracking().Where(o => objectIds.Contains(o.ObjectId)).ToDictionaryAsync(o => o.ObjectId, cancellationToken);
+        var arabic = request.Language == "ar";
+        var catalogue = objects
+            .Select(o =>
+            {
+                var permitted = o.Columns.Select(c => c.ColumnId).ToHashSet();
+                var cols = columns.Where(c => c.ObjectId == o.ObjectId && permitted.Contains(c.ColumnId)).OrderBy(c => c.OrdinalPosition).ToList();
+                return (Access: o, Columns: cols, Roles: cols.Count(c => c.SemanticRole is not null));
+            })
+            .OrderByDescending(o => o.Roles).ThenBy(o => o.Access.SchemaName).ThenBy(o => o.Access.ObjectName)
+            .Take(RuleDraftSchema.MaxObjects)
+            .ToList();
+        var organization = await _context.Organizations.AsNoTracking().SingleAsync(o => o.OrganizationId == organizationId, cancellationToken);
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_clock.UtcNow, JobRecurrence.ResolveTimeZone(organization.TimeZone)).DateTime);
+        var userContent = RuleDraftSchema.BuildUserContent(
+            catalogue.Select(o => new DraftCatalogueObject(o.Access.SchemaName, o.Access.ObjectName, arabic ? o.Access.DisplayNameAr ?? o.Access.DisplayNameEn : o.Access.DisplayNameEn,
+                o.Columns.Select(c => new DraftCatalogueColumn(c.ColumnName, c.DataType, arabic ? c.DisplayNameAr ?? c.DisplayNameEn : c.DisplayNameEn, c.SemanticRole)).ToList())).ToList(),
+            description, today, organization.TimeZone);
+
+        var resolved = await _providers.ResolveForOrganizationAsync(organizationId, cancellationToken);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var completion = await resolved.Provider.CompleteAsync(resolved.Descriptor,
+            new AiRequest(RuleDraftSchema.SystemPrompt, userContent, RuleDraftSchema.Json, RuleDraftSchema.Name, Math.Max(resolved.Descriptor.MaxOutputTokens, 2048), resolved.Descriptor.Effort), cancellationToken);
+        _usage.Append(Core.Entities.Usage.UsageEventTypes.RuleDrafted, "MonitoringRule", null, quantity: completion.Usage.InputTokens + completion.Usage.OutputTokens,
+            metadata: new { provider = resolved.Descriptor.ProviderType.ToString(), completion.Model, completion.Usage.InputTokens, completion.Usage.OutputTokens, cost = resolved.Descriptor.EstimateCost(completion.Usage), ms = watch.Elapsed.TotalMilliseconds, objects = catalogue.Count }, organizationId: organizationId);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        RuleDraftModel model;
+        try
+        {
+            model = System.Text.Json.JsonSerializer.Deserialize<RuleDraftModel>(ExtractJson(completion.Text), RuleDefinition.JsonOptions) ?? throw new System.Text.Json.JsonException("empty");
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            throw Invalid("draft_unreadable");
+        }
+
+        if (!model.Expressible || model.Target is null)
+        {
+            throw Invalid("draft_not_expressible");
+        }
+
+        // Bind names to the owner's permitted catalogue entries; anything else is refused, never guessed.
+        var target = catalogue.FirstOrDefault(o => string.Equals(o.Access.SchemaName, model.Target.Schema, StringComparison.OrdinalIgnoreCase) && string.Equals(o.Access.ObjectName, model.Target.ObjectName, StringComparison.OrdinalIgnoreCase));
+        if (target.Access is null)
+        {
+            throw Invalid("draft_reference_not_permitted");
+        }
+
+        Core.Entities.Metadata.DatabaseColumn Column(string? name) => target.Columns.FirstOrDefault(c => string.Equals(c.ColumnName, name, StringComparison.OrdinalIgnoreCase))
+            ?? throw Invalid("draft_reference_not_permitted");
+
+        var bindings = new List<DraftBinding>();
+        DraftBinding Bind(string part, Core.Entities.Metadata.DatabaseColumn c, string? detail = null) => new(part, c.ColumnId, c.ColumnName, c.DisplayNameEn, c.DisplayNameAr, c.SemanticRole, detail);
+        var data = new DataRuleDefinition
+        {
+            ObjectId = target.Access.ObjectId,
+            WindowHours = Math.Clamp(model.WindowHours, 1, 24 * 92),
+            Measure = new RuleMeasure { Aggregate = model.Measure.Aggregate },
+            Condition = new RuleCondition { Operator = model.Condition.Operator, Value = model.Condition.Value },
+            Comparison = model.Comparison,
+            MaxGroups = 200,
+        };
+        if (!string.IsNullOrWhiteSpace(model.TimeColumn))
+        {
+            var time = Column(model.TimeColumn);
+            data.TimeColumnId = time.ColumnId;
+            bindings.Add(Bind("time", time));
+        }
+
+        foreach (var groupName in model.GroupBy.Take(3))
+        {
+            var group = Column(groupName);
+            data.GroupByColumnIds.Add(group.ColumnId);
+            bindings.Add(Bind("group", group));
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.Measure.Column))
+        {
+            var measure = Column(model.Measure.Column);
+            data.Measure.ColumnId = measure.ColumnId;
+            bindings.Add(Bind("measure", measure, model.Measure.Aggregate));
+        }
+
+        foreach (var filter in model.Filters.Take(10))
+        {
+            var column = Column(filter.Column);
+            var values = filter.Values.Take(50).Select(v => v.Length <= 200 ? v : v[..200]).ToList();
+            data.Filters.Add(new RuleFilter { ColumnId = column.ColumnId, Operator = filter.Operator, Values = values });
+            bindings.Add(Bind("filter", column, $"{filter.Operator} {string.Join(", ", values)}".Trim()));
+        }
+
+        var recurrence = model.Recurrence switch { "Weekly" => JobRecurrenceKind.Weekly, "Interval" => JobRecurrenceKind.Interval, _ => JobRecurrenceKind.Daily };
+        var name = string.IsNullOrWhiteSpace(model.Name) ? description : model.Name.Trim();
+        var command = new SaveMonitoringRuleCommand(
+            name.Length <= 200 ? name : name[..200], description, MonitoringRuleKind.Data, null, new RuleDefinition { Data = data },
+            Enum.TryParse<AlertSeverity>(model.Severity, out var severity) ? severity : AlertSeverity.Medium,
+            recurrence, recurrence == JobRecurrenceKind.Interval ? Math.Max(15, model.IntervalMinutes ?? 60) : 0,
+            TimeOnly.TryParseExact(model.Time ?? string.Empty, "HH:mm", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var at) ? at : new TimeOnly(6, 0),
+            recurrence == JobRecurrenceKind.Weekly ? Math.Clamp(model.DayOfWeek ?? 1, 1, 7) : null,
+            24, true, IsAdmin ? owner : null, []);
+
+        // The same validation and authorization as a saved rule; the draft is only returned when it would save.
+        await ValidateAsync(command, Guid.Empty, cancellationToken);
+        var objectRow = objectRows[target.Access.ObjectId];
+        return new RuleDraftDto(command, $"{target.Access.ApplicationCode} · {target.Access.SchemaName}.{target.Access.ObjectName}", objectRow.DisplayNameEn, objectRow.DisplayNameAr, bindings,
+            PromptBuilder.SanitizeText(model.Explanation, 600), model.Assumptions.Take(5).Select(a => PromptBuilder.SanitizeText(a, 300)).ToList());
+    }
+
+    private static string ExtractJson(string text)
+    {
+        var first = text.IndexOf('{', StringComparison.Ordinal);
+        var last = text.LastIndexOf('}');
+        return first >= 0 && last > first ? text[first..(last + 1)] : text;
+    }
 
     private async Task<Guid> ValidateAsync(SaveMonitoringRuleCommand command, Guid? ruleId, CancellationToken cancellationToken)
     {
         var organizationId = _tenantContext.RequireOrganizationId();
-        if (!IsAdmin && command.Kind == MonitoringRuleKind.Access)
+        if (!IsAdmin && command.Kind != MonitoringRuleKind.Data)
         {
-            throw new TenantContextException("Access rules are managed by Organization Administrators.");
+            throw new TenantContextException("Access and system rules are managed by Organization Administrators.");
         }
 
         var owner = ResolveOwner(command.OwnerUserId);
@@ -371,7 +521,7 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
                 }
             }
         }
-        else
+        else if (command.Kind == MonitoringRuleKind.Access)
         {
             var access = definition.Access!;
             var objectIds = access.ObjectIds.Distinct().ToList();

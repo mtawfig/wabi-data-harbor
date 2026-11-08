@@ -156,9 +156,138 @@ public sealed class RuleEvaluator
             return RuleRunResult.Fail("rule_definition_invalid", invalid: true);
         }
 
-        return kind == MonitoringRuleKind.Data
-            ? await EvaluateDataAsync(definition.Data!, organization, cancellationToken)
-            : await EvaluateAccessAsync(definition.Access!, organization, cancellationToken);
+        return kind switch
+        {
+            MonitoringRuleKind.Data => await EvaluateDataAsync(definition.Data!, organization, cancellationToken),
+            MonitoringRuleKind.System => await EvaluateSystemAsync(definition.System!, organization, cancellationToken),
+            _ => await EvaluateAccessAsync(definition.Access!, organization, cancellationToken),
+        };
+    }
+
+    /// <summary>
+    /// System rules (P14.4): counts of the organization's own platform signals. No business data is read, so the
+    /// owner's data permissions do not matter here; the organization boundary does (tenant filters plus explicit
+    /// predicates for the outbox, which is not tenant-filtered).
+    /// </summary>
+    private async Task<RuleRunResult> EvaluateSystemAsync(SystemRuleDefinition rule, Organization organization, CancellationToken cancellationToken)
+    {
+        var now = _clock.UtcNow;
+        var start = now.AddHours(-rule.WindowHours);
+        var organizationId = organization.OrganizationId;
+        var matches = new List<RuleMatch>();
+        long examined = 0;
+        Dictionary<string, object?> Summary(decimal measure, decimal threshold, params (string Key, object? Value)[] extra)
+        {
+            var summary = new Dictionary<string, object?> { ["signal"] = rule.Signal, ["measure"] = measure, ["threshold"] = threshold, ["windowHours"] = rule.WindowHours };
+            foreach (var (key, value) in extra)
+            {
+                summary[key] = value;
+            }
+
+            return summary;
+        }
+
+        switch (rule.Signal)
+        {
+            case "connection_failures":
+            {
+                var failedRuns = await _context.AnalysisExecutionMetrics.AsNoTracking()
+                    .Where(m => m.CreatedAt >= start && m.Status == Core.Entities.Ai.AnalysisStatus.Failed && m.FailureStage == "execute")
+                    .GroupBy(m => m.ApplicationId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
+                var applications = await _context.Applications.AsNoTracking().Where(a => !a.IsBuiltIn).ToListAsync(cancellationToken);
+                foreach (var application in applications)
+                {
+                    var failures = failedRuns.FirstOrDefault(f => f.Key == application.ApplicationId)?.Count ?? 0;
+                    var testFailed = application.LastConnectionTestSucceeded == false && application.LastConnectionTestAt >= start;
+                    var count = failures + (testFailed ? 1 : 0);
+                    examined += count;
+                    if (count > rule.Threshold)
+                    {
+                        matches.Add(new RuleMatch(application.ApplicationCode, [application.ApplicationCode], count, null, rule.Threshold, null,
+                            Summary(count, rule.Threshold, ("application", application.ApplicationCode), ("failedQueries", failures), ("connectionTestFailed", testFailed))));
+                    }
+                }
+
+                break;
+            }
+
+            case "email_failures":
+            {
+                var failed = await _context.EmailMessages.AsNoTracking().CountAsync(e => e.OrganizationId == organizationId && e.Status == Core.Entities.Email.EmailDeliveryStatus.Failed && e.CreatedAt >= start, cancellationToken);
+                examined = failed;
+                if (failed > rule.Threshold)
+                {
+                    matches.Add(new RuleMatch("*", [], failed, null, rule.Threshold, null, Summary(failed, rule.Threshold)));
+                }
+
+                break;
+            }
+
+            case "ai_budget":
+            {
+                if (organization.MonthlyAiBudget is not { } budget || budget <= 0)
+                {
+                    return new RuleRunResult(RuleEvaluationOutcome.Skipped, [], 0, "ai_budget_not_set", false);
+                }
+
+                var spend = await AiSpend.MonthToDateAsync(_context.AnalysisExecutionMetrics, organization, now, cancellationToken);
+                var percent = Math.Round(spend / budget * 100m, 1);
+                examined = 1;
+                if (percent >= rule.Threshold)
+                {
+                    var month = TimeZoneInfo.ConvertTime(now, JobRecurrence.ResolveTimeZone(organization.TimeZone)).ToString("yyyy-MM", CultureInfo.InvariantCulture);
+                    matches.Add(new RuleMatch(month, [month], percent, null, rule.Threshold, null,
+                        Summary(percent, rule.Threshold, ("budget", budget), ("spend", Math.Round(spend, 2)), ("month", month))));
+                }
+
+                break;
+            }
+
+            case "metadata_drift":
+            {
+                var codes = await _context.Applications.AsNoTracking().ToDictionaryAsync(a => a.ApplicationId, a => a.ApplicationCode, cancellationToken);
+                var removedObjects = await _context.DatabaseObjects.AsNoTracking().Where(o => !o.IsPresent && o.RemovedAt >= start)
+                    .Select(o => new { o.ObjectId, o.ApplicationId, Name = o.SchemaName + "." + o.ObjectName }).ToListAsync(cancellationToken);
+                var removedColumns = await _context.DatabaseColumns.AsNoTracking().Where(c => !c.IsPresent && c.RemovedAt >= start)
+                    .Join(_context.DatabaseObjects, c => c.ObjectId, o => o.ObjectId, (c, o) => new { o.ObjectId, o.ApplicationId, Name = o.SchemaName + "." + o.ObjectName })
+                    .ToListAsync(cancellationToken);
+                foreach (var group in removedObjects.Select(o => (o.ObjectId, o.ApplicationId, o.Name, ObjectRemoved: 1)).Concat(removedColumns.Select(c => (c.ObjectId, c.ApplicationId, c.Name, ObjectRemoved: 0)))
+                    .GroupBy(x => (x.ObjectId, x.ApplicationId, x.Name)))
+                {
+                    var objectRemoved = group.Any(x => x.ObjectRemoved == 1);
+                    var columnsRemoved = group.Count(x => x.ObjectRemoved == 0);
+                    decimal count = columnsRemoved + (objectRemoved ? 1 : 0);
+                    examined += (long)count;
+                    if (count > rule.Threshold)
+                    {
+                        var application = codes.GetValueOrDefault(group.Key.ApplicationId) ?? "?";
+                        var key = $"{application} · {group.Key.Name}";
+                        matches.Add(new RuleMatch(key, [application, group.Key.Name], count, null, rule.Threshold, null,
+                            Summary(count, rule.Threshold, ("application", application), ("object", group.Key.Name), ("objectRemoved", objectRemoved), ("columnsRemoved", columnsRemoved))));
+                    }
+                }
+
+                break;
+            }
+
+            case "report_failures":
+            {
+                var failed = await _context.ReportDeliveries.AsNoTracking().Where(d => d.Status == ReportDeliveryStatus.Failed && d.CreatedAt >= start)
+                    .GroupBy(d => d.ReportName).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
+                foreach (var report in failed)
+                {
+                    examined += report.Count;
+                    if (report.Count > rule.Threshold)
+                    {
+                        matches.Add(new RuleMatch(report.Key, [report.Key], report.Count, null, rule.Threshold, null, Summary(report.Count, rule.Threshold, ("report", report.Key))));
+                    }
+                }
+
+                break;
+            }
+        }
+
+        return new RuleRunResult(matches.Count > 0 ? RuleEvaluationOutcome.Fired : RuleEvaluationOutcome.NoMatch, matches.Take(MaxMatches).ToList(), examined, null, false);
     }
 
     private async Task<RuleRunResult> EvaluateDataAsync(DataRuleDefinition rule, Organization organization, CancellationToken cancellationToken)
@@ -407,4 +536,20 @@ public sealed class RuleEvaluator
         IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
         _ => value.ToString(),
     };
+}
+
+/// <summary>The organization's AI spend this calendar month (organization time zone), from the analysis metrics.</summary>
+public static class AiSpend
+{
+    public static async Task<decimal> MonthToDateAsync(IQueryable<Core.Entities.Ai.AnalysisExecutionMetric> metrics, Organization organization, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        ArgumentNullException.ThrowIfNull(organization);
+        var zone = JobRecurrence.ResolveTimeZone(organization.TimeZone);
+        var local = TimeZoneInfo.ConvertTime(now, zone);
+        var monthStart = new DateTime(local.Year, local.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
+        var startUtc = new DateTimeOffset(monthStart, zone.GetUtcOffset(monthStart));
+        var organizationId = organization.OrganizationId;
+        return await metrics.AsNoTracking().Where(m => m.OrganizationId == organizationId && m.CreatedAt >= startUtc).SumAsync(m => (decimal?)m.EstimatedCost, cancellationToken) ?? 0m;
+    }
 }

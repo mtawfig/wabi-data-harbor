@@ -16,11 +16,14 @@ import { AuthService } from '../../core/auth/auth.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import {
   AlertSeverity,
+  DraftBinding,
   JobRecurrenceKind,
   MonitoringRule,
+  MonitoringRuleKind,
   MonitoringSettings,
   OwnerOption,
   RuleDefinition,
+  RuleDraft,
   RuleTemplate,
   RuleTestResult,
   SaveMonitoringRule,
@@ -35,9 +38,11 @@ import { problemMessage } from '../../core/problem-message';
 interface RuleForm {
   ruleId: string | null;
   template: RuleTemplate | null;
-  /** Definition kept as-is for rules created without a template (through the API). */
+  /** Definition kept as-is for rules created without a template (a confirmed draft, or through the API). */
   customDefinition: RuleDefinition | null;
-  kind: 'Data' | 'Access';
+  /** The plain-language draft this form confirms (P14.4); its bindings are shown read-only. */
+  draft: RuleDraft | null;
+  kind: MonitoringRuleKind;
   ownerUserId: string | null;
   objectId: string | null;
   bindings: Record<string, string>;
@@ -59,15 +64,32 @@ interface RuleForm {
 }
 
 const DAYS = [1, 2, 3, 4, 5, 6, 7];
+const DRAFT_PARTS: DraftBinding['part'][] = ['time', 'group', 'measure', 'filter'];
 
 /**
  * Monitoring Rules (specification §35.1): templates offered from the organization's own metadata, bound to the
  * owner's permitted columns; every rule runs under its owner's permissions. Administrators choose the owner and
- * recipients and manage access rules; Management users create data rules for themselves.
+ * recipients and manage access and system rules; Management users create data rules for themselves. A rule can
+ * also be described in plain English or Arabic (P14.4): the server drafts it against the owner's catalogue and
+ * nothing is saved until the user reviews the bindings and saves.
  */
 @Component({
   selector: 'app-rules',
-  imports: [DatePipe, DecimalPipe, FormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatSlideToggleModule, RouterLink, TranslocoModule],
+  imports: [
+    DatePipe,
+    DecimalPipe,
+    FormsModule,
+    MatButtonModule,
+    MatCheckboxModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatProgressBarModule,
+    MatSelectModule,
+    MatSlideToggleModule,
+    RouterLink,
+    TranslocoModule,
+  ],
   templateUrl: './rules.component.html',
   styleUrl: './monitoring.scss',
 })
@@ -98,9 +120,14 @@ export class RulesComponent {
   readonly settings = signal<MonitoringSettings | null>(null);
   readonly settingsOpen = signal(false);
   readonly settingsSaved = signal(false);
+  readonly description = signal('');
+  readonly drafting = signal(false);
+  readonly draft = signal<RuleDraft | null>(null);
+  readonly draftParts = DRAFT_PARTS;
 
   readonly dataTemplates = computed(() => this.templates().filter((t) => t.kind === 'Data'));
   readonly accessTemplates = computed(() => this.templates().filter((t) => t.kind === 'Access'));
+  readonly systemTemplates = computed(() => this.templates().filter((t) => t.kind === 'System'));
   readonly candidate = computed<TemplateCandidate | null>(() => {
     const f = this.form();
     return f?.template?.candidates.find((c) => c.objectId === f.objectId) ?? null;
@@ -139,13 +166,115 @@ export class RulesComponent {
     this.error.set(null);
     this.test.set(null);
     this.form.set(null);
+    this.draft.set(null);
     this.ownerDraft.set(null);
     this.loadTemplates(null);
     this.picking.set(true);
   }
 
+  /** P14.4: the description goes to the server, which drafts against the owner's permitted catalogue. Nothing is saved. */
+  draftRule(): void {
+    const description = this.description().trim();
+    if (description.length < 5 || this.drafting()) {
+      return;
+    }
+    this.drafting.set(true);
+    this.error.set(null);
+    this.draft.set(null);
+    this.monitoring
+      .draft({
+        description,
+        language: this.language.current(),
+        ownerUserId: this.isAdmin() ? this.ownerDraft() : null,
+      })
+      .subscribe({
+        next: (d) => {
+          this.draft.set(d);
+          this.drafting.set(false);
+        },
+        error: (response: HttpErrorResponse) => {
+          this.drafting.set(false);
+          this.fail(response);
+        },
+      });
+  }
+
+  discardDraft(): void {
+    this.draft.set(null);
+  }
+
+  /** Opens the editor on the draft; the user can still change name, window, condition, schedule and recipients before saving. */
+  reviewDraft(): void {
+    const d = this.draft();
+    if (!d) {
+      return;
+    }
+    const rule = d.rule;
+    const data = rule.definition.data;
+    this.form.set({
+      ruleId: null,
+      template: null,
+      customDefinition: rule.definition,
+      draft: d,
+      kind: 'Data',
+      ownerUserId: rule.ownerUserId ?? this.ownerDraft(),
+      objectId: data?.objectId ?? null,
+      bindings: {},
+      name: rule.name,
+      description: rule.description ?? '',
+      severity: rule.severity,
+      recurrenceKind: rule.recurrenceKind,
+      intervalMinutes: rule.intervalMinutes || 60,
+      time: rule.timeOfDay.slice(0, 5),
+      dayOfWeek: rule.dayOfWeek ?? 1,
+      cooldownHours: rule.cooldownHours,
+      isActive: rule.isActive,
+      windowHours: data?.windowHours ?? 24,
+      conditionOperator: data?.condition.operator ?? 'gt',
+      conditionValue: data?.condition.value ?? 0,
+      thresholdValue: 1,
+      recipientUserIds: [],
+      recipientRoleIds: [],
+    });
+    this.draft.set(null);
+    this.picking.set(false);
+  }
+
+  bindingsOf(d: RuleDraft, part: DraftBinding['part']): DraftBinding[] {
+    return d.bindings.filter((b) => b.part === part);
+  }
+
+  bindingLabel(b: DraftBinding): string {
+    const name =
+      this.language.current() === 'ar' ? b.displayNameAr || b.displayNameEn : b.displayNameEn;
+    return name && name !== b.columnName ? `${name} (${b.columnName})` : b.columnName;
+  }
+
+  /** The measure's aggregate, or a filter's operator and values ("eq 0" → "equal to 0"). */
+  detailLabel(b: DraftBinding): string {
+    const detail = b.detail ?? '';
+    if (b.part === 'measure') {
+      return this.transloco.translate(`monitoring.aggregates.${detail}`);
+    }
+    const space = detail.indexOf(' ');
+    const operator = space < 0 ? detail : detail.slice(0, space);
+    const key = `monitoring.filterOperators.${operator}`;
+    const label = this.transloco.translate(key);
+    return label === key ? detail : `${label}${space < 0 ? '' : detail.slice(space)}`;
+  }
+
+  draftObjectLabel(d: RuleDraft): string {
+    const name =
+      this.language.current() === 'ar'
+        ? d.objectDisplayNameAr || d.objectDisplayNameEn
+        : d.objectDisplayNameEn;
+    return name ? `${name} — ${d.objectLabel}` : d.objectLabel;
+  }
+
   ownerName(ownerUserId: string | null): string {
-    return ownerUserId ? (this.owners().find((o) => o.userId === ownerUserId)?.fullName ?? '') : this.transloco.translate('monitoring.rules.ownerSelf');
+    return ownerUserId
+      ? (this.owners().find((o) => o.userId === ownerUserId)?.fullName ?? '')
+      : this.transloco.translate('monitoring.rules.ownerSelf');
   }
 
   pickOwner(ownerUserId: string | null): void {
@@ -159,11 +288,14 @@ export class RulesComponent {
     }
     const data = template.defaults.data;
     const access = template.defaults.access;
+    const system = template.defaults.system;
     const candidate = template.candidates[0] ?? null;
+    this.draft.set(null);
     this.form.set({
       ruleId: null,
       template,
       customDefinition: null,
+      draft: null,
       kind: template.kind,
       ownerUserId: this.ownerDraft(),
       objectId: candidate?.objectId ?? null,
@@ -177,10 +309,10 @@ export class RulesComponent {
       dayOfWeek: 1,
       cooldownHours: 24,
       isActive: true,
-      windowHours: data?.windowHours ?? access?.windowHours ?? 24,
+      windowHours: data?.windowHours ?? access?.windowHours ?? system?.windowHours ?? 24,
       conditionOperator: data?.condition.operator ?? 'gt',
       conditionValue: data?.condition.value ?? 0,
-      thresholdValue: access?.threshold.value ?? 1,
+      thresholdValue: access?.threshold.value ?? system?.threshold ?? 1,
       recipientUserIds: [],
       recipientRoleIds: [],
     });
@@ -195,10 +327,12 @@ export class RulesComponent {
       const template = this.templates().find((t) => t.code === rule.templateCode) ?? null;
       const d = rule.definition.data;
       const a = rule.definition.access;
+      const sys = rule.definition.system;
       this.form.set({
         ruleId: rule.ruleId,
         template,
         customDefinition: template ? null : rule.definition,
+        draft: null,
         kind: rule.kind,
         ownerUserId: rule.ownerUserId,
         objectId: d?.objectId ?? null,
@@ -212,10 +346,10 @@ export class RulesComponent {
         dayOfWeek: rule.dayOfWeek ?? 1,
         cooldownHours: rule.cooldownHours,
         isActive: rule.isActive,
-        windowHours: d?.windowHours ?? a?.windowHours ?? 24,
+        windowHours: d?.windowHours ?? a?.windowHours ?? sys?.windowHours ?? 24,
         conditionOperator: d?.condition.operator ?? 'gt',
         conditionValue: d?.condition.value ?? 0,
-        thresholdValue: a?.threshold.value ?? 1,
+        thresholdValue: a?.threshold.value ?? sys?.threshold ?? 1,
         recipientUserIds: rule.recipients.filter((r) => r.userId).map((r) => r.userId!),
         recipientRoleIds: rule.recipients.filter((r) => r.roleId).map((r) => r.roleId!),
       });
@@ -224,6 +358,7 @@ export class RulesComponent {
 
   cancel(): void {
     this.form.set(null);
+    this.draft.set(null);
     this.picking.set(false);
     this.test.set(null);
     this.error.set(null);
@@ -239,7 +374,11 @@ export class RulesComponent {
     this.loadTemplates(ownerUserId, () => {
       const template = this.templates().find((t) => t.code === code) ?? null;
       const candidate = template?.candidates[0] ?? null;
-      this.patch({ template, objectId: candidate?.objectId ?? null, bindings: candidate ? this.defaultBindings(candidate) : {} });
+      this.patch({
+        template,
+        objectId: candidate?.objectId ?? null,
+        bindings: candidate ? this.defaultBindings(candidate) : {},
+      });
     });
   }
 
@@ -253,12 +392,14 @@ export class RulesComponent {
   }
 
   columnLabel(c: TemplateColumnOption): string {
-    const name = this.language.current() === 'ar' ? c.displayNameAr || c.displayNameEn : c.displayNameEn;
+    const name =
+      this.language.current() === 'ar' ? c.displayNameAr || c.displayNameEn : c.displayNameEn;
     return name && name !== c.columnName ? `${name} (${c.columnName})` : c.columnName;
   }
 
   objectLabel(c: TemplateCandidate): string {
-    const name = this.language.current() === 'ar' ? c.displayNameAr || c.displayNameEn : c.displayNameEn;
+    const name =
+      this.language.current() === 'ar' ? c.displayNameAr || c.displayNameEn : c.displayNameEn;
     return `${c.applicationCode} · ${name ?? c.objectName} (${c.schemaName}.${c.objectName})`;
   }
 
@@ -270,7 +411,9 @@ export class RulesComponent {
     const f = this.form()!;
     this.busy.set(true);
     this.error.set(null);
-    const call = f.ruleId ? this.monitoring.updateRule(f.ruleId, request) : this.monitoring.createRule(request);
+    const call = f.ruleId
+      ? this.monitoring.updateRule(f.ruleId, request)
+      : this.monitoring.createRule(request);
     call.subscribe({
       next: () => {
         this.busy.set(false);
@@ -337,13 +480,23 @@ export class RulesComponent {
     });
   }
 
-  schedule(rule: { recurrenceKind: JobRecurrenceKind; intervalMinutes: number; timeOfDay: string; dayOfWeek?: number }): string {
+  schedule(rule: {
+    recurrenceKind: JobRecurrenceKind;
+    intervalMinutes: number;
+    timeOfDay: string;
+    dayOfWeek?: number | null;
+  }): string {
     const time = rule.timeOfDay.slice(0, 5);
     switch (rule.recurrenceKind) {
       case 'Interval':
-        return this.transloco.translate('monitoring.rules.everyMinutes', { minutes: rule.intervalMinutes });
+        return this.transloco.translate('monitoring.rules.everyMinutes', {
+          minutes: rule.intervalMinutes,
+        });
       case 'Weekly':
-        return this.transloco.translate('monitoring.rules.weeklyAt', { day: this.transloco.translate(`monitoring.days.${rule.dayOfWeek ?? 1}`), time });
+        return this.transloco.translate('monitoring.rules.weeklyAt', {
+          day: this.transloco.translate(`monitoring.days.${rule.dayOfWeek ?? 1}`),
+          time,
+        });
       default:
         return this.transloco.translate('monitoring.rules.dailyAt', { time });
     }
@@ -376,14 +529,23 @@ export class RulesComponent {
     }
     this.busy.set(true);
     this.error.set(null);
-    this.monitoring.saveSettings({ digestTime: this.withSeconds(s.digestTime), workingHoursStart: this.withSeconds(s.workingHoursStart), workingHoursEnd: this.withSeconds(s.workingHoursEnd), workingDays: s.workingDays, retentionMonths: s.retentionMonths }).subscribe({
-      next: (saved) => {
-        this.settings.set(saved);
-        this.settingsSaved.set(true);
-        this.busy.set(false);
-      },
-      error: (response: HttpErrorResponse) => this.fail(response),
-    });
+    this.monitoring
+      .saveSettings({
+        digestTime: this.withSeconds(s.digestTime),
+        workingHoursStart: this.withSeconds(s.workingHoursStart),
+        workingHoursEnd: this.withSeconds(s.workingHoursEnd),
+        workingDays: s.workingDays,
+        retentionMonths: s.retentionMonths,
+        monthlyAiBudget: s.monthlyAiBudget ? Number(s.monthlyAiBudget) : null,
+      })
+      .subscribe({
+        next: (saved) => {
+          this.settings.set(saved);
+          this.settingsSaved.set(true);
+          this.busy.set(false);
+        },
+        error: (response: HttpErrorResponse) => this.fail(response),
+      });
   }
 
   private request(): SaveMonitoringRule | null {
@@ -410,14 +572,32 @@ export class RulesComponent {
       cooldownHours: Number(f.cooldownHours),
       isActive: f.isActive,
       ownerUserId: this.isAdmin() ? f.ownerUserId : null,
-      recipients: this.isAdmin() ? [...f.recipientUserIds.map((userId) => ({ userId })), ...f.recipientRoleIds.map((roleId) => ({ roleId }))] : [],
+      recipients: this.isAdmin()
+        ? [
+            ...f.recipientUserIds.map((userId) => ({ userId })),
+            ...f.recipientRoleIds.map((roleId) => ({ roleId })),
+          ]
+        : [],
     };
   }
 
   /** Mirrors the server's template binding (RuleTemplates.BindData); the server validates everything again. */
   private definition(f: RuleForm): RuleDefinition | null {
     if (!f.template) {
+      if (f.draft && f.customDefinition?.data) {
+        // A confirmed draft keeps its bound columns; only the window and the condition are editable here.
+        const data = structuredClone(f.customDefinition.data);
+        data.windowHours = Number(f.windowHours);
+        data.condition = { operator: f.conditionOperator, value: Number(f.conditionValue) };
+        return { data };
+      }
       return f.customDefinition;
+    }
+    if (f.template.kind === 'System') {
+      const system = structuredClone(f.template.defaults.system!);
+      system.windowHours = Number(f.windowHours);
+      system.threshold = Number(f.thresholdValue);
+      return { system };
     }
     if (f.template.kind === 'Access') {
       const access = structuredClone(f.template.defaults.access!);
@@ -461,7 +641,9 @@ export class RulesComponent {
   }
 
   private defaultBindings(candidate: TemplateCandidate): Record<string, string> {
-    return Object.fromEntries(Object.entries(candidate.slots).map(([slot, options]) => [slot, options[0]?.columnId ?? '']));
+    return Object.fromEntries(
+      Object.entries(candidate.slots).map(([slot, options]) => [slot, options[0]?.columnId ?? '']),
+    );
   }
 
   private bindingsFrom(code: string, definition: RuleDefinition): Record<string, string> {

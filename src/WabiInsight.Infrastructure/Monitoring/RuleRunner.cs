@@ -51,10 +51,12 @@ public sealed class RuleRunner
     private readonly INotificationDispatcher _notifications;
     private readonly IUsageEventWriter _usage;
     private readonly IClock _clock;
+    private readonly RuleHealthChecker _health;
     private Guid? _organizationId;
 
-    public RuleRunner(ConfigurationDbContext context, ITenantContext tenantContext, IServiceScopeFactory scopes, INotificationDispatcher notifications, IUsageEventWriter usage, IClock clock)
+    public RuleRunner(ConfigurationDbContext context, ITenantContext tenantContext, IServiceScopeFactory scopes, INotificationDispatcher notifications, IUsageEventWriter usage, IClock clock, RuleHealthChecker health)
     {
+        _health = health;
         _context = context;
         _tenantContext = tenantContext;
         _scopes = scopes;
@@ -125,7 +127,7 @@ public sealed class RuleRunner
                 tracked.LastError = result.ErrorCode;
                 if (result.Invalid && tracked.IsActive)
                 {
-                    await PauseAsync(tracked, owner, result.ErrorCode!, cancellationToken);
+                    await _health.PauseAsync(tracked, result.ErrorCode!, cancellationToken);
                 }
             }
         }
@@ -229,39 +231,6 @@ public sealed class RuleRunner
 
         _ = owner;
         return notify.Count;
-    }
-
-    private async Task PauseAsync(MonitoringRule rule, OrganizationUser? owner, string reason, CancellationToken cancellationToken)
-    {
-        var now = _clock.UtcNow;
-        rule.IsActive = false;
-        var jobs = await _context.ScheduledJobs.Where(j => j.OrganizationId == rule.OrganizationId && j.JobType == ScheduledJobType.MonitoringRule && j.TargetId == rule.RuleId).ToListAsync(cancellationToken);
-        foreach (var job in jobs)
-        {
-            job.IsEnabled = false;
-            job.UpdatedAt = now;
-        }
-
-        // Specification §35.1: a rule that no longer matches the catalogue or its owner's access is paused and flagged, never run silently.
-        var alert = new Alert
-        {
-            AlertId = Ids.New(),
-            OrganizationId = rule.OrganizationId,
-            RuleId = rule.RuleId,
-            Severity = AlertSeverity.Medium,
-            GroupKey = "rule_invalid",
-            Title = Truncate(rule.Name, 300),
-            SummaryJson = JsonSerializer.Serialize(new Dictionary<string, object?> { ["paused"] = true, ["reason"] = reason }, SummaryJson),
-            FirstSeenAt = now,
-            LastSeenAt = now,
-        };
-        _context.Alerts.Add(alert);
-        AddEvent(alert, AlertEventType.Raised, null, reason, now);
-        var userIds = new[] { rule.OwnerUserId, rule.CreatedByUserId }.Distinct().ToList();
-        var users = await Org(_context.OrganizationUsers).AsNoTracking().Where(u => userIds.Contains(u.UserId) && u.Status == OrganizationUserStatus.Active).ToListAsync(cancellationToken);
-        _notifications.Notify(users.Select(u => new NotificationRecipient(PrincipalType.OrganizationUser, u.UserId, rule.OrganizationId, u.Email, u.FullName, u.PreferredLanguage)), NotificationTypes.MonitoringRulePaused, "MonitoringRule",
-            rule.RuleId.ToString(), new { ruleId = rule.RuleId, ruleName = rule.Name, reason }, rule.OrganizationId);
-        _ = owner;
     }
 
     private void AddEvent(Alert alert, AlertEventType type, Guid? actor, string? note, DateTimeOffset at) => _context.AlertEvents.Add(new AlertEvent

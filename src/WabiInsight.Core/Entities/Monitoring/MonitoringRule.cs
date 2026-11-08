@@ -10,6 +10,9 @@ public enum MonitoringRuleKind
 
     /// <summary>Over the access ledger (how users use the platform), compared to limits or baselines.</summary>
     Access = 2,
+
+    /// <summary>Over platform signals of the organization: connection failures, email failures, AI spend, metadata drift, report delivery failures.</summary>
+    System = 3,
 }
 
 public enum AlertSeverity

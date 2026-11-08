@@ -7,7 +7,7 @@ using WabiInsight.Core.Entities.Monitoring;
 
 namespace WabiInsight.Core.Monitoring;
 
-/// <summary>The typed body of a Monitoring Rule (specification §35.1). Exactly one of <see cref="Data"/> or <see cref="Access"/> is set, matching the rule's kind.</summary>
+/// <summary>The typed body of a Monitoring Rule (specification §35.1). Exactly one of <see cref="Data"/>, <see cref="Access"/> or <see cref="System"/> is set, matching the rule's kind.</summary>
 public sealed class RuleDefinition
 {
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
@@ -17,6 +17,9 @@ public sealed class RuleDefinition
 
     [JsonPropertyName("access")]
     public AccessRuleDefinition? Access { get; set; }
+
+    [JsonPropertyName("system")]
+    public SystemRuleDefinition? System { get; set; }
 
     public string Serialize() => JsonSerializer.Serialize(this, JsonOptions);
 
@@ -169,12 +172,33 @@ public sealed class AccessThreshold
     public decimal Minimum { get; set; } = 1;
 }
 
+/// <summary>
+/// A system rule (P14.4): one platform signal of the organization over a window, compared with a threshold.
+/// Signals carry no business data: counts of failed connections, emails, report deliveries, removed catalogue
+/// entries, and the month's AI spend against the organization's budget.
+/// </summary>
+public sealed class SystemRuleDefinition
+{
+    /// <summary>connection_failures, email_failures, ai_budget, metadata_drift or report_failures.</summary>
+    [JsonPropertyName("signal")]
+    public string Signal { get; set; } = "connection_failures";
+
+    /// <summary>Look-back window in hours (ai_budget always uses the current month).</summary>
+    [JsonPropertyName("windowHours")]
+    public int WindowHours { get; set; } = 24;
+
+    /// <summary>Fire when the count exceeds this value; for ai_budget, when spend reaches this percentage of the monthly budget.</summary>
+    [JsonPropertyName("threshold")]
+    public decimal Threshold { get; set; }
+}
+
 /// <summary>Pure validation of a rule definition against its kind (no database; catalogue checks happen in the service).</summary>
 public static class RuleDefinitionValidator
 {
     public static readonly string[] ConditionOperators = ["gt", "gte", "lt", "lte", "eq", "neq"];
     public static readonly string[] AccessSignals = ["analyses", "rows", "restricted_touches", "exports", "unauthorized", "identifier_filter_values", "accesses"];
     public static readonly string[] BaselineSignals = ["analyses", "rows", "restricted_touches", "exports", "unauthorized"];
+    public static readonly string[] SystemSignals = ["connection_failures", "email_failures", "ai_budget", "metadata_drift", "report_failures"];
 
     public static IReadOnlyList<string> Validate(MonitoringRuleKind kind, RuleDefinition definition)
     {
@@ -182,7 +206,7 @@ public static class RuleDefinitionValidator
         var errors = new List<string>();
         if (kind == MonitoringRuleKind.Data)
         {
-            if (definition.Data is not { } d || definition.Access is not null)
+            if (definition.Data is not { } d || definition.Access is not null || definition.System is not null)
             {
                 return ["rule_definition_kind_mismatch"];
             }
@@ -235,9 +259,31 @@ public static class RuleDefinitionValidator
                 errors.Add("rule_max_groups_invalid");
             }
         }
+        else if (kind == MonitoringRuleKind.System)
+        {
+            if (definition.System is not { } sys || definition.Data is not null || definition.Access is not null)
+            {
+                return ["rule_definition_kind_mismatch"];
+            }
+
+            if (!SystemSignals.Contains(sys.Signal))
+            {
+                errors.Add("rule_signal_invalid");
+            }
+
+            if (sys.WindowHours is < 1 or > 24 * 31)
+            {
+                errors.Add("rule_window_invalid");
+            }
+
+            if (sys.Threshold < 0 || (sys.Signal == "ai_budget" && sys.Threshold is <= 0 or > 1000))
+            {
+                errors.Add("rule_threshold_invalid");
+            }
+        }
         else
         {
-            if (definition.Access is not { } a || definition.Data is not null)
+            if (definition.Access is not { } a || definition.Data is not null || definition.System is not null)
             {
                 return ["rule_definition_kind_mismatch"];
             }

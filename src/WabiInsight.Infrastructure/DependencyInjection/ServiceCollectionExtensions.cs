@@ -224,6 +224,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IScheduledJobHandler, AlertDigestJob>();
         services.AddScoped<RuleEvaluator>();
         services.AddScoped<RuleRunner>();
+        services.AddScoped<RuleHealthChecker>();
         services.AddScoped<AlertDigestBuilder>();
         services.AddScoped<IMonitoringRuleService, MonitoringRuleService>();
         services.AddScoped<IAlertService, AlertService>();
