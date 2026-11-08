@@ -24,6 +24,7 @@ internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organ
         builder.Property(o => o.TimeZone).HasMaxLength(64).IsRequired();
         // Existing organizations get 07:00 / 08:00–18:00 / Monday–Friday from the migration's column defaults.
         builder.Property(o => o.WorkingDays).HasMaxLength(7).IsRequired();
+        builder.Property(o => o.MonthlyAiBudget).HasPrecision(14, 2);
         builder.Property(o => o.DefaultLanguage).HasMaxLength(2).IsRequired();
         builder.Property(o => o.LogoArtifactKey).HasMaxLength(260);
         builder.Property(o => o.LogoContentType).HasMaxLength(100);

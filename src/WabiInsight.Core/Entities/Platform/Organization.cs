@@ -50,6 +50,9 @@ public class Organization : AuditableEntity
     /// <summary>End of working hours (local).</summary>
     public TimeOnly WorkingHoursEnd { get; set; } = new(18, 0);
 
+    /// <summary>Monthly AI spend budget in the providers' price currency (USD); null when the organization sets none. Read by the "AI budget" system rule.</summary>
+    public decimal? MonthlyAiBudget { get; set; }
+
     /// <summary>Working days as ISO day digits (1 = Monday … 7 = Sunday), e.g. "12345".</summary>
     public string WorkingDays { get; set; } = "12345";
 

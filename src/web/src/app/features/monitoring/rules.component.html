@@ -22,6 +22,11 @@
         <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.settings.workStart' | transloco }}</mat-label><input matInput type="time" [ngModel]="s.workingHoursStart.slice(0, 5)" (ngModelChange)="setSetting('workingHoursStart', $event)" /></mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.settings.workEnd' | transloco }}</mat-label><input matInput type="time" [ngModel]="s.workingHoursEnd.slice(0, 5)" (ngModelChange)="setSetting('workingHoursEnd', $event)" /></mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.settings.retention' | transloco }}</mat-label><input matInput type="number" min="1" [max]="s.maxRetentionMonths" [ngModel]="s.retentionMonths" (ngModelChange)="setSetting('retentionMonths', +$event)" /><mat-hint>{{ 'monitoring.settings.retentionHint' | transloco: { max: s.maxRetentionMonths } }}</mat-hint></mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'monitoring.settings.aiBudget' | transloco }}</mat-label>
+          <input matInput type="number" min="0" step="1" [ngModel]="s.monthlyAiBudget" (ngModelChange)="setSetting('monthlyAiBudget', $event === '' || $event === null ? null : +$event)" data-testid="settings-ai-budget" />
+          <mat-hint>{{ 'monitoring.settings.aiSpend' | transloco: { spend: (s.aiSpendThisMonth ?? 0 | number: '1.2-2') } }}</mat-hint>
+        </mat-form-field>
       </div>
       <div class="days">
         <span class="wi-muted small">{{ 'monitoring.settings.workingDays' | transloco }}</span>
@@ -48,6 +53,64 @@
           <mat-hint>{{ 'monitoring.rules.ownerHint' | transloco }}</mat-hint>
         </mat-form-field>
       }
+      <section class="describe" data-testid="rules-describe">
+        <h4><mat-icon>auto_awesome</mat-icon>{{ 'monitoring.draft.title' | transloco }}</h4>
+        <p class="wi-muted small">{{ 'monitoring.draft.subtitle' | transloco }}</p>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+          <mat-label>{{ 'monitoring.draft.label' | transloco }}</mat-label>
+          <textarea matInput rows="2" maxlength="1000" [ngModel]="description()" (ngModelChange)="description.set($event)" [placeholder]="'monitoring.draft.placeholder' | transloco" data-testid="rules-describe-text"></textarea>
+          <mat-hint>{{ 'monitoring.draft.hint' | transloco }}</mat-hint>
+        </mat-form-field>
+        <div class="actions end">
+          <button mat-flat-button type="button" (click)="draftRule()" [disabled]="drafting() || description().trim().length < 5" data-testid="rules-describe-go"><mat-icon>auto_awesome</mat-icon>{{ 'monitoring.draft.go' | transloco }}</button>
+        </div>
+        @if (drafting()) { <mat-progress-bar mode="indeterminate" /> }
+      </section>
+
+      @if (draft(); as d) {
+        <section class="draft" data-testid="rules-draft">
+          <div class="detail__head">
+            <h4><mat-icon>fact_check</mat-icon>{{ 'monitoring.draft.proposed' | transloco }}</h4>
+            <span class="sev" [attr.data-sev]="d.rule.severity">{{ 'monitoring.severity.' + d.rule.severity | transloco }}</span>
+          </div>
+          <p class="draft__name"><strong>{{ d.rule.name }}</strong> · <span class="wi-muted">{{ schedule(d.rule) }}</span></p>
+          <p class="draft__explain">{{ d.explanation }}</p>
+          <dl class="draft__bindings">
+            <dt>{{ 'monitoring.draft.object' | transloco }}</dt>
+            <dd class="bidi">{{ draftObjectLabel(d) }}</dd>
+            @for (part of draftParts; track part) {
+              @if (bindingsOf(d, part).length > 0) {
+                <dt>{{ 'monitoring.draft.parts.' + part | transloco }}</dt>
+                <dd>
+                  @for (b of bindingsOf(d, part); track $index) {
+                    <span class="binding">
+                      <span class="wi-ltr">{{ bindingLabel(b) }}</span>
+                      @if (b.role) { <span class="chip role">{{ 'admin.metadata.roles.' + b.role | transloco }}</span> }
+                      @if (b.detail) { <span class="wi-muted small">{{ detailLabel(b) }}</span> }
+                    </span>
+                  }
+                </dd>
+              }
+            }
+            @if (d.rule.definition.data; as data) {
+              <dt>{{ 'monitoring.draft.when' | transloco }}</dt>
+              <dd>{{ 'monitoring.draft.condition' | transloco: { aggregate: ('monitoring.aggregates.' + data.measure.aggregate | transloco), operator: ('monitoring.operators.' + data.condition.operator | transloco), value: data.condition.value, hours: data.windowHours } }}@if (data.comparison === 'previous_period') { · {{ 'monitoring.draft.vsPrevious' | transloco }} }</dd>
+            }
+          </dl>
+          @if (d.assumptions.length > 0) {
+            <div class="draft__assumptions">
+              <span class="wi-muted small">{{ 'monitoring.draft.assumptions' | transloco }}</span>
+              <ul>@for (a of d.assumptions; track $index) { <li>{{ a }}</li> }</ul>
+            </div>
+          }
+          <p class="callout"><mat-icon>verified_user</mat-icon>{{ 'monitoring.draft.notSaved' | transloco }}</p>
+          <div class="actions end">
+            <button mat-button type="button" (click)="discardDraft()" data-testid="rules-draft-discard">{{ 'monitoring.draft.discard' | transloco }}</button>
+            <button mat-flat-button type="button" (click)="reviewDraft()" data-testid="rules-draft-review"><mat-icon>edit_note</mat-icon>{{ 'monitoring.draft.review' | transloco }}</button>
+          </div>
+        </section>
+      }
+
       <h4>{{ 'monitoring.rules.dataTemplates' | transloco }}</h4>
       <div class="templates">
         @for (t of dataTemplates(); track t.code) {
@@ -73,6 +136,16 @@
             </button>
           }
         </div>
+        <h4 data-testid="rules-system-heading">{{ 'monitoring.rules.systemTemplates' | transloco }}</h4>
+        <div class="templates" data-testid="rules-system-templates">
+          @for (t of systemTemplates(); track t.code) {
+            <button type="button" class="template" [class.template--off]="!t.available" (click)="pick(t)" [disabled]="!t.available" [attr.data-testid]="'template-' + t.code">
+              <span class="template__head"><mat-icon>monitor_heart</mat-icon><strong>{{ 'monitoring.templates.' + t.code + '.name' | transloco }}</strong><span class="sev" [attr.data-sev]="t.severity">{{ 'monitoring.severity.' + t.severity | transloco }}</span></span>
+              <span class="template__text">{{ 'monitoring.templates.' + t.code + '.description' | transloco }}</span>
+              @if (!t.available) { <span class="template__off"><mat-icon>info</mat-icon>{{ 'monitoring.unavailable.' + t.unavailableReason | transloco }}</span> }
+            </button>
+          }
+        </div>
       }
       <p class="wi-muted small"><mat-icon class="tiny">sell</mat-icon>{{ 'monitoring.rules.rolesHint' | transloco }} @if (isAdmin()) { <a routerLink="/app/admin/metadata">{{ 'nav.org.admin.metadata' | transloco }}</a> }</p>
     </div>
@@ -81,7 +154,7 @@
   @if (form(); as f) {
     <form class="wi-card editor" (ngSubmit)="save()" data-testid="rule-form">
       <div class="detail__head">
-        <h3>{{ (f.ruleId ? 'monitoring.rules.edit' : 'monitoring.rules.new') | transloco }} · {{ f.template ? ('monitoring.templates.' + f.template.code + '.name' | transloco) : ('monitoring.rules.custom' | transloco) }}</h3>
+        <h3>{{ (f.ruleId ? 'monitoring.rules.edit' : 'monitoring.rules.new') | transloco }} · {{ f.template ? ('monitoring.templates.' + f.template.code + '.name' | transloco) : ((f.draft ? 'monitoring.draft.fromDescription' : 'monitoring.rules.custom') | transloco) }}</h3>
         <span class="wi-ms-auto"></span>
         <button mat-icon-button type="button" (click)="cancel()" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
       </div>
@@ -97,7 +170,9 @@
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span2"><mat-label>{{ 'monitoring.rules.description' | transloco }}</mat-label><input matInput name="description" maxlength="2000" [ngModel]="f.description" (ngModelChange)="patch({ description: $event })" /></mat-form-field>
       </div>
 
-      @if (isAdmin() && f.kind === 'Data') {
+      @if (isAdmin() && f.kind === 'Data' && f.draft) {
+        <p class="wi-muted small"><mat-icon class="tiny">person</mat-icon>{{ 'monitoring.draft.ownerFixed' | transloco: { owner: ownerName(f.ownerUserId) } }}</p>
+      } @else if (isAdmin() && f.kind === 'Data') {
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="owner">
           <mat-label>{{ 'monitoring.rules.owner' | transloco }}</mat-label>
           <mat-select name="owner" [value]="f.ownerUserId" (valueChange)="changeOwner($event)" data-testid="rule-owner">
@@ -162,7 +237,47 @@
         </fieldset>
       }
 
-      @if (!f.template) { <p class="callout"><mat-icon>code</mat-icon>{{ 'monitoring.rules.customHint' | transloco }}</p> }
+      @if (f.draft; as d) {
+        <fieldset class="block" data-testid="rule-draft-bindings">
+          <legend>{{ 'monitoring.rules.binding' | transloco }}</legend>
+          <p class="bidi"><mat-icon class="tiny">table_view</mat-icon>{{ draftObjectLabel(d) }}</p>
+          <div class="bindings-inline">
+            @for (b of d.bindings; track $index) {
+              <span class="chip binding-chip"><span class="wi-muted">{{ 'monitoring.draft.parts.' + b.part | transloco }}:</span><span class="wi-ltr">{{ bindingLabel(b) }}</span>@if (b.detail) { <span class="wi-muted wi-ltr">{{ detailLabel(b) }}</span> }</span>
+            }
+          </div>
+          <div class="grid3">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.rules.windowHours' | transloco }}</mat-label><input matInput type="number" min="1" name="window" [ngModel]="f.windowHours" (ngModelChange)="patch({ windowHours: +$event })" /></mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'monitoring.rules.condition' | transloco }}</mat-label>
+              <mat-select name="op" [value]="f.conditionOperator" (valueChange)="patch({ conditionOperator: $event })">
+                @for (o of operators; track o) { <mat-option [value]="o">{{ 'monitoring.operators.' + o | transloco }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ (d.rule.definition.data?.comparison === 'previous_period' ? 'monitoring.rules.changePercent' : 'monitoring.rules.threshold') | transloco }}</mat-label><input matInput type="number" name="value" [ngModel]="f.conditionValue" (ngModelChange)="patch({ conditionValue: +$event })" data-testid="rule-threshold" /></mat-form-field>
+          </div>
+          <p class="wi-muted small"><mat-icon class="tiny">lock</mat-icon>{{ 'monitoring.rules.runsAsOwner' | transloco }}</p>
+        </fieldset>
+      }
+
+      @if (f.template?.kind === 'System') {
+        <fieldset class="block">
+          <legend>{{ 'monitoring.rules.systemSignal' | transloco }}: {{ 'monitoring.signals.' + f.template!.defaults.system!.signal | transloco }}</legend>
+          <div class="grid3">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'monitoring.rules.windowHours' | transloco }}</mat-label><input matInput type="number" min="1" max="744" name="window" [ngModel]="f.windowHours" (ngModelChange)="patch({ windowHours: +$event })" /></mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ (f.template!.defaults.system!.signal === 'ai_budget' ? 'monitoring.rules.budgetPercent' : 'monitoring.rules.systemThreshold') | transloco }}</mat-label>
+              <input matInput type="number" min="0" step="1" name="threshold" [ngModel]="f.thresholdValue" (ngModelChange)="patch({ thresholdValue: +$event })" data-testid="rule-threshold" />
+            </mat-form-field>
+          </div>
+          @if (f.template!.defaults.system!.signal === 'ai_budget' && !settings()?.monthlyAiBudget) {
+            <p class="callout callout--warn"><mat-icon>info</mat-icon>{{ 'monitoring.rules.budgetMissing' | transloco }}</p>
+          }
+          <p class="wi-muted small"><mat-icon class="tiny">lock</mat-icon>{{ 'monitoring.rules.systemNoData' | transloco }}</p>
+        </fieldset>
+      }
+
+      @if (!f.template && !f.draft) { <p class="callout"><mat-icon>code</mat-icon>{{ 'monitoring.rules.customHint' | transloco }}</p> }
 
       <fieldset class="block">
         <legend>{{ 'monitoring.rules.schedule' | transloco }}</legend>

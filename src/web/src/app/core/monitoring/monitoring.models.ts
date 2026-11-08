@@ -1,11 +1,12 @@
 import { ColumnSemanticRole } from '../organizations/applications.models';
 
-export type MonitoringRuleKind = 'Data' | 'Access';
+export type MonitoringRuleKind = 'Data' | 'Access' | 'System';
 export type AlertSeverity = 'Info' | 'Medium' | 'High';
 export type AlertStatus = 'Open' | 'Acknowledged' | 'Resolved' | 'Dismissed';
 export type RuleEvaluationOutcome = 'NoMatch' | 'Fired' | 'Failed' | 'Skipped';
 export type JobRecurrenceKind = 'Interval' | 'Daily' | 'Weekly';
-export type AlertEventType = 'Raised' | 'Repeated' | 'Acknowledged' | 'Resolved' | 'Dismissed' | 'Reopened' | 'UserSuspended';
+export type AlertEventType =
+  'Raised' | 'Repeated' | 'Acknowledged' | 'Resolved' | 'Dismissed' | 'Reopened' | 'UserSuspended';
 
 export interface RuleMeasure {
   aggregate: string;
@@ -54,9 +55,20 @@ export interface AccessRuleDefinition {
   threshold: AccessThreshold;
 }
 
+export type SystemSignal =
+  'connection_failures' | 'email_failures' | 'ai_budget' | 'metadata_drift' | 'report_failures';
+
+/** P14.4: the organization's own platform signals; no business data. */
+export interface SystemRuleDefinition {
+  signal: SystemSignal;
+  windowHours: number;
+  threshold: number;
+}
+
 export interface RuleDefinition {
   data?: DataRuleDefinition | null;
   access?: AccessRuleDefinition | null;
+  system?: SystemRuleDefinition | null;
 }
 
 export interface TemplateSlot {
@@ -187,6 +199,38 @@ export interface MonitoringSettings {
   retentionMonths: number;
   maxRetentionMonths: number;
   timeZone: string;
+  monthlyAiBudget?: number | null;
+  aiSpendThisMonth?: number;
+}
+
+export interface RuleDraftRequest {
+  description: string;
+  language: string;
+  ownerUserId?: string | null;
+}
+
+export type DraftBindingPart = 'time' | 'group' | 'measure' | 'filter';
+
+/** One catalogued column the draft binds; shown so the user confirms what the rule reads. */
+export interface DraftBinding {
+  part: DraftBindingPart;
+  columnId: string;
+  columnName: string;
+  displayNameEn?: string;
+  displayNameAr?: string;
+  role?: ColumnSemanticRole;
+  detail?: string;
+}
+
+/** A proposed rule from a plain-language description: nothing is saved until the user saves it. */
+export interface RuleDraft {
+  rule: SaveMonitoringRule;
+  objectLabel: string;
+  objectDisplayNameEn?: string;
+  objectDisplayNameAr?: string;
+  bindings: DraftBinding[];
+  explanation: string;
+  assumptions: string[];
 }
 
 export interface AlertSubject {

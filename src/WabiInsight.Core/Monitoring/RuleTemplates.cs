@@ -34,6 +34,11 @@ public static class RuleTemplates
     public const string QueriesAboveBaseline = "queries_above_baseline";
     public const string SensitiveOutsideWorkingHours = "sensitive_outside_working_hours";
     public const string NewUserSensitiveAccess = "new_user_sensitive_access";
+    public const string SourceConnectionFailures = "source_connection_failures";
+    public const string EmailDeliveryFailures = "email_delivery_failures";
+    public const string AiBudgetReached = "ai_budget_reached";
+    public const string MetadataDrift = "metadata_drift";
+    public const string ReportDeliveryFailures = "report_delivery_failures";
 
     private static readonly ColumnSemanticRole[] EntityRoles = [ColumnSemanticRole.AccountIdentifier, ColumnSemanticRole.PersonIdentifier, ColumnSemanticRole.Identifier];
 
@@ -74,6 +79,23 @@ public static class RuleTemplates
         new(NewUserSensitiveAccess, MonitoringRuleKind.Access, AlertSeverity.Medium, [],
             new RuleDefinition { Access = new AccessRuleDefinition { Signal = "accesses", WindowHours = 24, MinClassification = DataClassification.Restricted, NewUsersWithinDays = 7, Threshold = new AccessThreshold { Mode = "absolute", Value = 0.5m } } },
             JobRecurrenceKind.Daily, new TimeOnly(7, 0), 0, RequiresRestrictedColumns: true),
+
+        // System rules (P14.4): platform signals of the organization, no business data.
+        new(SourceConnectionFailures, MonitoringRuleKind.System, AlertSeverity.High, [],
+            new RuleDefinition { System = new SystemRuleDefinition { Signal = "connection_failures", WindowHours = 24, Threshold = 0 } },
+            JobRecurrenceKind.Interval, default, 60),
+        new(EmailDeliveryFailures, MonitoringRuleKind.System, AlertSeverity.Medium, [],
+            new RuleDefinition { System = new SystemRuleDefinition { Signal = "email_failures", WindowHours = 24, Threshold = 0 } },
+            JobRecurrenceKind.Interval, default, 60),
+        new(AiBudgetReached, MonitoringRuleKind.System, AlertSeverity.Medium, [],
+            new RuleDefinition { System = new SystemRuleDefinition { Signal = "ai_budget", WindowHours = 24, Threshold = 80 } },
+            JobRecurrenceKind.Daily, new TimeOnly(8, 0), 0),
+        new(MetadataDrift, MonitoringRuleKind.System, AlertSeverity.Medium, [],
+            new RuleDefinition { System = new SystemRuleDefinition { Signal = "metadata_drift", WindowHours = 24, Threshold = 0 } },
+            JobRecurrenceKind.Daily, new TimeOnly(7, 30), 0),
+        new(ReportDeliveryFailures, MonitoringRuleKind.System, AlertSeverity.Medium, [],
+            new RuleDefinition { System = new SystemRuleDefinition { Signal = "report_failures", WindowHours = 24, Threshold = 0 } },
+            JobRecurrenceKind.Daily, new TimeOnly(7, 30), 0),
     ];
 
     public static RuleTemplate? Find(string? code) => All.FirstOrDefault(t => string.Equals(t.Code, code, StringComparison.Ordinal));

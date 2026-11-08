@@ -78,6 +78,7 @@ public static class UsageEventTypes
     public const string DigestSent = "Monitoring.DigestSent";
     public const string SubscriptionDelivered = "Reports.SubscriptionDelivered";
     public const string SubscriptionFailed = "Reports.SubscriptionFailed";
+    public const string RuleDrafted = "Monitoring.RuleDrafted";
     public const string RetentionPurged = "Monitoring.RetentionPurged";
     public const string ScheduledJobFailed = "Scheduler.JobFailed";
 }

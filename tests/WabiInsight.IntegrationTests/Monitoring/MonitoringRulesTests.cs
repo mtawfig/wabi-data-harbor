@@ -135,7 +135,8 @@ public sealed class MonitoringRulesTests : IDisposable
         var analystMail = await _factory.Emails.WaitForAsync(analystEmail, m => m.Subject.Contains("digest", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain("ACC-1", analystMail.TextBody, StringComparison.Ordinal);
         Assert.Contains("Details hidden", analystMail.TextBody, StringComparison.Ordinal);
-        Assert.DoesNotContain(_factory.Emails.Messages, m => m.ToEmail == TestData.AliceEmail && m.Subject.Contains("digest", StringComparison.OrdinalIgnoreCase));
+        // Alice is neither owner nor recipient of this rule (she may still get a digest for rules she owns).
+        Assert.DoesNotContain(_factory.Emails.Messages, m => m.ToEmail == TestData.AliceEmail && m.Subject.Contains("digest", StringComparison.OrdinalIgnoreCase) && m.TextBody.Contains("Same account, several devices", StringComparison.Ordinal));
         Assert.Single(_factory.Emails.Messages, m => m.ToEmail == managerEmail && m.Subject.Contains("digest", StringComparison.OrdinalIgnoreCase));
 
         // 7. Management users manage their own data rules only.

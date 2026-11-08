@@ -10,6 +10,8 @@ import {
   MonitoringRule,
   MonitoringSettings,
   OwnerOption,
+  RuleDraft,
+  RuleDraftRequest,
   RuleTemplate,
   RuleTestResult,
   SaveMonitoringRule,
@@ -42,7 +44,10 @@ export class MonitoringService {
   }
 
   setActive(ruleId: string, active: boolean): Observable<MonitoringRule> {
-    return this.http.post<MonitoringRule>(`/api/monitoring/rules/${ruleId}/${active ? 'resume' : 'pause'}`, {});
+    return this.http.post<MonitoringRule>(
+      `/api/monitoring/rules/${ruleId}/${active ? 'resume' : 'pause'}`,
+      {},
+    );
   }
 
   deleteRule(ruleId: string): Observable<void> {
@@ -57,16 +62,31 @@ export class MonitoringService {
     return this.http.post<RuleTestResult>('/api/monitoring/rules/test', request);
   }
 
+  /** P14.4: a plain-language description becomes a proposed rule; nothing is saved until createRule. */
+  draft(request: RuleDraftRequest): Observable<RuleDraft> {
+    return this.http.post<RuleDraft>('/api/monitoring/rules/draft', request);
+  }
+
   settings(): Observable<MonitoringSettings> {
     return this.http.get<MonitoringSettings>('/api/monitoring/settings');
   }
 
-  saveSettings(request: Omit<MonitoringSettings, 'maxRetentionMonths' | 'timeZone'>): Observable<MonitoringSettings> {
+  saveSettings(
+    request: Omit<MonitoringSettings, 'maxRetentionMonths' | 'timeZone' | 'aiSpendThisMonth'>,
+  ): Observable<MonitoringSettings> {
     return this.http.put<MonitoringSettings>('/api/monitoring/settings', request);
   }
 
-  alerts(query: { status?: AlertStatus | null; severity?: AlertSeverity | null; ruleId?: string | null; page?: number; pageSize?: number }): Observable<AlertPage> {
-    let params = new HttpParams().set('page', query.page ?? 1).set('pageSize', query.pageSize ?? 25);
+  alerts(query: {
+    status?: AlertStatus | null;
+    severity?: AlertSeverity | null;
+    ruleId?: string | null;
+    page?: number;
+    pageSize?: number;
+  }): Observable<AlertPage> {
+    let params = new HttpParams()
+      .set('page', query.page ?? 1)
+      .set('pageSize', query.pageSize ?? 25);
     if (query.status) {
       params = params.set('status', query.status);
     }
@@ -83,8 +103,14 @@ export class MonitoringService {
     return this.http.get<AlertDetail>(`/api/monitoring/alerts/${alertId}`);
   }
 
-  act(alertId: string, action: 'acknowledge' | 'resolve' | 'dismiss' | 'reopen' | 'suspend-user', note?: string | null): Observable<AlertDetail> {
-    return this.http.post<AlertDetail>(`/api/monitoring/alerts/${alertId}/${action}`, { note: note ?? null });
+  act(
+    alertId: string,
+    action: 'acknowledge' | 'resolve' | 'dismiss' | 'reopen' | 'suspend-user',
+    note?: string | null,
+  ): Observable<AlertDetail> {
+    return this.http.post<AlertDetail>(`/api/monitoring/alerts/${alertId}/${action}`, {
+      note: note ?? null,
+    });
   }
 
   digestPreview(): Observable<DigestPreview> {

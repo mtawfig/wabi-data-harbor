@@ -129,7 +129,7 @@ Organization Administration → **Monitoring Rules** (list, template catalogue w
 - Behaviour monitoring observes platform usage the organization already audits (`AuditLogs`, `UsageEvents`); facts are derived from those operations, retained 24 months (D3), visible to the Organization Administrator only, and never to the Platform Administrator.
 - Suspension is human-only (D2) and audited; alerts cannot modify users or data.
 - Natural-language drafts follow the §19 injection safeguards; no model output runs unconfirmed.
-- New usage events: `Monitoring.RuleEvaluated`, `Monitoring.AlertRaised`, `Monitoring.DigestSent`, `Reports.SubscriptionDelivered`, `Reports.SubscriptionFailed`.
+- New usage events: `Monitoring.RuleEvaluated`, `Monitoring.AlertRaised`, `Monitoring.DigestSent`, `Monitoring.RuleDrafted`, `Reports.SubscriptionDelivered`, `Reports.SubscriptionFailed`.
 
 ## 14. Delivery plan
 
@@ -160,6 +160,14 @@ What shipped, and where it differs from the design above:
 - **Which analyses.** The author may schedule their own analyses or ones shared with them (P10.1 shares), which records the owner's consent.
 - **Failures.** Three failed scheduled runs pause the subscription and send an in-app notification to its creator. The system-rule alert follows with the system rules in P14.4.
 - **Deliveries are not ledger facts.** The delivery log records who received what, when and how many rows. Behaviour baselines stay based on interactive use.
+
+### P14.4 (Natural-language rules and system rules)
+
+- **Drafts are data rules only.** A description becomes one data rule on one catalogued object (the shape of §5). Anything that needs several tables, how people use the platform, or system health is answered with `draft_not_expressible` and the user is pointed to the templates. Access rules stay template-based.
+- **The model sees the owner's catalogue, returns names.** The prompt lists only what the rule owner may read (approved, present, permitted columns; up to 60 objects ordered by how many field roles they carry, 60 columns each), with display names in the description's language, all fenced and sanitized like the §19 planner. Names are bound server-side to catalogue ids; an unknown or unpermitted name rejects the draft. The bound draft then goes through the same validation and owner authorization as a saved rule before it is shown.
+- **Confirmation is the save.** The draft endpoint never writes a rule. The page shows the bindings in words; the user saves through the normal endpoint (and may adjust window and condition; the columns are fixed so the confirmed bindings are what runs). An administrator drafting for another owner picks the owner first; the draft is bound to that owner's permissions.
+- **System rules.** Kind `System`, administrators only, five signals: `connection_failures` (failed executions at the execute stage plus a failed connection test, per application), `email_failures` (the organization's outbox), `ai_budget` (month-to-date estimated cost of analyses in the organization's time zone against `Organizations.MonthlyAiBudget`, threshold in percent; skipped while no budget is set), `metadata_drift` (objects and columns removed in the window, per object) and `report_failures` (failed periodic-report deliveries, per report). They count the organization's own platform events; no business data is read, so the alert is never redacted.
+- **Rule health on metadata change.** Besides the pause at run time (P14.2), `RuleHealthChecker` checks the organization's active data rules immediately after every catalogue change (refresh, object or column update, approval) and pauses those whose object or referenced columns are missing, removed or unapproved, with the same `rule_invalid` alert and notification. Permission changes are still caught at the next run.
 
 ## 16. Why this matters
 

@@ -11,7 +11,13 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
-import { AlertDetail, AlertPage, AlertSeverity, AlertStatus, DigestPreview } from '../../core/monitoring/monitoring.models';
+import {
+  AlertDetail,
+  AlertPage,
+  AlertSeverity,
+  AlertStatus,
+  DigestPreview,
+} from '../../core/monitoring/monitoring.models';
 import { MonitoringService } from '../../core/monitoring/monitoring.service';
 import { problemMessage } from '../../core/problem-message';
 
@@ -24,7 +30,19 @@ type AlertAction = 'acknowledge' | 'resolve' | 'dismiss' | 'reopen';
  */
 @Component({
   selector: 'app-alerts',
-  imports: [DatePipe, DecimalPipe, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, TranslocoModule],
+  imports: [
+    DatePipe,
+    DecimalPipe,
+    FormsModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatPaginatorModule,
+    MatProgressBarModule,
+    MatSelectModule,
+    TranslocoModule,
+  ],
   templateUrl: './alerts.component.html',
   styleUrl: './monitoring.scss',
 })
@@ -55,9 +73,37 @@ export class AlertsComponent {
     if (!s) {
       return [];
     }
-    return (['measure', 'previous', 'changePercent', 'threshold', 'expected', 'basis', 'signal', 'windowHours', 'reason'] as const)
+    // System rules (P14.4) add their own keys: the application, object or report concerned, the budget and the month.
+    return (
+      [
+        'measure',
+        'previous',
+        'changePercent',
+        'threshold',
+        'expected',
+        'basis',
+        'signal',
+        'windowHours',
+        'application',
+        'object',
+        'report',
+        'failedQueries',
+        'connectionTestFailed',
+        'objectRemoved',
+        'columnsRemoved',
+        'budget',
+        'spend',
+        'month',
+        'reason',
+      ] as const
+    )
       .filter((k) => s[k] !== undefined && s[k] !== null)
-      .map((k) => ({ key: k, value: s[k] as string | number }));
+      .map((k) => ({
+        key: k,
+        value: s[k] as string | number | boolean,
+        // The AI budget rule measures a share of the monthly budget.
+        percent: s['signal'] === 'ai_budget' && (k === 'measure' || k === 'threshold'),
+      }));
   });
 
   constructor() {
@@ -72,16 +118,23 @@ export class AlertsComponent {
 
   load(): void {
     this.loading.set(true);
-    this.monitoring.alerts({ status: this.status(), severity: this.severity(), page: this.pageIndex(), pageSize: 25 }).subscribe({
-      next: (p) => {
-        this.page.set(p);
-        this.loading.set(false);
-      },
-      error: (response: HttpErrorResponse) => {
-        this.error.set(problemMessage(response, this.transloco));
-        this.loading.set(false);
-      },
-    });
+    this.monitoring
+      .alerts({
+        status: this.status(),
+        severity: this.severity(),
+        page: this.pageIndex(),
+        pageSize: 25,
+      })
+      .subscribe({
+        next: (p) => {
+          this.page.set(p);
+          this.loading.set(false);
+        },
+        error: (response: HttpErrorResponse) => {
+          this.error.set(problemMessage(response, this.transloco));
+          this.loading.set(false);
+        },
+      });
   }
 
   setStatus(value: AlertStatus | null): void {
@@ -107,7 +160,8 @@ export class AlertsComponent {
     this.note.set('');
     this.monitoring.alert(alertId).subscribe({
       next: (d) => this.selected.set(d),
-      error: (response: HttpErrorResponse) => this.error.set(problemMessage(response, this.transloco)),
+      error: (response: HttpErrorResponse) =>
+        this.error.set(problemMessage(response, this.transloco)),
     });
   }
 

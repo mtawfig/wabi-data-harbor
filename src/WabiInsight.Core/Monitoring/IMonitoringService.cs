@@ -74,9 +74,21 @@ public sealed record RuleMatchDto(string? GroupKey, IReadOnlyList<string?>? Grou
 
 public sealed record RuleTestResultDto(RuleEvaluationOutcome Outcome, int MatchCount, long RowsExamined, string? ErrorCode, bool Redacted, IReadOnlyList<RuleMatchDto> Matches);
 
-public sealed record MonitoringSettingsDto(TimeOnly DigestTime, TimeOnly WorkingHoursStart, TimeOnly WorkingHoursEnd, string WorkingDays, int RetentionMonths, int MaxRetentionMonths, string TimeZone);
+public sealed record MonitoringSettingsDto(TimeOnly DigestTime, TimeOnly WorkingHoursStart, TimeOnly WorkingHoursEnd, string WorkingDays, int RetentionMonths, int MaxRetentionMonths, string TimeZone, decimal? MonthlyAiBudget = null, decimal AiSpendThisMonth = 0);
 
-public sealed record UpdateMonitoringSettingsCommand(TimeOnly DigestTime, TimeOnly WorkingHoursStart, TimeOnly WorkingHoursEnd, string WorkingDays, int RetentionMonths);
+public sealed record UpdateMonitoringSettingsCommand(TimeOnly DigestTime, TimeOnly WorkingHoursStart, TimeOnly WorkingHoursEnd, string WorkingDays, int RetentionMonths, decimal? MonthlyAiBudget = null);
+
+/// <summary>A plain-language description to turn into a data rule (P14.4). Owner as for templates: administrators choose, Management is the owner.</summary>
+public sealed record RuleDraftRequest(string Description, string? Language, Guid? OwnerUserId);
+
+/// <summary>One catalogued column the draft binds, shown for confirmation.</summary>
+public sealed record DraftBinding(string Part, Guid ColumnId, string ColumnName, string? DisplayNameEn, string? DisplayNameAr, Entities.Metadata.ColumnSemanticRole? Role, string? Detail);
+
+/// <summary>
+/// A proposed rule: nothing is saved. The model proposed names; the server bound them to the owner's permitted catalogue
+/// entries and validated the result exactly like a saved rule. The user confirms by saving <see cref="Rule"/>.
+/// </summary>
+public sealed record RuleDraftDto(SaveMonitoringRuleCommand Rule, string ObjectLabel, string? ObjectDisplayNameEn, string? ObjectDisplayNameAr, IReadOnlyList<DraftBinding> Bindings, string Explanation, IReadOnlyList<string> Assumptions);
 
 public sealed record OwnerOptionDto(Guid UserId, string FullName, string Email, IReadOnlyList<string> Roles, int PermittedObjects);
 
@@ -104,6 +116,9 @@ public interface IMonitoringRuleService
 
     /// <summary>Evaluates an unsaved definition as its intended owner; records nothing.</summary>
     Task<RuleTestResultDto> TestDraftAsync(SaveMonitoringRuleCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>Turns a plain-language description into a validated, unsaved data rule for confirmation (P14.4).</summary>
+    Task<RuleDraftDto> DraftAsync(RuleDraftRequest request, CancellationToken cancellationToken = default);
 
     Task<MonitoringSettingsDto> GetSettingsAsync(CancellationToken cancellationToken = default);
 

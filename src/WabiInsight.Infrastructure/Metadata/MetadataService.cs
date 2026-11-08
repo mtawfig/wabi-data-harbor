@@ -11,6 +11,7 @@ using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Security;
 using WabiInsight.Core.Tenancy;
 using WabiInsight.Core.Usage;
+using WabiInsight.Infrastructure.Monitoring;
 using WabiInsight.Infrastructure.Persistence;
 
 namespace WabiInsight.Infrastructure.Metadata;
@@ -31,9 +32,11 @@ public sealed partial class MetadataService : IMetadataService
     private readonly IAuditWriter _audit;
     private readonly IUsageEventWriter _usage;
     private readonly IClock _clock;
+    private readonly RuleHealthChecker _ruleHealth;
 
-    public MetadataService(ConfigurationDbContext context, ITenantContext tenantContext, IConnectionStringProtector protector, IDatabaseAdapterFactory adapters, IAuditWriter audit, IUsageEventWriter usage, IClock clock, ILogger<MetadataService> logger)
+    public MetadataService(ConfigurationDbContext context, ITenantContext tenantContext, IConnectionStringProtector protector, IDatabaseAdapterFactory adapters, IAuditWriter audit, IUsageEventWriter usage, IClock clock, ILogger<MetadataService> logger, RuleHealthChecker ruleHealth)
     {
+        _ruleHealth = ruleHealth;
         _logger = logger;
         _context = context;
         _tenantContext = tenantContext;
@@ -201,6 +204,7 @@ public sealed partial class MetadataService : IMetadataService
         _audit.Append(AuditEvents.MetadataRefreshed, "Application", applicationId.ToString(), summary, organizationId);
         _usage.Append(UsageEventTypes.MetadataRefreshed, "Application", applicationId.ToString(), quantity: discovered.Objects.Count, organizationId: organizationId);
         await _context.SaveChangesAsync(cancellationToken);
+        await _ruleHealth.CheckOrganizationAsync(organizationId, cancellationToken);
         return summary;
     }
 
@@ -262,6 +266,7 @@ public sealed partial class MetadataService : IMetadataService
         SetApproval(entity, command.IsApproved);
         _audit.Append(AuditEvents.MetadataObjectUpdated, "DatabaseObject", objectId.ToString(), new { entity.SchemaName, entity.ObjectName, entity.IsApproved }, organizationId);
         await _context.SaveChangesAsync(cancellationToken);
+        await _ruleHealth.CheckOrganizationAsync(organizationId, cancellationToken);
         return (await GetObjectAsync(objectId, cancellationToken))!;
     }
 
@@ -289,6 +294,7 @@ public sealed partial class MetadataService : IMetadataService
 
         _audit.Append(AuditEvents.MetadataColumnUpdated, "DatabaseColumn", columnId.ToString(), new { column.ColumnName, column.IsApproved, column.Classification, column.SemanticRole }, organizationId);
         await _context.SaveChangesAsync(cancellationToken);
+        await _ruleHealth.CheckOrganizationAsync(organizationId, cancellationToken);
         return ToDto(column);
     }
 
@@ -311,6 +317,7 @@ public sealed partial class MetadataService : IMetadataService
 
         _audit.Append(AuditEvents.MetadataObjectUpdated, "DatabaseObject", objectId.ToString(), new { entity.SchemaName, entity.ObjectName, entity.IsApproved, columns = columns.Count }, organizationId);
         await _context.SaveChangesAsync(cancellationToken);
+        await _ruleHealth.CheckOrganizationAsync(organizationId, cancellationToken);
         return (await GetObjectAsync(objectId, cancellationToken))!;
     }
 

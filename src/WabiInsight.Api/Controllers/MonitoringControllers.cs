@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WabiInsight.Api.Authorization;
+using WabiInsight.Api.Security;
 using WabiInsight.Core.Entities.Monitoring;
 using WabiInsight.Core.Monitoring;
 
@@ -71,6 +72,15 @@ public sealed class MonitoringRulesController : ControllerBase
     [HttpPost("rules/test")]
     public async Task<ActionResult<RuleTestResultDto>> TestDraft([FromBody] SaveMonitoringRuleCommand command, CancellationToken cancellationToken)
         => Ok(await _rules.TestDraftAsync(command, cancellationToken));
+
+    /// <summary>
+    /// P14.4: turns a plain-language description (English or Arabic) into a draft data rule bound to the owner's
+    /// permitted catalogue. Nothing is saved; the user reviews the bindings and saves through <c>POST rules</c>.
+    /// </summary>
+    [HttpPost("rules/draft")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(RateLimitingSetup.AiPolicy)]
+    public async Task<ActionResult<RuleDraftDto>> Draft([FromBody] RuleDraftRequest request, CancellationToken cancellationToken)
+        => Ok(await _rules.DraftAsync(request, cancellationToken));
 
     [HttpGet("settings")]
     [Authorize(Policy = Policies.OrganizationAdmin)]

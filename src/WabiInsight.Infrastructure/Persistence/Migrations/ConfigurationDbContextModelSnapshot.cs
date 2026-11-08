@@ -2803,6 +2803,10 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<int>("MonitoringRetentionMonths")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("MonthlyAiBudget")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
                     b.Property<string>("OrganizationCode")
                         .IsRequired()
                         .HasMaxLength(32)

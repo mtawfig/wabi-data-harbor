@@ -1,6 +1,6 @@
 # Wabi Insight — Implementation Plan (Phases and Pull Requests)
 
-**Status:** Phases 1–13 merged. Phase 14 (Proactive Agent) approved by the owner on 2026-11-07; design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P14.0–P14.2 merged; P14.3 in review.
+**Status:** Phases 1–13 merged. Phase 14 (Proactive Agent) approved by the owner on 2026-11-07; design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P14.0–P14.3 merged; P14.4 in review.
 **Specification:** [`docs/WABI_INSIGHT_SPECIFICATION.md`](./WABI_INSIGHT_SPECIFICATION.md) (v1.2; §35 added for Phase 14).
 **Review of the original prompt:** [`docs/SPEC_REVIEW.md`](./SPEC_REVIEW.md).
 
