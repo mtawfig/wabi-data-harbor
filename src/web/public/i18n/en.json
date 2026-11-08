@@ -345,7 +345,7 @@
     "outputLanguage": "Answer language",
     "sameAsInterface": "Same as interface",
     "prompt": "Your question",
-    "promptPlaceholder": "For example: Which departments used Wabi Insight most this month?",
+    "promptPlaceholder": "Ask about this application's data in your own words, in English or Arabic.",
     "submit": "Ask",
     "examplesTitle": "Try asking",
     "examples": {
@@ -876,7 +876,9 @@
       "draft_unreadable": "The AI answer could not be read. Try again or rephrase.",
       "draft_not_expressible": "This cannot be expressed as one data rule (it needs several tables, platform usage or system health). Use a template instead.",
       "draft_reference_not_permitted": "The draft referred to a table or column the owner may not read, so it was rejected. Rephrase or choose a template.",
-      "settings_ai_budget_invalid": "The monthly AI budget must be greater than zero (or left empty)."
+      "settings_ai_budget_invalid": "The monthly AI budget must be greater than zero (or left empty).",
+      "application_example_too_long": "An example question is longer than 200 characters.",
+      "application_examples_too_many": "An application can have at most six example questions."
     },
     "applications": {
       "title": "Applications",
@@ -919,7 +921,19 @@
       "connectionReplaced": "Connection replaced.",
       "approved": "Application approved for querying.",
       "unapproved": "Approval withdrawn.",
-      "empty": "No applications yet."
+      "empty": "No applications yet.",
+      "examples": {
+        "short": "Example questions",
+        "title": "Example questions — {{name}}",
+        "hint": "Shown as suggestions on the Ask page for this application. Write questions your own data can answer, in English, Arabic or both; at most six. A suggestion only fills the question box: the answer still follows each user's permissions.",
+        "en": "Question in English",
+        "ar": "Question in Arabic",
+        "add": "Add an example",
+        "remove": "Remove this example",
+        "none": "No example questions yet.",
+        "saved": "Example questions saved.",
+        "count": "{{count}} example questions"
+      }
     },
     "metadata": {
       "title": "Metadata",

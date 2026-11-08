@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using WabiInsight.Core.Ai;
 using WabiInsight.Core.Ai.Compilers;
+using WabiInsight.Core.Applications;
 using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Ai;
 using WabiInsight.Core.Entities.Analysis;
@@ -75,7 +76,7 @@ public sealed partial class AnalysisService : IAnalysisService
         var counts = await _planner.CountPermittedObjectsAsync(cancellationToken);
         return applications
             .Where(a => counts.GetValueOrDefault(a.ApplicationId) > 0)
-            .Select(a => new AskableApplication(a.ApplicationId, a.ApplicationCode, a.ApplicationName, a.ApplicationNameAr, a.DatabaseType.ToString(), a.IsBuiltIn, counts[a.ApplicationId]))
+            .Select(a => new AskableApplication(a.ApplicationId, a.ApplicationCode, a.ApplicationName, a.ApplicationNameAr, a.DatabaseType.ToString(), a.IsBuiltIn, counts[a.ApplicationId], ApplicationExamples.Parse(a.ExampleQuestionsJson)))
             .ToList();
     }
 

@@ -94,7 +94,7 @@
             }
             @if (d.rule.definition.data; as data) {
               <dt>{{ 'monitoring.draft.when' | transloco }}</dt>
-              <dd>{{ 'monitoring.draft.condition' | transloco: { aggregate: ('monitoring.aggregates.' + data.measure.aggregate | transloco), operator: ('monitoring.operators.' + data.condition.operator | transloco), value: data.condition.value, hours: data.windowHours } }}@if (data.comparison === 'previous_period') { · {{ 'monitoring.draft.vsPrevious' | transloco }} }</dd>
+              <dd>{{ 'monitoring.draft.condition' | transloco: { aggregate: ('monitoring.aggregates.' + data.measure.aggregate | transloco), operator: ('monitoring.operators.' + data.condition.operator | transloco), value: num(data.condition.value), hours: data.windowHours } }}@if (data.comparison === 'previous_period') { · {{ 'monitoring.draft.vsPrevious' | transloco }} }</dd>
             }
           </dl>
           @if (d.assumptions.length > 0) {

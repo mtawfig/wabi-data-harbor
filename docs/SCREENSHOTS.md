@@ -146,6 +146,17 @@ Captured from the running app with the Wabi Bank sample organization and the rea
 | "My department" in Arabic: the asker's department code is bound by the server (`[DepartmentCode] = ?`) | IT Service Desk Manager | [p13-8-my-department-ar](screenshots/p13-8-my-department-ar.png) |
 | Access note with the neutral wording "your department" (mobile) | Branch Manager, Deira | [p13-8-access-note-department-en-mobile](screenshots/p13-8-access-note-department-en-mobile.png) |
 
+## P13.9 — Example questions and readable numbers
+
+Captured from the running app with the Wabi Bank sample organization.
+
+| Screen | Signed in as | Files |
+|---|---|---|
+| Example questions editor (English and Arabic per row, at most six) | Organization Administrator | [p13-9-admin-examples-en](screenshots/p13-9-admin-examples-en.png) |
+| Ask page: the application's own examples; a click fills the question | Compliance and AML Officer | [p13-9-ask-examples-en](screenshots/p13-9-ask-examples-en.png) |
+| Ask page in Arabic on a phone: long examples wrap | HR officer | [p13-9-ask-examples-ar-mobile](screenshots/p13-9-ask-examples-ar-mobile.png) |
+| Alert detail with formatted value and threshold (58,000 / 55,000), English and Arabic digits | Compliance and AML Officer | [p13-9-alert-numbers-en](screenshots/p13-9-alert-numbers-en.png) · [p13-9-alert-numbers-ar](screenshots/p13-9-alert-numbers-ar.png) |
+
 ## P13.10 — Complete explanations, Arabic dates and numbers
 
 Captured from the running app with the Wabi Bank sample organization and the real model.

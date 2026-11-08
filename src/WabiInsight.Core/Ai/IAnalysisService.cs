@@ -15,7 +15,7 @@ public interface IQueryExecutor
 public sealed record Interpretation(string Narrative, IReadOnlyList<string> Highlights, PlanUsage Usage, bool Incomplete = false);
 
 /// <summary>One application the signed-in user may ask about.</summary>
-public sealed record AskableApplication(Guid ApplicationId, string ApplicationCode, string ApplicationName, string ApplicationNameAr, string DatabaseType, bool IsBuiltIn, int ObjectCount);
+public sealed record AskableApplication(Guid ApplicationId, string ApplicationCode, string ApplicationName, string ApplicationNameAr, string DatabaseType, bool IsBuiltIn, int ObjectCount, IReadOnlyList<Applications.ApplicationExampleQuestion> ExampleQuestions);
 
 /// <summary>HistoryId set means "re-run this saved analysis": the outcome becomes its next version instead of a new history entry.</summary>
 public sealed record AskRequest(Guid ApplicationId, string Question, string Language, bool Interpret = true, Guid? HistoryId = null);

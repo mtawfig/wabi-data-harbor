@@ -13,6 +13,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { AuthService } from '../../core/auth/auth.service';
 import { LanguageService } from '../../core/i18n/language.service';
+import { formatValue } from '../../shared/format/number-format';
 import {
   AlertSeverity,
   DraftBinding,
@@ -132,6 +133,11 @@ export class RulesComponent {
     const f = this.form();
     return f?.template?.candidates.find((c) => c.objectId === f.objectId) ?? null;
   });
+
+  /** A number in the interface language with separators and at most two decimals. */
+  num(value: unknown): string {
+    return formatValue(value, this.language.current());
+  }
 
   constructor() {
     this.load();

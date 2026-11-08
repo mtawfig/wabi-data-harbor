@@ -179,6 +179,8 @@ Organization-scoped tables: `Roles` (`RoleId`, `OrganizationId`, `RoleCode`, `Na
 
 **[Revised]** Every application row is tenant-owned, including the built-in one (§12). Organization Administrators configure their applications; Platform Administrators never browse application lists; the platform dashboard shows aggregated counts only.
 
+**Example questions (P13.9).** Each application carries up to six example questions (`ExampleQuestionsJson`, English and/or Arabic, at most 200 characters each), written by the organization's administrators and shown as suggestions on the Ask page in the interface language. The product ships none for business applications, because only the organization knows what its data answers; the built-in Platform Insights application falls back to the platform's own examples. A suggestion only fills the question box: the question then goes through the same planning, validation and authorization as any typed question. Changes are audited (`Application.ExamplesChanged`).
+
 **Connection protection:** connection strings are encrypted with ASP.NET Core Data Protection using a purpose-specific protector; the key ring is persisted outside the configuration database (file system or key vault) with automatic key rotation and retained old keys for decryption. Decrypted values exist only in server memory for authorized operations. The API returns only "Connection configured" plus the server/database display hint the administrator typed; replacement and "test connection" are supported. Test connection also verifies the account is read-only where the engine allows it.
 
 ---

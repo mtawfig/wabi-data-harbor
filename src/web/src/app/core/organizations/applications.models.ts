@@ -24,6 +24,7 @@ export interface Application {
   approvedObjectCount: number;
   createdAt: string;
   updatedAt?: string;
+  exampleQuestions?: { en?: string | null; ar?: string | null }[];
 }
 
 export interface CreateApplicationRequest {
