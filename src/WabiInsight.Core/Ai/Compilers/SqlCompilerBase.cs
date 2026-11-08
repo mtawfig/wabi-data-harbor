@@ -52,9 +52,23 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
         string Numeric(string reference, string target)
             => BooleanTypes.Contains(ColumnType(reference).ToLowerInvariant()) ? $"CAST({Column(reference)} AS {target})" : Column(reference);
 
+        // An asker placeholder becomes the asker's own code (resolved by the authorizer); anything else is a literal.
+        string Value(string value)
+        {
+            if (!AskerValues.IsPlaceholder(value))
+            {
+                return value;
+            }
+
+            return plan.AskerValues?.GetValueOrDefault(value) ?? throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "asker_value_missing");
+        }
+
+        var expressions = new Expressions(Column, ColumnType, Value);
+
         // SELECT
         var select = new List<string>();
         var aliasExpressions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var aliasTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in query.Select)
         {
             string expression;
@@ -82,6 +96,16 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
             }
 
             aliasExpressions[item.Alias] = expression;
+            if (item.Aggregate is not null)
+            {
+                // The type a HAVING value is converted to: counts are integers, sums and averages decimals, MIN/MAX keep the column's type.
+                aliasTypes[item.Alias] = item.Aggregate.ToLowerInvariant() switch
+                {
+                    "count" or "count_distinct" => "bigint",
+                    "sum" or "avg" => "decimal",
+                    _ => BooleanTypes.Contains(ColumnType(item.Column!).ToLowerInvariant()) ? "int" : ColumnType(item.Column!),
+                };
+            }
             select.Add($"{expression} AS {Quote(item.Alias)}");
         }
 
@@ -96,7 +120,12 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
         }
 
         // WHERE
-        var where = query.Filters is null ? null : Group(query.Filters, Column, ColumnType, context);
+        var where = query.Filters is null ? null : Group(query.Filters, expressions, context);
+
+        // HAVING: conditions on aggregate select items, compiled against their expressions (aliases are not visible there).
+        var having = query.Having.Count == 0
+            ? null
+            : Group(new PlanFilterGroup { Logic = "and", Conditions = query.Having }, new Expressions(a => aliasExpressions[a], a => aliasTypes[a], v => v), context);
 
         // GROUP BY / ORDER BY
         var groupBy = query.GroupBy.Select(g => aliasExpressions[g]).ToList();
@@ -112,6 +141,11 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
         if (groupBy.Count > 0)
         {
             sql.Append(" GROUP BY ").Append(string.Join(", ", groupBy));
+        }
+
+        if (!string.IsNullOrEmpty(having))
+        {
+            sql.Append(" HAVING ").Append(having);
         }
 
         if (orderBy.Count > 0)
@@ -156,17 +190,22 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
         return $"(SELECT * FROM {table} WHERE {string.Join(" OR ", predicates)}) {Quote(o.Alias)}";
     }
 
-    private string Group(PlanFilterGroup group, Func<string, string> column, Func<string, string> columnType, CompileContext context)
+    /// <summary>How a filter group resolves its references: SQL expression, data type and value (placeholders resolved).</summary>
+    private sealed record Expressions(Func<string, string> Column, Func<string, string> ColumnType, Func<string, string> Value);
+
+    private string Group(PlanFilterGroup group, Expressions expressions, CompileContext context)
     {
         var parts = new List<string>();
         foreach (var condition in group.Conditions)
         {
-            parts.Add(Condition(condition, column(condition.Column), columnType(condition.Column), context));
+            parts.Add(condition.CompareTo is null
+                ? Condition(condition, expressions.Column(condition.Column), expressions.ColumnType(condition.Column), expressions.Value, context)
+                : Comparison(condition, expressions));
         }
 
         foreach (var child in group.Groups)
         {
-            var nested = Group(child, column, columnType, context);
+            var nested = Group(child, expressions, context);
             if (!string.IsNullOrEmpty(nested))
             {
                 parts.Add($"({nested})");
@@ -176,10 +215,51 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
         return string.Join(group.Logic.Equals("or", StringComparison.OrdinalIgnoreCase) ? " OR " : " AND ", parts);
     }
 
-    private string Condition(PlanCondition condition, string column, string dataType, CompileContext context)
+    /// <summary>Column against column (or aggregate against aggregate): both sides must hold the same kind of value.</summary>
+    private static string Comparison(PlanCondition condition, Expressions expressions)
+    {
+        // Both sides resolve first, so a column outside the authorized plan fails as not permitted.
+        var left = expressions.Column(condition.Column);
+        var right = expressions.Column(condition.CompareTo!);
+        if (Family(expressions.ColumnType(condition.Column)) != Family(expressions.ColumnType(condition.CompareTo!)))
+        {
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "plan_compare_type_mismatch");
+        }
+
+        var op = condition.Operator.ToLowerInvariant() switch
+        {
+            "eq" => "=",
+            "neq" => "<>",
+            "gt" => ">",
+            "gte" => ">=",
+            "lt" => "<",
+            "lte" => "<=",
+            _ => throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "plan_compare_invalid"),
+        };
+        return $"{left} {op} {right}";
+    }
+
+    /// <summary>Kind of value a data type holds, for column-to-column comparisons.</summary>
+    internal static string Family(string dataType)
+    {
+        var type = dataType.ToLowerInvariant();
+        if (DateTypes.Any(t => type.StartsWith(t, StringComparison.Ordinal)))
+        {
+            return "date";
+        }
+
+        if (IntegerTypes.Contains(type) || DecimalTypes.Any(t => type.StartsWith(t, StringComparison.Ordinal)))
+        {
+            return "number";
+        }
+
+        return BooleanTypes.Contains(type) ? "boolean" : type == "uniqueidentifier" ? "guid" : "text";
+    }
+
+    private string Condition(PlanCondition condition, string column, string dataType, Func<string, string> value, CompileContext context)
     {
         var op = condition.Operator.ToLowerInvariant();
-        object? Typed(string v) => Convert(v, dataType);
+        object? Typed(string v) => Convert(value(v), dataType);
         return op switch
         {
             "eq" => $"{column} = {context.Add(Typed(condition.Values[0]))}",
@@ -224,9 +304,10 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
                 return DateTime.SpecifyKind(DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal), DateTimeKind.Unspecified);
             }
 
-            if (IntegerTypes.Contains(type) && long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l))
+            if (IntegerTypes.Contains(type))
             {
-                return l;
+                // A whole number stays an integer; "2.5" against an integer column is still a number; "two" is rejected.
+                return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l) ? (object)l : decimal.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture);
             }
 
             if (DecimalTypes.Any(t => type.StartsWith(t, StringComparison.Ordinal)))

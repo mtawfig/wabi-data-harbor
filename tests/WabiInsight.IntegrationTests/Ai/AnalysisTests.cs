@@ -149,8 +149,8 @@ public sealed class AnalysisTests : IDisposable
         var rowScope = (await scopedInterpreted.ReadJsonAsync()).GetProperty("panels")[0].GetProperty("rowScopes").EnumerateArray().Single();
         Assert.Equal(("Department", "HIGH"), (rowScope.GetProperty("scope").GetString(), rowScope.GetProperty("value").GetString()));
         var scopedInterpretRequest = FakeAiProvider.Requests.Last(r => r.SchemaName == "wabi_interpretation");
-        Assert.Contains("\"access\":\"limited to what the asker may see: only rows of the asker's department or branch HIGH\"", scopedInterpretRequest.UserContent, StringComparison.Ordinal);
-        Assert.Contains("never conclude that other people, branches, departments or sections have no data", scopedInterpretRequest.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("\"access\":\"limited to what the asker may see: only rows of the asker's department HIGH\"", scopedInterpretRequest.UserContent, StringComparison.Ordinal);
+        Assert.Contains("never conclude that other people, departments or sections have no data", scopedInterpretRequest.SystemPrompt, StringComparison.Ordinal);
 
         // Rejections and failures are recorded with their stage.
         FakeAiProvider.Script = (_) => TicketsByStatusPlan().Replace("\"t.Status\"", "\"t.NoSuchColumn\"", StringComparison.Ordinal);
@@ -214,6 +214,103 @@ public sealed class AnalysisTests : IDisposable
         Assert.Equal("authorization", partlyBadBody.GetProperty("stage").GetString());
         Assert.Contains(partlyBadBody.GetProperty("errors").EnumerateArray(), e => e.GetProperty("code").GetString() == "column_not_permitted" && e.GetProperty("detail").GetString()!.StartsWith("query 2:", StringComparison.Ordinal));
         FakeAiProvider.Script = null;
+    }
+
+    [Fact]
+    public async Task Ask_FiltersTotals_ComparesColumns_AndAppliesTheAskersOwnDepartment()
+    {
+        FakeAiProvider.Script = null;
+        try
+        {
+            await RunTotalsComparisonsAndAskerFlowAsync();
+        }
+        finally
+        {
+            FakeAiProvider.Script = null;
+        }
+    }
+
+    private async Task RunTotalsComparisonsAndAskerFlowAsync()
+    {
+        using var alice = await LoginAsync(TestData.AliceEmail);
+        var (applicationId, _) = await PrepareApplicationAsync(alice, "aitotals");
+        foreach (var impact in new[] { "High", "High", "High", "Medium", "Low", "Low" })
+        {
+            Assert.Equal(HttpStatusCode.Created, (await alice.PostJsonAsync("/api/support/tickets", new { ticketType = "Request", impact, subject = $"Totals seed {impact}", description = "Seed ticket for the totals test.", requiresSupportAccess = false })).StatusCode);
+        }
+
+        // A Management user (every row) whose profile carries the department code "Medium".
+        var roles = (await (await alice.GetAsync("/api/roles")).ReadJsonAsync()).EnumerateArray().ToList();
+        var managementId = roles.Single(r => r.GetProperty("roleCode").GetString() == "Management").GetProperty("roleId").GetGuid();
+        var department = await (await alice.PostJsonAsync("/api/departments", new { departmentCode = "Medium", departmentNameEn = "Medium impact", departmentNameAr = "أثر متوسط" })).ReadJsonAsync();
+        var (managerId, managerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId);
+        Assert.Equal(HttpStatusCode.OK, (await alice.PutAsJsonAsync(new Uri($"/api/users/{managerId}", UriKind.Relative), new { fullName = "Department Manager", departmentId = department.GetProperty("departmentId").GetGuid(), preferredLanguage = "en", roleCodes = new[] { "Management" } })).StatusCode);
+        using var manager = await LoginAsync(managerEmail);
+
+        // Totals and a column comparison: impacts with at least two tickets whose last activity is not before their creation.
+        FakeAiProvider.Script = (_) => """
+            {"objective":"Impacts with two tickets or more","source":{"schema":"dbo","object":"SupportTickets","alias":"t"},"joins":[],
+             "select":[{"alias":"impact","column":"t.Impact","aggregate":null,"dateTrunc":null},{"alias":"tickets","column":null,"aggregate":"count","dateTrunc":null}],
+             "filters":{"logic":"and","conditions":[{"column":"t.LastActivityAt","operator":"gte","values":[],"compareTo":"t.CreatedAt"}],"groups":[]},
+             "groupBy":["impact"],"having":[{"column":"tickets","operator":"gte","values":["2"],"compareTo":""}],
+             "orderBy":[{"alias":"tickets","direction":"desc"}],"limit":null,"visualization":{"type":"bar","x":"impact","y":["tickets"]},"assumptions":[]}
+            """;
+        var totals = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Which impacts have at least two tickets?", interpret = false });
+        Assert.True(totals.StatusCode == HttpStatusCode.OK, await totals.Content.ReadAsStringAsync());
+        var totalsPanel = (await totals.ReadJsonAsync()).GetProperty("panels")[0];
+        Assert.Contains("WHERE [t].[LastActivityAt] >= [t].[CreatedAt] GROUP BY [t].[Impact] HAVING COUNT(*) >= ?", totalsPanel.GetProperty("compiledSqlPreview").GetString(), StringComparison.Ordinal);
+        var totalsRows = totalsPanel.GetProperty("result").GetProperty("rows").EnumerateArray().Select(r => (Impact: r[0].GetString()!, Count: r[1].GetInt64())).ToList();
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var expected = (await context.SupportTickets.IgnoreQueryFilters().Where(t => t.LastActivityAt >= t.CreatedAt).Select(t => t.Impact).ToListAsync())
+                .GroupBy(i => i.ToString()).Where(g => g.Count() >= 2).ToDictionary(g => g.Key, g => (long)g.Count());
+            Assert.Equal(expected.Count, totalsRows.Count);
+            Assert.All(totalsRows, r => Assert.Equal(expected[r.Impact], r.Count));
+            Assert.Contains("High", expected.Keys);
+        }
+
+        // "My department": the planner writes the placeholder, the server binds the asker's own code, and the plan keeps the placeholder.
+        const string myDepartmentPlan = """
+            {"objective":"Tickets of my department","source":{"schema":"dbo","object":"SupportTickets","alias":"t"},"joins":[],
+             "select":[{"alias":"tickets","column":null,"aggregate":"count","dateTrunc":null}],
+             "filters":{"logic":"and","conditions":[{"column":"t.Impact","operator":"eq","values":["$asker.department"],"compareTo":null}],"groups":[]},
+             "groupBy":[],"having":[],"orderBy":[],"limit":null,"visualization":{"type":"kpi","x":null,"y":["tickets"]},"assumptions":[]}
+            """;
+        FakeAiProvider.Script = (_) => myDepartmentPlan;
+        var mine = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "How many tickets does my department have?", interpret = false });
+        Assert.True(mine.StatusCode == HttpStatusCode.OK, await mine.Content.ReadAsStringAsync());
+        var minePanel = (await mine.ReadJsonAsync()).GetProperty("panels")[0];
+        Assert.Contains("WHERE [t].[Impact] = ?", minePanel.GetProperty("compiledSqlPreview").GetString(), StringComparison.Ordinal);
+        Assert.Equal("$asker.department", minePanel.GetProperty("plan").GetProperty("filters").GetProperty("conditions")[0].GetProperty("values")[0].GetString());
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var medium = await context.SupportTickets.IgnoreQueryFilters().LongCountAsync(t => t.Impact == Core.Entities.Support.TicketImpact.Medium);
+            Assert.Equal(medium, minePanel.GetProperty("result").GetProperty("rows")[0][0].GetInt64());
+        }
+
+        // The planner was never told the asker's code; the column the organization mapped is not marked here (no mapping on this object).
+        var planRequest = FakeAiProvider.Requests.Last(r => r.SchemaName == "wabi_analysis_plan");
+        Assert.DoesNotContain("MEDIUM", planRequest.UserContent, StringComparison.OrdinalIgnoreCase);
+
+        // Someone without a department in their profile is told so instead of getting another department's rows.
+        var (_, noDepartmentEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId);
+        using var noDepartment = await LoginAsync(noDepartmentEmail);
+        var missing = await noDepartment.PostJsonAsync("/api/ai/ask", new { applicationId, question = "How many tickets does my department have?", interpret = false });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, missing.StatusCode);
+        var missingBody = await missing.ReadJsonAsync();
+        Assert.Equal("authorization", missingBody.GetProperty("stage").GetString());
+        Assert.Contains(missingBody.GetProperty("errors").EnumerateArray(), e => e.GetProperty("code").GetString() == "asker_value_missing");
+
+        // Comparing a text column with a date never reaches the database.
+        FakeAiProvider.Script = (_) => myDepartmentPlan.Replace("{\"column\":\"t.Impact\",\"operator\":\"eq\",\"values\":[\"$asker.department\"],\"compareTo\":null}", "{\"column\":\"t.Impact\",\"operator\":\"gt\",\"values\":[],\"compareTo\":\"t.CreatedAt\"}", StringComparison.Ordinal);
+        var mismatch = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "x", interpret = false });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, mismatch.StatusCode);
+        Assert.Contains((await mismatch.ReadJsonAsync()).GetProperty("errors").EnumerateArray(), e => e.GetProperty("code").GetString() == "plan_compare_type_mismatch");
+
+        // Second organization: Bob cannot ask against organization A's application at all.
+        using var bob = await LoginAsync(TestData.BobEmail);
+        FakeAiProvider.Script = (_) => myDepartmentPlan;
+        Assert.Equal(HttpStatusCode.NotFound, (await bob.PostJsonAsync("/api/ai/ask", new { applicationId, question = "How many tickets does my department have?", interpret = false })).StatusCode);
     }
 
     [Fact]

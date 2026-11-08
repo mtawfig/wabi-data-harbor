@@ -119,6 +119,7 @@ public static partial class QueryPlanValidator
         }
 
         var selectAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var aggregateAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var hasAggregate = false;
         var plainAliases = new List<string>();
         foreach (var item in plan.Select)
@@ -138,6 +139,7 @@ public static partial class QueryPlanValidator
             if (item.Aggregate is not null)
             {
                 hasAggregate = true;
+                aggregateAliases.Add(item.Alias ?? string.Empty);
                 if (!QueryPlanSchema.Aggregates.Contains(item.Aggregate, StringComparer.OrdinalIgnoreCase))
                 {
                     errors.Add(new PlanError("plan_aggregate_invalid", item.Aggregate));
@@ -187,6 +189,18 @@ public static partial class QueryPlanValidator
         if (plan.Filters is not null)
         {
             ValidateGroup(plan.Filters, 0, aliases, limits, errors, ref conditions);
+        }
+
+        if (plan.Having.Count > 0)
+        {
+            if (!hasAggregate)
+            {
+                errors.Add(new PlanError("plan_having_invalid", "having needs an aggregate select item"));
+            }
+            else
+            {
+                ValidateHaving(plan.Having, aggregateAliases, limits, errors, ref conditions);
+            }
         }
 
         if (conditions > limits.MaxConditions)
@@ -286,6 +300,7 @@ public static partial class QueryPlanValidator
     private static void Collect(PlanFilterGroup group, List<ColumnRef> refs)
     {
         refs.AddRange(group.Conditions.Select(c => Split(c.Column)));
+        refs.AddRange(group.Conditions.Where(c => c.CompareTo is not null).Select(c => Split(c.CompareTo!)));
         foreach (var child in group.Groups)
         {
             Collect(child, refs);
@@ -316,6 +331,24 @@ public static partial class QueryPlanValidator
                 continue;
             }
 
+            if (condition.CompareTo is not null)
+            {
+                // Column against column: a comparison operator and no values.
+                ParseColumn(condition.CompareTo, aliases, errors, "filter");
+                if (!QueryPlanSchema.CompareOperators.Contains(op) || (condition.Values?.Count ?? 0) != 0)
+                {
+                    errors.Add(new PlanError("plan_compare_invalid", $"{condition.Column} {op} {condition.CompareTo}"));
+                }
+
+                continue;
+            }
+
+            var placeholders = condition.Values?.Where(AskerValues.IsPlaceholder).ToList() ?? [];
+            if (placeholders.Count > 0 && (!AskerValues.Operators.Contains(op) || placeholders.Any(v => !AskerValues.All.Contains(v, StringComparer.Ordinal))))
+            {
+                errors.Add(new PlanError("plan_asker_value_invalid", $"{condition.Column} {op} {string.Join(", ", placeholders)}"));
+            }
+
             var count = condition.Values?.Count ?? 0;
             var valid = op switch
             {
@@ -338,6 +371,47 @@ public static partial class QueryPlanValidator
         foreach (var child in group.Groups)
         {
             ValidateGroup(child, depth + 1, aliases, limits, errors, ref conditions);
+        }
+    }
+
+    /// <summary>HAVING: every condition names an aggregate select alias, compares it with numbers/dates or another aggregate alias.</summary>
+    private static void ValidateHaving(List<PlanCondition> having, HashSet<string> aggregateAliases, PlanLimits limits, List<PlanError> errors, ref int conditions)
+    {
+        foreach (var condition in having)
+        {
+            conditions++;
+            var op = condition.Operator?.ToLowerInvariant() ?? string.Empty;
+            if (!aggregateAliases.Contains(condition.Column ?? string.Empty))
+            {
+                errors.Add(new PlanError("plan_having_invalid", $"'{condition.Column}' is not an aggregate select alias"));
+                continue;
+            }
+
+            if (condition.CompareTo is not null)
+            {
+                if (!aggregateAliases.Contains(condition.CompareTo) || !QueryPlanSchema.CompareOperators.Contains(op) || (condition.Values?.Count ?? 0) != 0)
+                {
+                    errors.Add(new PlanError("plan_having_invalid", $"{condition.Column} {op} {condition.CompareTo}"));
+                }
+
+                continue;
+            }
+
+            if (!QueryPlanSchema.HavingOperators.Contains(op))
+            {
+                errors.Add(new PlanError("plan_having_invalid", $"{condition.Column} {condition.Operator}"));
+                continue;
+            }
+
+            var values = condition.Values ?? [];
+            if (values.Count != (op == "between" ? 2 : 1) || values.Any(v => string.IsNullOrWhiteSpace(v) || AskerValues.IsPlaceholder(v)))
+            {
+                errors.Add(new PlanError("plan_filter_values_invalid", $"{condition.Column} {op}"));
+            }
+            else if (values.Any(v => v.Length > limits.MaxValueLength))
+            {
+                errors.Add(new PlanError("plan_filter_value_too_long", condition.Column ?? string.Empty));
+            }
         }
     }
 

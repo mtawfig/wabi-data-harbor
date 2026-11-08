@@ -13,7 +13,7 @@ public sealed class SqlCompilerTests
     private static readonly Guid App = Guid.NewGuid();
 
     private static readonly Dictionary<string, string> OrderColumns = new(StringComparer.OrdinalIgnoreCase) { ["OrderId"] = "int", ["CustomerId"] = "int", ["Amount"] = "decimal", ["Status"] = "nvarchar", ["OrderDate"] = "datetime2", ["DeptCode"] = "nvarchar", ["IsPaid"] = "bit" };
-    private static readonly Dictionary<string, string> CustomerColumns = new(StringComparer.OrdinalIgnoreCase) { ["CustomerId"] = "int", ["Name"] = "nvarchar" };
+    private static readonly Dictionary<string, string> CustomerColumns = new(StringComparer.OrdinalIgnoreCase) { ["CustomerId"] = "int", ["Name"] = "nvarchar", ["CreatedAt"] = "datetime2", ["CreditLimit"] = "decimal" };
 
     private static AuthorizedPlan Plan(string planJson, IReadOnlyList<RowPredicate>? orderPredicates = null, int limit = 100)
     {
@@ -61,6 +61,82 @@ public sealed class SqlCompilerTests
         Assert.StartsWith("SELECT \"c\".\"Name\" AS \"customer\", TRUNC(\"o\".\"OrderDate\", 'MM') AS \"month\", SUM(\"o\".\"Amount\") AS \"total\", COUNT(*) AS \"orders\" FROM (SELECT * FROM \"dbo\".\"Orders\" WHERE \"DeptCode\" = :p0) \"o\" LEFT JOIN \"dbo\".\"Customers\" \"c\" ON \"o\".\"CustomerId\" = \"c\".\"CustomerId\" WHERE \"o\".\"Status\" IN (:p1, :p2)", compiled.Sql, StringComparison.Ordinal);
         Assert.EndsWith("ORDER BY \"total\" DESC FETCH FIRST 51 ROWS ONLY", compiled.Sql, StringComparison.Ordinal);
         Assert.All(compiled.Parameters, p => Assert.StartsWith(":p", p.Name, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Having_FiltersAggregatedValues_WithTypedParameters_InBothDialects()
+    {
+        // "Customers with more than two orders, a total between 100 and 500.5 and a last order before March": conditions on totals.
+        const string totals = """
+            {"objective":"x","source":{"schema":"dbo","object":"Orders","alias":"o"},
+             "joins":[{"schema":"dbo","object":"Customers","alias":"c","type":"inner","on":[{"left":"o.CustomerId","right":"c.CustomerId"}]}],
+             "select":[{"alias":"customer","column":"c.Name","aggregate":null,"dateTrunc":null},{"alias":"orders","column":null,"aggregate":"count","dateTrunc":null},{"alias":"total","column":"o.Amount","aggregate":"sum","dateTrunc":null},
+                       {"alias":"lastOrder","column":"o.OrderDate","aggregate":"max","dateTrunc":null},{"alias":"paid","column":"o.IsPaid","aggregate":"sum","dateTrunc":null}],
+             "filters":{"logic":"and","conditions":[{"column":"o.Status","operator":"neq","values":["Cancelled"],"compareTo":null}],"groups":[]},
+             "groupBy":["customer"],
+             "having":[{"column":"orders","operator":"gt","values":["2"],"compareTo":""},{"column":"total","operator":"between","values":["100","500.5"],"compareTo":""},
+                       {"column":"lastOrder","operator":"lt","values":["2026-03-01"],"compareTo":""},{"column":"paid","operator":"lt","values":[],"compareTo":"orders"}],
+             "orderBy":[{"alias":"orders","direction":"desc"}],"limit":null,"visualization":null,"assumptions":[]}
+            """;
+        var compiled = new SqlServerCompiler().Compile(Plan(totals));
+        Assert.Equal(
+            "SELECT TOP (101) [c].[Name] AS [customer], COUNT(*) AS [orders], SUM([o].[Amount]) AS [total], MAX([o].[OrderDate]) AS [lastOrder], SUM(CAST([o].[IsPaid] AS INT)) AS [paid] " +
+            "FROM [dbo].[Orders] [o] INNER JOIN [dbo].[Customers] [c] ON [o].[CustomerId] = [c].[CustomerId] WHERE [o].[Status] <> @p0 GROUP BY [c].[Name] " +
+            "HAVING COUNT(*) > @p1 AND SUM([o].[Amount]) BETWEEN @p2 AND @p3 AND MAX([o].[OrderDate]) < @p4 AND SUM(CAST([o].[IsPaid] AS INT)) < COUNT(*) ORDER BY [orders] DESC",
+            compiled.Sql);
+        Assert.Equal(2L, compiled.Parameters[1].Value);
+        Assert.Equal(100m, compiled.Parameters[2].Value);
+        Assert.Equal(500.5m, compiled.Parameters[3].Value);
+        Assert.Equal(new DateTime(2026, 3, 1), compiled.Parameters[4].Value);
+
+        var oracle = new OracleCompiler().Compile(Plan(totals)).Sql;
+        Assert.Contains("GROUP BY \"c\".\"Name\" HAVING COUNT(*) > :p1 AND SUM(\"o\".\"Amount\") BETWEEN :p2 AND :p3", oracle, StringComparison.Ordinal);
+        Assert.EndsWith("ORDER BY \"orders\" DESC FETCH FIRST 101 ROWS ONLY", oracle, StringComparison.Ordinal);
+
+        // A value that does not fit the aggregate is rejected, not concatenated.
+        var bad = Plan(totals.Replace("[\"2\"]", "[\"two\"]", StringComparison.Ordinal));
+        Assert.Equal("plan_filter_value_type_mismatch", Assert.Throws<DomainException>(() => new SqlServerCompiler().Compile(bad)).Message);
+    }
+
+    [Fact]
+    public void ColumnComparison_ComparesTwoPermittedColumns_OfTheSameKindOnly()
+    {
+        static string Compare(string column, string op, string other) => $$"""
+            {"objective":"x","source":{"schema":"dbo","object":"Orders","alias":"o"},
+             "joins":[{"schema":"dbo","object":"Customers","alias":"c","type":"inner","on":[{"left":"o.CustomerId","right":"c.CustomerId"}]}],
+             "select":[{"alias":"id","column":"o.OrderId","aggregate":null,"dateTrunc":null}],
+             "filters":{"logic":"and","conditions":[{"column":"{{column}}","operator":"{{op}}","values":[],"compareTo":"{{other}}"},{"column":"o.Status","operator":"eq","values":["Open"],"compareTo":null}],"groups":[]},
+             "groupBy":[],"having":[],"orderBy":[],"limit":null,"visualization":null,"assumptions":[]}
+            """;
+
+        var compiled = new SqlServerCompiler().Compile(Plan(Compare("o.OrderDate", "gt", "c.CreatedAt"), [new RowPredicate("DeptCode", "@rs0", "FIN")]));
+        Assert.Contains("WHERE [o].[OrderDate] > [c].[CreatedAt] AND [o].[Status] = @p1", compiled.Sql, StringComparison.Ordinal);
+        Assert.Equal(["FIN", "Open"], compiled.Parameters.Select(p => p.Value).ToArray());
+        Assert.Contains("\"o\".\"Amount\" >= \"c\".\"CreditLimit\"", new OracleCompiler().Compile(Plan(Compare("o.Amount", "gte", "c.CreditLimit"))).Sql, StringComparison.Ordinal);
+
+        // A date against a number, or a column the plan was not authorized for, never compiles.
+        Assert.Equal("plan_compare_type_mismatch", Assert.Throws<DomainException>(() => new SqlServerCompiler().Compile(Plan(Compare("o.OrderDate", "gt", "c.CreditLimit")))).Message);
+        Assert.Equal("column_not_permitted", Assert.Throws<DomainException>(() => new SqlServerCompiler().Compile(Plan(Compare("o.Amount", "gt", "c.Secret")))).Message);
+    }
+
+    [Fact]
+    public void AskerPlaceholders_AreBoundToTheAskersOwnCode_AndNeverCompiledWithoutOne()
+    {
+        const string mine = """
+            {"objective":"x","source":{"schema":"dbo","object":"Orders","alias":"o"},"joins":[],
+             "select":[{"alias":"orders","column":null,"aggregate":"count","dateTrunc":null}],
+             "filters":{"logic":"and","conditions":[{"column":"o.DeptCode","operator":"in","values":["$asker.department","OPS"],"compareTo":null}],"groups":[]},
+             "groupBy":[],"having":[],"orderBy":[],"limit":null,"visualization":null,"assumptions":[]}
+            """;
+        var plan = Plan(mine) with { AskerValues = new Dictionary<string, string> { [AskerValues.Department] = "FIN" } };
+        var compiled = new SqlServerCompiler().Compile(plan);
+        Assert.Contains("WHERE [o].[DeptCode] IN (@p0, @p1)", compiled.Sql, StringComparison.Ordinal);
+        Assert.Equal(["FIN", "OPS"], compiled.Parameters.Select(p => p.Value).ToArray());
+        Assert.DoesNotContain("FIN", compiled.Sql, StringComparison.Ordinal);
+        // The stored plan keeps the placeholder, so a re-run by someone else resolves to them.
+        Assert.Equal(AskerValues.Department, plan.Plan.Filters!.Conditions[0].Values[0]);
+
+        Assert.Equal("asker_value_missing", Assert.Throws<DomainException>(() => new SqlServerCompiler().Compile(Plan(mine))).Message);
     }
 
     [Fact]

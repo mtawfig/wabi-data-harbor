@@ -285,6 +285,8 @@ Discovery of tables/views, columns, data types, primary and foreign keys; busine
 
 The AI never selects connections, overrides context, or modifies data; unsupported plan shapes are rejected with a clear message and logged as a failed query.
 
+**Plan language (P13.8).** A query plan names objects and columns of the authorized snapshot only. Besides selected columns, aggregates, date grouping, joins, filters on literal values, ordering and a limit, it can express: conditions on aggregated values (`having`, for example "accounts with more than two returned items", compiled to `HAVING` against the aggregate expression with typed parameters); a column compared with another column of the same kind (`compareTo`, for example "closed after the due date", both columns authorized like any other reference, different kinds rejected); and the asker's own employee, department or section code (`$asker.employee`, `$asker.department`, `$asker.section` as a filter value). The planner never sees those codes: the authorizer takes them from the asker's organization profile (the same values row scopes use), rejects the plan when the profile has none (`asker_value_missing`), and the compiler binds them as parameters. The stored plan keeps the placeholder, so a re-run, a shared copy or a periodic report resolves it to whoever runs it. Columns the organization mapped as row-scope columns are marked in the snapshot (`askerKey`) so the planner knows where "my department" applies; nothing in the plan language is specific to an industry.
+
 ---
 
 ## 20. Localization

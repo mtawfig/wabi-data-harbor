@@ -136,6 +136,16 @@ Captured from the running app with the Wabi Bank sample organization (`scripts/s
 | Teller's answer limited to their own postings (`SELF`) | Teller, Deira | [p13-7-answer-access-self-en](screenshots/p13-7-answer-access-self-en.png) |
 | Branch manager's answer limited to the branch (`DEPARTMENT`), Arabic | Branch Manager, Deira | [p13-7-answer-access-department-ar](screenshots/p13-7-answer-access-department-ar.png) · [p13-7-answer-access-department-ar-mobile](screenshots/p13-7-answer-access-department-ar-mobile.png) |
 
+## P13.8 — Totals, column comparisons and "my department"
+
+Captured from the running app with the Wabi Bank sample organization and the real model.
+
+| Screen | Signed in as | Files |
+|---|---|---|
+| Condition on a total: accounts with more than two returned cheques, `HAVING COUNT(…) > ?` in the query | Compliance and AML Officer | [p13-8-totals-filter-en](screenshots/p13-8-totals-filter-en.png) |
+| "My department" in Arabic: the asker's department code is bound by the server (`[DepartmentCode] = ?`) | IT Service Desk Manager | [p13-8-my-department-ar](screenshots/p13-8-my-department-ar.png) |
+| Access note with the neutral wording "your department" (mobile) | Branch Manager, Deira | [p13-8-access-note-department-en-mobile](screenshots/p13-8-access-note-department-en-mobile.png) |
+
 ## P13.9 — Example questions and readable numbers
 
 Captured from the running app with the Wabi Bank sample organization.
