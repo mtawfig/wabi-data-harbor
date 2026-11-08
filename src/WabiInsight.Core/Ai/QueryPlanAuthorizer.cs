@@ -16,7 +16,11 @@ public sealed record RowPredicate(string Column, string ParameterName, string Va
 /// <summary>An object the plan may touch, with the predicates the compiler must apply at the source-table level.</summary>
 public sealed record AuthorizedObject(string Alias, Guid ObjectId, string Schema, string ObjectName, IReadOnlyList<RowPredicate> RowPredicates, IReadOnlyDictionary<string, string> ColumnTypes);
 
-public sealed record AuthorizedPlan(QueryPlan Plan, Guid ApplicationId, IReadOnlyList<AuthorizedObject> Objects, int EffectiveLimit);
+/// <summary>
+/// A plan cleared for compilation. <see cref="AskerValues"/> maps each <see cref="Ai.AskerValues"/> placeholder the plan uses to
+/// the asker's own code; the compiler binds it as a parameter (the plan itself keeps the placeholder).
+/// </summary>
+public sealed record AuthorizedPlan(QueryPlan Plan, Guid ApplicationId, IReadOnlyList<AuthorizedObject> Objects, int EffectiveLimit, IReadOnlyDictionary<string, string>? AskerValues = null);
 
 /// <summary>
 /// Authorization pass (specification §19 steps 9-10). Every object and column the plan references must be in
@@ -95,12 +99,51 @@ public static class QueryPlanAuthorizer
             }
         }
 
+        // "My department", "my section", "my records": the placeholder needs the asker's own code from their profile.
+        var askerValues = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var placeholder in Placeholders(plan.Filters).Distinct(StringComparer.Ordinal))
+        {
+            var value = placeholder switch
+            {
+                AskerValues.Employee => permissions.Context.EmployeeNumber,
+                AskerValues.Department => permissions.Context.DepartmentCode,
+                AskerValues.Section => permissions.Context.SectionCode,
+                _ => null,
+            };
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                errors.Add(new PlanError("asker_value_missing", placeholder));
+            }
+            else
+            {
+                askerValues[placeholder] = value;
+            }
+        }
+
         if (errors.Count > 0)
         {
             return (null, errors);
         }
 
         var limit = Math.Min(plan.Limit ?? limits.DefaultRows, limits.MaxRows);
-        return (new AuthorizedPlan(plan, applicationId, refs.Select(r => objects[r.Alias].Authorized).ToList(), limit), errors);
+        return (new AuthorizedPlan(plan, applicationId, refs.Select(r => objects[r.Alias].Authorized).ToList(), limit, askerValues.Count == 0 ? null : askerValues), errors);
+    }
+
+    private static IEnumerable<string> Placeholders(PlanFilterGroup? group)
+    {
+        if (group is null)
+        {
+            yield break;
+        }
+
+        foreach (var value in group.Conditions.Where(c => c.CompareTo is null).SelectMany(c => c.Values).Where(AskerValues.IsPlaceholder))
+        {
+            yield return value;
+        }
+
+        foreach (var value in group.Groups.SelectMany(Placeholders))
+        {
+            yield return value;
+        }
     }
 }
