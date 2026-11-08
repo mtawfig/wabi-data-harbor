@@ -106,7 +106,9 @@ def _rows():
             submitted = p["UserId"]
         else:
             submitted = next(h["UserId"] for h in hr_officers if bp.employed(h, req_day) and bp.has_access(h["UserId"], "HRMS", req_day))
-        if q["Status"] == "Cancelled":
+        if q["Status"] == "Pending":
+            decided_by, decided_at = None, None
+        elif q["Status"] == "Cancelled":
             decided_by, decided_at = submitted, q["RequestedAt"] + dt.timedelta(days=2, hours=1)
         else:
             mgr = bp.manager_on(p, req_day) or chro

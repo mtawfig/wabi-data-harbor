@@ -77,6 +77,10 @@ Accounts default to the demo users (`WI_PLATFORM_*`, `WI_ORGADMIN_*`, `WI_USER_*
 | 41 | Support ticket detail | Organization user | [en-desktop](screenshots/screens/41-support-ticket-detail-en-desktop.png) | [ar-desktop](screenshots/screens/41-support-ticket-detail-ar-desktop.png) | [en-mobile](screenshots/screens/41-support-ticket-detail-en-mobile.png) | [ar-mobile](screenshots/screens/41-support-ticket-detail-ar-mobile.png) |
 | 42 | Profile | Organization user | [en-desktop](screenshots/screens/42-profile-en-desktop.png) | [ar-desktop](screenshots/screens/42-profile-ar-desktop.png) | [en-mobile](screenshots/screens/42-profile-en-mobile.png) | [ar-mobile](screenshots/screens/42-profile-ar-mobile.png) |
 
+## Wabi Bank (P13.6)
+
+Recorded demo from the running app with the second sample organization (`scripts/sql/samples/wabi-bank`) and the real model: [`docs/demo/p13-6-wabi-bank.gif`](demo/p13-6-wabi-bank.gif) — the Deira branch manager sees only Deira, a Deira teller only their own postings (both answers say so), and the AML officer opens the structuring alert (script and story: `scripts/demo/wabi-bank/README.md`).
+
 ## Phase 14 — Proactive agent
 
 Captured from the running app with the sample organization Gulf Aviation Services (`scripts/sql/samples`); drafts in P14.4 come from the real model. Recorded demo: [`docs/demo/p14-5-proactive-agent-alert.gif`](demo/p14-5-proactive-agent-alert.gif) — an analyst looks up six colleagues' pay, row scope shows him none of it, the access rule raises a High alert and the administrator acknowledges it (script and story: `scripts/demo/proactive-agent/README.md`).

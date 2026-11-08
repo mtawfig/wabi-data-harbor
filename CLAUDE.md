@@ -55,6 +55,7 @@ npm start                                          # http://localhost:4200, prox
 # Screens, load check, container images (P11.2 / P12)
 WI_HISTORY_ID=… WI_ORGANIZATION_ID=… WI_TICKET_ID=… node scripts/screenshots/capture.js   # 42 screens EN/AR desktop+mobile
 WI_SQLCMD="sqlcmd -S localhost,1433 -U sa -P … -C -d WabiInsightDB" node scripts/demo/proactive-agent/record.js --gif docs/demo/p14-5-proactive-agent-alert.gif   # proactive-agent demo (sample org)
+WI_SAMPLE_PASSWORD=… WI_SQLCMD="sqlcmd …" node scripts/demo/wabi-bank/record.js --gif docs/demo/p13-6-wabi-bank.gif   # Wabi Bank demo (row scopes + AML alert)
 node scripts/perf/load-check.js --base http://localhost:5080 --users 20 --logins 5 --seconds 30
 docker build -f src/WabiInsight.Api/Dockerfile -t wabi-insight-api . && docker build -f src/web/Dockerfile -t wabi-insight-web src/web
 ```

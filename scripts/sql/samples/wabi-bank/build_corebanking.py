@@ -24,7 +24,7 @@ from build_common import UAE_HOLIDAYS_2025, calendar_table, epilogue, insert, pr
 from build_personnel import DROP_FOREIGN_KEYS  # noqa: E402
 
 DB = "WabiBankCoreBankingDB"
-TABLES = ["MonthEndArrears", "LoanRepayments", "LoanSchedules", "Loans", "LoanApplications", "LoanProducts", "TellerTills", "MonthEndBalances", "Transactions",
+TABLES = ["MonthEndLoanBalances", "MonthEndArrears", "LoanRepayments", "LoanSchedules", "Loans", "LoanApplications", "LoanProducts", "TellerTills", "MonthEndBalances", "Transactions",
           "InwardTransfers", "OutwardTransfers", "InwardCheques", "OutwardCheques", "ChequeBooks", "ChequeReturnReasons", "ClearingSessions", "FixedDeposits",
           "KycDocuments", "Accounts", "Customers", "TransactionCodes", "Products", "FxRates", "Currencies", "Users", "Units", "Branches", "BusinessCalendar", "Calendar"]
 VIEWS = ["vw_TransactionsByStaff", "vw_OutwardChequesByStaff", "vw_OutwardTransfersByStaff", "vw_TransactionsLive", "vw_InwardChequesLive"]
@@ -57,6 +57,7 @@ OBJECT_DOCS = [
     ("LoanSchedules", "Loan schedules", "جداول سداد القروض", "Monthly instalments falling due in 2025 with principal, interest and outstanding balance."),
     ("LoanRepayments", "Loan repayments", "سداد القروض", "Instalments paid on time, late or not paid in 2025."),
     ("MonthEndArrears", "Month-end arrears", "المتأخرات في نهاية الشهر", "Overdue instalments per loan at each month end with days past due and bucket (Current, 1-30, 31-60, 61-90, 90+)."),
+    ("MonthEndLoanBalances", "Month-end loan balances", "أرصدة القروض في نهاية الشهر", "Outstanding principal of every active loan at each month end of 2025 (after the instalments due by then), with customer, product and branch. Use it for loan book size by branch, product or month."),
     ("vw_TransactionsByStaff", "Transactions with posting staff", "المعاملات مع الموظف المرحِّل", "Transactions with the posting user's employee number, department and section (from Users)."),
     ("vw_OutwardChequesByStaff", "Deposited cheques with capturing staff", "الشيكات المودعة مع الموظف", "Outward cheques with the capturing user's employee number, department and section."),
     ("vw_OutwardTransfersByStaff", "Outward transfers with approving staff", "الحوالات الصادرة مع الموظف المعتمِد", "Outward transfers with the approving (checker) user's employee number, department and section."),
@@ -80,7 +81,8 @@ COLUMN_DOCS = [
     ("OutwardTransfers", "BeneficiaryAccount", "Beneficiary account", "حساب المستفيد", None, "Restricted"),
     ("InwardCheques", "Status", "Status", "الحالة", "Paid or Returned.", None), ("OutwardCheques", "Status", "Status", "الحالة", "Cleared or Returned.", None),
     ("TellerTills", "Difference", "Cash difference", "فرق النقد", "Counted minus expected closing cash (negative = shortage).", None),
-    ("Loans", "Principal", "Principal", "أصل القرض", None, "Confidential"), ("LoanApplications", "RequestedAmount", "Requested amount", "المبلغ المطلوب", None, "Confidential"),
+    ("Loans", "Principal", "Principal", "أصل القرض", None, "Confidential"),
+    ("MonthEndLoanBalances", "OutstandingPrincipal", "Outstanding principal (AED)", "أصل القرض القائم (درهم)", "Principal still owed at the month end.", "Confidential"), ("LoanApplications", "RequestedAmount", "Requested amount", "المبلغ المطلوب", None, "Confidential"),
 ]
 FIELD_ROLES = [
     ("Transactions", "AccountNumber", 3), ("Transactions", "Amount", 6), ("Transactions", "AmountAed", 6), ("Transactions", "PostedAt", 5), ("Transactions", "Status", 8),
@@ -90,7 +92,7 @@ FIELD_ROLES = [
     ("Customers", "CIF", 2), ("Customers", "RiskRating", 8), ("InwardCheques", "AccountNumber", 3), ("InwardCheques", "PresentedDate", 5), ("InwardCheques", "Amount", 6),
     ("InwardCheques", "Status", 8), ("vw_InwardChequesLive", "AccountNumber", 3), ("vw_InwardChequesLive", "CIF", 2), ("vw_InwardChequesLive", "PresentedDate", 5),
     ("vw_InwardChequesLive", "Status", 8), ("vw_InwardChequesLive", "Amount", 6), ("OutwardTransfers", "AmountAed", 6), ("OutwardTransfers", "CreatedAt", 5),
-    ("Loans", "Principal", 6), ("LoanRepayments", "DueDate", 5), ("LoanRepayments", "Status", 8), ("MonthEndArrears", "DaysPastDue", 7),
+    ("Loans", "Principal", 6), ("LoanRepayments", "DueDate", 5), ("LoanRepayments", "Status", 8), ("MonthEndArrears", "DaysPastDue", 7), ("MonthEndLoanBalances", "MonthEnd", 5), ("MonthEndLoanBalances", "OutstandingPrincipal", 6), ("MonthEndLoanBalances", "LoanNumber", 3),
 ]
 ROW_SCOPES = [
     ("Customers", None, "HomeBranchCode", None), ("Accounts", None, "BranchCode", None), ("Transactions", None, "PostingUnitCode", None),
@@ -98,7 +100,8 @@ ROW_SCOPES = [
     ("OutwardCheques", None, "DepositBranchCode", None), ("vw_OutwardChequesByStaff", "CapturedByEmployeeNumber", "DepositBranchCode", "CapturedBySectionCode"),
     ("InwardCheques", None, "BranchCode", None), ("vw_InwardChequesLive", None, "BranchCode", None), ("TellerTills", None, "BranchCode", None),
     ("LoanApplications", "SourcedByEmployeeNumber", "BranchCode", None), ("Loans", None, "BranchCode", None), ("FixedDeposits", None, "BranchCode", None),
-    ("OutwardTransfers", None, "InitiatedAtUnitCode", None), ("MonthEndBalances", None, "BranchCode", None),
+    ("OutwardTransfers", None, "InitiatedAtUnitCode", None), ("MonthEndBalances", None, "BranchCode", None), ("MonthEndLoanBalances", None, "BranchCode", None),
+    ("MonthEndArrears", None, "BranchCode", None),
 ]
 
 PRODUCTS = [  # code, name, Arabic, type, currency, monthly fee, interest %
@@ -326,6 +329,9 @@ CREATE TABLE dbo.LoanRepayments (LoanNumber nvarchar(12) NOT NULL, InstallmentNu
     CONSTRAINT FK_LoanRepayments_Schedules FOREIGN KEY (LoanNumber, InstallmentNumber) REFERENCES dbo.LoanSchedules);
 CREATE TABLE dbo.MonthEndArrears (LoanNumber nvarchar(12) NOT NULL CONSTRAINT FK_MonthEndArrears_Loans REFERENCES dbo.Loans, MonthEnd date NOT NULL, ProductCode nvarchar(4) NOT NULL, BranchCode nvarchar(10) NOT NULL,
     OverdueInstallments smallint NOT NULL, OverdueAmount decimal(18,2) NOT NULL, DaysPastDue smallint NOT NULL, Bucket nvarchar(8) NOT NULL, CONSTRAINT PK_MonthEndArrears PRIMARY KEY (LoanNumber, MonthEnd));
+CREATE TABLE dbo.MonthEndLoanBalances (LoanNumber nvarchar(12) NOT NULL CONSTRAINT FK_MonthEndLoanBalances_Loans REFERENCES dbo.Loans, MonthEnd date NOT NULL,
+    CIF nvarchar(10) NOT NULL, ProductCode nvarchar(4) NOT NULL, BranchCode nvarchar(10) NOT NULL, OutstandingPrincipal decimal(18,2) NOT NULL,
+    CONSTRAINT PK_MonthEndLoanBalances PRIMARY KEY (LoanNumber, MonthEnd));
 GO
 """
 
@@ -574,7 +580,11 @@ RAISERROR(N'  atm and cards done', 0, 1) WITH NOWAIT;
 -- Teller cash deposits and withdrawals: at the home branch (mostly), by a teller at work that day; above the teller's limit
 -- the supervisor of the branch with the highest limit at work that day approves.
 {cand_tl}
-SELECT c.*, CASE WHEN c.R1 < 0.85 THEN c.BranchCode ELSE bo.BranchCode END AS B INTO #TL2 FROM #TL c JOIN #BranchList bo ON bo.N = 1 + CAST(c.R9 * 6 AS int);
+-- Counter cash is smaller than the account's transfer scale: individuals up to about AED 30,000 a visit, companies about a
+-- quarter of their scale (large cash moves through cash-in-transit, not the counter).
+SELECT c.*, CASE WHEN c.R1 < 0.85 THEN c.BranchCode ELSE bo.BranchCode END AS B,
+       CASE c.GenKind WHEN N'corporate' THEN c.GenScale * 0.23 WHEN N'sme' THEN c.GenScale * 0.8 ELSE CASE WHEN c.GenScale > 12000 THEN 12000 ELSE c.GenScale END END AS TScale
+INTO #TL2 FROM #TL c JOIN #BranchList bo ON bo.N = 1 + CAST(c.R9 * 6 AS int);
 INSERT INTO #Tx (AccountNumber, TransactionCode, Amount, PostedAt, Channel, PostingUnitCode, PostedByUserId, ApprovedByUserId, Narrative, IsTeller, RevKey)
 SELECT c.AccountNumber, t.Code, t.Amount, DATEADD(MINUTE, 480 + CAST(c.R3 * 420 AS int), CAST(c.D AS datetime2(0))), N'Branch', c.B, tl.UserId,
        CASE WHEN t.Amount * c.Fx > tl.LimitAed THEN sup.UserId END, CASE t.Code WHEN N'CDP' THEN N'Cash deposit' ELSE N'Cash withdrawal' END, 1, c.GenKey * 10000 + c.M * 100 + c.N
@@ -583,8 +593,8 @@ JOIN #RosterCount tlc ON tlc.UnitCode = c.B AND tlc.WorkDate = c.D AND tlc.RoleG
 JOIN #Roster tl ON tl.UnitCode = c.B AND tl.WorkDate = c.D AND tl.RoleGroup = N'TELLER' AND tl.Slot = 1 + CAST(c.R7 * tlc.Slots AS int)
 JOIN #TopSuper sup ON sup.UnitCode = c.B AND sup.WorkDate = c.D
 CROSS APPLY (SELECT CASE WHEN c.R8 < 0.58 THEN N'CDP' ELSE N'CWD' END AS Code,
-                    CASE WHEN ROUND(c.GenScale * (0.1 + 2.5 * c.R2 * c.R2 * c.R2), -1) * c.Fx > sup.LimitAed THEN ROUND(sup.LimitAed / c.Fx * 0.9, -2)
-                         ELSE ROUND(c.GenScale * (0.1 + 2.5 * c.R2 * c.R2 * c.R2), -1) END AS Amount) t
+                    CASE WHEN ROUND(c.TScale * (0.1 + 2.5 * c.R2 * c.R2 * c.R2), -1) * c.Fx > sup.LimitAed THEN ROUND(sup.LimitAed / c.Fx * 0.9, -2)
+                         ELSE ROUND(c.TScale * (0.1 + 2.5 * c.R2 * c.R2 * c.R2), -1) END AS Amount) t
 WHERE t.Amount > 0;
 RAISERROR(N'  teller postings done', 0, 1) WITH NOWAIT;
 -- Planted postings (teller posting to own account, structured cash deposits).
@@ -672,6 +682,11 @@ SELECT l.LoanNumber, m.MonthEnd, l.ProductCode, l.BranchCode, ISNULL(o.Cnt, 0), 
 FROM dbo.Loans l JOIN #Months m ON l.StartDate <= m.MonthEnd AND l.MaturityDate > m.MonthStart
 OUTER APPLY (SELECT COUNT(*) AS Cnt, SUM(p.AmountDue) AS Amt, MIN(p.DueDate) AS Oldest FROM dbo.LoanRepayments p
              WHERE p.LoanNumber = l.LoanNumber AND p.DueDate <= m.MonthEnd AND (p.PaidDate IS NULL OR p.PaidDate > m.MonthEnd) HAVING COUNT(*) > 0) o;
+-- Outstanding principal at each month end: after the last instalment due by then (the full principal before the first one).
+INSERT INTO dbo.MonthEndLoanBalances (LoanNumber, MonthEnd, CIF, ProductCode, BranchCode, OutstandingPrincipal)
+SELECT l.LoanNumber, m.MonthEnd, l.CIF, l.ProductCode, l.BranchCode, ISNULL(s.OutstandingAfter, l.Principal)
+FROM dbo.Loans l JOIN #Months m ON l.StartDate <= m.MonthEnd AND l.MaturityDate > m.MonthEnd
+OUTER APPLY (SELECT TOP (1) x.OutstandingAfter FROM dbo.LoanSchedules x WHERE x.LoanNumber = l.LoanNumber AND x.DueDate <= m.MonthEnd ORDER BY x.InstallmentNumber DESC) s;
 GO
 
 RAISERROR(N'  loans done', 0, 1) WITH NOWAIT;
@@ -805,7 +820,7 @@ def cand(name, rate, salt, days="work", where=""):
     rs = ", ".join(f"r.R{i}" for i in range(1, 17))
     return f"""SELECT a.AccountNumber, m.M, CAST(FLOOR(a.{rate} * 2 * rc.R1 + rc.R2) AS int) AS Cnt INTO #AM_{name}
 FROM #Live a JOIN #Months m ON 1 = 1 CROSS APPLY gen.Rand(a.GenKey * 100 + m.M + {salt}) rc WHERE a.{rate} > 0 {where};
-SELECT a.AccountNumber, a.BranchCode, a.CurrencyCode, a.GenKey, a.GenScale, a.Fx, a.OpenedDate, a.ClosedDate, am.M, n.N, {rs} INTO #E_{name}
+SELECT a.AccountNumber, a.BranchCode, a.CurrencyCode, a.GenKey, a.GenKind, a.GenScale, a.Fx, a.OpenedDate, a.ClosedDate, am.M, n.N, {rs} INTO #E_{name}
 FROM #AM_{name} am JOIN #Live a ON a.AccountNumber = am.AccountNumber JOIN #N n ON n.N <= am.Cnt
 CROSS APPLY gen.Rand(a.GenKey * 10000 + am.M * 100 + n.N + {salt + 1}) r;
 SELECT e.*, w.D INTO #{name} FROM #E_{name} e {day_join}
@@ -856,7 +871,7 @@ UNION ALL SELECT N'Transactions', COUNT(*) FROM dbo.Transactions UNION ALL SELEC
 UNION ALL SELECT N'InwardCheques', COUNT(*) FROM dbo.InwardCheques UNION ALL SELECT N'OutwardTransfers', COUNT(*) FROM dbo.OutwardTransfers
 UNION ALL SELECT N'InwardTransfers', COUNT(*) FROM dbo.InwardTransfers UNION ALL SELECT N'Loans', COUNT(*) FROM dbo.Loans
 UNION ALL SELECT N'LoanRepayments', COUNT(*) FROM dbo.LoanRepayments UNION ALL SELECT N'TellerTills', COUNT(*) FROM dbo.TellerTills
-UNION ALL SELECT N'MonthEndBalances', COUNT(*) FROM dbo.MonthEndBalances UNION ALL SELECT N'Negative balances (must be 0)', COUNT(*) FROM dbo.Transactions WHERE BalanceAfter < 0
+UNION ALL SELECT N'MonthEndBalances', COUNT(*) FROM dbo.MonthEndBalances UNION ALL SELECT N'MonthEndLoanBalances', COUNT(*) FROM dbo.MonthEndLoanBalances UNION ALL SELECT N'Negative balances (must be 0)', COUNT(*) FROM dbo.Transactions WHERE BalanceAfter < 0
 UNION ALL SELECT N'Staff acting on their own account (planted: 3 postings)', COUNT(*) FROM (
     SELECT a.AccountNumber, u.UserId FROM dbo.Accounts a JOIN dbo.Customers c ON c.CIF = a.CIF JOIN dbo.Users u ON u.EmployeeNumber = c.StaffEmployeeNumber) so
     CROSS APPLY (SELECT so.UserId AS U FROM dbo.Transactions t WHERE t.AccountNumber = so.AccountNumber AND so.UserId IN (t.PostedByUserId, t.ApprovedByUserId)

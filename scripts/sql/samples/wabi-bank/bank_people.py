@@ -660,8 +660,32 @@ def _leave_and_absence():
     return requests, absences, on_leave
 
 
+@lru_cache(maxsize=None)
+def _pending_leave():
+    """Annual leave for January and February 2026 requested in the second half of December 2025 and not decided yet. Its own
+    random stream, so the 2025 model above is unchanged; it never affects 2025 attendance (only approved leave does)."""
+    r = rng(778)
+    people = [p for p in employees() if p["TerminationDate"] is None and p["UserId"]]
+    out = []
+    next_id = len(_leave_and_absence()[0]) + 1
+    for p in sorted(r.sample(people, 28), key=lambda x: x["EmployeeNumber"]):
+        first = dt.date(2026, 1, 4) + dt.timedelta(days=r.randint(0, 50))
+        while first.weekday() >= 5:
+            first += dt.timedelta(days=1)
+        days = [first + dt.timedelta(days=k) for k in range(r.randint(5, 16))]
+        block = [x for x in days if x.weekday() < 5]
+        asked = dt.date(2025, 12, 15) + dt.timedelta(days=r.randint(0, 16))
+        while not present(p, asked) and asked < dt.date(2025, 12, 31):
+            asked += dt.timedelta(days=1)
+        out.append({"LeaveRequestId": next_id, "EmployeeNumber": p["EmployeeNumber"], "LeaveTypeCode": "AL", "StartDate": block[0], "EndDate": days[-1],
+                    "WorkingDays": len(block), "Status": "Pending", "Blocks": block, "RequestedAt": dt.datetime.combine(asked, dt.time(r.randint(8, 15), r.randint(0, 59)))})
+        next_id += 1
+    return out
+
+
 def leave_requests():
-    return _leave_and_absence()[0]
+    """2025 leave (approved, rejected, cancelled) and the requests still pending at the year end."""
+    return _leave_and_absence()[0] + _pending_leave()
 
 
 def absences():

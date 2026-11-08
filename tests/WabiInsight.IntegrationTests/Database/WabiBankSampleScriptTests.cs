@@ -37,6 +37,9 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
         Assert.Equal(0, await _fixture.ScalarAsync<int>(
             $"SELECT COUNT(*) FROM [{db}].dbo.Sections s WHERE NOT EXISTS (SELECT 1 FROM [{db}].dbo.Employees e WHERE e.SectionCode = s.SectionCode AND e.EmploymentStatus = N'Active')"));
         Assert.Equal(478, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{db}].dbo.Employees"));
+
+        // Leave still waiting for a decision at the year end (January and February 2026), never counted as 2025 absence.
+        Assert.Equal(28, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{db}].dbo.LeaveRequests WHERE Status = N'Pending' AND DecidedByUserId IS NULL AND StartDate >= '2026-01-01'"));
     }
 
     [Fact]
@@ -52,7 +55,15 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
         var core = _fixture.Db("WabiBankCoreBankingDB");
         Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Accounts WHERE BranchCode NOT LIKE N'BR-%'"));
         Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Transactions WHERE BalanceAfter < 0"));
-        Assert.True(await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Transactions") > 400_000);
+        Assert.True(await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Transactions") > 500_000);
+
+        // Counter cash looks like a branch: dozens of postings per teller a day, mostly small amounts.
+        var perTellerDay = await _fixture.ScalarAsync<decimal>(
+            $"SELECT CAST(COUNT(*) * 1.0 / COUNT(DISTINCT CONCAT(PostedByUserId, CAST(PostedAt AS date))) AS decimal(9,2)) FROM [{core}].dbo.Transactions WHERE Channel = N'Branch' AND TransactionCode IN (N'CDP', N'CWD')");
+        Assert.InRange(perTellerDay, 20m, 60m);
+        // Month-end loan balances: one row per active loan and month end, never more than the principal.
+        Assert.Equal(0, await _fixture.ScalarAsync<int>(
+            $"SELECT COUNT(*) FROM [{core}].dbo.MonthEndLoanBalances b JOIN [{core}].dbo.Loans l ON l.LoanNumber = b.LoanNumber WHERE b.OutstandingPrincipal > l.Principal OR b.OutstandingPrincipal < 0 OR b.BranchCode <> l.BranchCode"));
 
         // Nobody processes their own account; the planted exception is one Abu Dhabi teller's three postings.
         Assert.Equal(["KIYER", "KIYER", "KIYER"], await _fixture.ListAsync<string>(
@@ -144,8 +155,32 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
             SELECT COUNT(*) FROM dbo.RoleRowPermissions rp LEFT JOIN dbo.RowScopeColumnMappings m ON m.ObjectId = rp.ObjectId
             WHERE (rp.Scope = N'Self' AND m.EmployeeColumnId IS NULL) OR (rp.Scope = N'Department' AND m.DepartmentColumnId IS NULL)
             """));
-        Assert.Equal(24, await _fixture.ScalarAsync<int>(
+        Assert.Equal(26, await _fixture.ScalarAsync<int>(
             $"SELECT COUNT(*) FROM dbo.RoleRowPermissions p {wbkRoles} WHERE r.RoleCode = N'BranchManager' AND p.Scope = N'Department'"));
+        // Directory roles read the employee directory and structure without Confidential personal data (dates of birth, mobiles, salary bands).
+        Assert.Equal(0, await _fixture.ScalarAsync<int>(
+            $"""
+            SELECT COUNT(*) FROM dbo.RoleTablePermissions p {wbkRoles}
+            JOIN dbo.DatabaseObjects o ON o.ObjectId = p.ObjectId JOIN dbo.Applications a ON a.ApplicationId = o.ApplicationId AND a.ApplicationCode = N'PERSONNEL'
+            JOIN dbo.DatabaseColumns c ON c.ObjectId = p.ObjectId AND c.Classification IN (N'Confidential', N'Restricted')
+            WHERE r.RoleCode IN (N'ServiceDeskManager', N'BudgetController', N'CyberSecurity')
+              AND (p.AllColumns = 1 OR EXISTS (SELECT 1 FROM dbo.RoleColumnPermissions cp WHERE cp.RoleId = p.RoleId AND cp.ColumnId = c.ColumnId))
+            """));
+        Assert.True(await _fixture.ScalarAsync<int>(
+            $"SELECT COUNT(*) FROM dbo.RoleColumnPermissions cp JOIN dbo.Roles r ON r.RoleId = cp.RoleId AND r.RoleCode = N'HROfficer' JOIN dbo.DatabaseColumns c ON c.ColumnId = cp.ColumnId AND c.Classification = N'Confidential'") > 0);
+
+        // The planner reads descriptions, never data: codes and short coded values are listed where it needs them.
+        string Description(string objectName, string column) => $"""
+            SELECT c.BusinessDescription FROM dbo.DatabaseColumns c JOIN dbo.DatabaseObjects o ON o.ObjectId = c.ObjectId
+            JOIN dbo.Applications a ON a.ApplicationId = o.ApplicationId JOIN dbo.Organizations org ON org.OrganizationId = a.OrganizationId AND org.OrganizationCode = N'WBK'
+            WHERE o.ObjectName = N'{objectName}' AND c.ColumnName = N'{column}'
+            """;
+        Assert.Contains("ITD Information Technology", await _fixture.ScalarAsync<string>(Description("BudgetLines", "DepartmentCode")), StringComparison.Ordinal);
+        Assert.Contains("BR-DXB01 Deira", await _fixture.ScalarAsync<string>(Description("vw_TransactionsByStaff", "PostingUnitCode")), StringComparison.Ordinal);
+        Assert.Contains("C = credit", await _fixture.ScalarAsync<string>(Description("vw_TransactionsByStaff", "Direction")), StringComparison.Ordinal);
+        Assert.EndsWith("Values: Approved, Cancelled, Pending, Rejected.", await _fixture.ScalarAsync<string>(Description("LeaveRequests", "Status")), StringComparison.Ordinal);
+        Assert.Equal(0, await _fixture.ScalarAsync<int>(
+            "SELECT COUNT(*) FROM dbo.DatabaseColumns WHERE Classification IN (N'Confidential', N'Restricted') AND BusinessDescription LIKE N'%Values: %'"));
     }
 
     [Fact]
@@ -204,7 +239,8 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
             SELECT CONCAT((SELECT COUNT(*) FROM dbo.Organizations), ',', (SELECT COUNT(*) FROM dbo.Roles), ',', (SELECT COUNT(*) FROM dbo.OrganizationUsers), ',',
                           (SELECT COUNT(*) FROM dbo.Applications), ',', (SELECT COUNT(*) FROM dbo.DatabaseColumns), ',', (SELECT COUNT(*) FROM dbo.DatabaseRelationships), ',',
                           (SELECT COUNT(*) FROM dbo.RoleTablePermissions), ',', (SELECT COUNT(*) FROM dbo.RoleColumnPermissions), ',', (SELECT COUNT(*) FROM dbo.RoleRowPermissions), ',',
-                          (SELECT COUNT(*) FROM dbo.MonitoringRules), ',', (SELECT COUNT(*) FROM dbo.Departments), ',', (SELECT COUNT(*) FROM dbo.Sections))
+                          (SELECT COUNT(*) FROM dbo.MonitoringRules), ',', (SELECT COUNT(*) FROM dbo.Departments), ',', (SELECT COUNT(*) FROM dbo.Sections), ',',
+                          (SELECT CHECKSUM_AGG(CHECKSUM(BusinessDescription)) FROM dbo.DatabaseColumns), ',', (SELECT SUM(CAST(LEN(BusinessDescription) AS bigint)) FROM dbo.DatabaseColumns))
             """;
         var before = await _fixture.ScalarAsync<string>(countsSql);
         await _fixture.RunScriptAsync("06-seed-wabiinsightdb.sql");
