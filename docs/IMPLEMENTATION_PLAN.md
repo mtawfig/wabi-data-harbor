@@ -1,6 +1,6 @@
 # Wabi Insight — Implementation Plan (Phases and Pull Requests)
 
-**Status:** Phases 1–14 merged; Phase 14 (Proactive Agent) was approved by the owner on 2026-11-07, design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P13.5 (second sample organization, Wabi Bank) merged; P13.7 (answer accuracy fixes found with it) in review.
+**Status:** Phases 1–14 merged; Phase 14 (Proactive Agent) was approved by the owner on 2026-11-07, design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P13.5 (second sample organization, Wabi Bank) and P13.6 (its follow-ups) merged; P13.7 (answer accuracy fixes found with it) in review.
 **Specification:** [`docs/WABI_INSIGHT_SPECIFICATION.md`](./WABI_INSIGHT_SPECIFICATION.md) (v1.2; §35 added for Phase 14).
 **Review of the original prompt:** [`docs/SPEC_REVIEW.md`](./SPEC_REVIEW.md).
 
@@ -136,6 +136,7 @@
 |---|---|
 | P13.1 — Sample source databases and WabiInsightDB seed | Flight operations, HR/payroll/attendance and procurement/stores SQL Server databases (one script each with database, owner and reader logins, tables and data) and a configuration seed with organization, structure, four users, applications, catalogue, classifications and permissions. |
 | P13.5 — Wabi Bank sample organization | A fictional UAE bank as a second sample organization: Personnel (system of record for every identifier), Core Banking, Finance, Digital Banking and IT Help Desk databases with consistent 2025 data and planted findings, a cross-system consistency check, and a seed with eight role-scoped users, least-privilege permissions and five Monitoring Rules. |
+| P13.6 — Wabi Bank follow-ups | From the live tests: code and value lists in the catalogue so the AI can name the bank's codes, classification-capped grants for directory roles, pending leave, realistic counter volumes, month-end loan balances, README questions that the data answers, and the recorded demo. |
 | P13.7 — Answer accuracy fixes | Found by the live Wabi Bank tests: answers and reports say when row scopes limited their rows (and never conclude about what the asker cannot see), aggregates over yes/no columns, and no absence claims from partial results. |
 | P13.4 — Windows server layout | `C:\wabitex-apps\wabi-insight` (`src`, `web\app`, `web\api`) and `D:\wabi-insight\files` per kind, in the Windows deployment and DevOps guides and the deploy script; moving an existing installation. |
 | P13.3 — CI/CD with manual deployments | Reusable release build, `Deploy (Linux)` / `Deploy (Windows)` workflows started by hand (frontend / backend / both, migration switch), self-hosted runner + server-side deploy scripts with backup, health check and automatic restore, DevOps guides for both platforms. |

@@ -64,35 +64,64 @@ CBS_REFERENCE = ["Branches", "Units", "Products", "TransactionCodes", "Currencie
 
 
 def _grants():
-    rows = [  # role, app, object (None = every object), scope, exclude Restricted
-        ("Employee", "IT-HELPDESK", "ServiceRequests", "Self", 0), ("Employee", "IT-HELPDESK", "Incidents", "Self", 0),
-        ("Employee", "IT-HELPDESK", "vw_IncidentsLive", "Self", 0),
-        ("CyberSecurity", "DIGITAL-BANKING", "SignIns", "All", 0), ("CyberSecurity", "DIGITAL-BANKING", "vw_SignInsLive", "All", 0),
-        ("CyberSecurity", "DIGITAL-BANKING", "Devices", "All", 0), ("CyberSecurity", "DIGITAL-BANKING", "DigitalProfiles", "All", 0),
-        ("CyberSecurity", "PERSONNEL", "Systems", "All", 0), ("CyberSecurity", "PERSONNEL", "SystemUsers", "All", 0),
-        ("CyberSecurity", "PERSONNEL", "UserSystemAccess", "All", 0), ("CyberSecurity", "PERSONNEL", "Employees", "All", 1),
-        ("CyberSecurity", "IT-HELPDESK", "ServiceRequests", "All", 0), ("CyberSecurity", "IT-HELPDESK", "RequestTasks", "All", 0),
-        ("CyberSecurity", "IT-HELPDESK", "ServiceCatalogItems", "All", 0),
-        ("HROfficer", "PERSONNEL", None, "All", 1),
-        ("BudgetController", "FINANCE", None, "All", 1),
-        ("BudgetController", "PERSONNEL", "Employees", "All", 1),
-        ("ComplianceOfficer", "CORE-BANKING", None, "All", 0), ("ComplianceOfficer", "DIGITAL-BANKING", None, "All", 0),
-        ("ServiceDeskManager", "IT-HELPDESK", None, "All", 0), ("ServiceDeskManager", "PERSONNEL", "Employees", "All", 1),
-        ("Teller", "CORE-BANKING", "vw_TransactionsByStaff", "Self", 0), ("Teller", "CORE-BANKING", "vw_OutwardChequesByStaff", "Self", 0),
-        ("Teller", "CORE-BANKING", "TransactionCodes", "All", 0), ("Teller", "CORE-BANKING", "Products", "All", 0),
+    # role, app, object (None = every object), scope, highest classification the role may read (Restricted = every column)
+    R, C, I = "Restricted", "Confidential", "Internal"
+    rows = [
+        ("Employee", "IT-HELPDESK", "ServiceRequests", "Self", R), ("Employee", "IT-HELPDESK", "Incidents", "Self", R),
+        ("Employee", "IT-HELPDESK", "vw_IncidentsLive", "Self", R),
+        ("CyberSecurity", "DIGITAL-BANKING", "SignIns", "All", R), ("CyberSecurity", "DIGITAL-BANKING", "vw_SignInsLive", "All", R),
+        ("CyberSecurity", "DIGITAL-BANKING", "Devices", "All", R), ("CyberSecurity", "DIGITAL-BANKING", "DigitalProfiles", "All", R),
+        ("CyberSecurity", "PERSONNEL", "Systems", "All", R), ("CyberSecurity", "PERSONNEL", "SystemUsers", "All", R),
+        ("CyberSecurity", "PERSONNEL", "UserSystemAccess", "All", R), ("CyberSecurity", "PERSONNEL", "Employees", "All", I),
+        ("CyberSecurity", "IT-HELPDESK", "ServiceRequests", "All", R), ("CyberSecurity", "IT-HELPDESK", "RequestTasks", "All", R),
+        ("CyberSecurity", "IT-HELPDESK", "ServiceCatalogItems", "All", R),
+        ("HROfficer", "PERSONNEL", None, "All", C),
+        ("BudgetController", "FINANCE", None, "All", C),
+        ("BudgetController", "PERSONNEL", "Employees", "All", I),
+        ("ComplianceOfficer", "CORE-BANKING", None, "All", R), ("ComplianceOfficer", "DIGITAL-BANKING", None, "All", R),
+        ("ServiceDeskManager", "IT-HELPDESK", None, "All", R), ("ServiceDeskManager", "PERSONNEL", "Employees", "All", I),
+        ("Teller", "CORE-BANKING", "vw_TransactionsByStaff", "Self", R), ("Teller", "CORE-BANKING", "vw_OutwardChequesByStaff", "Self", R),
+        ("Teller", "CORE-BANKING", "TransactionCodes", "All", R), ("Teller", "CORE-BANKING", "Products", "All", R),
     ]
-    rows += [(role, "PERSONNEL", o, "All", 0) for role in ("BudgetController", "ServiceDeskManager") for o in PERSONNEL_STRUCTURE]
-    rows += [("BranchManager", "CORE-BANKING", o, "All", 1) for o in CBS_REFERENCE]
-    rows += [("BranchManager", "DIGITAL-BANKING", "Branches", "All", 1)]
+    rows += [(role, "PERSONNEL", o, "All", I) for role in ("BudgetController", "ServiceDeskManager") for o in PERSONNEL_STRUCTURE]
+    rows += [("BranchManager", "CORE-BANKING", o, "All", C) for o in CBS_REFERENCE]
+    rows += [("BranchManager", "DIGITAL-BANKING", "Branches", "All", C)]
     # Branch-scoped objects: every object of the three systems whose row-scope mapping has a department column.
     for app, module in (("CORE-BANKING", build_corebanking), ("DIGITAL-BANKING", build_digital), ("IT-HELPDESK", build_it)):
-        rows += [("BranchManager", app, o, "Department", 1) for o, _, dept, _ in module.ROW_SCOPES if dept]
+        rows += [("BranchManager", app, o, "Department", C) for o, _, dept, _ in module.ROW_SCOPES if dept]
     scopes = {(a[0], s[0]): s for a in APPS for s in a[2].ROW_SCOPES}
     for role, app, obj, scope, _ in rows:  # DEPARTMENT / SELF need the mapped column, or the object would return nothing
         if scope == "Department":
             assert scopes[(app, obj)][2], (app, obj)
         if scope == "Self":
             assert scopes[(app, obj)][1], (app, obj)
+    return rows
+
+
+# Column-name patterns of short coded text columns whose values the seed lists in the description (see step (c) in the SQL).
+VALUE_PATTERNS = ["%Status", "%Type", "%Category", "Subcategory", "Direction", "%Channel", "%Priority", "Segment", "%Level", "%Rating", "Gender", "Impact",
+                  "Urgency", "Bucket", "CurrencyCode", "%ReasonCode", "ProductCode", "ResolutionCode", "Platform", "FailureReason", "RoleCode", "LeaveTypeCode",
+                  "GradeCode", "ShiftCode", "TerminationReason", "TransactionCode", "BudgetVersionCode", "Purpose", "Bank", "Kind"]
+
+
+def _code_docs():
+    """Organization code lists for the planner, from the shared Personnel model (pattern, priority, marker, text)."""
+    branches = ", ".join(f"{d['DepartmentCode']} {d['DepartmentName'].replace(' Branch', '')}" for d in bp.departments() if d["DepartmentType"] == "Branch")
+    hq = "; ".join(f"{d['DepartmentCode']} {d['DepartmentName']}" for d in bp.departments() if d["DepartmentType"] != "Branch")
+    sections = ", ".join(f"{s['SectionCode']} {s['SectionName']}" for s in bp.sections() if not s["SectionCode"].startswith("BR-"))
+    divisions = ", ".join(f"{d[0]} {d[1]}" for d in bp.DIVISIONS)
+    rows = [
+        ("%SectionCode", 1, "-TLR Teller", "Personnel section code. Branch sections are the branch code plus -CSV Customer Service, -TLR Teller and Cash, "
+         f"-SLS Personal Banking and Sales or -OPS Branch Operations (for example BR-DXB01-TLR). Head Office sections: {sections}."),
+        ("%DepartmentCode", 2, "BR-DXB01 Deira", f"Personnel department code. Head Office departments: {hq}. Branches (a branch's department code is its branch code): {branches}."),
+        ("%BranchCode", 3, "BR-DXB01 Deira", f"Branch code (the branch's Personnel department code): {branches}."),
+        ("%UnitCode", 4, "OPS Central Operations", f"Unit code: a branch ({branches}) or a Head Office department such as OPS Central Operations (clearing, payments, "
+         "end-of-day batch), DCC Digital Banking and Contact Centre, CBD Corporate and SME Banking or TRY Treasury."),
+        ("LocationCode", 5, "HO Head Office", f"Location: HO Head Office or a branch ({branches})."),
+        ("CostCentreCode", 6, "Cost centres are", "Cost centres are Personnel department codes and section codes (see DepartmentCode and SectionCode), for example ITD, ITD-SD, BR-DXB01."),
+        ("%DivisionCode", 7, "DIV-RTL", f"Division code: {divisions}."),
+    ]
+    assert all(len(r[3]) <= 2000 for r in rows)
     return rows
 
 
@@ -232,9 +261,15 @@ CREATE TABLE #RowScopes (AppCode nvarchar(64) COLLATE DATABASE_DEFAULT, ObjectNa
 INSERT INTO #RowScopes VALUES
 {row_scopes};
 CREATE TABLE #Grants (RoleCode nvarchar(64) COLLATE DATABASE_DEFAULT, AppCode nvarchar(64) COLLATE DATABASE_DEFAULT, ObjectName nvarchar(128) COLLATE DATABASE_DEFAULT NULL,
-                      Scope nvarchar(20) COLLATE DATABASE_DEFAULT, ExcludeRestricted bit);
+                      Scope nvarchar(20) COLLATE DATABASE_DEFAULT, MaxClassification nvarchar(20) COLLATE DATABASE_DEFAULT);
 INSERT INTO #Grants VALUES
 {grants};
+CREATE TABLE #CodeDocs (Pattern nvarchar(100) COLLATE DATABASE_DEFAULT, Priority int, Marker nvarchar(100) COLLATE DATABASE_DEFAULT, Text nvarchar(2000) COLLATE DATABASE_DEFAULT);
+INSERT INTO #CodeDocs VALUES
+{code_docs};
+CREATE TABLE #ValuePatterns (Pattern nvarchar(100) COLLATE DATABASE_DEFAULT);
+INSERT INTO #ValuePatterns VALUES
+{value_patterns};
 CREATE TABLE #CustomRoles (RoleCode nvarchar(64) COLLATE DATABASE_DEFAULT, NameEn nvarchar(200) COLLATE DATABASE_DEFAULT, NameAr nvarchar(200) COLLATE DATABASE_DEFAULT,
                            Description nvarchar(1000) COLLATE DATABASE_DEFAULT);
 INSERT INTO #CustomRoles VALUES
@@ -342,6 +377,52 @@ BEGIN TRY
     FROM dbo.DatabaseColumns c JOIN dbo.DatabaseObjects o ON o.ObjectId = c.ObjectId JOIN #Apps a ON a.ApplicationId = o.ApplicationId
     JOIN #ColumnDocs d ON d.AppCode = a.AppCode AND d.ObjectName = o.ObjectName AND d.ColumnName = c.ColumnName;
 
+    -- The AI planner reads names and descriptions, never data, so it can only use a code it has been told about.
+    -- (a) A view column without its own description takes the documented one of the same column in the table it reads from
+    --     (from the documentation above, not from the catalogue, so a re-run gives the same text).
+    UPDATE v SET DisplayNameEn = ISNULL(v.DisplayNameEn, t.DisplayEn), DisplayNameAr = ISNULL(v.DisplayNameAr, t.DisplayAr), BusinessDescription = t.Description, UpdatedAt = @Now
+    FROM dbo.DatabaseColumns v
+    JOIN dbo.DatabaseObjects vo ON vo.ObjectId = v.ObjectId AND vo.ObjectType = N'View'
+    JOIN #Apps a ON a.ApplicationId = vo.ApplicationId
+    CROSS APPLY (SELECT TOP (1) d.DisplayEn, d.DisplayAr, d.Description FROM #ColumnDocs d
+                 JOIN dbo.DatabaseObjects tobj ON tobj.ApplicationId = vo.ApplicationId AND tobj.ObjectType = N'Table' AND tobj.ObjectName = d.ObjectName
+                 WHERE d.AppCode = a.AppCode AND d.ColumnName = v.ColumnName AND d.Description IS NOT NULL
+                 ORDER BY CASE WHEN vo.ObjectName LIKE N'%' + tobj.ObjectName + N'%' THEN 0 ELSE 1 END, tobj.ObjectName) t
+    WHERE v.BusinessDescription IS NULL
+      AND NOT EXISTS (SELECT 1 FROM #ColumnDocs d WHERE d.AppCode = a.AppCode AND d.ObjectName = vo.ObjectName AND d.ColumnName = v.ColumnName AND d.Description IS NOT NULL);
+    -- (b) Organization codes (departments, branches, units, sections, locations, cost centres, divisions) list their values with names.
+    UPDATE c SET BusinessDescription = LEFT(CASE WHEN c.BusinessDescription IS NULL OR c.BusinessDescription = N'' THEN cd.Text
+                                                 WHEN CHARINDEX(cd.Marker, c.BusinessDescription) > 0 THEN c.BusinessDescription
+                                                 ELSE CONCAT(c.BusinessDescription, N' ', cd.Text) END, 2000), UpdatedAt = @Now
+    FROM dbo.DatabaseColumns c JOIN dbo.DatabaseObjects o ON o.ObjectId = c.ObjectId JOIN #Apps a ON a.ApplicationId = o.ApplicationId
+    CROSS APPLY (SELECT TOP (1) x.Marker, x.Text FROM #CodeDocs x WHERE c.ColumnName LIKE x.Pattern ORDER BY x.Priority) cd;
+    -- (c) Short coded text columns (status, type, category, direction ...) list the values found in the source today. Confidential and
+    --     Restricted columns never do, so no protected value reaches the planner through a description.
+    DECLARE @VColumnId uniqueidentifier, @VDb sysname, @VObject nvarchar(128), @VColumn nvarchar(128), @Values nvarchar(max), @VSql nvarchar(max);
+    DECLARE coded CURSOR LOCAL FAST_FORWARD FOR
+        SELECT c.ColumnId, a.DbName, o.ObjectName, c.ColumnName
+        FROM dbo.DatabaseColumns c JOIN dbo.DatabaseObjects o ON o.ObjectId = c.ObjectId JOIN #Apps a ON a.ApplicationId = o.ApplicationId
+        WHERE c.DataType IN (N'char', N'nchar', N'varchar', N'nvarchar') AND ISNULL(c.MaxLength, 9999) <= 200 AND c.Classification NOT IN (N'Confidential', N'Restricted')
+          AND EXISTS (SELECT 1 FROM #ValuePatterns p WHERE c.ColumnName LIKE p.Pattern)
+          AND NOT EXISTS (SELECT 1 FROM #CodeDocs x WHERE c.ColumnName LIKE x.Pattern);
+    OPEN coded;
+    FETCH NEXT FROM coded INTO @VColumnId, @VDb, @VObject, @VColumn;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @Values = NULL;
+        SET @VSql = N'SELECT @v = STRING_AGG(x.V, N'', '') WITHIN GROUP (ORDER BY x.V) FROM (SELECT DISTINCT TOP (21) CAST(' + QUOTENAME(@VColumn) + N' AS nvarchar(100)) AS V FROM '
+                  + QUOTENAME(@VDb) + N'.dbo.' + QUOTENAME(@VObject) + N' WHERE ' + QUOTENAME(@VColumn) + N' IS NOT NULL) x HAVING COUNT(*) BETWEEN 1 AND 20 AND MAX(LEN(x.V)) <= 40;';
+        EXEC sys.sp_executesql @VSql, N'@v nvarchar(max) OUTPUT', @v = @Values OUTPUT;
+        IF @Values IS NOT NULL
+            UPDATE dbo.DatabaseColumns
+            SET BusinessDescription = LEFT(LTRIM(CONCAT(CASE WHEN CHARINDEX(N'Values: ', ISNULL(BusinessDescription, N'')) > 0 THEN RTRIM(LEFT(BusinessDescription, CHARINDEX(N'Values: ', BusinessDescription) - 1))
+                                                         ELSE ISNULL(BusinessDescription, N'') END, N' Values: ', @Values, N'.')), 2000), UpdatedAt = @Now
+            WHERE ColumnId = @VColumnId;
+        FETCH NEXT FROM coded INTO @VColumnId, @VDb, @VObject, @VColumn;
+    END;
+    CLOSE coded;
+    DEALLOCATE coded;
+
     -- Field roles (Phase 14): 1 Identifier, 2 Person, 3 Account, 4 Device, 5 Date/time, 6 Amount, 7 Quantity, 8 Status, 9 Location.
     -- An administrator's later choice is kept.
     UPDATE c SET SemanticRole = v.SemanticRole, UpdatedAt = @Now
@@ -365,7 +446,9 @@ BEGIN TRY
     WHERE NOT EXISTS (SELECT 1 FROM dbo.RowScopeColumnMappings x WHERE x.ObjectId = o.ObjectId);
 
     -- ------------------------------------------------------------------------------------------ role permissions
-    SELECT g.RoleCode, r.RoleId, o.ObjectId, g.Scope, g.ExcludeRestricted
+    -- A grant reads the columns up to its highest classification (Internal < Confidential < Restricted); a table with a column
+    -- above it is granted column by column.
+    SELECT g.RoleCode, r.RoleId, o.ObjectId, g.Scope, CASE g.MaxClassification WHEN N'Internal' THEN 1 WHEN N'Confidential' THEN 2 ELSE 3 END AS MaxRank
     INTO #ObjectGrants
     FROM #Grants g
     JOIN dbo.Roles r ON r.OrganizationId = @OrgId AND r.RoleCode = g.RoleCode
@@ -373,13 +456,14 @@ BEGIN TRY
     JOIN dbo.DatabaseObjects o ON o.ApplicationId = a.ApplicationId AND (g.ObjectName IS NULL OR o.ObjectName = g.ObjectName);
     INSERT INTO dbo.RoleTablePermissions (PermissionId, OrganizationId, RoleId, ObjectId, AllColumns, GrantedAt, GrantedByUserId)
     SELECT NEWID(), @OrgId, og.RoleId, og.ObjectId,
-           CASE WHEN og.ExcludeRestricted = 1 AND EXISTS (SELECT 1 FROM dbo.DatabaseColumns c WHERE c.ObjectId = og.ObjectId AND c.Classification = N'Restricted') THEN 0 ELSE 1 END,
+           CASE WHEN EXISTS (SELECT 1 FROM dbo.DatabaseColumns c WHERE c.ObjectId = og.ObjectId
+                             AND CASE c.Classification WHEN N'Restricted' THEN 3 WHEN N'Confidential' THEN 2 ELSE 1 END > og.MaxRank) THEN 0 ELSE 1 END,
            @Now, @AdminUserId
     FROM #ObjectGrants og WHERE NOT EXISTS (SELECT 1 FROM dbo.RoleTablePermissions x WHERE x.RoleId = og.RoleId AND x.ObjectId = og.ObjectId);
     INSERT INTO dbo.RoleColumnPermissions (RoleId, ColumnId, OrganizationId, ObjectId)
     SELECT p.RoleId, c.ColumnId, @OrgId, p.ObjectId
     FROM dbo.RoleTablePermissions p JOIN #ObjectGrants og ON og.RoleId = p.RoleId AND og.ObjectId = p.ObjectId
-    JOIN dbo.DatabaseColumns c ON c.ObjectId = p.ObjectId AND c.Classification <> N'Restricted'
+    JOIN dbo.DatabaseColumns c ON c.ObjectId = p.ObjectId AND CASE c.Classification WHEN N'Restricted' THEN 3 WHEN N'Confidential' THEN 2 ELSE 1 END <= og.MaxRank
     WHERE p.AllColumns = 0 AND NOT EXISTS (SELECT 1 FROM dbo.RoleColumnPermissions x WHERE x.RoleId = p.RoleId AND x.ColumnId = c.ColumnId);
     INSERT INTO dbo.RoleRowPermissions (RoleId, ObjectId, OrganizationId, Scope)
     SELECT og.RoleId, og.ObjectId, @OrgId, og.Scope FROM #ObjectGrants og
@@ -529,7 +613,8 @@ def build():
     text = HEADER.format(users=_values(users), user_roles=_values(user_roles),
                          apps=_values([(a[0], a[1], a[3], a[4], a[5], a[6], a[7]) for a in APPS]))
     text += CATALOG.format(object_docs=_values(docs), column_docs=_values(cols), field_roles=_values(roles), row_scopes=_values(scopes),
-                           grants=_values(grants), custom_roles=_values(CUSTOM_ROLES))
+                           grants=_values(grants), custom_roles=_values(CUSTOM_ROLES), code_docs=_values(_code_docs()),
+                           value_patterns=_values([(p,) for p in VALUE_PATTERNS]))
     body = BODY.replace("{rules}", _values(rules)).replace("{app_codes}", ",".join(f'"{a[0]}"' for a in APPS))
     body = body.replace("{user_count}", str(len(users))).replace("{rule_count}", str(len(rules)))
     text += body
