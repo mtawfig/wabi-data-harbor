@@ -19,6 +19,8 @@ Each of 01–03 creates the database if missing, creates its owner and read-only
 
 **ProcurementStoresDB (purchasing and stores):** `CostCenters`, `ItemCategories`, `UnitsOfMeasure`, `Warehouses` (5 stores), `Suppliers` (52, rated A/B/C; lateness follows the rating), `Items` (159), `PurchaseRequisitions` and lines (Routine/Urgent/AOG), `PurchaseOrders` and lines (5 % VAT), `GoodsReceipts` and lines (partial deliveries, rejections, days late), `SupplierInvoices`, `StoreIssues` and lines, `StockMovements` (ledger) and `StockBalances` (31 December 2025).
 
+A second, larger sample organization lives in [`wabi-bank/`](wabi-bank/README.md): **Wabi Bank** (`WBK`), a fictional UAE bank with five systems (Personnel and Attendance, Core Banking, Finance, Digital Banking, IT Help Desk), eight role-scoped users and Monitoring Rules on planted findings. Both organizations can be seeded into the same `WabiInsightDB`.
+
 Department codes, section codes and employee numbers are shared by all three databases and by the Wabi Insight organization structure, so row scopes (`DEPARTMENT`, `SECTION`, `SELF`) work on real columns.
 
 ## Run order
