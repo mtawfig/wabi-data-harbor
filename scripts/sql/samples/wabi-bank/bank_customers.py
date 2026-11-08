@@ -240,7 +240,8 @@ def accounts():
         a["SalaryTo"] = emp["TerminationDate"] if emp and kind == "salary" else None
         a["AtmPerMonth"] = (r.choice([1, 2, 2, 3, 4]) if kind in ("salary", "retail") else 0) if active else 0
         a["PosPerMonth"] = (r.choice([0, 1, 1, 2, 3]) if kind in ("salary", "retail") else 0) if active else 0
-        a["TellerPerMonth"] = ({"salary": 0.25, "retail": 0.5, "savings": 0.3, "sme": 3.5, "corporate": 4.5}[kind]) if active else 0
+        # Branch counters: individuals come in a couple of times a month for small amounts, businesses weekly.
+        a["TellerPerMonth"] = ({"salary": 2.0, "retail": 2.0, "savings": 0.8, "sme": 5.0, "corporate": 6.0}[kind]) if active else 0
         a["ChequeInPerMonth"] = ({"sme": 1.2, "corporate": 2.5, "salary": 0.05, "retail": 0.05}.get(kind, 0)) if active and a["CurrencyCode"] == "AED" else 0
         a["ChequeOutPerMonth"] = ({"sme": 1.0, "corporate": 2.0, "salary": 0.08}.get(kind, 0)) if active and a["ProductCode"].startswith("CA") and a["CurrencyCode"] == "AED" else 0
         a["TransferOutPerMonth"] = ({"sme": 0.8, "corporate": 1.6, "salary": 0.04}.get(kind, 0)) if active else 0

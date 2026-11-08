@@ -182,6 +182,7 @@ INSERT INTO #ObjectDocs VALUES
 (N'CORE-BANKING', N'LoanSchedules', N'Loan schedules', N'جداول سداد القروض', N'Monthly instalments falling due in 2025 with principal, interest and outstanding balance.'),
 (N'CORE-BANKING', N'LoanRepayments', N'Loan repayments', N'سداد القروض', N'Instalments paid on time, late or not paid in 2025.'),
 (N'CORE-BANKING', N'MonthEndArrears', N'Month-end arrears', N'المتأخرات في نهاية الشهر', N'Overdue instalments per loan at each month end with days past due and bucket (Current, 1-30, 31-60, 61-90, 90+).'),
+(N'CORE-BANKING', N'MonthEndLoanBalances', N'Month-end loan balances', N'أرصدة القروض في نهاية الشهر', N'Outstanding principal of every active loan at each month end of 2025 (after the instalments due by then), with customer, product and branch. Use it for loan book size by branch, product or month.'),
 (N'CORE-BANKING', N'vw_TransactionsByStaff', N'Transactions with posting staff', N'المعاملات مع الموظف المرحِّل', N'Transactions with the posting user''s employee number, department and section (from Users).'),
 (N'CORE-BANKING', N'vw_OutwardChequesByStaff', N'Deposited cheques with capturing staff', N'الشيكات المودعة مع الموظف', N'Outward cheques with the capturing user''s employee number, department and section.'),
 (N'CORE-BANKING', N'vw_OutwardTransfersByStaff', N'Outward transfers with approving staff', N'الحوالات الصادرة مع الموظف المعتمِد', N'Outward transfers with the approving (checker) user''s employee number, department and section.'),
@@ -270,6 +271,7 @@ INSERT INTO #ColumnDocs VALUES
 (N'CORE-BANKING', N'OutwardCheques', N'Status', N'Status', N'الحالة', N'Cleared or Returned.', NULL),
 (N'CORE-BANKING', N'TellerTills', N'Difference', N'Cash difference', N'فرق النقد', N'Counted minus expected closing cash (negative = shortage).', NULL),
 (N'CORE-BANKING', N'Loans', N'Principal', N'Principal', N'أصل القرض', NULL, N'Confidential'),
+(N'CORE-BANKING', N'MonthEndLoanBalances', N'OutstandingPrincipal', N'Outstanding principal (AED)', N'أصل القرض القائم (درهم)', N'Principal still owed at the month end.', N'Confidential'),
 (N'CORE-BANKING', N'LoanApplications', N'RequestedAmount', N'Requested amount', N'المبلغ المطلوب', NULL, N'Confidential'),
 (N'FINANCE', N'Users', N'UserId', N'User id', N'معرف المستخدم', N'Single login across Wabi Bank systems (same as Personnel).', NULL),
 (N'FINANCE', N'Users', N'RoleCode', N'Finance role', N'الدور المالي', N'FIN role: Accountant, FinancialController, BudgetAnalyst, BudgetManager, Buyer, ProcurementManager, PayablesOfficer, PayablesSupervisor, BudgetHolder, Requisitioner, ChiefFinancialOfficer, ExecutiveApprover, ServiceAccount.', NULL),
@@ -445,6 +447,9 @@ INSERT INTO #FieldRoles VALUES
 (N'CORE-BANKING', N'LoanRepayments', N'DueDate', 5),
 (N'CORE-BANKING', N'LoanRepayments', N'Status', 8),
 (N'CORE-BANKING', N'MonthEndArrears', N'DaysPastDue', 7),
+(N'CORE-BANKING', N'MonthEndLoanBalances', N'MonthEnd', 5),
+(N'CORE-BANKING', N'MonthEndLoanBalances', N'OutstandingPrincipal', 6),
+(N'CORE-BANKING', N'MonthEndLoanBalances', N'LoanNumber', 3),
 (N'FINANCE', N'Users', N'UserId', 3),
 (N'FINANCE', N'Users', N'EmployeeNumber', 2),
 (N'FINANCE', N'Users', N'Status', 8),
@@ -623,6 +628,8 @@ INSERT INTO #RowScopes VALUES
 (N'CORE-BANKING', N'FixedDeposits', NULL, N'BranchCode', NULL),
 (N'CORE-BANKING', N'OutwardTransfers', NULL, N'InitiatedAtUnitCode', NULL),
 (N'CORE-BANKING', N'MonthEndBalances', NULL, N'BranchCode', NULL),
+(N'CORE-BANKING', N'MonthEndLoanBalances', NULL, N'BranchCode', NULL),
+(N'CORE-BANKING', N'MonthEndArrears', NULL, N'BranchCode', NULL),
 (N'FINANCE', N'Users', N'EmployeeNumber', N'DepartmentCode', N'SectionCode'),
 (N'FINANCE', N'CostCentres', NULL, N'DepartmentCode', N'SectionCode'),
 (N'FINANCE', N'BudgetLines', NULL, N'DepartmentCode', N'SectionCode'),
@@ -645,78 +652,121 @@ INSERT INTO #RowScopes VALUES
 (N'IT-HELPDESK', N'Users', N'EmployeeNumber', N'DepartmentCode', N'SectionCode'),
 (N'IT-HELPDESK', N'ConfigurationItems', N'AssignedToEmployeeNumber', NULL, NULL);
 CREATE TABLE #Grants (RoleCode nvarchar(64) COLLATE DATABASE_DEFAULT, AppCode nvarchar(64) COLLATE DATABASE_DEFAULT, ObjectName nvarchar(128) COLLATE DATABASE_DEFAULT NULL,
-                      Scope nvarchar(20) COLLATE DATABASE_DEFAULT, ExcludeRestricted bit);
+                      Scope nvarchar(20) COLLATE DATABASE_DEFAULT, MaxClassification nvarchar(20) COLLATE DATABASE_DEFAULT);
 INSERT INTO #Grants VALUES
-(N'Employee', N'IT-HELPDESK', N'ServiceRequests', N'Self', 0),
-(N'Employee', N'IT-HELPDESK', N'Incidents', N'Self', 0),
-(N'Employee', N'IT-HELPDESK', N'vw_IncidentsLive', N'Self', 0),
-(N'CyberSecurity', N'DIGITAL-BANKING', N'SignIns', N'All', 0),
-(N'CyberSecurity', N'DIGITAL-BANKING', N'vw_SignInsLive', N'All', 0),
-(N'CyberSecurity', N'DIGITAL-BANKING', N'Devices', N'All', 0),
-(N'CyberSecurity', N'DIGITAL-BANKING', N'DigitalProfiles', N'All', 0),
-(N'CyberSecurity', N'PERSONNEL', N'Systems', N'All', 0),
-(N'CyberSecurity', N'PERSONNEL', N'SystemUsers', N'All', 0),
-(N'CyberSecurity', N'PERSONNEL', N'UserSystemAccess', N'All', 0),
-(N'CyberSecurity', N'PERSONNEL', N'Employees', N'All', 1),
-(N'CyberSecurity', N'IT-HELPDESK', N'ServiceRequests', N'All', 0),
-(N'CyberSecurity', N'IT-HELPDESK', N'RequestTasks', N'All', 0),
-(N'CyberSecurity', N'IT-HELPDESK', N'ServiceCatalogItems', N'All', 0),
-(N'HROfficer', N'PERSONNEL', NULL, N'All', 1),
-(N'BudgetController', N'FINANCE', NULL, N'All', 1),
-(N'BudgetController', N'PERSONNEL', N'Employees', N'All', 1),
-(N'ComplianceOfficer', N'CORE-BANKING', NULL, N'All', 0),
-(N'ComplianceOfficer', N'DIGITAL-BANKING', NULL, N'All', 0),
-(N'ServiceDeskManager', N'IT-HELPDESK', NULL, N'All', 0),
-(N'ServiceDeskManager', N'PERSONNEL', N'Employees', N'All', 1),
-(N'Teller', N'CORE-BANKING', N'vw_TransactionsByStaff', N'Self', 0),
-(N'Teller', N'CORE-BANKING', N'vw_OutwardChequesByStaff', N'Self', 0),
-(N'Teller', N'CORE-BANKING', N'TransactionCodes', N'All', 0),
-(N'Teller', N'CORE-BANKING', N'Products', N'All', 0),
-(N'BudgetController', N'PERSONNEL', N'Divisions', N'All', 0),
-(N'BudgetController', N'PERSONNEL', N'Departments', N'All', 0),
-(N'BudgetController', N'PERSONNEL', N'Sections', N'All', 0),
-(N'BudgetController', N'PERSONNEL', N'Locations', N'All', 0),
-(N'BudgetController', N'PERSONNEL', N'Positions', N'All', 0),
-(N'BudgetController', N'PERSONNEL', N'JobGrades', N'All', 0),
-(N'ServiceDeskManager', N'PERSONNEL', N'Divisions', N'All', 0),
-(N'ServiceDeskManager', N'PERSONNEL', N'Departments', N'All', 0),
-(N'ServiceDeskManager', N'PERSONNEL', N'Sections', N'All', 0),
-(N'ServiceDeskManager', N'PERSONNEL', N'Locations', N'All', 0),
-(N'ServiceDeskManager', N'PERSONNEL', N'Positions', N'All', 0),
-(N'ServiceDeskManager', N'PERSONNEL', N'JobGrades', N'All', 0),
-(N'BranchManager', N'CORE-BANKING', N'Branches', N'All', 1),
-(N'BranchManager', N'CORE-BANKING', N'Units', N'All', 1),
-(N'BranchManager', N'CORE-BANKING', N'Products', N'All', 1),
-(N'BranchManager', N'CORE-BANKING', N'TransactionCodes', N'All', 1),
-(N'BranchManager', N'CORE-BANKING', N'Currencies', N'All', 1),
-(N'BranchManager', N'CORE-BANKING', N'ChequeReturnReasons', N'All', 1),
-(N'BranchManager', N'CORE-BANKING', N'LoanProducts', N'All', 1),
-(N'BranchManager', N'CORE-BANKING', N'BusinessCalendar', N'All', 1),
-(N'BranchManager', N'DIGITAL-BANKING', N'Branches', N'All', 1),
-(N'BranchManager', N'CORE-BANKING', N'Customers', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'Accounts', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'Transactions', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'vw_TransactionsByStaff', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'vw_TransactionsLive', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'OutwardCheques', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'vw_OutwardChequesByStaff', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'InwardCheques', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'vw_InwardChequesLive', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'TellerTills', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'LoanApplications', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'Loans', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'FixedDeposits', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'OutwardTransfers', N'Department', 1),
-(N'BranchManager', N'CORE-BANKING', N'MonthEndBalances', N'Department', 1),
-(N'BranchManager', N'DIGITAL-BANKING', N'DigitalProfiles', N'Department', 1),
-(N'BranchManager', N'DIGITAL-BANKING', N'ChannelTransfers', N'Department', 1),
-(N'BranchManager', N'DIGITAL-BANKING', N'ServiceRequests', N'Department', 1),
-(N'BranchManager', N'DIGITAL-BANKING', N'ProfileActions', N'Department', 1),
-(N'BranchManager', N'IT-HELPDESK', N'ServiceRequests', N'Department', 1),
-(N'BranchManager', N'IT-HELPDESK', N'Incidents', N'Department', 1),
-(N'BranchManager', N'IT-HELPDESK', N'vw_IncidentsLive', N'Department', 1),
-(N'BranchManager', N'IT-HELPDESK', N'EmployeeDirectory', N'Department', 1),
-(N'BranchManager', N'IT-HELPDESK', N'Users', N'Department', 1);
+(N'Employee', N'IT-HELPDESK', N'ServiceRequests', N'Self', N'Restricted'),
+(N'Employee', N'IT-HELPDESK', N'Incidents', N'Self', N'Restricted'),
+(N'Employee', N'IT-HELPDESK', N'vw_IncidentsLive', N'Self', N'Restricted'),
+(N'CyberSecurity', N'DIGITAL-BANKING', N'SignIns', N'All', N'Restricted'),
+(N'CyberSecurity', N'DIGITAL-BANKING', N'vw_SignInsLive', N'All', N'Restricted'),
+(N'CyberSecurity', N'DIGITAL-BANKING', N'Devices', N'All', N'Restricted'),
+(N'CyberSecurity', N'DIGITAL-BANKING', N'DigitalProfiles', N'All', N'Restricted'),
+(N'CyberSecurity', N'PERSONNEL', N'Systems', N'All', N'Restricted'),
+(N'CyberSecurity', N'PERSONNEL', N'SystemUsers', N'All', N'Restricted'),
+(N'CyberSecurity', N'PERSONNEL', N'UserSystemAccess', N'All', N'Restricted'),
+(N'CyberSecurity', N'PERSONNEL', N'Employees', N'All', N'Internal'),
+(N'CyberSecurity', N'IT-HELPDESK', N'ServiceRequests', N'All', N'Restricted'),
+(N'CyberSecurity', N'IT-HELPDESK', N'RequestTasks', N'All', N'Restricted'),
+(N'CyberSecurity', N'IT-HELPDESK', N'ServiceCatalogItems', N'All', N'Restricted'),
+(N'HROfficer', N'PERSONNEL', NULL, N'All', N'Confidential'),
+(N'BudgetController', N'FINANCE', NULL, N'All', N'Confidential'),
+(N'BudgetController', N'PERSONNEL', N'Employees', N'All', N'Internal'),
+(N'ComplianceOfficer', N'CORE-BANKING', NULL, N'All', N'Restricted'),
+(N'ComplianceOfficer', N'DIGITAL-BANKING', NULL, N'All', N'Restricted'),
+(N'ServiceDeskManager', N'IT-HELPDESK', NULL, N'All', N'Restricted'),
+(N'ServiceDeskManager', N'PERSONNEL', N'Employees', N'All', N'Internal'),
+(N'Teller', N'CORE-BANKING', N'vw_TransactionsByStaff', N'Self', N'Restricted'),
+(N'Teller', N'CORE-BANKING', N'vw_OutwardChequesByStaff', N'Self', N'Restricted'),
+(N'Teller', N'CORE-BANKING', N'TransactionCodes', N'All', N'Restricted'),
+(N'Teller', N'CORE-BANKING', N'Products', N'All', N'Restricted'),
+(N'BudgetController', N'PERSONNEL', N'Divisions', N'All', N'Internal'),
+(N'BudgetController', N'PERSONNEL', N'Departments', N'All', N'Internal'),
+(N'BudgetController', N'PERSONNEL', N'Sections', N'All', N'Internal'),
+(N'BudgetController', N'PERSONNEL', N'Locations', N'All', N'Internal'),
+(N'BudgetController', N'PERSONNEL', N'Positions', N'All', N'Internal'),
+(N'BudgetController', N'PERSONNEL', N'JobGrades', N'All', N'Internal'),
+(N'ServiceDeskManager', N'PERSONNEL', N'Divisions', N'All', N'Internal'),
+(N'ServiceDeskManager', N'PERSONNEL', N'Departments', N'All', N'Internal'),
+(N'ServiceDeskManager', N'PERSONNEL', N'Sections', N'All', N'Internal'),
+(N'ServiceDeskManager', N'PERSONNEL', N'Locations', N'All', N'Internal'),
+(N'ServiceDeskManager', N'PERSONNEL', N'Positions', N'All', N'Internal'),
+(N'ServiceDeskManager', N'PERSONNEL', N'JobGrades', N'All', N'Internal'),
+(N'BranchManager', N'CORE-BANKING', N'Branches', N'All', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'Units', N'All', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'Products', N'All', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'TransactionCodes', N'All', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'Currencies', N'All', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'ChequeReturnReasons', N'All', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'LoanProducts', N'All', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'BusinessCalendar', N'All', N'Confidential'),
+(N'BranchManager', N'DIGITAL-BANKING', N'Branches', N'All', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'Customers', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'Accounts', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'Transactions', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'vw_TransactionsByStaff', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'vw_TransactionsLive', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'OutwardCheques', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'vw_OutwardChequesByStaff', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'InwardCheques', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'vw_InwardChequesLive', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'TellerTills', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'LoanApplications', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'Loans', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'FixedDeposits', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'OutwardTransfers', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'MonthEndBalances', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'MonthEndLoanBalances', N'Department', N'Confidential'),
+(N'BranchManager', N'CORE-BANKING', N'MonthEndArrears', N'Department', N'Confidential'),
+(N'BranchManager', N'DIGITAL-BANKING', N'DigitalProfiles', N'Department', N'Confidential'),
+(N'BranchManager', N'DIGITAL-BANKING', N'ChannelTransfers', N'Department', N'Confidential'),
+(N'BranchManager', N'DIGITAL-BANKING', N'ServiceRequests', N'Department', N'Confidential'),
+(N'BranchManager', N'DIGITAL-BANKING', N'ProfileActions', N'Department', N'Confidential'),
+(N'BranchManager', N'IT-HELPDESK', N'ServiceRequests', N'Department', N'Confidential'),
+(N'BranchManager', N'IT-HELPDESK', N'Incidents', N'Department', N'Confidential'),
+(N'BranchManager', N'IT-HELPDESK', N'vw_IncidentsLive', N'Department', N'Confidential'),
+(N'BranchManager', N'IT-HELPDESK', N'EmployeeDirectory', N'Department', N'Confidential'),
+(N'BranchManager', N'IT-HELPDESK', N'Users', N'Department', N'Confidential');
+CREATE TABLE #CodeDocs (Pattern nvarchar(100) COLLATE DATABASE_DEFAULT, Priority int, Marker nvarchar(100) COLLATE DATABASE_DEFAULT, Text nvarchar(2000) COLLATE DATABASE_DEFAULT);
+INSERT INTO #CodeDocs VALUES
+(N'%SectionCode', 1, N'-TLR Teller', N'Personnel section code. Branch sections are the branch code plus -CSV Customer Service, -TLR Teller and Cash, -SLS Personal Banking and Sales or -OPS Branch Operations (for example BR-DXB01-TLR). Head Office sections: CEO-EXO Executive Office, CEO-STR Strategy and PMO, CEO-BSC Board Secretariat, LGL-ADV Legal Advisory, LGL-LIT Litigation, CMP-AML AML and Sanctions, CMP-KYC KYC Review, CMP-REG Regulatory Compliance, IAD-BOA Branch and Operations Audit, IAD-ITA IT Audit, RBD-BNM Branch Network Management, RBD-PRD Retail Products, RBD-CRD Cards, DCC-DIG Digital Channels, DCC-CC Contact Centre, CBD-CRM Corporate Relationship, CBD-SME SME Banking, CBD-TRF Trade Finance, TRY-DLR Dealing Room, TRY-ALM ALM and Liquidity, OPS-CLR Clearing and Cheques, OPS-PAY Payments and Remittances, OPS-ACS Account Services, OPS-LNO Loan Operations, OPS-CSH Cash and Vault, RSK-CRA Credit Risk and Approvals, RSK-MLR Market and Liquidity Risk, RSK-OPR Operational Risk, FIN-FCR Financial Control and Reporting, FIN-BGP Budgeting and Planning, FIN-PRC Procurement, FIN-AP Accounts Payable, HRD-REC Recruitment, HRD-PSV Personnel Services, HRD-LND Learning and Development, ITD-SD Service Desk, ITD-INF Infrastructure, ITD-APP Applications Support, ITD-NET Network, ITD-SEC Information Security, MKT-MKT Marketing, MKT-CX Customer Experience, MKT-COM Corporate Communications, ADM-FAC Facilities, ADM-PSC Physical Security.'),
+(N'%DepartmentCode', 2, N'BR-DXB01 Deira', N'Personnel department code. Head Office departments: CEO CEO Office; LGL Legal; CMP Compliance; IAD Internal Audit; RBD Retail Banking; DCC Digital Banking and Contact Centre; CBD Corporate and SME Banking; TRY Treasury; OPS Central Operations; RSK Risk Management; FIN Finance; HRD Human Resources; ITD Information Technology; MKT Marketing and Communications; ADM Administration and Facilities. Branches (a branch''s department code is its branch code): BR-DXB01 Deira (Dubai Main), BR-AUH01 Abu Dhabi Main, BR-SHJ01 Sharjah, BR-AAN01 Al Ain, BR-DXB02 Business Bay, BR-RAK01 Ras Al Khaimah.'),
+(N'%BranchCode', 3, N'BR-DXB01 Deira', N'Branch code (the branch''s Personnel department code): BR-DXB01 Deira (Dubai Main), BR-AUH01 Abu Dhabi Main, BR-SHJ01 Sharjah, BR-AAN01 Al Ain, BR-DXB02 Business Bay, BR-RAK01 Ras Al Khaimah.'),
+(N'%UnitCode', 4, N'OPS Central Operations', N'Unit code: a branch (BR-DXB01 Deira (Dubai Main), BR-AUH01 Abu Dhabi Main, BR-SHJ01 Sharjah, BR-AAN01 Al Ain, BR-DXB02 Business Bay, BR-RAK01 Ras Al Khaimah) or a Head Office department such as OPS Central Operations (clearing, payments, end-of-day batch), DCC Digital Banking and Contact Centre, CBD Corporate and SME Banking or TRY Treasury.'),
+(N'LocationCode', 5, N'HO Head Office', N'Location: HO Head Office or a branch (BR-DXB01 Deira (Dubai Main), BR-AUH01 Abu Dhabi Main, BR-SHJ01 Sharjah, BR-AAN01 Al Ain, BR-DXB02 Business Bay, BR-RAK01 Ras Al Khaimah).'),
+(N'CostCentreCode', 6, N'Cost centres are', N'Cost centres are Personnel department codes and section codes (see DepartmentCode and SectionCode), for example ITD, ITD-SD, BR-DXB01.'),
+(N'%DivisionCode', 7, N'DIV-RTL', N'Division code: DIV-CEO CEO Office, DIV-RTL Retail Banking, DIV-WHL Wholesale Banking, DIV-OPT Operations and Technology, DIV-RSK Risk, DIV-FIN Finance, DIV-HR Human Resources, DIV-MKT Marketing.');
+CREATE TABLE #ValuePatterns (Pattern nvarchar(100) COLLATE DATABASE_DEFAULT);
+INSERT INTO #ValuePatterns VALUES
+(N'%Status'),
+(N'%Type'),
+(N'%Category'),
+(N'Subcategory'),
+(N'Direction'),
+(N'%Channel'),
+(N'%Priority'),
+(N'Segment'),
+(N'%Level'),
+(N'%Rating'),
+(N'Gender'),
+(N'Impact'),
+(N'Urgency'),
+(N'Bucket'),
+(N'CurrencyCode'),
+(N'%ReasonCode'),
+(N'ProductCode'),
+(N'ResolutionCode'),
+(N'Platform'),
+(N'FailureReason'),
+(N'RoleCode'),
+(N'LeaveTypeCode'),
+(N'GradeCode'),
+(N'ShiftCode'),
+(N'TerminationReason'),
+(N'TransactionCode'),
+(N'BudgetVersionCode'),
+(N'Purpose'),
+(N'Bank'),
+(N'Kind');
 CREATE TABLE #CustomRoles (RoleCode nvarchar(64) COLLATE DATABASE_DEFAULT, NameEn nvarchar(200) COLLATE DATABASE_DEFAULT, NameAr nvarchar(200) COLLATE DATABASE_DEFAULT,
                            Description nvarchar(1000) COLLATE DATABASE_DEFAULT);
 INSERT INTO #CustomRoles VALUES
@@ -829,6 +879,52 @@ BEGIN TRY
     FROM dbo.DatabaseColumns c JOIN dbo.DatabaseObjects o ON o.ObjectId = c.ObjectId JOIN #Apps a ON a.ApplicationId = o.ApplicationId
     JOIN #ColumnDocs d ON d.AppCode = a.AppCode AND d.ObjectName = o.ObjectName AND d.ColumnName = c.ColumnName;
 
+    -- The AI planner reads names and descriptions, never data, so it can only use a code it has been told about.
+    -- (a) A view column without its own description takes the documented one of the same column in the table it reads from
+    --     (from the documentation above, not from the catalogue, so a re-run gives the same text).
+    UPDATE v SET DisplayNameEn = ISNULL(v.DisplayNameEn, t.DisplayEn), DisplayNameAr = ISNULL(v.DisplayNameAr, t.DisplayAr), BusinessDescription = t.Description, UpdatedAt = @Now
+    FROM dbo.DatabaseColumns v
+    JOIN dbo.DatabaseObjects vo ON vo.ObjectId = v.ObjectId AND vo.ObjectType = N'View'
+    JOIN #Apps a ON a.ApplicationId = vo.ApplicationId
+    CROSS APPLY (SELECT TOP (1) d.DisplayEn, d.DisplayAr, d.Description FROM #ColumnDocs d
+                 JOIN dbo.DatabaseObjects tobj ON tobj.ApplicationId = vo.ApplicationId AND tobj.ObjectType = N'Table' AND tobj.ObjectName = d.ObjectName
+                 WHERE d.AppCode = a.AppCode AND d.ColumnName = v.ColumnName AND d.Description IS NOT NULL
+                 ORDER BY CASE WHEN vo.ObjectName LIKE N'%' + tobj.ObjectName + N'%' THEN 0 ELSE 1 END, tobj.ObjectName) t
+    WHERE v.BusinessDescription IS NULL
+      AND NOT EXISTS (SELECT 1 FROM #ColumnDocs d WHERE d.AppCode = a.AppCode AND d.ObjectName = vo.ObjectName AND d.ColumnName = v.ColumnName AND d.Description IS NOT NULL);
+    -- (b) Organization codes (departments, branches, units, sections, locations, cost centres, divisions) list their values with names.
+    UPDATE c SET BusinessDescription = LEFT(CASE WHEN c.BusinessDescription IS NULL OR c.BusinessDescription = N'' THEN cd.Text
+                                                 WHEN CHARINDEX(cd.Marker, c.BusinessDescription) > 0 THEN c.BusinessDescription
+                                                 ELSE CONCAT(c.BusinessDescription, N' ', cd.Text) END, 2000), UpdatedAt = @Now
+    FROM dbo.DatabaseColumns c JOIN dbo.DatabaseObjects o ON o.ObjectId = c.ObjectId JOIN #Apps a ON a.ApplicationId = o.ApplicationId
+    CROSS APPLY (SELECT TOP (1) x.Marker, x.Text FROM #CodeDocs x WHERE c.ColumnName LIKE x.Pattern ORDER BY x.Priority) cd;
+    -- (c) Short coded text columns (status, type, category, direction ...) list the values found in the source today. Confidential and
+    --     Restricted columns never do, so no protected value reaches the planner through a description.
+    DECLARE @VColumnId uniqueidentifier, @VDb sysname, @VObject nvarchar(128), @VColumn nvarchar(128), @Values nvarchar(max), @VSql nvarchar(max);
+    DECLARE coded CURSOR LOCAL FAST_FORWARD FOR
+        SELECT c.ColumnId, a.DbName, o.ObjectName, c.ColumnName
+        FROM dbo.DatabaseColumns c JOIN dbo.DatabaseObjects o ON o.ObjectId = c.ObjectId JOIN #Apps a ON a.ApplicationId = o.ApplicationId
+        WHERE c.DataType IN (N'char', N'nchar', N'varchar', N'nvarchar') AND ISNULL(c.MaxLength, 9999) <= 200 AND c.Classification NOT IN (N'Confidential', N'Restricted')
+          AND EXISTS (SELECT 1 FROM #ValuePatterns p WHERE c.ColumnName LIKE p.Pattern)
+          AND NOT EXISTS (SELECT 1 FROM #CodeDocs x WHERE c.ColumnName LIKE x.Pattern);
+    OPEN coded;
+    FETCH NEXT FROM coded INTO @VColumnId, @VDb, @VObject, @VColumn;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @Values = NULL;
+        SET @VSql = N'SELECT @v = STRING_AGG(x.V, N'', '') WITHIN GROUP (ORDER BY x.V) FROM (SELECT DISTINCT TOP (21) CAST(' + QUOTENAME(@VColumn) + N' AS nvarchar(100)) AS V FROM '
+                  + QUOTENAME(@VDb) + N'.dbo.' + QUOTENAME(@VObject) + N' WHERE ' + QUOTENAME(@VColumn) + N' IS NOT NULL) x HAVING COUNT(*) BETWEEN 1 AND 20 AND MAX(LEN(x.V)) <= 40;';
+        EXEC sys.sp_executesql @VSql, N'@v nvarchar(max) OUTPUT', @v = @Values OUTPUT;
+        IF @Values IS NOT NULL
+            UPDATE dbo.DatabaseColumns
+            SET BusinessDescription = LEFT(LTRIM(CONCAT(CASE WHEN CHARINDEX(N'Values: ', ISNULL(BusinessDescription, N'')) > 0 THEN RTRIM(LEFT(BusinessDescription, CHARINDEX(N'Values: ', BusinessDescription) - 1))
+                                                         ELSE ISNULL(BusinessDescription, N'') END, N' Values: ', @Values, N'.')), 2000), UpdatedAt = @Now
+            WHERE ColumnId = @VColumnId;
+        FETCH NEXT FROM coded INTO @VColumnId, @VDb, @VObject, @VColumn;
+    END;
+    CLOSE coded;
+    DEALLOCATE coded;
+
     -- Field roles (Phase 14): 1 Identifier, 2 Person, 3 Account, 4 Device, 5 Date/time, 6 Amount, 7 Quantity, 8 Status, 9 Location.
     -- An administrator's later choice is kept.
     UPDATE c SET SemanticRole = v.SemanticRole, UpdatedAt = @Now
@@ -852,7 +948,9 @@ BEGIN TRY
     WHERE NOT EXISTS (SELECT 1 FROM dbo.RowScopeColumnMappings x WHERE x.ObjectId = o.ObjectId);
 
     -- ------------------------------------------------------------------------------------------ role permissions
-    SELECT g.RoleCode, r.RoleId, o.ObjectId, g.Scope, g.ExcludeRestricted
+    -- A grant reads the columns up to its highest classification (Internal < Confidential < Restricted); a table with a column
+    -- above it is granted column by column.
+    SELECT g.RoleCode, r.RoleId, o.ObjectId, g.Scope, CASE g.MaxClassification WHEN N'Internal' THEN 1 WHEN N'Confidential' THEN 2 ELSE 3 END AS MaxRank
     INTO #ObjectGrants
     FROM #Grants g
     JOIN dbo.Roles r ON r.OrganizationId = @OrgId AND r.RoleCode = g.RoleCode
@@ -860,13 +958,14 @@ BEGIN TRY
     JOIN dbo.DatabaseObjects o ON o.ApplicationId = a.ApplicationId AND (g.ObjectName IS NULL OR o.ObjectName = g.ObjectName);
     INSERT INTO dbo.RoleTablePermissions (PermissionId, OrganizationId, RoleId, ObjectId, AllColumns, GrantedAt, GrantedByUserId)
     SELECT NEWID(), @OrgId, og.RoleId, og.ObjectId,
-           CASE WHEN og.ExcludeRestricted = 1 AND EXISTS (SELECT 1 FROM dbo.DatabaseColumns c WHERE c.ObjectId = og.ObjectId AND c.Classification = N'Restricted') THEN 0 ELSE 1 END,
+           CASE WHEN EXISTS (SELECT 1 FROM dbo.DatabaseColumns c WHERE c.ObjectId = og.ObjectId
+                             AND CASE c.Classification WHEN N'Restricted' THEN 3 WHEN N'Confidential' THEN 2 ELSE 1 END > og.MaxRank) THEN 0 ELSE 1 END,
            @Now, @AdminUserId
     FROM #ObjectGrants og WHERE NOT EXISTS (SELECT 1 FROM dbo.RoleTablePermissions x WHERE x.RoleId = og.RoleId AND x.ObjectId = og.ObjectId);
     INSERT INTO dbo.RoleColumnPermissions (RoleId, ColumnId, OrganizationId, ObjectId)
     SELECT p.RoleId, c.ColumnId, @OrgId, p.ObjectId
     FROM dbo.RoleTablePermissions p JOIN #ObjectGrants og ON og.RoleId = p.RoleId AND og.ObjectId = p.ObjectId
-    JOIN dbo.DatabaseColumns c ON c.ObjectId = p.ObjectId AND c.Classification <> N'Restricted'
+    JOIN dbo.DatabaseColumns c ON c.ObjectId = p.ObjectId AND CASE c.Classification WHEN N'Restricted' THEN 3 WHEN N'Confidential' THEN 2 ELSE 1 END <= og.MaxRank
     WHERE p.AllColumns = 0 AND NOT EXISTS (SELECT 1 FROM dbo.RoleColumnPermissions x WHERE x.RoleId = p.RoleId AND x.ColumnId = c.ColumnId);
     INSERT INTO dbo.RoleRowPermissions (RoleId, ObjectId, OrganizationId, Scope)
     SELECT og.RoleId, og.ObjectId, @OrgId, og.Scope FROM #ObjectGrants og

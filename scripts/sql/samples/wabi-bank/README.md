@@ -18,13 +18,13 @@ Column naming is the same everywhere: actors are `…ByUserId`, subjects are `�
 
 | # | File | Creates | Contents | Run time* |
 |---|---|---|---|---|
-| 1 | `01-create-wabibankpersonneldb.sql` | `WabiBankPersonnelDB`, logins `wbpersonnel_owner` / `wbpersonnel_reader` | 17 tables: 478 employees (438 active at year end), 69 sections, 106,127 attendance days, 1,829 leave requests, 474 system users, 1,461 access rights | ≈ 25 s |
-| 2 | `02-create-wabibankcorebankingdb.sql` | `WabiBankCoreBankingDB`, `wbcore_owner` / `wbcore_reader` | 28 tables, 5 views: 5,978 customers, 7,699 accounts, 446,913 postings, 32,732 cheques, 28,882 transfers, 1,096 loans, 84,888 month-end balances | ≈ 85 s |
+| 1 | `01-create-wabibankpersonneldb.sql` | `WabiBankPersonnelDB`, logins `wbpersonnel_owner` / `wbpersonnel_reader` | 17 tables: 478 employees (438 active at year end), 69 sections, 106,127 attendance days, 1,857 leave requests (28 still pending at year end), 474 system users, 1,461 access rights | ≈ 25 s |
+| 2 | `02-create-wabibankcorebankingdb.sql` | `WabiBankCoreBankingDB`, `wbcore_owner` / `wbcore_reader` | 29 tables, 5 views: 5,978 customers, 7,699 accounts, 569,547 postings (about 32 counter postings per teller a day), 32,732 cheques, 28,882 transfers, 1,096 loans, 84,888 account and 9,549 loan month-end balances | ≈ 100 s |
 | 3 | `03-create-wabibankfinancedb.sql` | `WabiBankFinanceDB`, `wbfinance_owner` / `wbfinance_reader` | 18 tables: 90 cost centres, 11,670 budget lines, 1,197 requisitions, 1,101 purchase orders, 990 invoices, 885 payments, 722 assets, 9,571 journal lines | ≈ 10 s |
 | 4 | `04-create-wabibankdigitaldb.sql` | `WabiBankDigitalDB`, `wbdigital_owner` / `wbdigital_reader` | 9 tables, 2 views: 3,179 profiles, 5,703 devices, 95,616 sign-ins, 3,781 channel transfers, 3,641 Contact Centre requests | ≈ 15 s |
 | 5 | `05-create-wabibankitdb.sql` | `WabiBankITDB`, `wbit_owner` / `wbit_reader` | 15 tables, 1 view: 6,000 service requests (4,102 approvals, 7,278 tasks), 4,500 incidents (33,601 activities), 598 configuration items | ≈ 16 s |
-| 6 | `06-seed-wabiinsightdb.sql` | the WBK organization in `WabiInsightDB` | structure, 8 users, 11 roles, 5 applications, catalogue, permissions, 5 Monitoring Rules | ≈ 2 s |
-| 7 | `07-check-consistency.sql` | nothing (read-only) | 230 cross-system identifier checks; every one must report 0 | ≈ 5 s |
+| 6 | `06-seed-wabiinsightdb.sql` | the WBK organization in `WabiInsightDB` | structure, 8 users, 11 roles, 5 applications, catalogue with code and value lists, permissions, 5 Monitoring Rules | ≈ 5 s |
+| 7 | `07-check-consistency.sql` | nothing (read-only) | 231 cross-system identifier checks; every one must report 0 | ≈ 5 s |
 
 \* On a 4-core development SQL Server 2022.
 
@@ -62,9 +62,9 @@ Board → CEO → eight divisions, each led by an executive who also heads its m
 
 ## Contents
 
-**WabiBankPersonnelDB (HRMS, system of record):** `Countries`, `Locations` (Head Office and the six branches), `Divisions`, `Departments` (type HeadOffice or Branch, division, head), `Sections`, `JobGrades` (G1–G10 salary bands), `Positions`, `PublicHolidays`, `Shifts` (Head Office, branch, three Contact Centre shifts, security), `Employees`, `EmployeeMovements` (transfers and promotions), `LeaveTypes`, `LeaveRequests` (submitted and decided by user ids), `AttendanceRecords` (every scheduled day: Present, Late, Absent, On Leave), and the identity directory `Systems`, `SystemUsers` and `UserSystemAccess` (role and approval limit per system, with grant and revoke dates).
+**WabiBankPersonnelDB (HRMS, system of record):** `Countries`, `Locations` (Head Office and the six branches), `Divisions`, `Departments` (type HeadOffice or Branch, division, head), `Sections`, `JobGrades` (G1–G10 salary bands), `Positions`, `PublicHolidays`, `Shifts` (Head Office, branch, three Contact Centre shifts, security), `Employees`, `EmployeeMovements` (transfers and promotions), `LeaveTypes`, `LeaveRequests` (submitted and decided by user ids; Approved, Rejected, Cancelled, and Pending for leave in early 2026), `AttendanceRecords` (every scheduled day: Present, Late, Absent, On Leave), and the identity directory `Systems`, `SystemUsers` and `UserSystemAccess` (role and approval limit per system, with grant and revoke dates).
 
-**WabiBankCoreBankingDB (CBS):** `Branches`, `Units`, `Users`, `BusinessCalendar`, `Currencies`, `FxRates`, `Products`, `TransactionCodes`, `Customers` (staff, retail, Priority, SME, corporate; relationship managers), `KycDocuments`, `Accounts` (IBAN, opened by / approved by, dormant and reactivated), `FixedDeposits`, `ClearingSessions`, `ChequeReturnReasons`, `ChequeBooks`, `OutwardCheques` and `InwardCheques` (clearing, returns with reason codes), `OutwardTransfers` (maker, checker, AML screening for SWIFT) and `InwardTransfers`, `Transactions` (every posting with `PostingUnitCode`, `PostedByUserId`, `ApprovedByUserId`, running balance, reversals), `TellerTills`, `MonthEndBalances`, `LoanProducts`, `LoanApplications`, `Loans`, `LoanSchedules`, `LoanRepayments`, `MonthEndArrears`. Views: `vw_TransactionsByStaff`, `vw_OutwardChequesByStaff`, `vw_OutwardTransfersByStaff` (the posting user's employee number, department and section, for `SELF` scopes) and the live views `vw_TransactionsLive`, `vw_InwardChequesLive`.
+**WabiBankCoreBankingDB (CBS):** `Branches`, `Units`, `Users`, `BusinessCalendar`, `Currencies`, `FxRates`, `Products`, `TransactionCodes`, `Customers` (staff, retail, Priority, SME, corporate; relationship managers), `KycDocuments`, `Accounts` (IBAN, opened by / approved by, dormant and reactivated), `FixedDeposits`, `ClearingSessions`, `ChequeReturnReasons`, `ChequeBooks`, `OutwardCheques` and `InwardCheques` (clearing, returns with reason codes), `OutwardTransfers` (maker, checker, AML screening for SWIFT) and `InwardTransfers`, `Transactions` (every posting with `PostingUnitCode`, `PostedByUserId`, `ApprovedByUserId`, running balance, reversals), `TellerTills`, `MonthEndBalances`, `LoanProducts`, `LoanApplications`, `Loans`, `LoanSchedules`, `LoanRepayments`, `MonthEndArrears`, `MonthEndLoanBalances` (outstanding principal per loan and month end). Views: `vw_TransactionsByStaff`, `vw_OutwardChequesByStaff`, `vw_OutwardTransfersByStaff` (the posting user's employee number, department and section, for `SELF` scopes) and the live views `vw_TransactionsLive`, `vw_InwardChequesLive`.
 
 **WabiBankFinanceDB (FIN):** `Users`, `ChartOfAccounts`, `CostCentres` (every department and section), `FiscalPeriods`, `BudgetVersions` (original and revised FY2025), `BudgetLines`, `BudgetTransfers`, `Vendors`, `PurchaseRequisitions` and lines, `PurchaseOrders` and lines (5 % VAT, approval limits before VAT), `GoodsReceipts`, `VendorInvoices` (three-way match), `Payments` (maker and checker), `FixedAssets`, `JournalEntries` and `JournalLines` (payroll interface, depreciation, accruals, payables, core-banking income).
 
@@ -99,14 +99,14 @@ $SQL -i 06-seed-wabiinsightdb.sql
 
 | Employee | Name | Position | Wabi Insight roles | What they see |
 |---|---|---|---|---|
-| W1001 | Huda Al Marzooqi | Head of IT Security (`ITD-SEC`) | Organization Administrator, Cyber Security | Administers WBK. Digital sign-ins and devices, Personnel system users and access rights, IT access requests (all rows). |
+| W1001 | Huda Al Marzooqi | Head of IT Security (`ITD-SEC`) | Organization Administrator, Cyber Security | Administers WBK. Digital sign-ins and devices, Personnel system users and access rights, the employee directory (Internal columns), IT access requests (all rows). |
 | W1002 | Rashid Al Hammadi | Chief Executive Officer (`CEO`) | Management | Every approved object of the five systems, all rows. |
 | W1003 | Omar Haddad | Branch Manager, Deira (`BR-DXB01`) | Branch Manager | Core Banking, Digital Banking and IT Help Desk rows of **their own branch** (`DEPARTMENT` on `BranchCode` / `PostingUnitCode` / `HomeBranchCode` / `DepartmentCode`), reference tables, no Restricted columns. |
 | W1004 | Priya Menon | Teller, Deira (`BR-DXB01-TLR`) | Teller | **Their own** postings and cheques (`SELF` through `vw_TransactionsByStaff` and `vw_OutwardChequesByStaff`), transaction codes and products. |
 | W1005 | Mariam Al Ketbi | HR officer (`HRD-PSV`) | HR Officer | Personnel and Attendance, all rows, without Restricted columns (Emirates ID, passport). |
-| W1006 | Imran Qureshi | Budget controller (`FIN-BGP`) | Budget Controller | Finance, all rows; Personnel structure and employees; no Restricted columns (vendor IBAN, Emirates ID, passport). |
+| W1006 | Imran Qureshi | Budget controller (`FIN-BGP`) | Budget Controller | Finance, all rows, without Restricted columns (vendor IBAN); the Personnel structure and employee directory with Internal columns only (no dates of birth, mobiles or salary bands). |
 | W1007 | Layla Darwish | Senior AML officer (`CMP-AML`) | Compliance and AML Officer | Core Banking and Digital Banking, all rows including KYC numbers and IBANs; no Personnel. |
-| W1008 | Mark Santos | IT Service Desk Manager (`ITD-SD`) | IT Service Desk Manager | IT Help Desk, all rows; the Personnel employee directory and structure without Restricted columns; no banking or finance data. |
+| W1008 | Mark Santos | IT Service Desk Manager (`ITD-SD`) | IT Service Desk Manager | IT Help Desk, all rows; the Personnel employee directory and structure with Internal columns only; no banking or finance data. |
 
 Everyone also holds **Employee self-service**: their own IT requests and incidents (`SELF` on `RequestedForEmployeeNumber` / `ReportedByEmployeeNumber`). Sign-in e-mails are the Personnel work e-mails, `firstname.lastname@wabibank.example` (`huda.almarzooqi@…`, `rashid.alhammadi@…`, `omar.haddad@…`, `priya.menon@…`, `mariam.alketbi@…`, `imran.qureshi@…`, `layla.darwish@…`, `mark.santos@…`); set `Email` in `#Users` at the top of 06 for real mailboxes. All eight start with `Wabi#Sample#2026` and **must change it at first sign-in**. This known password is for sandboxes only; on a shared server change it immediately or have the administrator reset each user so Wabi Insight e-mails a temporary one (decision H).
 
@@ -122,13 +122,15 @@ SQL logins (change them with `ALTER LOGIN … WITH PASSWORD` outside a sandbox):
 
 ## Questions to try
 
-- *Rashid (CEO):* "Deposits and loans by branch at the end of each quarter", "IT department actual spend against the revised budget per quarter", "Headcount by division and grade".
-- *Omar (Branch Manager):* "Cash deposits and withdrawals per teller this month", "Cheques returned at my branch by reason", "Open IT incidents reported by my branch" — only Deira rows come back.
-- *Priya (Teller):* "My cash deposits and withdrawals per day in December", "My reversed postings" — only their own.
-- *Mariam (HR):* "Absence days by department in Q3", "Leave requests pending approval", "Leavers in 2025 and the date their access was revoked".
-- *Imran (Budget):* "Budget versus actual by department for Q3", "Purchase orders between AED 90,000 and 100,000 by buyer and vendor".
-- *Layla (AML):* "Individual customers with cash deposits of AED 50,000 or more in a day", "Accounts with more than two returned cheques", "Dormant accounts reactivated this year and their transfers".
-- *Mark (Service Desk):* "SLA breach rate by assignment group and quarter", "Configuration items with the most incidents in December", "Access-removal requests fulfilled after the employee's last day".
+The data covers calendar year 2025, so name the period ("in December 2025", "in Q3 2025"): "this month" means the current month and finds nothing.
+
+- *Rashid (CEO):* "Total deposit balances and outstanding loan balances by branch at the end of each quarter of 2025", "IT department actual spend against the revised budget for each quarter of 2025", "Headcount of active employees by division and grade", "ما عدد الموظفين النشطين في كل قطاع؟".
+- *Omar (Branch Manager):* "Cash deposits and withdrawals per teller in December 2025", "Cheques returned at my branch in 2025 by return reason", "IT incidents reported by my branch in December 2025 by category and status" — only Deira rows come back, and the answer says so.
+- *Priya (Teller):* "My cash deposits and withdrawals per day in December 2025", "My reversed postings in 2025" — only their own postings, and the answer says so.
+- *Mariam (HR):* "Absence days by department in Q3 2025", "Leave requests pending approval", "Employees who left in 2025 and the date their system access was revoked".
+- *Imran (Budget):* "Budget versus actual expense by department for Q3 2025", "Purchase orders with a subtotal between AED 90,000 and 100,000 by buyer and vendor".
+- *Layla (AML):* "Individual customers with cash deposits of AED 50,000 or more in a single day in December 2025", "Accounts with more than two returned inward cheques in December 2025", "Dormant accounts reactivated in 2025 and their inward and outward transfers".
+- *Mark (Service Desk):* "SLA breach rate by assignment group and quarter in 2025", "Configuration items with the most incidents in December 2025", "Access-removal requests fulfilled after the employee's last working day".
 
 ## Planted findings
 
@@ -141,7 +143,7 @@ Each one is found with plain SQL; the five Monitoring Rules seeded by 06 find th
 | Core Banking | Structuring: individual customer `C100503` deposits cash just under AED 50,000 on seven December days, then twice a day on 30 and 31 December (AED 57,000 and 58,000 a day) | rule *Cash deposits of AED 55,000 or more in a day (individuals)* |
 | Core Banking | Two accounts (`C100509`, `C105301`) with four returned cheques each in December | rule *More than two returned cheques per account in 30 days* |
 | Core Banking | Sharjah branch returns 9.1 % of deposited cheques (others 2.5–3 %) | `OutwardCheques` by `DepositBranchCode` |
-| Core Banking | Teller `ASHARMA` reverses 224 postings (next: 26) | `Transactions WHERE Status = 'Reversed'` by `ReversedByUserId` |
+| Core Banking | Teller `ASHARMA` reverses 715 postings (next: 63) | `Transactions WHERE Status = 'Reversed'` by `ReversedByUserId` |
 | Core Banking | Dormant account `201000000203` reactivated on 11 November by `HCHAUDHRY3`, then AED 512,000 in and 495,000 out by SWIFT | `Accounts.ReactivatedByUserId`, `InwardTransfers`, `OutwardTransfers` |
 | Core Banking | Abu Dhabi teller `KIYER` posts three cash transactions to their own account (the only staff self-processing in any table) | `Customers.StaffEmployeeNumber` = poster's employee number |
 | Core Banking | Two loans approved above the credit officer's AED 250,000 limit (`LA2500003`, `LA2500004`) | `LoanApplications` joined to `Users.ApprovalLimitAed` |
@@ -157,6 +159,20 @@ Each one is found with plain SQL; the five Monitoring Rules seeded by 06 find th
 | IT Help Desk | The access-removal request for W1396 is fulfilled three days after the last working day | `ServiceRequests` (`ACC-REMOVE`) versus `EmployeeDirectory.TerminationDate` |
 
 The generator docstrings (`build_*.py`) hold the SQL for each finding.
+
+## What the AI sees
+
+The planner reads the catalogue's names and descriptions, never the data, so a code it has not been told about is a guess (and a wrong guess returns nothing). Besides the EN/AR documentation of every table and key column, 06 adds:
+
+- **code lists** on every organization code column: department, branch, unit, section, location, cost centre and division codes with their names (`ITD Information Technology`, `BR-DXB01 Deira (Dubai Main)` …), built from the Personnel model;
+- **value lists** on short coded columns (status, type, category, direction, priority, channel …), read from the source when the seed runs, for example "Values: Approved, Cancelled, Pending, Rejected." Confidential and Restricted columns never get one;
+- view columns inherit the documentation of the same column in their table (the teller's `vw_TransactionsByStaff` explains C/D like `Transactions`).
+
+Re-running 06 refreshes these descriptions, so they follow the data. It never changes permissions that already exist (an administrator's later choices are kept); to apply this version's least-privilege grants to an organization seeded by an older version, remove the WBK roles' permissions first and run 06 again.
+
+## Demo
+
+[`docs/demo/p13-6-wabi-bank.gif`](../../../../docs/demo/p13-6-wabi-bank.gif), recorded from the running app with the real model by `scripts/demo/wabi-bank/record.js` (story and how to run it: [`scripts/demo/wabi-bank/README.md`](../../../demo/wabi-bank/README.md)): the branch manager sees only Deira, the teller only their own postings (and both answers say so), and the AML officer acknowledges the structuring alert.
 
 ## Monitoring Rules (Phase 14)
 

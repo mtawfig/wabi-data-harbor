@@ -16,7 +16,7 @@
  * Usage (API on :5080, web on :4200, Wabi Bank seeded and its five applications connected and approved):
  *   WI_SAMPLE_PASSWORD='<the accounts' password>' \
  *   WI_SQLCMD='sqlcmd -S localhost,1433 -U sa -P <password> -C -d WabiInsightDB' \
- *     node scripts/demo/wabi-bank/record.js [--gif docs/demo/p13-5-wabi-bank.gif] [--videos <dir>] [--screens <dir>]
+ *     node scripts/demo/wabi-bank/record.js [--gif docs/demo/p13-6-wabi-bank.gif] [--videos <dir>] [--screens <dir>]
  *
  * WI_SQLCMD is optional: with it the script makes the cash-deposit rule's job due (one scheduler tick, at most a
  * minute) when no alert is open yet; without it an open alert must already exist (the rule runs daily at 06:30).
@@ -102,14 +102,15 @@ async function ask(page, who, question, note) {
 
 /** The open alert of the cash-deposit rule, making the rule's job due first when none is open (needs WI_SQLCMD). */
 async function cashAlert(page) {
-  const find = async () => ((await api(page, 'GET', '/api/monitoring/alerts?status=Open&pageSize=50')).json?.items ?? []).find((a) => a.ruleName === RULE_NAME);
-  let alert = await find();
+  const find = async (status) => ((await api(page, 'GET', `/api/monitoring/alerts?status=${status}&pageSize=50`)).json?.items ?? []).find((a) => a.ruleName === RULE_NAME);
+  // A re-recording finds the alert already acknowledged (the rule's cool-down keeps it from being raised again): show it as it is.
+  let alert = (await find('Open')) ?? (await find('Acknowledged'));
   if (!alert && process.env.WI_SQLCMD) {
     execSync(`${process.env.WI_SQLCMD} -Q "SET NOCOUNT ON; UPDATE j SET NextRunAt = DATEADD(second, -5, SYSUTCDATETIME()) FROM dbo.ScheduledJobs j JOIN dbo.MonitoringRules m ON m.RuleId = j.TargetId WHERE m.Name = N'${RULE_NAME.replace(/'/g, "''")}'"`, { stdio: 'ignore' });
     const deadline = Date.now() + 3 * 60 * 1000;
-    while (!alert && Date.now() < deadline) { await pause(page, 5000); alert = await find(); }
+    while (!alert && Date.now() < deadline) { await pause(page, 5000); alert = await find('Open'); }
   }
-  if (!alert) throw new Error('No open alert for the cash-deposit rule.');
+  if (!alert) throw new Error('No alert for the cash-deposit rule.');
   return alert;
 }
 
@@ -120,20 +121,26 @@ async function cashAlert(page) {
     await context.addInitScript(() => { try { localStorage.setItem('wi.lang', 'en'); } catch {} });
     const page = await context.newPage();
     await signIn(page, email);
+    // The app follows the user's saved language after sign-in; the recording is in English.
+    await page.waitForTimeout(1500);
+    if ((await page.locator('html').getAttribute('lang')) === 'ar') {
+      await page.getByTestId('language-switcher').first().click();
+      await page.waitForTimeout(800);
+    }
     return { context, page };
   };
 
   // Scene 1: the branch manager sees only the Deira branch.
   const one = await scene(MANAGER);
   await ask(one.page, 'Omar (Branch Manager, Deira) asks for the branch’s cash postings per teller.', QUESTION,
-    'Row scope DEPARTMENT: only postings made at Deira (BR-DXB01) come back — the other five branches are filtered out by the platform, not the prompt.');
+    'Row scope DEPARTMENT: only Deira (BR-DXB01) comes back — filtered by the platform, not the prompt — and the answer says so.');
   await screen(one.page, 'wbk-01-branch-manager-tellers');
   await one.context.close();
 
   // Scene 2: the teller sees only their own postings.
   const two = await scene(TELLER);
   await ask(two.page, 'Priya (Teller, Deira) asks the same question.', QUESTION,
-    'Row scope SELF through the staff view: only Priya’s own postings come back — not the colleagues’.');
+    'Row scope SELF: only Priya’s own postings come back, and the answer says it is not the whole branch.');
   await screen(two.page, 'wbk-02-teller-own-postings');
   await two.context.close();
 
@@ -143,16 +150,24 @@ async function cashAlert(page) {
   await three.page.goto(`${BASE}/app/alerts`);
   await caption(three.page, 'Layla (AML) has a High alert: an individual’s cash deposits reached AED 55,000 within 24 hours.');
   await three.page.waitForSelector('[data-testid="alerts-list"]');
+  if (alert.status !== 'Open') {
+    // The list opens on open alerts; a re-recording shows the acknowledged one.
+    await three.page.getByTestId('alerts-status').click();
+    await three.page.locator('mat-option', { hasText: 'Acknowledged' }).click();
+    await three.page.waitForSelector(`[data-testid="alert-${alert.alertId}"]`);
+  }
   await pause(three.page, 2500);
   await three.page.getByTestId(`alert-${alert.alertId}`).click();
   await three.page.waitForSelector('[data-testid="alert-detail"]');
   await caption(three.page, 'Customer C100503 split cash into deposits just under AED 50,000, then twice a day — a structuring pattern.');
   await pause(three.page, 4500);
   await screen(three.page, 'wbk-03-aml-alert');
-  await three.page.getByTestId('alert-note').click();
-  await three.page.keyboard.type('Structuring pattern on C100503: escalating for a suspicious transaction report review.', { delay: 18 });
-  await three.page.getByTestId('alert-ack').click();
-  await pause(three.page, 1200);
+  if (alert.status === 'Open') {
+    await three.page.getByTestId('alert-note').click();
+    await three.page.keyboard.type('Structuring pattern on C100503: escalating for a suspicious transaction report review.', { delay: 18 });
+    await three.page.getByTestId('alert-ack').click();
+    await pause(three.page, 1200);
+  }
   await caption(three.page, 'A person decides. Alerts never block or suspend anyone automatically; every action is recorded.');
   await pause(three.page, 4500);
   await three.context.close();
