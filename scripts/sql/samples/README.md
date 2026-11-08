@@ -61,6 +61,8 @@ Change the SQL login passwords as well (`ALTER LOGIN … WITH PASSWORD`). They a
 
 ## Questions to try
 
+The seed also gives each of the three applications four example questions in English and Arabic, shown on the Ask page (Organization Administration → Applications → *Example questions* to change them; the seed sets them only while an application has none).
+
 - *Khalid (Management):* "Monthly passengers and load factor in 2025 by airline", "Payroll cost by department for each month", "Spend by supplier rating and how many deliveries were late".
 - *Arjun (Operations Analyst):* "Top 10 routes by delayed departures and their main delay reasons", "AOG requisitions by month and average days to receive", "Show my net pay for each month of 2025" (only his payslips).
 - *Sara (HR and Payroll Officer):* "Overtime hours by department and shift", "Absence days per section in Q3", "Purchase requisitions raised by my department" (HR only).

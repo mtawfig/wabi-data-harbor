@@ -238,6 +238,51 @@ public sealed class ApplicationsAndMetadataTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{grantId}/complete", new { note = "done" })).StatusCode);
     }
 
+    [Fact]
+    public async Task ExampleQuestions_AreWrittenByTheOrganizationsAdministrators_Only()
+    {
+        using var alice = await LoginAsync(TestData.AliceEmail);
+        var created = await (await alice.PostJsonAsync("/api/applications", new { applicationCode = "examples", applicationName = "Examples", applicationNameAr = "أمثلة", databaseType = "SqlServer", connectionString = Source("examples") })).ReadJsonAsync();
+        var applicationId = created.GetProperty("applicationId").GetGuid();
+        Assert.Equal(0, created.GetProperty("exampleQuestions").GetArrayLength());
+
+        // Text is trimmed, control characters and empty rows are dropped, and either language may be missing.
+        var saved = await alice.PutAsJsonAsync(new Uri($"/api/applications/{applicationId}/examples", UriKind.Relative), new
+        {
+            examples = new object[]
+            {
+                new { en = "  Orders per month\u0007 in 2025  ", ar = "الطلبات شهريًا في 2025" },
+                new { en = (string?)null, ar = "  أكبر العملاء حسب المبيعات " },
+                new { en = " ", ar = "" },
+            },
+        });
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var examples = (await saved.ReadJsonAsync()).GetProperty("exampleQuestions").EnumerateArray().ToList();
+        Assert.Equal(2, examples.Count);
+        Assert.Equal("Orders per month in 2025", examples[0].GetProperty("en").GetString());
+        Assert.False(examples[1].TryGetProperty("en", out _)); // the API leaves null members out
+        Assert.Equal("أكبر العملاء حسب المبيعات", examples[1].GetProperty("ar").GetString());
+        Assert.Equal(2, (await (await alice.GetAsync($"/api/applications/{applicationId}")).ReadJsonAsync()).GetProperty("exampleQuestions").GetArrayLength());
+
+        // Limits: six questions of at most 200 characters.
+        var tooMany = await alice.PutAsJsonAsync(new Uri($"/api/applications/{applicationId}/examples", UriKind.Relative), new { examples = Enumerable.Range(1, 7).Select(i => new { en = $"Question {i}", ar = (string?)null }) });
+        Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
+        var tooLong = await alice.PutAsJsonAsync(new Uri($"/api/applications/{applicationId}/examples", UriKind.Relative), new { examples = new[] { new { en = new string('x', 201), ar = (string?)null } } });
+        Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
+
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            Assert.True(await context.AuditLogs.IgnoreQueryFilters().AnyAsync(a => a.EventType == "Application.ExamplesChanged" && a.EntityId == applicationId.ToString() && a.OrganizationId == _db.Data.OrganizationAId));
+        }
+
+        // Organization B's administrator gets 404 for A's application; a plain user has no application endpoints.
+        var bobAdmin = await MakeAdminOfBAsync();
+        Assert.Equal(HttpStatusCode.NotFound, (await bobAdmin.PutAsJsonAsync(new Uri($"/api/applications/{applicationId}/examples", UriKind.Relative), new { examples = new[] { new { en = "Hijacked", ar = (string?)null } } })).StatusCode);
+        using var bob = await LoginAsync(TestData.BobEmail);
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.PutAsJsonAsync(new Uri($"/api/applications/{applicationId}/examples", UriKind.Relative), new { examples = new[] { new { en = "Hijacked", ar = (string?)null } } })).StatusCode);
+        Assert.Equal("Orders per month in 2025", (await (await alice.GetAsync($"/api/applications/{applicationId}")).ReadJsonAsync()).GetProperty("exampleQuestions")[0].GetProperty("en").GetString());
+    }
+
     private async Task<HttpClient> MakeAdminOfBAsync()
     {
         // Organization B has no administrator in the seed; add a dedicated one without touching Bob (other tests rely on him being a plain user).

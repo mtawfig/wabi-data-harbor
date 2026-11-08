@@ -23,7 +23,7 @@
       <ul>
         @for (l of d.lines; track $index) {
           <li><span class="sev" [attr.data-sev]="l.severity">{{ 'monitoring.severity.' + l.severity | transloco }}</span> {{ l.title }}@if (l.occurrences > 1) { (×{{ l.occurrences }}) }
-            <span class="wi-muted">@if (l.redacted) { {{ 'monitoring.alerts.redactedShort' | transloco }} } @else { @if (l.groupKey) { <span class="wi-ltr">{{ l.groupKey }}</span> } @if (l.measure !== undefined && l.measure !== null) { · {{ l.measure | number: '1.0-2' }} } }</span>
+            <span class="wi-muted">@if (l.redacted) { {{ 'monitoring.alerts.redactedShort' | transloco }} } @else { @if (l.groupKey) { <span class="wi-ltr">{{ l.groupKey }}</span> } @if (l.measure !== undefined && l.measure !== null) { · {{ num(l.measure) }} } }</span>
           </li>
         }
       </ul>
@@ -104,7 +104,7 @@
           <dl class="facts">
             @if (d.alert.groupKey && d.alert.groupKey !== '*') { <dt>{{ 'monitoring.alerts.groupKey' | transloco }}</dt><dd class="wi-ltr" data-testid="alert-group-key">{{ d.alert.groupKey }}</dd> }
             @for (r of summaryRows(); track r.key) {
-              @if (r.key !== 'reason') { <dt>{{ 'monitoring.summary.' + r.key | transloco }}</dt><dd>{{ r.key === 'signal' ? ('monitoring.signals.' + r.value | transloco) : r.key === 'basis' ? ('monitoring.basis.' + r.value | transloco) : r.value === true ? ('monitoring.summary.yes' | transloco) : r.value === false ? ('monitoring.summary.no' | transloco) : r.value }}{{ r.percent ? ' %' : '' }}</dd> }
+              @if (r.key !== 'reason') { <dt>{{ 'monitoring.summary.' + r.key | transloco }}</dt><dd>{{ r.key === 'signal' ? ('monitoring.signals.' + r.value | transloco) : r.key === 'basis' ? ('monitoring.basis.' + r.value | transloco) : r.value === true ? ('monitoring.summary.yes' | transloco) : r.value === false ? ('monitoring.summary.no' | transloco) : r.display }}{{ r.percent ? ' %' : '' }}</dd> }
             }
           </dl>
         }
@@ -112,7 +112,7 @@
         <dl class="facts">
           <dt>{{ 'monitoring.alerts.firstSeen' | transloco }}</dt><dd>{{ d.alert.firstSeenAt | date: 'medium' }}</dd>
           <dt>{{ 'monitoring.alerts.lastSeen' | transloco }}</dt><dd>{{ d.alert.lastSeenAt | date: 'medium' }}</dd>
-          <dt>{{ 'monitoring.alerts.occurrences' | transloco }}</dt><dd>{{ d.alert.occurrences }}</dd>
+          <dt>{{ 'monitoring.alerts.occurrences' | transloco }}</dt><dd>{{ num(d.alert.occurrences) }}</dd>
           @if (d.alert.subject; as s) {
             <dt>{{ 'monitoring.alerts.subject' | transloco }}</dt>
             <dd>{{ s.fullName }} <span class="wi-muted wi-ltr">{{ s.email }}</span> <span class="chip" [attr.data-on]="s.status === 'Active'">{{ 'monitoring.userStatus.' + s.status | transloco }}</span></dd>

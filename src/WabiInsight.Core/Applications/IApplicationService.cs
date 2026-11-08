@@ -21,11 +21,15 @@ public sealed record ApplicationDto(
     int ObjectCount,
     int ApprovedObjectCount,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt);
+    DateTimeOffset? UpdatedAt,
+    IReadOnlyList<ApplicationExampleQuestion> ExampleQuestions);
 
 public sealed record SaveApplicationCommand(string ApplicationCode, string ApplicationName, string ApplicationNameAr, string? Description, DatabaseType DatabaseType, string? ConnectionString, string? ConnectionHint);
 
 public sealed record UpdateApplicationCommand(string ApplicationName, string ApplicationNameAr, string? Description, bool IsActive);
+
+/// <summary>One example question in English and/or Arabic; the Ask page shows the one in the interface language, else the other.</summary>
+public sealed record ApplicationExampleQuestion(string? En, string? Ar);
 
 /// <summary>Outcome of a connectivity test. Never contains the connection string.</summary>
 public sealed record ConnectionTestResult(bool Succeeded, string? ServerVersion, string? DatabaseName, bool? ReadOnlyVerified, IReadOnlyList<string> Warnings, string? Error, double DurationMs);
@@ -40,6 +44,9 @@ public interface IApplicationService
     Task<ApplicationDto> CreateAsync(SaveApplicationCommand command, CancellationToken cancellationToken = default);
 
     Task<ApplicationDto> UpdateAsync(Guid applicationId, UpdateApplicationCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the application's example questions (at most <see cref="ApplicationExamples.MaxCount"/>); Organization Administrators only.</summary>
+    Task<ApplicationDto> SetExamplesAsync(Guid applicationId, IReadOnlyList<ApplicationExampleQuestion> examples, CancellationToken cancellationToken = default);
 
     /// <summary>Replaces the encrypted connection string (and fingerprint). The old value is never returned.</summary>
     Task<ApplicationDto> ReplaceConnectionAsync(Guid applicationId, string connectionString, string? connectionHint, CancellationToken cancellationToken = default);

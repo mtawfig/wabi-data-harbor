@@ -153,6 +153,12 @@ public sealed class SampleDatabaseScriptTests : IClassFixture<SampleDatabaseScri
         Assert.Equal(before, await _fixture.ScalarAsync<string>(countsSql));
 
         Assert.Equal(1, await _fixture.ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Organizations WHERE OrganizationCode = N'GAS'"));
+        // Each business application carries example questions in both languages (ISJSON, four each); the built-in one keeps none.
+        Assert.Equal(3, await _fixture.ScalarAsync<int>(
+            "SELECT COUNT(*) FROM dbo.Applications a JOIN dbo.Organizations o ON o.OrganizationId = a.OrganizationId AND o.OrganizationCode = N'GAS' " +
+            "WHERE a.IsBuiltIn = 0 AND ISJSON(a.ExampleQuestionsJson) = 1 AND (SELECT COUNT(*) FROM OPENJSON(a.ExampleQuestionsJson) WITH (en nvarchar(200) '$.en', ar nvarchar(200) '$.ar') e WHERE e.en IS NOT NULL AND e.ar IS NOT NULL) = 4"));
+        Assert.Equal(0, await _fixture.ScalarAsync<int>(
+            "SELECT COUNT(*) FROM dbo.Applications a JOIN dbo.Organizations o ON o.OrganizationId = a.OrganizationId AND o.OrganizationCode = N'GAS' WHERE a.IsBuiltIn = 1 AND a.ExampleQuestionsJson <> N'[]'"));
         Assert.Equal(0, await _fixture.ScalarAsync<int>(
             "SELECT COUNT(*) FROM dbo.OrganizationUsers ou JOIN dbo.Organizations o ON o.OrganizationId = ou.OrganizationId WHERE o.OrganizationCode <> N'GAS' AND ou.Email LIKE N'%@gulfaviation.example'"));
         foreach (var organizationId in new[] { _fixture.Database.Data.OrganizationAId, _fixture.Database.Data.OrganizationBId })

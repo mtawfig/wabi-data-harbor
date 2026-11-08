@@ -58,7 +58,7 @@ public sealed class CrossTenantSweepTests : IDisposable
 
         Probe[] tenantProbes =
         [
-            new("GET", $"/api/applications/{applicationId}"), new("PUT", $"/api/applications/{applicationId}", new { applicationName = "x", applicationNameAr = "x" }), new("PUT", $"/api/applications/{applicationId}/connection", new { connectionString = source }), new("POST", $"/api/applications/{applicationId}/approval", new { isApproved = false }), new("POST", $"/api/applications/{applicationId}/test-connection", new { }),
+            new("GET", $"/api/applications/{applicationId}"), new("PUT", $"/api/applications/{applicationId}", new { applicationName = "x", applicationNameAr = "x" }), new("PUT", $"/api/applications/{applicationId}/examples", new { examples = new[] { new { en = "Hijacked" } } }), new("PUT", $"/api/applications/{applicationId}/connection", new { connectionString = source }), new("POST", $"/api/applications/{applicationId}/approval", new { isApproved = false }), new("POST", $"/api/applications/{applicationId}/test-connection", new { }),
             new("POST", $"/api/metadata/applications/{applicationId}/refresh", new { }), new("GET", $"/api/metadata/applications/{applicationId}/objects"),
             new("PUT", $"/api/departments/{departmentId}", new { departmentCode = "SW-" + tag, departmentNameEn = "Hijacked", departmentNameAr = "x" }),
             new("PUT", $"/api/sections/{sectionId}", new { departmentId, sectionCode = "SW-A", sectionNameEn = "Hijacked", sectionNameAr = "x" }),

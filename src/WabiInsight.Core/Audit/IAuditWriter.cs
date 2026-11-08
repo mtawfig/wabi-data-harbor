@@ -53,6 +53,7 @@ public static class AuditEvents
     public const string ApplicationConnectionReplaced = "Application.ConnectionReplaced";
     public const string ApplicationConnectionTested = "Application.ConnectionTested";
     public const string ApplicationApprovalChanged = "Application.ApprovalChanged";
+    public const string ApplicationExamplesChanged = "Application.ExamplesChanged";
     public const string MetadataRefreshed = "Metadata.Refreshed";
     public const string MetadataObjectUpdated = "Metadata.ObjectUpdated";
     public const string MetadataColumnUpdated = "Metadata.ColumnUpdated";

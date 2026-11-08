@@ -122,6 +122,8 @@ SQL logins (change them with `ALTER LOGIN … WITH PASSWORD` outside a sandbox):
 
 ## Questions to try
 
+06 also gives each of the five applications three to five example questions in English and Arabic, shown on the Ask page; administrators change them under Organization Administration → Applications → *Example questions* (the seed sets them only while an application has none).
+
 The data covers calendar year 2025, so name the period ("in December 2025", "in Q3 2025"): "this month" means the current month and finds nothing.
 
 - *Rashid (CEO):* "Total deposit balances and outstanding loan balances by branch at the end of each quarter of 2025", "IT department actual spend against the revised budget for each quarter of 2025", "Headcount of active employees by division and grade", "ما عدد الموظفين النشطين في كل قطاع؟".

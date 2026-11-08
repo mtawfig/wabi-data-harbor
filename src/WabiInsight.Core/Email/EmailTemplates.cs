@@ -185,7 +185,7 @@ public static class EmailTemplates
 
             if (line.Measure is { } m)
             {
-                parts.Add((ar ? "القيمة: " : "Value: ") + m.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
+                parts.Add((ar ? "القيمة: " : "Value: ") + Common.NumberText.Format(m, ar));
             }
 
             return string.Join(" · ", parts);

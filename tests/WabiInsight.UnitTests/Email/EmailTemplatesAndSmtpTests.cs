@@ -53,4 +53,18 @@ public class EmailTemplatesAndSmtpTests
     {
         Assert.Equal(expected, AdministratorAccountService.Mask(email));
     }
+
+    [Fact]
+    public void Numbers_InEmails_HaveSeparators_AndArabicDigitsInArabic()
+    {
+        Assert.Equal("58,000", Core.Common.NumberText.Format(58000m, arabic: false));
+        Assert.Equal("1,234,567.89", Core.Common.NumberText.Format(1234567.891m, arabic: false));
+        Assert.Equal("٥٨٬٠٠٠", Core.Common.NumberText.Format(58000m, arabic: true));
+        Assert.Equal("١٢٬٥٠٠٫٥", Core.Common.NumberText.Format(12500.5m, arabic: true));
+
+        // The daily digest shows an alert's value as people read it ("Value: 58,000", not "Value: 58000").
+        var line = new Core.Monitoring.DigestLine(Core.Entities.Monitoring.AlertSeverity.High, "Cash deposits", "Cash deposits", 1, false, "C100503", 58000m);
+        Assert.Contains("Value: 58,000", EmailTemplates.AlertDigest("a@b.test", "A", "en", "Org", [line], "https://x.test").HtmlBody, StringComparison.Ordinal);
+        Assert.Contains("القيمة: ٥٨٬٠٠٠", EmailTemplates.AlertDigest("a@b.test", "A", "ar", "Org", [line], "https://x.test").HtmlBody, StringComparison.Ordinal);
+    }
 }

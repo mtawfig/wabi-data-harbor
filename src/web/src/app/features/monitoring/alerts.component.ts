@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -11,6 +11,8 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
+import { LanguageService } from '../../core/i18n/language.service';
+import { formatNumber, formatValue } from '../../shared/format/number-format';
 import {
   AlertDetail,
   AlertPage,
@@ -32,7 +34,6 @@ type AlertAction = 'acknowledge' | 'resolve' | 'dismiss' | 'reopen';
   selector: 'app-alerts',
   imports: [
     DatePipe,
-    DecimalPipe,
     FormsModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -50,6 +51,7 @@ export class AlertsComponent {
   private readonly monitoring = inject(MonitoringService);
   private readonly transloco = inject(TranslocoService);
   private readonly router = inject(Router);
+  private readonly language = inject(LanguageService);
 
   /** ?alert=… from a notification opens that alert. */
   readonly alert = input<string | undefined>(undefined);
@@ -101,10 +103,17 @@ export class AlertsComponent {
       .map((k) => ({
         key: k,
         value: s[k] as string | number | boolean,
+        // Measures, thresholds and counts read as numbers in the interface language ("58,000", not "58000").
+        display: typeof s[k] === 'number' ? formatNumber(s[k] as number, this.language.current()) : String(s[k]),
         // The AI budget rule measures a share of the monthly budget.
         percent: s['signal'] === 'ai_budget' && (k === 'measure' || k === 'threshold'),
       }));
   });
+
+  /** A number in the interface language with separators and at most two decimals. */
+  num(value: unknown): string {
+    return formatValue(value, this.language.current());
+  }
 
   constructor() {
     this.load();

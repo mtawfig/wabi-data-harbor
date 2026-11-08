@@ -94,7 +94,7 @@
             }
             @if (d.rule.definition.data; as data) {
               <dt>{{ 'monitoring.draft.when' | transloco }}</dt>
-              <dd>{{ 'monitoring.draft.condition' | transloco: { aggregate: ('monitoring.aggregates.' + data.measure.aggregate | transloco), operator: ('monitoring.operators.' + data.condition.operator | transloco), value: data.condition.value, hours: data.windowHours } }}@if (data.comparison === 'previous_period') { · {{ 'monitoring.draft.vsPrevious' | transloco }} }</dd>
+              <dd>{{ 'monitoring.draft.condition' | transloco: { aggregate: ('monitoring.aggregates.' + data.measure.aggregate | transloco), operator: ('monitoring.operators.' + data.condition.operator | transloco), value: num(data.condition.value), hours: data.windowHours } }}@if (data.comparison === 'previous_period') { · {{ 'monitoring.draft.vsPrevious' | transloco }} }</dd>
             }
           </dl>
           @if (d.assumptions.length > 0) {
@@ -349,7 +349,7 @@
         <span class="wi-ms-auto"></span>
         <button mat-icon-button type="button" (click)="test.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
       </div>
-      <p>{{ 'monitoring.rules.testSummary' | transloco: { matches: t.result.matchCount, rows: (t.result.rowsExamined | number) } }}</p>
+      <p>{{ 'monitoring.rules.testSummary' | transloco: { matches: t.result.matchCount, rows: num(t.result.rowsExamined) } }}</p>
       @if (t.result.errorCode) { <p class="callout callout--warn"><mat-icon>error_outline</mat-icon>{{ 'monitoring.errors.' + t.result.errorCode | transloco }}</p> }
       @if (t.result.redacted) { <p class="callout"><mat-icon>visibility_off</mat-icon>{{ 'monitoring.rules.testRedacted' | transloco }}</p> }
       @if (t.result.matches.length > 0) {
@@ -358,7 +358,7 @@
             <thead><tr><th>{{ 'monitoring.alerts.groupKey' | transloco }}</th><th class="num">{{ 'monitoring.summary.measure' | transloco }}</th><th class="num">{{ 'monitoring.summary.threshold' | transloco }}</th>@if (t.result.matches[0].previous !== undefined) { <th class="num">{{ 'monitoring.summary.previous' | transloco }}</th> }</tr></thead>
             <tbody>
               @for (m of t.result.matches; track $index) {
-                <tr><td class="wi-ltr">{{ m.subjectName ?? (m.groupKey === '*' ? ('monitoring.rules.wholeObject' | transloco) : m.groupKey) }}</td><td class="num">{{ m.measure | number: '1.0-2' }}</td><td class="num">{{ m.threshold | number: '1.0-2' }}</td>@if (m.previous !== undefined) { <td class="num">{{ m.previous | number: '1.0-2' }}</td> }</tr>
+                <tr><td class="wi-ltr">{{ m.subjectName ?? (m.groupKey === '*' ? ('monitoring.rules.wholeObject' | transloco) : m.groupKey) }}</td><td class="num">{{ num(m.measure) }}</td><td class="num">{{ num(m.threshold) }}</td>@if (m.previous !== undefined) { <td class="num">{{ num(m.previous) }}</td> }</tr>
               }
             </tbody>
           </table>

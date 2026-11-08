@@ -15,6 +15,10 @@ public sealed record CreateApplicationRequest(
 
 public sealed record UpdateApplicationRequest([Required, MaxLength(200)] string ApplicationName, [Required, MaxLength(200)] string ApplicationNameAr, [MaxLength(1000)] string? Description, bool IsActive = true);
 
+public sealed record ApplicationExampleRequest([MaxLength(200)] string? En, [MaxLength(200)] string? Ar);
+
+public sealed record SetApplicationExamplesRequest([Required, MaxLength(6)] IReadOnlyList<ApplicationExampleRequest> Examples);
+
 public sealed record ReplaceConnectionRequest([Required, MaxLength(4000)] string ConnectionString, [MaxLength(300)] string? ConnectionHint);
 
 public sealed record TestConnectionRequest([Required] DatabaseType DatabaseType, [Required, MaxLength(4000)] string ConnectionString);

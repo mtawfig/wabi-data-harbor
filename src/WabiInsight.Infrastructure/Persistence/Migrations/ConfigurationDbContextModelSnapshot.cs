@@ -2047,6 +2047,12 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<string>("EncryptedConnectionString")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ExampleQuestionsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("[]");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 

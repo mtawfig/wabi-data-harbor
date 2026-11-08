@@ -122,6 +122,19 @@ public sealed partial class ApplicationService : IApplicationService
         return (await GetAsync(applicationId, cancellationToken))!;
     }
 
+    public async Task<ApplicationDto> SetExamplesAsync(Guid applicationId, IReadOnlyList<ApplicationExampleQuestion> examples, CancellationToken cancellationToken = default)
+    {
+        var organizationId = RequireAdmin();
+        var normalized = ApplicationExamples.Normalize(examples);
+        var application = await LoadAsync(applicationId, cancellationToken);
+        var before = ApplicationExamples.Parse(application.ExampleQuestionsJson).Count;
+        application.ExampleQuestionsJson = ApplicationExamples.Serialize(normalized);
+        application.UpdatedByUserId = _tenantContext.Principal.UserId;
+        _audit.Append(AuditEvents.ApplicationExamplesChanged, "Application", applicationId.ToString(), new { before, after = normalized.Count }, organizationId);
+        await _context.SaveChangesAsync(cancellationToken);
+        return (await GetAsync(applicationId, cancellationToken))!;
+    }
+
     public async Task<ApplicationDto> ReplaceConnectionAsync(Guid applicationId, string connectionString, string? connectionHint, CancellationToken cancellationToken = default)
     {
         var organizationId = RequireAdmin();
@@ -231,7 +244,7 @@ public sealed partial class ApplicationService : IApplicationService
             a.EncryptedConnectionString != null, a.ConnectionHint, a.LastConnectionTestAt, a.LastConnectionTestSucceeded, a.LastMetadataRefreshAt,
             _context.DatabaseObjects.Count(o => o.ApplicationId == a.ApplicationId && o.IsPresent),
             _context.DatabaseObjects.Count(o => o.ApplicationId == a.ApplicationId && o.IsPresent && o.IsApproved),
-            a.CreatedAt, a.UpdatedAt));
+            a.CreatedAt, a.UpdatedAt, ApplicationExamples.Parse(a.ExampleQuestionsJson)));
 
     private async Task<Application> LoadAsync(Guid applicationId, CancellationToken cancellationToken)
         => await _context.Applications.SingleOrDefaultAsync(a => a.ApplicationId == applicationId, cancellationToken)

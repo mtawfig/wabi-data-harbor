@@ -125,6 +125,11 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
                 """));
         }
 
+        // Every business application carries example questions in both languages; the built-in one keeps none.
+        Assert.Equal(5, await _fixture.ScalarAsync<int>(
+            "SELECT COUNT(*) FROM dbo.Applications a JOIN dbo.Organizations org ON org.OrganizationId = a.OrganizationId AND org.OrganizationCode = N'WBK' " +
+            "WHERE a.IsBuiltIn = 0 AND (SELECT COUNT(*) FROM OPENJSON(a.ExampleQuestionsJson) WITH (en nvarchar(200) '$.en', ar nvarchar(200) '$.ar') e WHERE e.en IS NOT NULL AND e.ar IS NOT NULL) >= 3"));
+
         const string wbkRoles = "JOIN dbo.Roles r ON r.RoleId = p.RoleId JOIN dbo.Organizations org ON org.OrganizationId = r.OrganizationId AND org.OrganizationCode = N'WBK'";
         // Only Management and Compliance may read Restricted columns (Emirates ID, passport, IBAN, KYC numbers).
         Assert.Equal(0, await _fixture.ScalarAsync<int>(

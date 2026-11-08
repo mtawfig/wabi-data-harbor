@@ -324,6 +324,16 @@ BEGIN TRY
     FROM #Apps a WHERE NOT EXISTS (SELECT 1 FROM dbo.Applications x WHERE x.OrganizationId = @OrgId AND x.ApplicationCode = a.AppCode);
     UPDATE a SET ApplicationId = x.ApplicationId FROM #Apps a JOIN dbo.Applications x ON x.OrganizationId = @OrgId AND x.ApplicationCode = a.AppCode;
 
+    -- Example questions on the Ask page. The product ships none for business applications; the organization's administrators
+    -- write questions their data answers (Organization Administration -> Applications). Set only while an application has none.
+    UPDATE x SET ExampleQuestionsJson = e.Json
+    FROM dbo.Applications x JOIN (VALUES
+        (N'FLIGHT-OPS', N'[{"en":"Monthly passengers and load factor in 2025 by airline","ar":"عدد الركاب ومعامل الحمولة شهريًا في 2025 حسب شركة الطيران"},{"en":"Top 10 routes by delayed departures and their main delay reasons","ar":"أعلى 10 وجهات من حيث تأخر المغادرة وأهم أسباب التأخير"},{"en":"Aircraft that operated more than 300 flights in 2025","ar":"الطائرات التي شغّلت أكثر من 300 رحلة في 2025"},{"en":"Flights in December 2025 whose actual arrival was later than scheduled, by route","ar":"رحلات ديسمبر 2025 التي وصلت بعد موعدها المجدول حسب الوجهة"}]'),
+        (N'HR-PAYROLL', N'[{"en":"Payroll cost by department for each month of 2025","ar":"تكلفة الرواتب حسب الإدارة لكل شهر من 2025"},{"en":"Overtime hours by department and shift","ar":"ساعات العمل الإضافي حسب الإدارة والمناوبة"},{"en":"Absence days per section in Q3 2025","ar":"أيام الغياب لكل قسم في الربع الثالث من 2025"},{"en":"Employees in my department by grade","ar":"موظفو إدارتي حسب الدرجة"}]'),
+        (N'PROCUREMENT', N'[{"en":"Spend by supplier rating and how many deliveries were late","ar":"الإنفاق حسب تقييم المورد وعدد التسليمات المتأخرة"},{"en":"AOG requisitions by month and average days to receive","ar":"طلبات AOG حسب الشهر ومتوسط أيام الاستلام"},{"en":"Suppliers whose purchase orders total more than 1,000,000 in 2025","ar":"الموردون الذين يتجاوز مجموع أوامر شرائهم 1,000,000 في 2025"},{"en":"Purchase requisitions raised by my department in 2025","ar":"طلبات الشراء الصادرة عن إدارتي في 2025"}]')
+    ) e(AppCode, Json) ON x.OrganizationId = @OrgId AND x.ApplicationCode = e.AppCode
+    WHERE x.ExampleQuestionsJson = N'[]';
+
     INSERT INTO dbo.DatabaseObjects (ObjectId, OrganizationId, ApplicationId, SchemaName, ObjectName, ObjectType, IsApproved, IsPresent, DiscoveredAt, LastSeenAt, ApprovedByUserId, ApprovedAt, CreatedAt)
     SELECT NEWID(), @OrgId, a.ApplicationId, c.SchemaName, c.ObjectName, MIN(c.ObjectType), 1, 1, @Now, @Now, @AdminUserId, @Now, @Now
     FROM #Catalog c JOIN #Apps a ON a.AppCode = c.AppCode
