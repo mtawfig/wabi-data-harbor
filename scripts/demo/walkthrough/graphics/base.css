@@ -1,0 +1,45 @@
+/* Shared look of the walkthrough's graphic scenes (1920 x 1080). __WEB__ is replaced with the path of src/web by record.mjs. */
+@import url('__WEB__/node_modules/@fontsource/inter/400.css');
+@import url('__WEB__/node_modules/@fontsource/inter/600.css');
+@import url('__WEB__/node_modules/@fontsource/inter/700.css');
+@import url('__WEB__/node_modules/@fontsource/inter/800.css');
+@import url('__WEB__/node_modules/material-icons/iconfont/filled.css');
+
+:root {
+  --navy: #0b1f3a; --deep: #06142a; --ocean: #087df2; --aqua: #22b8cf; --cloud: #f5f8fc; --white: #fff;
+  --muted: rgb(255 255 255 / 68%); --line: rgb(255 255 255 / 12%); --card: rgb(255 255 255 / 6%);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; }
+body {
+  font-family: Inter, system-ui, sans-serif; color: var(--white); background: radial-gradient(1200px 800px at 20% 10%, #12305a 0%, var(--navy) 45%, var(--deep) 100%);
+  -webkit-font-smoothing: antialiased; position: relative;
+}
+/* Slow aurora blobs and a faint grid behind everything. */
+.aurora { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+.aurora i { position: absolute; width: 900px; height: 900px; border-radius: 50%; filter: blur(140px); opacity: .45; animation: drift 18s ease-in-out infinite alternate; }
+.aurora i:nth-child(1) { background: var(--ocean); left: -200px; top: -250px; }
+.aurora i:nth-child(2) { background: var(--aqua); right: -300px; bottom: -350px; animation-duration: 22s; opacity: .35; }
+.aurora i:nth-child(3) { background: #5b5fe8; left: 45%; top: 40%; width: 600px; height: 600px; animation-duration: 26s; opacity: .25; }
+@keyframes drift { to { transform: translate(120px, 80px) scale(1.15); } }
+.grid { position: absolute; inset: 0; z-index: 0; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 80px 80px; mask-image: radial-gradient(circle at 50% 50%, black 0%, transparent 75%); opacity: .35; }
+.stage { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 120px; }
+
+/* Reveal system: elements with data-beat="n" appear when window.showBeat(n) runs; data-until="m" hides them from beat m. */
+[data-beat] { opacity: 0; transform: translateY(28px) scale(.98); transition: opacity .9s var(--ease), transform .9s var(--ease); transition-delay: calc(var(--i, 0) * 90ms); }
+[data-beat].in { opacity: 1; transform: none; }
+[data-beat].out { opacity: 0; transform: translateY(-24px) scale(.98); transition-delay: 0s; }
+.layer { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 140px; }
+
+.eyebrow { font: 600 22px/1 Inter; letter-spacing: .32em; text-transform: uppercase; color: var(--aqua); margin-bottom: 26px; }
+h1 { font: 800 92px/1.04 Inter; letter-spacing: -.02em; text-align: center; }
+h2 { font: 800 68px/1.08 Inter; letter-spacing: -.015em; text-align: center; }
+.lead { font: 400 34px/1.45 Inter; color: var(--muted); text-align: center; max-width: 1400px; margin-top: 28px; }
+.grad { background: linear-gradient(90deg, #6fc3ff, var(--aqua) 55%, #8ef0d0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.chip { display: inline-flex; align-items: center; gap: 12px; padding: 14px 24px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font: 600 26px/1 Inter; }
+.chip .material-icons { color: var(--aqua); font-size: 30px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; backdrop-filter: blur(8px); }
+.material-icons { font-family: 'Material Icons'; font-weight: normal; font-style: normal; line-height: 1; letter-spacing: normal; text-transform: none; display: inline-block; white-space: nowrap; direction: ltr; -webkit-font-feature-settings: 'liga'; font-feature-settings: 'liga'; }
+.brandbar { position: absolute; left: 60px; bottom: 44px; z-index: 2; display: flex; align-items: center; gap: 14px; opacity: .85; font: 600 22px/1 Inter; }
+.brandbar img { height: 34px; }

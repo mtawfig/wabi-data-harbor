@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>For every organization</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  .stage { justify-content: flex-start; padding-top: 90px; }
+  .grid12 { display: grid; grid-template-columns: repeat(4, 380px); gap: 22px; margin-top: 54px; }
+  .tile { display: flex; align-items: center; gap: 20px; padding: 26px 28px; }
+  .tile .material-icons { font-size: 46px; color: var(--aqua); background: rgb(34 184 207 / 12%); border-radius: 16px; padding: 12px; }
+  .tile span:last-child { font: 600 28px/1.2 Inter; }
+  .bottom { display: flex; align-items: center; gap: 28px; margin-top: 56px; }
+  .cta { display: flex; align-items: center; gap: 22px; padding: 26px 34px; background: linear-gradient(90deg, rgb(8 125 242 / 35%), rgb(34 184 207 / 25%)); border: 1px solid rgb(255 255 255 / 25%); border-radius: 22px; }
+  .cta .material-icons { font-size: 44px; color: #8ef0d0; }
+  .cta b { font: 700 32px/1.2 Inter; display: block; }
+  .cta small { font: 500 24px/1.4 Inter; color: var(--muted); }
+</style></head>
+<body>
+  <div class="aurora"><i></i><i></i><i></i></div><div class="grid"></div>
+  <div class="stage">
+    <div class="eyebrow" data-beat="0">One platform</div>
+    <h2 data-beat="0" style="--i:1">Built for <span class="grad">every organization</span></h2>
+    <div class="grid12" data-stagger>
+      <div class="tile card" data-beat="0"><span class="material-icons">account_balance</span><span>Banks &amp; finance</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">verified_user</span><span>Insurance</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">flight</span><span>Airlines &amp; airports</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">local_hospital</span><span>Hospitals &amp; healthcare</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">gavel</span><span>Government entities</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">storefront</span><span>Retail &amp; e-commerce</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">cell_tower</span><span>Telecom operators</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">school</span><span>Universities &amp; schools</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">local_shipping</span><span>Logistics &amp; ports</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">hotel</span><span>Hotels &amp; hospitality</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">bolt</span><span>Energy &amp; utilities</span></div>
+      <div class="tile card" data-beat="0"><span class="material-icons">precision_manufacturing</span><span>Manufacturing</span></div>
+    </div>
+    <div class="bottom">
+      <span class="chip" data-beat="1"><span class="material-icons">storage</span>SQL Server</span>
+      <span class="chip" data-beat="1" style="--i:1"><span class="material-icons">storage</span>Oracle</span>
+      <div class="cta" data-beat="1" style="--i:3"><span class="material-icons">support_agent</span><div><b>Contact WabiTex Solutions for a demo on your data</b><small>__WEBSITE__ · __EMAIL__</small></div></div>
+    </div>
+  </div>
+  <script src="stage.js"></script>
+</body></html>
