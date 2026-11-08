@@ -43,6 +43,10 @@ public sealed class ApplicationsController : ControllerBase
     public async Task<ActionResult<ApplicationDto>> Update(Guid id, [FromBody] UpdateApplicationRequest request, CancellationToken cancellationToken)
         => Ok(await _applications.UpdateAsync(id, new UpdateApplicationCommand(request.ApplicationName, request.ApplicationNameAr, request.Description, request.IsActive), cancellationToken));
 
+    [HttpPut("{id:guid}/examples")]
+    public async Task<ActionResult<ApplicationDto>> SetExamples(Guid id, [FromBody] SetApplicationExamplesRequest request, CancellationToken cancellationToken)
+        => Ok(await _applications.SetExamplesAsync(id, request.Examples.Select(e => new ApplicationExampleQuestion(e.En, e.Ar)).ToList(), cancellationToken));
+
     [HttpPut("{id:guid}/connection")]
     public async Task<ActionResult<ApplicationDto>> ReplaceConnection(Guid id, [FromBody] ReplaceConnectionRequest request, CancellationToken cancellationToken)
         => Ok(await _applications.ReplaceConnectionAsync(id, request.ConnectionString, request.ConnectionHint, cancellationToken));

@@ -1,7 +1,7 @@
 import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -18,6 +18,11 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { Application, ConnectionTestResult, DATABASE_TYPES, DatabaseType } from '../../../core/organizations/applications.models';
 import { ApplicationsService } from '../../../core/organizations/applications.service';
 import { problemMessage } from '../../../core/problem-message';
+
+interface ExampleControls {
+  en: FormControl<string>;
+  ar: FormControl<string>;
+}
 
 /**
  * Applications (specification §11): the organization's data sources. The connection string is typed once,
@@ -42,6 +47,8 @@ export class ApplicationsComponent {
   readonly editing = signal<Application | null>(null);
   readonly showForm = signal(false);
   readonly connectionFor = signal<Application | null>(null);
+  readonly examplesFor = signal<Application | null>(null);
+  readonly maxExamples = 6;
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly testResult = signal<ConnectionTestResult | null>(null);
@@ -61,6 +68,13 @@ export class ApplicationsComponent {
     connectionString: ['', Validators.required],
     connectionHint: ['', Validators.maxLength(300)],
   });
+
+  /** Example questions of one application: English and Arabic text per row (either may be empty, not both). */
+  readonly examplesForm = new FormGroup({ items: new FormArray<FormGroup<ExampleControls>>([]) });
+
+  get exampleRows(): FormArray<FormGroup<ExampleControls>> {
+    return this.examplesForm.controls.items;
+  }
 
   readonly custom = computed(() => this.items().filter((a) => !a.isBuiltIn));
   readonly builtIn = computed(() => this.items().filter((a) => a.isBuiltIn));
@@ -84,6 +98,7 @@ export class ApplicationsComponent {
     this.form.controls.databaseType.enable();
     this.testResult.set(null);
     this.connectionFor.set(null);
+    this.examplesFor.set(null);
     this.showForm.set(true);
     this.error.set(null);
   }
@@ -95,6 +110,7 @@ export class ApplicationsComponent {
     this.form.controls.databaseType.disable();
     this.testResult.set(null);
     this.connectionFor.set(null);
+    this.examplesFor.set(null);
     this.showForm.set(true);
     this.error.set(null);
   }
@@ -104,12 +120,57 @@ export class ApplicationsComponent {
     this.connectionForm.reset({ connectionString: '', connectionHint: a.connectionHint ?? '' });
     this.testResult.set(null);
     this.showForm.set(false);
+    this.examplesFor.set(null);
     this.error.set(null);
+  }
+
+  startExamples(a: Application): void {
+    this.exampleRows.clear();
+    for (const e of a.exampleQuestions ?? []) {
+      this.addExample(e.en ?? '', e.ar ?? '');
+    }
+    if (this.exampleRows.length === 0) {
+      this.addExample();
+    }
+    this.examplesFor.set(a);
+    this.showForm.set(false);
+    this.connectionFor.set(null);
+    this.testResult.set(null);
+    this.error.set(null);
+  }
+
+  addExample(en = '', ar = ''): void {
+    if (this.exampleRows.length >= this.maxExamples) {
+      return;
+    }
+    this.exampleRows.push(
+      new FormGroup<ExampleControls>({
+        en: new FormControl(en, { nonNullable: true, validators: Validators.maxLength(200) }),
+        ar: new FormControl(ar, { nonNullable: true, validators: Validators.maxLength(200) }),
+      }),
+    );
+  }
+
+  removeExample(index: number): void {
+    this.exampleRows.removeAt(index);
+  }
+
+  submitExamples(): void {
+    const target = this.examplesFor();
+    if (!target || this.examplesForm.invalid || this.busy()) {
+      this.examplesForm.markAllAsTouched();
+      return;
+    }
+    const examples = this.exampleRows.getRawValue()
+      .map((e) => ({ en: e.en.trim() || null, ar: e.ar.trim() || null }))
+      .filter((e) => e.en || e.ar);
+    this.run(this.applications.setExamples(target.applicationId, examples), 'admin.applications.examples.saved', () => this.examplesFor.set(null));
   }
 
   cancel(): void {
     this.showForm.set(false);
     this.connectionFor.set(null);
+    this.examplesFor.set(null);
   }
 
   submit(): void {

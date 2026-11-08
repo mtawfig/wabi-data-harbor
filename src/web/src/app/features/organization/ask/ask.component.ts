@@ -28,6 +28,12 @@ interface Rejection {
  * them out as a dashboard: narrative first, headline numbers, charts, then the detail tables, and
  * "How this was computed" with the redacted SQL of every query. History and sharing arrive with P9.
  */
+/** An example question chip: administrator-written text, or a key of the platform's built-in examples. */
+interface ExampleChip {
+  text?: string;
+  key?: string;
+}
+
 @Component({
   selector: 'app-ask',
   imports: [FormsModule, RouterLink, MatButtonModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, AnalysisAnswerComponent],
@@ -49,9 +55,28 @@ export class AskComponent {
   readonly error = signal<string | null>(null);
   readonly rejection = signal<Rejection | null>(null);
   readonly answer = signal<AskResponse | null>(null);
-  readonly examples = ['e1', 'e2', 'e3'];
-
   readonly application = computed(() => this.applications().find((a) => a.applicationId === this.selectedApplication()) ?? null);
+
+  /**
+   * Suggestions for the chosen application: the questions its administrators wrote, in the interface language (else the
+   * other one). The built-in Platform Insights application falls back to the platform's own examples; a business
+   * application without examples shows none, because only its organization knows what its data can answer.
+   */
+  readonly exampleChips = computed<ExampleChip[]>(() => {
+    const app = this.application();
+    if (!app) {
+      return [];
+    }
+    const arabic = this.language.current() === 'ar';
+    const own = (app.exampleQuestions ?? [])
+      .map((e) => (arabic ? e.ar || e.en : e.en || e.ar)?.trim())
+      .filter((text): text is string => !!text)
+      .map((text) => ({ text }));
+    if (own.length > 0) {
+      return own;
+    }
+    return app.isBuiltIn ? ['e1', 'e2', 'e3'].map((key) => ({ key })) : [];
+  });
   constructor() {
     this.ai.askableApplications().subscribe({
       next: (apps) => {
@@ -73,8 +98,8 @@ export class AskComponent {
     return this.language.current() === 'ar' ? a.applicationNameAr : a.applicationName;
   }
 
-  useExample(key: string): void {
-    this.prompt.set(this.transloco.translate(`ask.examples.${key}`));
+  useExample(chip: ExampleChip): void {
+    this.prompt.set(chip.key ? this.transloco.translate(`ask.examples.${chip.key}`) : (chip.text ?? ''));
   }
 
   submit(): void {

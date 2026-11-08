@@ -51,6 +51,13 @@ public class Application : AuditableEntity, ITenantOwned
     /// <summary>Server/database hint typed by the administrator; shown instead of the connection string.</summary>
     public string? ConnectionHint { get; set; }
 
+    /// <summary>
+    /// Example questions shown on the Ask page for this application, written by the organization's administrators
+    /// (JSON array of <c>{ "en": …, "ar": … }</c>, see <see cref="WabiInsight.Core.Applications.ApplicationExamples"/>). The product ships none
+    /// for business applications: every organization writes questions its own data answers.
+    /// </summary>
+    public string ExampleQuestionsJson { get; set; } = "[]";
+
     public DateTimeOffset? LastConnectionTestAt { get; set; }
 
     public bool? LastConnectionTestSucceeded { get; set; }

@@ -41,13 +41,15 @@
       </mat-form-field>
 
       <div class="ask__actions">
-        <div class="ask__examples">
-          <span class="wi-muted">{{ 'ask.examplesTitle' | transloco }}</span>
-          <mat-chip-set>
-            @for (key of examples; track key) {
-              <mat-chip (click)="useExample(key)" class="ask__chip">{{ 'ask.examples.' + key | transloco }}</mat-chip>
-            }
-          </mat-chip-set>
+        <div class="ask__examples" data-testid="ask-examples">
+          @if (exampleChips().length > 0) {
+            <span class="wi-muted">{{ 'ask.examplesTitle' | transloco }}</span>
+            <mat-chip-set>
+              @for (chip of exampleChips(); track $index) {
+                <mat-chip (click)="useExample(chip)" class="ask__chip" [attr.data-testid]="'ask-example-' + $index">{{ chip.key ? ('ask.examples.' + chip.key | transloco) : chip.text }}</mat-chip>
+              }
+            </mat-chip-set>
+          }
         </div>
         <button mat-flat-button type="button" (click)="submit()" [disabled]="busy() || !prompt().trim() || !selectedApplication()" data-testid="ask-submit">
           <mat-icon>auto_awesome</mat-icon>{{ 'ask.submit' | transloco }}

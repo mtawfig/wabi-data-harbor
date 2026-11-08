@@ -136,6 +136,17 @@ Captured from the running app with the Wabi Bank sample organization (`scripts/s
 | Teller's answer limited to their own postings (`SELF`) | Teller, Deira | [p13-7-answer-access-self-en](screenshots/p13-7-answer-access-self-en.png) |
 | Branch manager's answer limited to the branch (`DEPARTMENT`), Arabic | Branch Manager, Deira | [p13-7-answer-access-department-ar](screenshots/p13-7-answer-access-department-ar.png) · [p13-7-answer-access-department-ar-mobile](screenshots/p13-7-answer-access-department-ar-mobile.png) |
 
+## P13.9 — Example questions and readable numbers
+
+Captured from the running app with the Wabi Bank sample organization.
+
+| Screen | Signed in as | Files |
+|---|---|---|
+| Example questions editor (English and Arabic per row, at most six) | Organization Administrator | [p13-9-admin-examples-en](screenshots/p13-9-admin-examples-en.png) |
+| Ask page: the application's own examples; a click fills the question | Compliance and AML Officer | [p13-9-ask-examples-en](screenshots/p13-9-ask-examples-en.png) |
+| Ask page in Arabic on a phone: long examples wrap | HR officer | [p13-9-ask-examples-ar-mobile](screenshots/p13-9-ask-examples-ar-mobile.png) |
+| Alert detail with formatted value and threshold (58,000 / 55,000), English and Arabic digits | Compliance and AML Officer | [p13-9-alert-numbers-en](screenshots/p13-9-alert-numbers-en.png) · [p13-9-alert-numbers-ar](screenshots/p13-9-alert-numbers-ar.png) |
+
 ## Feature screenshots by PR
 
 Earlier PRs keep their own captures under `docs/screenshots/p<phase>-<n>-*.png` (listed per PR in `docs/DESIGN_SYSTEM.md`), the recorded demo under `docs/demo/`, and the brand sheet at `docs/screenshots/p11-1-brand-sheet.png`.

@@ -3,7 +3,24 @@
 .ask__notice, .ask__scope { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: -8px 0 12px; mat-icon { color: var(--wi-ocean); font-size: 18px; width: 18px; height: 18px; } }
 .ask__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
 .ask__examples { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
-.ask__chip { cursor: pointer; }
+// Administrator-written examples can be long: the chip grows with its text instead of clipping a second line.
+.ask__chip {
+  cursor: pointer;
+  height: auto;
+  min-height: 32px;
+  max-width: 100%;
+
+  ::ng-deep .mdc-evolution-chip__cell,
+  ::ng-deep .mdc-evolution-chip__action {
+    height: auto;
+  }
+
+  ::ng-deep .mdc-evolution-chip__text-label {
+    white-space: normal;
+    line-height: 1.35;
+    padding-block: 6px;
+  }
+}
 .ask__working { margin: 8px 0 0; }
 .ask__results { min-height: 220px; display: grid; place-items: center; }
 .ask__empty { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 520px; mat-icon { font-size: 40px; width: 40px; height: 40px; color: var(--wi-aqua); margin-bottom: 8px; } }

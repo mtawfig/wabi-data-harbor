@@ -64,8 +64,12 @@ public sealed class AnalysisTests : IDisposable
         var (_, managerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId);
         using var manager = await LoginAsync(managerEmail);
 
+        // The administrators' example questions reach the Ask page of everyone who may ask about the application.
+        Assert.Equal(HttpStatusCode.OK, (await alice.PutAsJsonAsync(new Uri($"/api/applications/{applicationId}/examples", UriKind.Relative), new { examples = new[] { new { en = "Tickets per status this year", ar = "التذاكر حسب الحالة هذا العام" } } })).StatusCode);
         var askable = await (await manager.GetAsync("/api/ai/applications")).ReadJsonAsync();
         Assert.Contains(askable.EnumerateArray(), a => a.GetProperty("applicationId").GetGuid() == applicationId && a.GetProperty("objectCount").GetInt32() >= 1);
+        var askableExamples = askable.EnumerateArray().Single(a => a.GetProperty("applicationId").GetGuid() == applicationId).GetProperty("exampleQuestions");
+        Assert.Equal("التذاكر حسب الحالة هذا العام", askableExamples[0].GetProperty("ar").GetString());
 
         // Data to aggregate: tickets of every impact in organization A (the test database is the business source).
         foreach (var impact in new[] { "High", "High", "Medium", "Low", "Critical" })

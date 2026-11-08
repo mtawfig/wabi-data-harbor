@@ -71,6 +71,13 @@ export interface AskableApplication {
   databaseType: string;
   isBuiltIn: boolean;
   objectCount: number;
+  /** Example questions written by the organization's administrators (EN and/or AR). */
+  exampleQuestions?: ApplicationExample[];
+}
+
+export interface ApplicationExample {
+  en?: string | null;
+  ar?: string | null;
 }
 
 export interface ResultColumn {

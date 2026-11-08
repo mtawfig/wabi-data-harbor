@@ -25,6 +25,10 @@ export class ApplicationsService {
     return this.http.put<Application>(`/api/applications/${id}`, request);
   }
 
+  setExamples(id: string, examples: { en?: string | null; ar?: string | null }[]): Observable<Application> {
+    return this.http.put<Application>(`/api/applications/${id}/examples`, { examples });
+  }
+
   replaceConnection(id: string, connectionString: string, connectionHint?: string): Observable<Application> {
     return this.http.put<Application>(`/api/applications/${id}/connection`, { connectionString, connectionHint: connectionHint || null });
   }

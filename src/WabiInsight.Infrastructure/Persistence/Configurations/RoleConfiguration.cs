@@ -63,6 +63,7 @@ internal sealed class ApplicationConfiguration : IEntityTypeConfiguration<Applic
 
         builder.HasOne<Organization>().WithMany().HasForeignKey(a => a.OrganizationId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(a => a.ConnectionHint).HasMaxLength(300);
+        builder.Property(a => a.ExampleQuestionsJson).IsRequired().HasDefaultValue("[]");
 
         builder.Property(a => a.ApplicationName).HasMaxLength(200).IsRequired();
         builder.Property(a => a.ApplicationNameAr).HasMaxLength(200).IsRequired();
