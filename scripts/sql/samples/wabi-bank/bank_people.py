@@ -335,7 +335,7 @@ def _people():
     _index()
     r = rng(20250101)
     nat_weights = [(c, c[4]) for c in COUNTRIES]
-    used_emails, used_users = set(), set()
+    used_users = set()
     slots = []  # one per job: dept, section, position code, grade, level, has_user
 
     for dep in HQ_DEPARTMENTS:
@@ -355,14 +355,6 @@ def _people():
     def name_for(nat, female):
         (first, first_ar), (last, last_ar) = bank_names.pick(r, nat[5], female)
         return first, last, first_ar, last_ar
-
-    def unique_email(first, last):
-        base = f"{first}.{last}".lower().replace(" ", "").replace("'", "")
-        e, n = f"{base}@{DOMAIN}", 2
-        while e in used_emails:
-            e, n = f"{base}{n}@{DOMAIN}", n + 1
-        used_emails.add(e)
-        return e
 
     def unique_user(first, last):
         base = (first[0] + _clean(last))[:10]
@@ -422,9 +414,11 @@ def _people():
             "HireDate": hire, "TerminationDate": None, "TerminationReason": None,
             "DivisionCode": DEPT[slot["dept"]]["DivisionCode"], "DepartmentCode": slot["dept"], "SectionCode": sect, "LocationCode": loc,
             "PositionCode": slot["pos"], "GradeCode": slot["grade"], "Level": slot["level"], "Title": slot["title"],
-            "ShiftCode": shift, "WeeklyOffDays": off_days, "WorkEmail": unique_email(first, last) if has_user else None,
-            "MobileNumber": f"+971 5{r.choice('024568')} {r.randint(1000000, 9999999)}",
-            "EmiratesIdNumber": f"784-{dob.year}-{r.randint(1000000, 9999999)}-{r.randint(0, 9)}",
+            # Contact details and identity numbers are visibly fictional: the work e-mail is set from the employee number once
+            # numbers are assigned, mobiles use the non-existent country code +000 and Emirates IDs the prefix 000 (not 784).
+            "ShiftCode": shift, "WeeklyOffDays": off_days, "WorkEmail": has_user,
+            "MobileNumber": f"+000 5{r.choice('024568')} {r.randint(1000000, 9999999)}",
+            "EmiratesIdNumber": f"000-{dob.year}-{r.randint(1000000, 9999999)}-{r.randint(0, 9)}",
             "PassportNumber": None if nat[0] == "AE" else f"{r.choice('ABCDEFGHJKLMNPRSTUVWXYZ')}{r.choice('ABCDEFGHJKLMNPRSTUVWXYZ')}{r.randint(1000000, 9999999)}",
             "UserId": unique_user(first, last) if has_user else None,
         }
@@ -483,6 +477,9 @@ def _people():
     rest = sorted((p for p in people if p["EmployeeNumber"] is None), key=lambda p: (p["HireDate"], p["Slot"], p["LastName"], p["FirstName"]))
     for n, p in enumerate(rest, 1101):
         p["EmployeeNumber"] = f"W{n}"
+    # Work e-mails name no one: the employee number at the fictional domain (w1004@wabibank.example).
+    for p in people:
+        p["WorkEmail"] = f"{p['EmployeeNumber'].lower()}@{DOMAIN}" if p["WorkEmail"] else None
 
     # Movements in 2025: branch-to-branch transfers (same section type) and promotions.
     movements = []

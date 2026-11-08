@@ -140,7 +140,7 @@ def customers():
         employer = (r.choice(EXTERNAL_EMPLOYERS) if r.random() < 0.6 else None) if salaried else None
         risk = "High" if r.random() < 0.03 else ("Medium" if r.random() < 0.22 else "Low")
         out.append({"CIF": f"C{n}", "CustomerType": "Individual", "Segment": segment, "FullName": f"{first} {last}", "FullNameAr": name_ar, "Gender": "F" if female else "M",
-                    "DateOfBirth": dob, "NationalityCode": nat[0], "MobileNumber": f"+971 5{r.choice('024568')} {r.randint(1000000, 9999999)}",
+                    "DateOfBirth": dob, "NationalityCode": nat[0], "MobileNumber": f"+000 5{r.choice('024568')} {r.randint(1000000, 9999999)}",
                     "RiskRating": risk, "IsPep": risk == "High" and r.random() < 0.3, "HomeBranchCode": branch,
                     "RelationshipManagerEmployeeNumber": rm_for(branch, segment, day), "OnboardedDate": day, "CreatedByUserId": uid, "IsStaff": False,
                     "StaffEmployeeNumber": None, "EmployerName": employer, "MonthlySalary": salary})
@@ -160,7 +160,7 @@ def customers():
             uid, day = onboard_actor(branch, start)
             out.append({"CIF": f"C{n}", "CustomerType": kind, "Segment": kind, "FullName": name, "FullNameAr": None, "Gender": None,
                         "DateOfBirth": None, "IncorporationDate": day - dt.timedelta(days=r.randint(200, 4000)), "NationalityCode": "AE",
-                        "MobileNumber": f"+971 4 {r.randint(1000000, 9999999)}", "RiskRating": "Medium" if r.random() < 0.35 else ("High" if r.random() < 0.06 else "Low"),
+                        "MobileNumber": f"+000 4 {r.randint(1000000, 9999999)}", "RiskRating": "Medium" if r.random() < 0.35 else ("High" if r.random() < 0.06 else "Low"),
                         "IsPep": False, "HomeBranchCode": branch, "RelationshipManagerEmployeeNumber": rm_for(branch, kind, day), "OnboardedDate": day,
                         "CreatedByUserId": uid, "IsStaff": False, "StaffEmployeeNumber": None, "EmployerName": None, "MonthlySalary": None,
                         "Turnover": round(r.lognormvariate(math.log(4_000_000 if kind == "SME" else 60_000_000), 0.6), -3)})

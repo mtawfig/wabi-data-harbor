@@ -790,7 +790,7 @@ BEGIN TRY
         INSERT INTO dbo.Organizations (OrganizationId, OrganizationCode, OrganizationName, OrganizationNameAr, Description, ContactEmail, ContactPhone, CountryCode, TimeZone,
                                        DefaultLanguage, Status, CreatedAt, RequireSecondAdminApprovalForSupportAccess)
         VALUES (@OrgId, @OrgCode, @OrgName, @OrgNameAr, N'Sample organization (fictional): a UAE retail and commercial bank with Personnel, Core Banking, Finance, Digital Banking and IT Help Desk sources.',
-                (SELECT Email FROM #Users WHERE EmployeeNumber = N'W1001'), N'+971 4 000 0000', N'AE', N'Asia/Dubai', N'en', N'Active', @Now, 0);
+                (SELECT Email FROM #Users WHERE EmployeeNumber = N'W1001'), N'+000 4 000 0000', N'AE', N'Asia/Dubai', N'en', N'Active', @Now, 0);
     END;
 
     INSERT INTO dbo.Roles (RoleId, OrganizationId, RoleCode, NameEn, NameAr, Description, IsSystem, IsActive, TemplateVersion, CreatedAt)
@@ -828,7 +828,8 @@ BEGIN TRY
     UPDATE u SET UserId = ou.UserId FROM #Users u JOIN dbo.OrganizationUsers ou ON ou.OrganizationId = @OrgId AND ou.EmployeeNumber = u.EmployeeNumber WHERE u.UserId IS NULL;
     UPDATE #Users SET UserId = NEWID() WHERE UserId IS NULL;
     -- Sample users created by an earlier version keep their account (matched by employee number above) and take the current
-    -- generic names; a sample e-mail (@wabibank.example) follows Personnel too, while a real mailbox set by an administrator is kept.
+    -- generic names; a sample e-mail (@wabibank.example) follows Personnel too (now w1001@… style), while a real mailbox set by an
+    -- administrator is kept.
     UPDATE ou SET FullName = u.FullName FROM dbo.OrganizationUsers ou JOIN #Users u ON u.UserId = ou.UserId WHERE ou.FullName <> u.FullName;
     UPDATE li SET NormalizedEmail = UPPER(LTRIM(RTRIM(u.Email)))
     FROM dbo.LoginIdentities li JOIN dbo.OrganizationUsers ou ON li.PrincipalType = N'OrganizationUser' AND li.PrincipalId = ou.UserId
@@ -839,6 +840,10 @@ BEGIN TRY
     FROM dbo.OrganizationUsers ou JOIN #Users u ON u.UserId = ou.UserId
     JOIN dbo.LoginIdentities li ON li.PrincipalType = N'OrganizationUser' AND li.PrincipalId = ou.UserId AND li.NormalizedEmail = UPPER(LTRIM(RTRIM(u.Email)))
     WHERE ou.NormalizedEmail LIKE N'%@WABIBANK.EXAMPLE' AND ou.NormalizedEmail <> UPPER(LTRIM(RTRIM(u.Email)));
+    -- Accounts still on a sample sign-in also take the current (fictional) mobile number from Personnel.
+    UPDATE ou SET PhoneNumber = u.MobileNumber FROM dbo.OrganizationUsers ou JOIN #Users u ON u.UserId = ou.UserId
+    WHERE ou.NormalizedEmail LIKE N'%@WABIBANK.EXAMPLE' AND ISNULL(ou.PhoneNumber, N'') <> u.MobileNumber;
+    UPDATE dbo.Organizations SET ContactPhone = N'+000 4 000 0000' WHERE OrganizationId = @OrgId AND ContactPhone = N'+971 4 000 0000';
     UPDATE dbo.Organizations SET ContactEmail = (SELECT Email FROM #Users WHERE EmployeeNumber = N'W1001')
     WHERE OrganizationId = @OrgId AND ContactEmail LIKE N'%@wabibank.example' AND ContactEmail <> (SELECT Email FROM #Users WHERE EmployeeNumber = N'W1001');
     INSERT INTO dbo.OrganizationUsers (UserId, OrganizationId, Email, NormalizedEmail, FullName, EmployeeNumber, PhoneNumber, DepartmentId, SectionId, PreferredLanguage, Status,

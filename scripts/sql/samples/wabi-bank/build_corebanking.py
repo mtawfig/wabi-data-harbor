@@ -408,7 +408,7 @@ CROSS APPLY gen.Rand(DATEPART(DAYOFYEAR, d.D) * 100 + c.Phase * 10) r;
 -- KYC documents: Emirates ID for every individual, passport for expatriates, trade licence for companies.
 INSERT INTO dbo.KycDocuments (CIF, DocumentType, DocumentNumber, IssueDate, ExpiryDate, VerifiedByUserId, VerifiedDate, Status)
 SELECT c.CIF, k.DocType,
-       CASE k.DocType WHEN N'EmiratesId' THEN CONCAT(N'784-', YEAR(c.DateOfBirth), N'-', 1000000 + CAST(r.R1 * 8999999 AS int), N'-', CAST(r.R2 * 9 AS int))
+       CASE k.DocType WHEN N'EmiratesId' THEN CONCAT(N'000-', YEAR(c.DateOfBirth), N'-', 1000000 + CAST(r.R1 * 8999999 AS int), N'-', CAST(r.R2 * 9 AS int))
                       WHEN N'Passport' THEN CONCAT(CHAR(65 + CAST(r.R3 * 26 AS int)), CHAR(65 + CAST(r.R4 * 26 AS int)), 1000000 + CAST(r.R5 * 8999999 AS int))
                       ELSE CONCAT(N'CN-', 1000000 + CAST(r.R6 * 8999999 AS int)) END,
        x.Issue, DATEADD(YEAR, k.Years, x.Issue), c.CreatedByUserId, c.OnboardedDate,

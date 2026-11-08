@@ -57,6 +57,13 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
         Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Transactions WHERE BalanceAfter < 0"));
         Assert.True(await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Transactions") > 500_000);
 
+        // Contact details and identity numbers are visibly fictional: no real-looking e-mail, phone or Emirates ID anywhere.
+        var personnel = _fixture.Db("WabiBankPersonnelDB");
+        Assert.Equal(0, await _fixture.ScalarAsync<int>(
+            $"SELECT COUNT(*) FROM [{personnel}].dbo.Employees WHERE MobileNumber NOT LIKE N'+000 %' OR EmiratesIdNumber NOT LIKE N'000-%' OR (WorkEmail IS NOT NULL AND WorkEmail <> LOWER(EmployeeNumber) + N'@wabibank.example')"));
+        Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.Customers WHERE MobileNumber NOT LIKE N'+000 %'"));
+        Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) FROM [{core}].dbo.KycDocuments WHERE DocumentType = N'EmiratesId' AND DocumentNumber NOT LIKE N'000-%'"));
+
         // Counter cash looks like a branch: dozens of postings per teller a day, mostly small amounts.
         var perTellerDay = await _fixture.ScalarAsync<decimal>(
             $"SELECT CAST(COUNT(*) * 1.0 / COUNT(DISTINCT CONCAT(PostedByUserId, CAST(PostedAt AS date))) AS decimal(9,2)) FROM [{core}].dbo.Transactions WHERE Channel = N'Branch' AND TransactionCode IN (N'CDP', N'CWD')");
@@ -95,11 +102,11 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
             ["W1001:CyberSecurity:ITD:ITD-SEC", "W1001:OrganizationAdmin:ITD:ITD-SEC", "W1002:Management:CEO:-", "W1003:BranchManager:BR-DXB01:-", "W1004:Teller:BR-DXB01:BR-DXB01-TLR",
              "W1005:HROfficer:HRD:HRD-PSV", "W1006:BudgetController:FIN:FIN-BGP", "W1007:ComplianceOfficer:CMP:CMP-AML", "W1008:ServiceDeskManager:ITD:ITD-SD"],
             users.Select(u => $"{u[0]}:{u[1]}:{u[2]}:{u[3]}"));
-        // Generic, clearly fictional names (bank_names.py), with the Personnel work e-mail as the sign-in.
+        // Generic, clearly fictional names (bank_names.py); the sign-in is the Personnel work e-mail, the employee number at the fictional domain.
         Assert.Equal(
-            ["W1001 Clara Ashby clara.ashby@wabibank.example", "W1002 Victor Lindley victor.lindley@wabibank.example", "W1003 Daniel Hartwell daniel.hartwell@wabibank.example",
-             "W1004 Emily Carver emily.carver@wabibank.example", "W1005 Sophie Langley sophie.langley@wabibank.example", "W1006 Martin Calder martin.calder@wabibank.example",
-             "W1007 Laura Bexley laura.bexley@wabibank.example", "W1008 Simon Varley simon.varley@wabibank.example"],
+            ["W1001 Clara Ashby w1001@wabibank.example", "W1002 Victor Lindley w1002@wabibank.example", "W1003 Daniel Hartwell w1003@wabibank.example",
+             "W1004 Emily Carver w1004@wabibank.example", "W1005 Sophie Langley w1005@wabibank.example", "W1006 Martin Calder w1006@wabibank.example",
+             "W1007 Laura Bexley w1007@wabibank.example", "W1008 Simon Varley w1008@wabibank.example"],
             await _fixture.ListAsync<string>(
                 "SELECT CONCAT(ou.EmployeeNumber, ' ', ou.FullName, ' ', ou.Email) FROM dbo.OrganizationUsers ou JOIN dbo.Organizations o ON o.OrganizationId = ou.OrganizationId AND o.OrganizationCode = N'WBK' ORDER BY ou.EmployeeNumber"));
         var hasher = new IdentityPasswordHashingService();
@@ -260,7 +267,7 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
             $"""
             UPDATE li SET NormalizedEmail = N'OLD.SAMPLE@WABIBANK.EXAMPLE' FROM dbo.LoginIdentities li JOIN dbo.OrganizationUsers ou ON ou.UserId = li.PrincipalId AND ou.EmployeeNumber = N'W1004'
             JOIN dbo.Organizations o ON o.OrganizationId = ou.OrganizationId AND o.OrganizationCode = N'WBK';
-            UPDATE ou SET FullName = N'Old Sample Name', Email = N'old.sample@wabibank.example', NormalizedEmail = N'OLD.SAMPLE@WABIBANK.EXAMPLE' {wbkUser} WHERE ou.EmployeeNumber = N'W1004';
+            UPDATE ou SET FullName = N'Old Sample Name', Email = N'old.sample@wabibank.example', NormalizedEmail = N'OLD.SAMPLE@WABIBANK.EXAMPLE', PhoneNumber = N'+971 50 1234567' {wbkUser} WHERE ou.EmployeeNumber = N'W1004';
             SELECT @@ROWCOUNT;
             """));
         Assert.Equal(1, await _fixture.ScalarAsync<int>(
@@ -276,7 +283,7 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
 
         // Re-running renames the sample users after Personnel and moves a sample e-mail (and its sign-in) along; a real mailbox is kept.
         Assert.Equal(
-            ["W1004|Emily Carver|EMILY.CARVER@WABIBANK.EXAMPLE|EMILY.CARVER@WABIBANK.EXAMPLE", "W1006|Martin Calder|CONTROLLER@MAIL.EXAMPLE|CONTROLLER@MAIL.EXAMPLE"],
+            ["W1004|Emily Carver|W1004@WABIBANK.EXAMPLE|W1004@WABIBANK.EXAMPLE", "W1006|Martin Calder|CONTROLLER@MAIL.EXAMPLE|CONTROLLER@MAIL.EXAMPLE"],
             await _fixture.ListAsync<string>(
                 $"""
                 SELECT CONCAT(ou.EmployeeNumber, '|', ou.FullName, '|', ou.NormalizedEmail, '|', li.NormalizedEmail) {wbkUser}
@@ -284,6 +291,7 @@ public sealed class WabiBankSampleScriptTests : IClassFixture<WabiBankSampleScri
                 WHERE ou.EmployeeNumber IN (N'W1004', N'W1006') ORDER BY ou.EmployeeNumber
                 """));
         Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) {wbkUser} WHERE ou.FullName = N'Old Sample Name'"));
+        Assert.Equal(0, await _fixture.ScalarAsync<int>($"SELECT COUNT(*) {wbkUser} WHERE ou.EmployeeNumber <> N'W1006' AND ou.PhoneNumber NOT LIKE N'+000 %'"));
 
         Assert.Equal((21, 69), (await _fixture.ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Departments d JOIN dbo.Organizations o ON o.OrganizationId = d.OrganizationId AND o.OrganizationCode = N'WBK'"),
                                 await _fixture.ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Sections s JOIN dbo.Organizations o ON o.OrganizationId = s.OrganizationId AND o.OrganizationCode = N'WBK'")));
