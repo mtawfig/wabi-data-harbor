@@ -9,6 +9,7 @@ import { NgxEchartsDirective } from 'ngx-echarts';
 import { LanguageService } from '../../core/i18n/language.service';
 import { AnalysisPanel, AskResponse, EmailDraft } from '../../core/platform/ai.models';
 import { baseChartOption } from '../ui/chart-theme';
+import { answerAccess } from './answer-access';
 
 interface KpiCard {
   title: string;
@@ -43,6 +44,8 @@ export class AnalysisAnswerComponent {
 
   readonly copied = signal(false);
   readonly panels = computed<AnalysisPanel[]>(() => this.answer().panels ?? []);
+  /** Row scopes that limited this answer to what the asker may see (shown so it is never read as the whole organization). */
+  readonly access = computed(() => answerAccess(this.panels()));
   readonly truncatedRows = computed(() => this.panels().filter((p) => p.result.truncated).reduce((n, p) => n + p.result.rowCount, 0));
   readonly totalRows = computed(() => this.panels().reduce((n, p) => n + p.result.rowCount, 0));
   readonly totalTokens = computed(() => {

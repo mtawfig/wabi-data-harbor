@@ -48,6 +48,10 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
             return objects[split.Alias].ColumnTypes.First(k => string.Equals(k.Key, split.Column, StringComparison.OrdinalIgnoreCase)).Value;
         }
 
+        // SUM, AVG, MIN and MAX reject bit columns in SQL Server: count the true values (SUM), give their share (AVG, 0 to 1).
+        string Numeric(string reference, string target)
+            => BooleanTypes.Contains(ColumnType(reference).ToLowerInvariant()) ? $"CAST({Column(reference)} AS {target})" : Column(reference);
+
         // SELECT
         var select = new List<string>();
         var aliasExpressions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -61,10 +65,10 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
                 {
                     "count" => item.Column is null ? "COUNT(*)" : $"COUNT({Column(item.Column)})",
                     "count_distinct" => $"COUNT(DISTINCT {Column(item.Column!)})",
-                    "sum" => $"SUM({Column(item.Column!)})",
-                    "avg" => $"AVG({Column(item.Column!)})",
-                    "min" => $"MIN({Column(item.Column!)})",
-                    "max" => $"MAX({Column(item.Column!)})",
+                    "sum" => $"SUM({Numeric(item.Column!, "INT")})",
+                    "avg" => $"AVG({Numeric(item.Column!, "FLOAT")})",
+                    "min" => $"MIN({Numeric(item.Column!, "INT")})",
+                    "max" => $"MAX({Numeric(item.Column!, "INT")})",
                     _ => throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "plan_aggregate_invalid"),
                 };
             }

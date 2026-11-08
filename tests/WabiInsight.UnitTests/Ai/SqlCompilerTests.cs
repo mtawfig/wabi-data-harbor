@@ -64,6 +64,22 @@ public sealed class SqlCompilerTests
     }
 
     [Fact]
+    public void Aggregates_CastBitColumns_SoSqlServerAcceptsSumAvgMinMax_AndOtherTypesStayUntouched()
+    {
+        // "SLA breach rate" style questions: AVG over a bit column is rejected by SQL Server unless it is cast.
+        const string rates = """
+            {"objective":"x","source":{"schema":"dbo","object":"Orders","alias":"o"},"joins":[],
+             "select":[{"alias":"status","column":"o.Status","aggregate":null,"dateTrunc":null},{"alias":"paidRate","column":"o.IsPaid","aggregate":"avg","dateTrunc":null},{"alias":"paid","column":"o.IsPaid","aggregate":"sum","dateTrunc":null},
+                       {"alias":"anyPaid","column":"o.IsPaid","aggregate":"max","dateTrunc":null},{"alias":"allPaid","column":"o.IsPaid","aggregate":"min","dateTrunc":null},{"alias":"amount","column":"o.Amount","aggregate":"avg","dateTrunc":null},{"alias":"paidOrders","column":"o.IsPaid","aggregate":"count","dateTrunc":null}],
+             "filters":null,"groupBy":["status"],"orderBy":[],"limit":null,"visualization":null,"assumptions":[]}
+            """;
+        var sqlServer = new SqlServerCompiler().Compile(Plan(rates)).Sql;
+        Assert.StartsWith("SELECT TOP (101) [o].[Status] AS [status], AVG(CAST([o].[IsPaid] AS FLOAT)) AS [paidRate], SUM(CAST([o].[IsPaid] AS INT)) AS [paid], MAX(CAST([o].[IsPaid] AS INT)) AS [anyPaid], MIN(CAST([o].[IsPaid] AS INT)) AS [allPaid], AVG([o].[Amount]) AS [amount], COUNT([o].[IsPaid]) AS [paidOrders] FROM", sqlServer, StringComparison.Ordinal);
+        var oracle = new OracleCompiler().Compile(Plan(rates)).Sql;
+        Assert.Contains("AVG(CAST(\"o\".\"IsPaid\" AS FLOAT)) AS \"paidRate\", SUM(CAST(\"o\".\"IsPaid\" AS INT)) AS \"paid\"", oracle, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Compile_RejectsIdentifiersOutsideTheAuthorizedShape_AndTypeMismatches()
     {
         var unknown = Aggregated.Replace("\"c.Name\"", "\"c.Secret\"", StringComparison.Ordinal);

@@ -127,6 +127,15 @@ Captured from the running app with the sample organization Gulf Aviation Service
 | AI budget alert | Organization Administrator | [p14-4-ai-budget-alert-en](screenshots/p14-4-ai-budget-alert-en.png) |
 | Rule paused after a column was un-approved | Organization Administrator | [p14-4-rule-paused-alert-en](screenshots/p14-4-rule-paused-alert-en.png) |
 
+## P13.7 — Answers that state their access
+
+Captured from the running app with the Wabi Bank sample organization (`scripts/sql/samples/wabi-bank`) and the real model.
+
+| Screen | Signed in as | Files |
+|---|---|---|
+| Teller's answer limited to their own postings (`SELF`) | Teller, Deira | [p13-7-answer-access-self-en](screenshots/p13-7-answer-access-self-en.png) |
+| Branch manager's answer limited to the branch (`DEPARTMENT`), Arabic | Branch Manager, Deira | [p13-7-answer-access-department-ar](screenshots/p13-7-answer-access-department-ar.png) · [p13-7-answer-access-department-ar-mobile](screenshots/p13-7-answer-access-department-ar-mobile.png) |
+
 ## Feature screenshots by PR
 
 Earlier PRs keep their own captures under `docs/screenshots/p<phase>-<n>-*.png` (listed per PR in `docs/DESIGN_SYSTEM.md`), the recorded demo under `docs/demo/`, and the brand sheet at `docs/screenshots/p11-1-brand-sheet.png`.

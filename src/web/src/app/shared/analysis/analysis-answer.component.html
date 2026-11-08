@@ -32,6 +32,12 @@
   <div class="wi-card ask__answer" data-testid="ask-answer">
     <p class="wi-eyebrow">{{ 'ask.answer' | transloco }}</p>
     <h2>{{ a.objective }}</h2>
+    @if (access().length > 0) {
+      <p class="ask__access" data-testid="ask-access">
+        <mat-icon>lock</mat-icon><span>{{ 'ask.access.title' | transloco }}</span>
+        @for (s of access(); track s.scope + s.value) { <span class="ask__access-scope">{{ 'ask.access.' + s.scope | transloco: { value: s.value } }}</span> }
+      </p>
+    }
     @if (a.interpretation?.narrative) { <p class="ask__narrative" data-testid="ask-narrative">{{ a.interpretation!.narrative }}</p> }
     @if (a.interpretation?.highlights?.length) { <ul class="ask__highlights">@for (h of a.interpretation!.highlights; track h) { <li><mat-icon>check_circle</mat-icon>{{ h }}</li> }</ul> }
     @if (panels().length > 1) { <p class="ask__panels-note wi-muted small"><mat-icon>verified</mat-icon>{{ 'ask.panelsNote' | transloco: { count: panels().length } }}</p> }

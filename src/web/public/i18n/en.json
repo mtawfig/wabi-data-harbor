@@ -432,7 +432,13 @@
       "subjectLabel": "Subject"
     },
     "savedToHistory": "Saved to My History.",
-    "openInHistory": "Open"
+    "openInHistory": "Open",
+    "access": {
+      "title": "Rows limited to what you may see:",
+      "Self": "your own records",
+      "Department": "your department or branch ({{value}})",
+      "Section": "your section ({{value}})"
+    }
   },
   "platform": {
     "overview": {
