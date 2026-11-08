@@ -138,6 +138,9 @@ Ten sections: sticky header (wordmark with tagline, section links, language swit
 ## Monitoring Rules and Alerts (P14.2)
 Severity is a filled pill (High `#c0262d`, Medium `#b26a00`, Info ocean); status and run outcome are tinted chips. Templates are cards that state the field roles they need; an unavailable template stays visible, greyed, with the reason. The alert centre is a list plus a detail panel (stacked on narrow screens) with facts, a note field, the actions and the timeline; redacted details show an explanatory callout instead of values. Suspension asks for confirmation inline in a red callout. Field roles show as light-blue tags in Metadata, with a dashed one-click suggestion until confirmed. The digest email follows the notification template with one row per alert.
 
+## Demo recording (P14.5)
+`docs/demo/p14-5-proactive-agent-alert.gif` (960 px, 8 fps, 38 s), recorded by `scripts/demo/proactive-agent/record.js` from the running app: a caption bar in the brand navy at the bottom states each step; the two scenes (analyst, administrator) are trimmed and joined with a shared palette.
+
 ## Screenshots (P14.4)
 `docs/screenshots/p14-4-*.png` from the sample organization, drafts produced by the real model: the Arabic description and proposed rule (desktop and mobile, Khalid), the English description with a filter and its review editor (Faisal), the rules list with system rules and a rule paused by a catalogue change, the system templates, Monitoring settings with the monthly AI budget, the AI budget alert and the paused-rule alert. The sandbox budget is set very low (0.08 USD) so that the month's real spend triggers the alert. The *Describe a rule* box uses a dashed ocean border; the proposed rule is a light card listing what the rule reads, with field-role chips and a callout that nothing is saved yet.
 

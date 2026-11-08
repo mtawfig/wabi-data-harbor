@@ -1,6 +1,6 @@
 # Wabi Insight — Implementation Plan (Phases and Pull Requests)
 
-**Status:** Phases 1–13 merged. Phase 14 (Proactive Agent) approved by the owner on 2026-11-07; design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P14.0–P14.3 merged; P14.4 in review.
+**Status:** Phases 1–13 merged. Phase 14 (Proactive Agent) approved by the owner on 2026-11-07; design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P14.0–P14.4 merged (Phase 14 complete); P14.5 wrap-up (demo recording, scheduler lease fix, screenshot index) in review.
 **Specification:** [`docs/WABI_INSIGHT_SPECIFICATION.md`](./WABI_INSIGHT_SPECIFICATION.md) (v1.2; §35 added for Phase 14).
 **Review of the original prompt:** [`docs/SPEC_REVIEW.md`](./SPEC_REVIEW.md).
 
@@ -149,6 +149,7 @@
 | P14.2 — Monitoring Rules and Alerts | Typed rule document, validation/authorization, data-rule compiler on the dialect compilers, access-rule evaluator (limits and baselines), template catalogue filtered by metadata, `Alerts`/`AlertEvents`, cooldown, immediate in-app for High, daily digest email, human actions incl. suspend, API, Angular pages (rules, templates, editor, test run, alert centre), EN/AR, platform counts. |
 | P14.3 — Periodic Reports | Subscriptions, per-recipient execution under the recipient's permissions, PDF/XLSX, outbox delivery with attachment and link, delivery log, pause after three failures, administrator pages, Management self-service, "sent to me" in My Reports. |
 | P14.4 — Natural-language rules and system rules | `wabi_monitoring_rule` schema and prompt, draft → confirm → save, system rules (connections, AI budget, email, metadata drift), `RuleInvalid` rule-health alerts, screenshots and docs. |
+| P14.5 — Wrap-up | Recorded proactive-agent demo on the sample organization (`scripts/demo/proactive-agent`), scheduler lease release fix, Phase 14 screenshot index, status docs. |
 
 ## Milestone verification (every PR)
 
