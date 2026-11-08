@@ -135,6 +135,8 @@ Platform Administration → General Settings shows: bootstrap completed, date, b
 ## 8. Authentication
 Local email/password only; no SSO, directory, social login or public registration in v1. One public login screen serves both account categories; the backend resolves the category through `LoginIdentities`.
 
+**[Planned v2]** Sign in with Microsoft (Microsoft Entra ID) for invited users with any e-mail address, alongside or instead of the password per organization; Microsoft verifies the password and second step, and Wabi Insight links accounts by directory and object id and keeps every authorization rule. Design in `IMPLEMENTATION_PLAN.md` → *Version 2*.
+
 **[Decision] `LoginIdentities`:** `NormalizedEmail` (primary key), `PrincipalType`, `PrincipalId`, `CreatedAt`. Every administrator and organization user creation inserts here inside the same transaction, guaranteeing global uniqueness across both stores.
 
 **[Revised] Identity primitives:** ASP.NET Core Identity's `PasswordHasher<T>` (PBKDF2, v3 format), `UpperInvariantLookupNormalizer`, lockout and security-stamp semantics are used over the two custom tables through `AuthenticationService`. One cookie authentication scheme carries claims: `sub`, `principal_type`, `org` (organization users only), `security_stamp`, `must_change_password`, `lang`.
