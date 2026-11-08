@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -15,6 +14,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { problemMessage } from '../../../core/problem-message';
 import { Share, ShareRecipient } from '../../../core/sharing/sharing.models';
 import { SharingService } from '../../../core/sharing/sharing.service';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 export interface ShareDialogData {
   historyId: string;
@@ -27,7 +27,7 @@ export interface ShareDialogData {
  */
 @Component({
   selector: 'app-share-dialog',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, WiDatePipe],
   template: `
     <h2 mat-dialog-title><mat-icon>share</mat-icon>{{ 'sharing.share.title' | transloco }}</h2>
     <mat-dialog-content>
@@ -74,7 +74,7 @@ export interface ShareDialogData {
             <div>
               <strong>{{ s.recipientName }}</strong> <span class="wi-muted small wi-ltr">{{ s.recipientEmail }}</span><br />
               <span class="chip" [class.chip--muted]="s.status !== 'Active'">{{ 'sharing.statuses.' + s.status | transloco }}</span>
-              <span class="wi-muted small"> · {{ s.createdAt | date: 'mediumDate' }}@if (s.expiresAt) { · {{ 'sharing.share.expiresOn' | transloco: { date: (s.expiresAt | date: 'mediumDate') } }}}@if (s.lastViewedAt) { · {{ 'sharing.share.viewed' | transloco: { date: (s.lastViewedAt | date: 'medium') } }}}</span>
+              <span class="wi-muted small"> · {{ s.createdAt | wiDate: 'mediumDate' }}@if (s.expiresAt) { · {{ 'sharing.share.expiresOn' | transloco: { date: (s.expiresAt | wiDate: 'mediumDate') } }}}@if (s.lastViewedAt) { · {{ 'sharing.share.viewed' | transloco: { date: (s.lastViewedAt | wiDate: 'medium') } }}}</span>
             </div>
             @if (s.status === 'Active') { <button mat-button type="button" class="danger" (click)="revoke(s)" [attr.data-testid]="'share-revoke-' + s.shareId"><mat-icon>link_off</mat-icon>{{ 'sharing.share.revoke' | transloco }}</button> }
           </li>

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,6 +18,7 @@ import { OrganizationsService } from '../../core/organizations/organizations.ser
 import { SupportArea, TICKET_IMPACTS, TICKET_STATUSES, TICKET_TYPES, TicketImpact, TicketStatus, TicketSummary, TicketType } from '../../core/support/support.models';
 import { SupportService } from '../../core/support/support.service';
 import { TicketImpactComponent, TicketStatusComponent, TicketTypeComponent } from './ticket-chips.component';
+import { WiDatePipe, WiNumberPipe } from '../../shared/format/locale-pipes';
 
 type OpenFilter = 'open' | 'closed' | 'all';
 type AssigneeFilter = 'any' | 'me' | 'unassigned';
@@ -26,7 +26,7 @@ type AssigneeFilter = 'any' | 'me' | 'unassigned';
 /** Ticket list for the organization area (My Tickets / organization tickets) and the platform queue. */
 @Component({
   selector: 'app-ticket-list',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, TicketStatusComponent, TicketImpactComponent, TicketTypeComponent],
+  imports: [FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, TicketStatusComponent, TicketImpactComponent, TicketTypeComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './ticket-list.component.html',
   styleUrl: './support.scss',
 })

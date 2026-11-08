@@ -14,10 +14,11 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { Department, Section } from '../../../core/organizations/admin.models';
 import { OrganizationAdminService } from '../../../core/organizations/admin.service';
 import { problemMessage } from '../../../core/problem-message';
+import { WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 @Component({
   selector: 'app-sections',
-  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule, WiNumberPipe],
   templateUrl: './sections.component.html',
   styleUrl: './admin-catalog.scss',
 })

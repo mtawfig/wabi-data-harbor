@@ -414,20 +414,51 @@ public sealed partial class AnalysisService : IAnalysisService
             Write in the language given in the LANGUAGE block, in plain prose for a manager. Output only the JSON object.
             """;
         var watch = Stopwatch.StartNew();
-        var completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(system, user, InterpretationSchema, "wabi_interpretation", Math.Min(resolved.Descriptor.MaxOutputTokens, 1536), "low"), cancellationToken);
+        // Low effort keeps the explanation quick; the budget leaves room for the model's reasoning on large multi-panel answers.
+        var completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(system, user, InterpretationSchema, "wabi_interpretation", Math.Max(resolved.Descriptor.MaxOutputTokens, MinInterpretOutputTokens), "low"), cancellationToken);
         var usage = new PlanUsage(resolved.Descriptor.ProviderType.ToString(), completion.Model, completion.Usage.InputTokens, completion.Usage.OutputTokens, completion.Usage.CachedInputTokens, resolved.Descriptor.EstimateCost(completion.Usage), watch.Elapsed.TotalMilliseconds);
+        var interpretation = ParseInterpretation(completion.Text, CutOff(completion.StopReason), usage);
+        if (interpretation.Incomplete)
+        {
+            LogInterpretationIncomplete(_logger, completion.StopReason ?? "none", completion.Usage.OutputTokens);
+        }
+
+        return interpretation;
+    }
+
+    /// <summary>The output budget the explanation call never goes below, whatever the provider row says.</summary>
+    public const int MinInterpretOutputTokens = 4096;
+
+    private static bool CutOff(string? stopReason)
+        => string.Equals(stopReason, "max_tokens", StringComparison.OrdinalIgnoreCase) || string.Equals(stopReason, "length", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Reads the explanation JSON. A reply the provider cut off (or one with no text) is marked incomplete and never shown as a
+    /// fragment of JSON; a complete reply that is not JSON is shown as plain text, as before.
+    /// </summary>
+    internal static Interpretation ParseInterpretation(string? completionText, bool cutOff, PlanUsage usage)
+    {
+        var text = completionText?.Trim() ?? string.Empty;
+        InterpretationJson? parsed = null;
         try
         {
-            var text = completion.Text.Trim();
             var first = text.IndexOf('{', StringComparison.Ordinal);
             var last = text.LastIndexOf('}');
-            var parsed = first >= 0 && last > first ? JsonSerializer.Deserialize<InterpretationJson>(text[first..(last + 1)], JsonOptions) : null;
-            return new Interpretation(PromptBuilder.Sanitize(parsed?.Narrative ?? text, 4000), (parsed?.Highlights ?? []).Select(h => PromptBuilder.Sanitize(h, 300)).Where(h => h.Length > 0).Take(6).ToList(), usage);
+            parsed = first >= 0 && last > first ? JsonSerializer.Deserialize<InterpretationJson>(text[first..(last + 1)], JsonOptions) : null;
         }
         catch (JsonException)
         {
-            return new Interpretation(PromptBuilder.Sanitize(completion.Text, 4000), [], usage);
+            parsed = null;
         }
+
+        if (parsed is null && cutOff)
+        {
+            return new Interpretation(string.Empty, [], usage, Incomplete: true);
+        }
+
+        var narrative = PromptBuilder.Sanitize(parsed?.Narrative ?? text, 4000);
+        var highlights = (parsed?.Highlights ?? []).Select(h => PromptBuilder.Sanitize(h, 300)).Where(h => h.Length > 0).Take(6).ToList();
+        return new Interpretation(narrative, highlights, usage, Incomplete: narrative.Length == 0 || (cutOff && parsed is null));
     }
 
     private async Task FailAsync(AnalysisExecutionMetric metric, AnalysisStatus status, string stage, string code, Stopwatch total, CancellationToken cancellationToken, Guid? historyId = null)
@@ -461,4 +492,7 @@ public sealed partial class AnalysisService : IAnalysisService
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Interpretation failed with code {Code}; the verified result was returned without a narrative.")]
     private static partial void LogInterpretationFailed(ILogger logger, string code);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Interpretation incomplete (stop reason {StopReason}, {OutputTokens} output tokens); the verified result was returned with a note.")]
+    private static partial void LogInterpretationIncomplete(ILogger logger, string stopReason, long outputTokens);
 }

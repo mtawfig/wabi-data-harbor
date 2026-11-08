@@ -148,7 +148,8 @@ export interface AskResponse {
   panels: AnalysisPanel[];
   report?: GeneratedReport | null;
   emailDraft?: EmailDraft | null;
-  interpretation?: { narrative: string; highlights: string[]; usage: PlanUsage } | null;
+  /** `incomplete`: the provider stopped before the explanation was finished; the page says so instead of showing nothing. */
+  interpretation?: { narrative: string; highlights: string[]; usage: PlanUsage; incomplete?: boolean } | null;
   planUsage: PlanUsage;
   totalEstimatedCost: number;
   totalDurationMs: number;

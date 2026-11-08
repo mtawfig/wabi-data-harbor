@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -21,6 +20,7 @@ import { problemMessage } from '../../../core/problem-message';
 import { AnalysisAnswerComponent } from '../../../shared/analysis/analysis-answer.component';
 import { EmailDialogComponent, EmailDialogData } from '../sharing/email-dialog.component';
 import { ShareDialogComponent, ShareDialogData } from '../sharing/share-dialog.component';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 interface Rejection {
   stage: string;
@@ -33,7 +33,7 @@ interface Rejection {
  */
 @Component({
   selector: 'app-history-detail',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule, MatProgressBarModule, MatSelectModule, TranslocoModule, AnalysisAnswerComponent],
+  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule, MatProgressBarModule, MatSelectModule, TranslocoModule, AnalysisAnswerComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './history-detail.component.html',
   styleUrl: './history-detail.component.scss',
 })

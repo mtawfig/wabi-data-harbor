@@ -16,7 +16,7 @@
           <span class="chip">{{ 'history.types.' + d.summary.analysisType | transloco }}</span>
           <span>{{ language.current() === 'ar' ? d.summary.applicationNameAr : d.summary.applicationName }}</span> ·
           <span>{{ 'history.versionsCount' | transloco: { count: d.versions.length } }}</span> ·
-          <span>{{ d.summary.createdAt | date: 'medium' }}</span>
+          <span>{{ d.summary.createdAt | wiDate: 'medium' }}</span>
           @if (d.summary.isArchived) { · <span class="chip chip--muted">{{ 'history.archived' | transloco }}</span> }
         </p>
       }
@@ -75,8 +75,8 @@
           @for (v of d.versions; track v.versionId) {
             <li [class.active]="v.versionNumber === versionNumber()" [class.failed]="v.status === 'Failed'">
               <button type="button" (click)="selectVersion(v.versionNumber)" [attr.data-testid]="'history-version-' + v.versionNumber">
-                <strong>v{{ v.versionNumber }}</strong> · <span class="wi-muted">{{ v.createdAt | date: 'medium' }}</span><br />
-                @if (v.status === 'Failed') { <span class="chip chip--failed">{{ 'history.statusFailed' | transloco }}</span> } @else { <span class="wi-muted small">{{ 'history.versionMeta' | transloco: { panels: v.panelCount, rows: v.rowCount, cost: (v.estimatedCost | number: '1.2-2') } }}</span> }
+                <strong>v{{ v.versionNumber | wiNumber }}</strong> · <span class="wi-muted">{{ v.createdAt | wiDate: 'medium' }}</span><br />
+                @if (v.status === 'Failed') { <span class="chip chip--failed">{{ 'history.statusFailed' | transloco }}</span> } @else { <span class="wi-muted small">{{ 'history.versionMeta' | transloco: { panels: v.panelCount, rows: v.rowCount, cost: (v.estimatedCost | wiNumber: '1.2-2') } }}</span> }
                 @if (v.hasReport) { <mat-icon class="pdf" [title]="'ask.report.title' | transloco">picture_as_pdf</mat-icon> }
               </button>
             </li>

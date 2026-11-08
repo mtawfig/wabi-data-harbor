@@ -25,7 +25,7 @@
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ 'monitoring.settings.aiBudget' | transloco }}</mat-label>
           <input matInput type="number" min="0" step="1" [ngModel]="s.monthlyAiBudget" (ngModelChange)="setSetting('monthlyAiBudget', $event === '' || $event === null ? null : +$event)" data-testid="settings-ai-budget" />
-          <mat-hint>{{ 'monitoring.settings.aiSpend' | transloco: { spend: (s.aiSpendThisMonth ?? 0 | number: '1.2-2') } }}</mat-hint>
+          <mat-hint>{{ 'monitoring.settings.aiSpend' | transloco: { spend: (s.aiSpendThisMonth ?? 0 | wiNumber: '1.2-2') } }}</mat-hint>
         </mat-form-field>
       </div>
       <div class="days">
@@ -349,7 +349,7 @@
         <span class="wi-ms-auto"></span>
         <button mat-icon-button type="button" (click)="test.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
       </div>
-      <p>{{ 'monitoring.rules.testSummary' | transloco: { matches: t.result.matchCount, rows: (t.result.rowsExamined | number) } }}</p>
+      <p>{{ 'monitoring.rules.testSummary' | transloco: { matches: t.result.matchCount, rows: (t.result.rowsExamined | wiNumber) } }}</p>
       @if (t.result.errorCode) { <p class="callout callout--warn"><mat-icon>error_outline</mat-icon>{{ 'monitoring.errors.' + t.result.errorCode | transloco }}</p> }
       @if (t.result.redacted) { <p class="callout"><mat-icon>visibility_off</mat-icon>{{ 'monitoring.rules.testRedacted' | transloco }}</p> }
       @if (t.result.matches.length > 0) {
@@ -358,7 +358,7 @@
             <thead><tr><th>{{ 'monitoring.alerts.groupKey' | transloco }}</th><th class="num">{{ 'monitoring.summary.measure' | transloco }}</th><th class="num">{{ 'monitoring.summary.threshold' | transloco }}</th>@if (t.result.matches[0].previous !== undefined) { <th class="num">{{ 'monitoring.summary.previous' | transloco }}</th> }</tr></thead>
             <tbody>
               @for (m of t.result.matches; track $index) {
-                <tr><td class="wi-ltr">{{ m.subjectName ?? (m.groupKey === '*' ? ('monitoring.rules.wholeObject' | transloco) : m.groupKey) }}</td><td class="num">{{ m.measure | number: '1.0-2' }}</td><td class="num">{{ m.threshold | number: '1.0-2' }}</td>@if (m.previous !== undefined) { <td class="num">{{ m.previous | number: '1.0-2' }}</td> }</tr>
+                <tr><td class="wi-ltr">{{ m.subjectName ?? (m.groupKey === '*' ? ('monitoring.rules.wholeObject' | transloco) : m.groupKey) }}</td><td class="num">{{ m.measure | wiNumber: '1.0-2' }}</td><td class="num">{{ m.threshold | wiNumber: '1.0-2' }}</td>@if (m.previous !== undefined) { <td class="num">{{ m.previous | wiNumber: '1.0-2' }}</td> }</tr>
               }
             </tbody>
           </table>
@@ -394,10 +394,10 @@
                 </div>
               </td>
               <td><span class="sev" [attr.data-sev]="r.severity">{{ 'monitoring.severity.' + r.severity | transloco }}</span></td>
-              <td>{{ schedule(r) }}@if (!r.isActive) { <div><span class="chip">{{ 'monitoring.rules.paused' | transloco }}</span></div> } @else if (r.nextRunAt) { <div class="wi-muted small">{{ 'monitoring.rules.nextRun' | transloco }}: {{ r.nextRunAt | date: 'short' }}</div> }</td>
+              <td>{{ schedule(r) }}@if (!r.isActive) { <div><span class="chip">{{ 'monitoring.rules.paused' | transloco }}</span></div> } @else if (r.nextRunAt) { <div class="wi-muted small">{{ 'monitoring.rules.nextRun' | transloco }}: {{ r.nextRunAt | wiDate: 'short' }}</div> }</td>
               <td>{{ r.ownerName }}@if (r.recipients.length > 0) { <div class="wi-muted small">+{{ r.recipients.length }} {{ 'monitoring.rules.recipientsShort' | transloco }}</div> }</td>
               <td>
-                @if (r.lastOutcome) { <span class="chip outcome" [attr.data-outcome]="r.lastOutcome">{{ 'monitoring.outcome.' + r.lastOutcome | transloco }}</span><div class="wi-muted small">{{ r.lastEvaluatedAt | date: 'short' }}</div> }
+                @if (r.lastOutcome) { <span class="chip outcome" [attr.data-outcome]="r.lastOutcome">{{ 'monitoring.outcome.' + r.lastOutcome | transloco }}</span><div class="wi-muted small">{{ r.lastEvaluatedAt | wiDate: 'short' }}</div> }
                 @else { <span class="wi-muted small">{{ 'monitoring.rules.neverRun' | transloco }}</span> }
                 @if (r.lastError) { <div class="err small">{{ 'monitoring.errors.' + r.lastError | transloco }}</div> }
               </td>

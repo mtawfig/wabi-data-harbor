@@ -53,8 +53,8 @@
         </ng-container>
         <ng-container matColumnDef="application"><th mat-header-cell *matHeaderCellDef>{{ 'ask.application' | transloco }}</th><td mat-cell *matCellDef="let h">{{ language.current() === 'ar' ? h.applicationNameAr : h.applicationName }}<br /><span class="wi-muted wi-ltr small">{{ h.applicationCode }}</span></td></ng-container>
         <ng-container matColumnDef="type"><th mat-header-cell *matHeaderCellDef>{{ 'history.type' | transloco }}</th><td mat-cell *matCellDef="let h"><span class="chip">{{ 'history.types.' + h.analysisType | transloco }}</span>@if (h.hasReport) { <mat-icon class="history__pdf" [title]="'ask.report.title' | transloco">picture_as_pdf</mat-icon> }@if (h.status === 'Failed') { <span class="chip chip--failed">{{ 'history.statusFailed' | transloco }}</span> }</td></ng-container>
-        <ng-container matColumnDef="version"><th mat-header-cell *matHeaderCellDef class="num">{{ 'history.columns.version' | transloco }}</th><td mat-cell *matCellDef="let h" class="num">v{{ h.currentVersionNumber }}<br /><span class="wi-muted small">${{ h.estimatedCost | number: '1.2-2' }}</span></td></ng-container>
-        <ng-container matColumnDef="updated"><th mat-header-cell *matHeaderCellDef>{{ 'history.columns.updated' | transloco }}</th><td mat-cell *matCellDef="let h">{{ (h.updatedAt || h.createdAt) | date: 'medium' }}</td></ng-container>
+        <ng-container matColumnDef="version"><th mat-header-cell *matHeaderCellDef class="num">{{ 'history.columns.version' | transloco }}</th><td mat-cell *matCellDef="let h" class="num">v{{ h.currentVersionNumber | wiNumber }}<br /><span class="wi-muted small">${{ h.estimatedCost | wiNumber: '1.2-2' }}</span></td></ng-container>
+        <ng-container matColumnDef="updated"><th mat-header-cell *matHeaderCellDef>{{ 'history.columns.updated' | transloco }}</th><td mat-cell *matCellDef="let h">{{ (h.updatedAt || h.createdAt) | wiDate: 'medium' }}</td></ng-container>
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let h" (click)="$event.stopPropagation()">
@@ -84,7 +84,7 @@
         <li [class.active]="collectionId() === null"><button type="button" (click)="collectionId.set(null); applyFilters()"><mat-icon>history</mat-icon>{{ 'history.allAnalyses' | transloco }}</button></li>
         @for (c of collections(); track c.collectionId) {
           <li [class.active]="collectionId() === c.collectionId">
-            <button type="button" (click)="collectionId.set(c.collectionId); applyFilters()" [attr.data-testid]="'collection-' + c.collectionId"><mat-icon>folder</mat-icon>{{ c.name }} <span class="wi-muted">({{ c.itemCount }})</span></button>
+            <button type="button" (click)="collectionId.set(c.collectionId); applyFilters()" [attr.data-testid]="'collection-' + c.collectionId"><mat-icon>folder</mat-icon>{{ c.name }} <span class="wi-muted">({{ c.itemCount | wiNumber }})</span></button>
             <button mat-icon-button type="button" (click)="deleteCollection(c)" [attr.aria-label]="'common.delete' | transloco"><mat-icon>close</mat-icon></button>
           </li>
         }

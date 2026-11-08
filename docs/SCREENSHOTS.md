@@ -136,6 +136,16 @@ Captured from the running app with the Wabi Bank sample organization (`scripts/s
 | Teller's answer limited to their own postings (`SELF`) | Teller, Deira | [p13-7-answer-access-self-en](screenshots/p13-7-answer-access-self-en.png) |
 | Branch manager's answer limited to the branch (`DEPARTMENT`), Arabic | Branch Manager, Deira | [p13-7-answer-access-department-ar](screenshots/p13-7-answer-access-department-ar.png) · [p13-7-answer-access-department-ar-mobile](screenshots/p13-7-answer-access-department-ar-mobile.png) |
 
+## P13.10 — Complete explanations, Arabic dates and numbers
+
+Captured from the running app with the Wabi Bank sample organization and the real model.
+
+| Screen | Signed in as | Files |
+|---|---|---|
+| The two-panel budget question whose explanation used to come back blank, now explained | Budget controller | [p13-10-explanation-en](screenshots/p13-10-explanation-en.png) |
+| Alerts in Arabic: counts, occurrences, dates and the badge in Arabic digits and month names | Compliance and AML Officer | [p13-10-alerts-ar](screenshots/p13-10-alerts-ar.png) |
+| My History in Arabic: run dates, versions and costs | HR officer | [p13-10-history-ar](screenshots/p13-10-history-ar.png) |
+
 ## Feature screenshots by PR
 
 Earlier PRs keep their own captures under `docs/screenshots/p<phase>-<n>-*.png` (listed per PR in `docs/DESIGN_SYSTEM.md`), the recorded demo under `docs/demo/`, and the brand sheet at `docs/screenshots/p11-1-brand-sheet.png`.

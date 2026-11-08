@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,11 +10,12 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { AskResponse } from '../../../core/platform/ai.models';
 import { problemMessage } from '../../../core/problem-message';
 import { AnalysisAnswerComponent } from '../../../shared/analysis/analysis-answer.component';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 /** Print view (specification §23): the stored answer of a version on a plain white page without the shell, with a print button. */
 @Component({
   selector: 'app-history-print',
-  imports: [DatePipe, MatButtonModule, MatIconModule, TranslocoModule, AnalysisAnswerComponent],
+  imports: [MatButtonModule, MatIconModule, TranslocoModule, AnalysisAnswerComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './history-print.component.html',
   styleUrl: './history-print.component.scss',
 })

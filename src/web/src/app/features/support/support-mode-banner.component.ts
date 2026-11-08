@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,11 +7,12 @@ import { interval } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SupportAccessService } from '../../core/support/support-access.service';
+import { WiDatePipe } from '../../shared/format/locale-pipes';
 
 /** Visible support-mode banner (specification §16.3): organization, ticket, remaining time and an explicit exit. */
 @Component({
   selector: 'app-support-mode-banner',
-  imports: [DatePipe, MatButtonModule, MatIconModule, RouterLink, TranslocoModule],
+  imports: [MatButtonModule, MatIconModule, RouterLink, TranslocoModule, WiDatePipe],
   template: `
     @if (access.session(); as s) {
       <div class="banner" role="status" data-testid="support-mode-banner">
@@ -20,7 +20,7 @@ import { SupportAccessService } from '../../core/support/support-access.service'
         <span class="text">
           <strong>{{ 'supportAccess.banner.title' | transloco }}</strong>
           {{ 'supportAccess.banner.detail' | transloco: { organization: organizationName(), reference: s.grant.ticketReference } }}
-          · {{ 'supportAccess.banner.remaining' | transloco: { minutes: remaining() } }} ({{ s.expiresAt | date: 'shortTime' }})
+          · {{ 'supportAccess.banner.remaining' | transloco: { minutes: remaining() } }} ({{ s.expiresAt | wiDate: 'shortTime' }})
         </span>
         <a mat-button [routerLink]="['/platform/support', s.grant.ticketId]">{{ 'supportAccess.banner.openTicket' | transloco }}</a>
         <button mat-stroked-button type="button" (click)="exit()" [disabled]="busy()" data-testid="support-mode-exit"><mat-icon>logout</mat-icon>{{ 'supportAccess.actions.exit' | transloco }}</button>

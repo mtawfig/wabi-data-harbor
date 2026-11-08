@@ -1,15 +1,15 @@
-import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslocoModule } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { BootstrapStatus } from '../../public/bootstrap/bootstrap.component';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 /** Specification §7.3: bootstrap completion, date, administrator email, schema version and status. */
 @Component({
   selector: 'app-bootstrap-status',
-  imports: [DatePipe, MatIconModule, TranslocoModule],
+  imports: [MatIconModule, TranslocoModule, WiDatePipe],
   template: `
     <div class="wi-card">
       <h3>{{ 'platform.settings.bootstrapSection' | transloco }}</h3>
@@ -20,7 +20,7 @@ import { BootstrapStatus } from '../../public/bootstrap/bootstrap.component';
             <mat-icon [class.ok]="s.bootstrapCompleted">{{ s.bootstrapCompleted ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
             {{ (s.bootstrapCompleted ? 'platform.settings.completed' : 'platform.settings.notCompleted') | transloco }}
           </dd>
-          <dt>{{ 'bootstrap.completedAt' | transloco }}</dt><dd>{{ s.bootstrapCompletedAt | date: 'medium' }}</dd>
+          <dt>{{ 'bootstrap.completedAt' | transloco }}</dt><dd>{{ s.bootstrapCompletedAt | wiDate: 'medium' }}</dd>
           <dt>{{ 'bootstrap.administrator' | transloco }}</dt><dd><span class="wi-ltr">{{ s.bootstrapAdministratorEmail }}</span></dd>
           <dt>{{ 'bootstrap.schema' | transloco }}</dt><dd><span class="wi-ltr">{{ s.schemaVersion }}</span></dd>
           <dt>{{ 'bootstrap.pendingMigrations' | transloco }}</dt><dd>{{ (s.pendingMigrations ? 'bootstrap.yes' : 'bootstrap.no') | transloco }}</dd>

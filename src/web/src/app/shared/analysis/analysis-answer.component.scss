@@ -27,3 +27,18 @@
 .ask__email-body { white-space: pre-wrap; font-family: inherit; font-size: 14.5px; line-height: 1.6; background: #f8fafc; border: 1px solid var(--wi-border); border-radius: var(--wi-radius-sm); padding: 14px 16px; margin: 8px 0; }
 .ask__attachment { display: inline-flex; gap: 6px; align-items: center; padding: 6px 12px; border: 1px solid var(--wi-border); border-radius: 999px; font-size: 13px; text-decoration: none; color: var(--wi-ocean); background: #fff; mat-icon { font-size: 18px; width: 18px; height: 18px; } }
 @media (max-width: 760px) { .ask__report-toc { columns: 1; } }
+
+.ask__incomplete {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #7a4b00;
+
+  mat-icon {
+    flex: none;
+  }
+}

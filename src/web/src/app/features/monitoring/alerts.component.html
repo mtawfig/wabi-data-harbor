@@ -10,8 +10,8 @@
 
   @if (page(); as p) {
     <div class="kpis" data-testid="alerts-kpis">
-      <div class="kpi"><span class="kpi__value">{{ p.openCount }}</span><span class="kpi__label">{{ 'monitoring.alerts.openCount' | transloco }}</span></div>
-      <div class="kpi kpi--high"><span class="kpi__value">{{ p.openHighCount }}</span><span class="kpi__label">{{ 'monitoring.alerts.openHighCount' | transloco }}</span></div>
+      <div class="kpi"><span class="kpi__value">{{ p.openCount | wiNumber }}</span><span class="kpi__label">{{ 'monitoring.alerts.openCount' | transloco }}</span></div>
+      <div class="kpi kpi--high"><span class="kpi__value">{{ p.openHighCount | wiNumber }}</span><span class="kpi__label">{{ 'monitoring.alerts.openHighCount' | transloco }}</span></div>
       <p class="kpi-note wi-muted"><mat-icon>verified_user</mat-icon>{{ 'monitoring.alerts.humanDecision' | transloco }}</p>
     </div>
   }
@@ -22,8 +22,8 @@
       @if (d.lines.length === 0) { <p class="wi-muted">{{ 'monitoring.alerts.digestEmpty' | transloco }}</p> }
       <ul>
         @for (l of d.lines; track $index) {
-          <li><span class="sev" [attr.data-sev]="l.severity">{{ 'monitoring.severity.' + l.severity | transloco }}</span> {{ l.title }}@if (l.occurrences > 1) { (×{{ l.occurrences }}) }
-            <span class="wi-muted">@if (l.redacted) { {{ 'monitoring.alerts.redactedShort' | transloco }} } @else { @if (l.groupKey) { <span class="wi-ltr">{{ l.groupKey }}</span> } @if (l.measure !== undefined && l.measure !== null) { · {{ l.measure | number: '1.0-2' }} } }</span>
+          <li><span class="sev" [attr.data-sev]="l.severity">{{ 'monitoring.severity.' + l.severity | transloco }}</span> {{ l.title }}@if (l.occurrences > 1) { (×{{ l.occurrences | wiNumber }}) }
+            <span class="wi-muted">@if (l.redacted) { {{ 'monitoring.alerts.redactedShort' | transloco }} } @else { @if (l.groupKey) { <span class="wi-ltr">{{ l.groupKey }}</span> } @if (l.measure !== undefined && l.measure !== null) { · {{ l.measure | wiNumber: '1.0-2' }} } }</span>
           </li>
         }
       </ul>
@@ -64,7 +64,7 @@
                   @else if (a.groupKey === 'rule_invalid') { <span>{{ 'monitoring.rules.paused' | transloco }}</span> }
                   @else if (a.groupKey && a.groupKey !== '*') { <span class="wi-ltr">{{ a.groupKey }}</span> }
                   @if (a.occurrences > 1) { <span>{{ 'monitoring.alerts.times' | transloco: { count: a.occurrences } }}</span> }
-                  <span>{{ a.lastSeenAt | date: 'medium' }}</span>
+                  <span>{{ a.lastSeenAt | wiDate: 'medium' }}</span>
                 </span>
               </span>
               <span class="chip status" [attr.data-status]="a.status">{{ 'monitoring.status.' + a.status | transloco }}</span>
@@ -110,9 +110,9 @@
         }
 
         <dl class="facts">
-          <dt>{{ 'monitoring.alerts.firstSeen' | transloco }}</dt><dd>{{ d.alert.firstSeenAt | date: 'medium' }}</dd>
-          <dt>{{ 'monitoring.alerts.lastSeen' | transloco }}</dt><dd>{{ d.alert.lastSeenAt | date: 'medium' }}</dd>
-          <dt>{{ 'monitoring.alerts.occurrences' | transloco }}</dt><dd>{{ d.alert.occurrences }}</dd>
+          <dt>{{ 'monitoring.alerts.firstSeen' | transloco }}</dt><dd>{{ d.alert.firstSeenAt | wiDate: 'medium' }}</dd>
+          <dt>{{ 'monitoring.alerts.lastSeen' | transloco }}</dt><dd>{{ d.alert.lastSeenAt | wiDate: 'medium' }}</dd>
+          <dt>{{ 'monitoring.alerts.occurrences' | transloco }}</dt><dd>{{ d.alert.occurrences | wiNumber }}</dd>
           @if (d.alert.subject; as s) {
             <dt>{{ 'monitoring.alerts.subject' | transloco }}</dt>
             <dd>{{ s.fullName }} <span class="wi-muted wi-ltr">{{ s.email }}</span> <span class="chip" [attr.data-on]="s.status === 'Active'">{{ 'monitoring.userStatus.' + s.status | transloco }}</span></dd>
@@ -156,7 +156,7 @@
           @for (e of d.events; track $index) {
             <li><span class="timeline__dot" [attr.data-event]="e.eventType"></span>
               <div><strong>{{ 'monitoring.events.' + e.eventType | transloco }}</strong>@if (e.actorName) { · {{ e.actorName }} }
-                <span class="wi-muted small"> · {{ e.createdAt | date: 'medium' }}</span>
+                <span class="wi-muted small"> · {{ e.createdAt | wiDate: 'medium' }}</span>
                 @if (e.note) { <p class="small">{{ e.eventType === 'Raised' && d.alert.groupKey === 'rule_invalid' ? ('monitoring.errors.' + e.note | transloco) : e.note }}</p> }
               </div>
             </li>

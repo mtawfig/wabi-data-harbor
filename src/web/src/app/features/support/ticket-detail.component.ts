@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +21,7 @@ import { ALLOWED_ATTACHMENT_EXTENSIONS, SupportArea, TicketAttachment, TicketCom
 import { SupportService } from '../../core/support/support.service';
 import { TicketImpactComponent, TicketStatusComponent, TicketTypeComponent } from './ticket-chips.component';
 import { SupportAccessTabComponent } from './support-access-tab.component';
+import { WiDatePipe, WiNumberPipe } from '../../shared/format/locale-pipes';
 
 const EVENT_ICONS: Record<string, string> = {
   TicketCreated: 'add_comment',
@@ -47,7 +47,7 @@ const EVENT_ICONS: Record<string, string> = {
 /** Ticket details (specification §15.8): header plus Overview, Conversation, Activity Timeline and Attachments tabs. */
 @Component({
   selector: 'app-ticket-detail',
-  imports: [DatePipe, DecimalPipe, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTabsModule, RouterLink, TranslocoModule, TicketStatusComponent, TicketImpactComponent, TicketTypeComponent, SupportAccessTabComponent],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTabsModule, RouterLink, TranslocoModule, TicketStatusComponent, TicketImpactComponent, TicketTypeComponent, SupportAccessTabComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './ticket-detail.component.html',
   styleUrl: './ticket-detail.component.scss',
 })

@@ -35,12 +35,12 @@
   @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
 
   @if (data(); as d) {
-    <p class="wi-muted dash__period">{{ 'platformDashboard.period' | transloco }}: {{ d.period.from | date: 'mediumDate' }} – {{ d.period.to | date: 'mediumDate' }}</p>
+    <p class="wi-muted dash__period">{{ 'platformDashboard.period' | transloco }}: {{ d.period.from | wiDate: 'mediumDate' }} – {{ d.period.to | wiDate: 'mediumDate' }}</p>
 
     <div class="kpis" data-testid="odash-kpis">
       @for (code of primaryKpis(); track code) {
         <div class="kpi wi-card" [attr.data-kpi]="code">
-          <span class="kpi__value">{{ kpi(code) | number }}@if (code.endsWith('Minutes')) { <small>{{ 'platformDashboard.minutes' | transloco }}</small> }</span>
+          <span class="kpi__value">{{ kpi(code) | wiNumber }}@if (code.endsWith('Minutes')) { <small>{{ 'platformDashboard.minutes' | transloco }}</small> }</span>
           <span class="kpi__label">{{ 'orgDashboard.kpis.' + code | transloco }}</span>
         </div>
       }
@@ -67,7 +67,7 @@
         @if (d.departmentUsage.length === 0) { <p class="wi-muted">{{ 'orgDashboard.noData' | transloco }}</p> } @else {
           <table class="plain full" data-testid="odash-departments">
             <thead><tr><th>{{ 'nav.org.admin.departments' | transloco }}</th><th class="num">{{ 'orgDashboard.events' | transloco }}</th></tr></thead>
-            <tbody>@for (r of d.departmentUsage; track r.key) { <tr><td>{{ rowLabel(r) }}</td><td class="num">{{ r.value | number }}</td></tr> }</tbody>
+            <tbody>@for (r of d.departmentUsage; track r.key) { <tr><td>{{ rowLabel(r) }}</td><td class="num">{{ r.value | wiNumber }}</td></tr> }</tbody>
           </table>
         }
       </div>
@@ -76,7 +76,7 @@
         @if (d.ticketsByStatus.length === 0) { <p class="wi-muted">{{ 'orgDashboard.noData' | transloco }}</p> } @else {
           <table class="plain full" data-testid="odash-tickets">
             <thead><tr><th>{{ 'admin.fields.status' | transloco }}</th><th class="num">{{ 'orgDashboard.tickets' | transloco }}</th></tr></thead>
-            <tbody>@for (r of d.ticketsByStatus; track r.key) { <tr><td>{{ 'support.statuses.' + r.key | transloco }}</td><td class="num">{{ r.value | number }}</td></tr> }</tbody>
+            <tbody>@for (r of d.ticketsByStatus; track r.key) { <tr><td>{{ 'support.statuses.' + r.key | transloco }}</td><td class="num">{{ r.value | wiNumber }}</td></tr> }</tbody>
           </table>
         }
       </div>
@@ -86,7 +86,7 @@
           <thead><tr><th>{{ 'admin.applications.application' | transloco }}</th><th>{{ 'admin.applications.databaseType' | transloco }}</th><th>{{ 'admin.fields.status' | transloco }}</th><th class="num">{{ 'orgDashboard.objects' | transloco }}</th><th>{{ 'orgDashboard.lastRefresh' | transloco }}</th></tr></thead>
           <tbody>
             @for (a of d.applications; track a.applicationId) {
-              <tr><td>{{ appName(a) }} <span class="wi-muted wi-ltr">({{ a.applicationCode }})</span></td><td>{{ a.isBuiltIn ? ('admin.applications.builtIn' | transloco) : a.databaseType }}</td><td><span class="chip" [attr.data-on]="a.isApproved">{{ (a.isApproved ? 'admin.metadata.approved' : 'admin.metadata.pending') | transloco }}</span></td><td class="num">{{ a.approvedObjectCount }} / {{ a.objectCount }}</td><td>{{ a.lastMetadataRefreshAt ? (a.lastMetadataRefreshAt | date: 'medium') : '—' }}</td></tr>
+              <tr><td>{{ appName(a) }} <span class="wi-muted wi-ltr">({{ a.applicationCode }})</span></td><td>{{ a.isBuiltIn ? ('admin.applications.builtIn' | transloco) : a.databaseType }}</td><td><span class="chip" [attr.data-on]="a.isApproved">{{ (a.isApproved ? 'admin.metadata.approved' : 'admin.metadata.pending') | transloco }}</span></td><td class="num">{{ a.approvedObjectCount | wiNumber }} / {{ a.objectCount | wiNumber }}</td><td>{{ a.lastMetadataRefreshAt ? (a.lastMetadataRefreshAt | wiDate: 'medium') : '—' }}</td></tr>
             }
           </tbody>
         </table>

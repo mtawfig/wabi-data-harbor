@@ -44,6 +44,10 @@ The mark is a lighthouse (navy tower with ocean bands, aqua lamp) over three dat
 ## Translations
 Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped by area (`common`, `landing`, `login`, `changePassword`, `bootstrap`, `nav`, `ask`, `platform`, `platformDashboard`, `health`, `audit`, `platformAdmins`, `organizations`, `admin`, `support`, `notifications`). Status codes and error codes from the API are mapped to keys (`login.errors.<code>`, `changePassword.errors.<code>`); codes themselves are never shown.
 
+## Dates and numbers (P13.10)
+- Templates format dates with `| wiDate: 'medium' | 'mediumDate' | 'short' | 'shortDate' | 'shortTime'` and numbers with `| wiNumber: '1.0-2'` (`shared/format/locale-pipes.ts`), never Angular's `date`/`number` pipes, which follow the build locale only. In Arabic they use `ar-EG`: month names ("٨ نوفمبر ٢٠٢٦") and Arabic-Indic digits with Arabic separators, the same convention as answer tables; in English they give the same text as the Angular pipes of the same names.
+- Numbers passed to translations (`{{count}}`) are formatted by `LocalizedTranspiler`: Arabic digits in Arabic, grouped from 10,000 so years and versions read naturally; English text is unchanged. Raw counts in templates go through `wiNumber`; codes (reference numbers, employee numbers) stay as text.
+
 ## Screenshots (P1.4)
 `docs/screenshots/p1-4-*.png`: landing EN/AR (full page) and mobile, login EN/AR and mobile, bootstrap, change password, Ask workspace EN/AR, platform overview, platform placeholder. Demo recording: `docs/demo/p1-4-landing-login-ask.gif`.
 

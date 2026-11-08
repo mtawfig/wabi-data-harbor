@@ -8,8 +8,8 @@
           <span class="chip">{{ 'history.types.' + d.share.analysisType | transloco }}</span>
           <span class="chip" [class]="'chip chip--' + d.share.dataClassification.toLowerCase()">{{ 'sharing.classifications.' + d.share.dataClassification | transloco }}</span>
           <span>{{ language.current() === 'ar' ? d.share.applicationNameAr : d.share.applicationName }}</span> ·
-          <span>{{ 'sharing.view.sharedBy' | transloco: { name: d.share.ownerName, date: (d.share.sharedAt | date: 'medium') } }}</span>
-          @if (d.share.expiresAt) { · <span>{{ 'sharing.share.expiresOn' | transloco: { date: (d.share.expiresAt | date: 'mediumDate') } }}</span> }
+          <span>{{ 'sharing.view.sharedBy' | transloco: { name: d.share.ownerName, date: (d.share.sharedAt | wiDate: 'medium') } }}</span>
+          @if (d.share.expiresAt) { · <span>{{ 'sharing.share.expiresOn' | transloco: { date: (d.share.expiresAt | wiDate: 'mediumDate') } }}</span> }
         </p>
       }
     </div>
@@ -40,7 +40,7 @@
           @for (v of d.versions; track v.versionId) {
             <li [class.active]="v.versionNumber === versionNumber()">
               <button type="button" (click)="selectVersion(v.versionNumber)" [attr.data-testid]="'shared-version-' + v.versionNumber">
-                <strong>v{{ v.versionNumber }}</strong> · <span class="wi-muted">{{ v.createdAt | date: 'medium' }}</span><br />
+                <strong>v{{ v.versionNumber | wiNumber }}</strong> · <span class="wi-muted">{{ v.createdAt | wiDate: 'medium' }}</span><br />
                 <span class="wi-muted small">{{ 'sharing.view.versionMeta' | transloco: { panels: v.panelCount, rows: v.rowCount } }}</span>
                 @if (v.hasReport) { <mat-icon class="pdf" [title]="'ask.report.title' | transloco">picture_as_pdf</mat-icon> }
               </button>

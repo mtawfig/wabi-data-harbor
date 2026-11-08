@@ -16,7 +16,7 @@
       <div class="source__item"><mat-icon [class.ok]="s.reachable" [class.bad]="!s.reachable">{{ s.reachable ? 'check_circle' : 'error' }}</mat-icon><div><strong>{{ 'platformInsights.source.reachable' | transloco }}</strong><span class="wi-muted">{{ s.reachable ? ('platformInsights.source.views' | transloco: { count: s.viewCount }) : (('admin.errors.' + s.error) | transloco) }}</span></div></div>
       <div class="source__item"><mat-icon [class.ok]="s.dedicatedLoginConfigured" [class.warn]="!s.dedicatedLoginConfigured">{{ s.dedicatedLoginConfigured ? 'verified_user' : 'warning_amber' }}</mat-icon><div><strong>{{ 'platformInsights.source.login' | transloco }}</strong><span class="wi-muted">{{ (s.dedicatedLoginConfigured ? 'platformInsights.source.loginConfigured' : 'platformInsights.source.loginMissing') | transloco }}</span></div></div>
       <div class="source__item"><mat-icon [class.ok]="s.confinedToInsightsSchema" [class.warn]="!s.confinedToInsightsSchema">{{ s.confinedToInsightsSchema ? 'lock' : 'lock_open' }}</mat-icon><div><strong>{{ 'platformInsights.source.confined' | transloco }}</strong><span class="wi-muted">{{ (s.confinedToInsightsSchema ? 'platformInsights.source.confinedYes' : 'platformInsights.source.confinedNo') | transloco }}</span></div></div>
-      <div class="source__item"><mat-icon>schedule</mat-icon><div><strong>{{ 'platformInsights.source.checked' | transloco }}</strong><span class="wi-muted">{{ s.checkedAt | date: 'medium' }}</span></div></div>
+      <div class="source__item"><mat-icon>schedule</mat-icon><div><strong>{{ 'platformInsights.source.checked' | transloco }}</strong><span class="wi-muted">{{ s.checkedAt | wiDate: 'medium' }}</span></div></div>
     </div>
   }
 

@@ -136,7 +136,7 @@
           <thead><tr><th>{{ 'periodic.when' | transloco }}</th><th>{{ 'periodic.recipient' | transloco }}</th><th>{{ 'monitoring.alerts.status' | transloco }}</th><th class="num">{{ 'periodic.rows' | transloco }}</th></tr></thead>
           <tbody>
             @for (d of l.items; track d.deliveryId) {
-              <tr><td>{{ d.createdAt | date: 'short' }}@if (d.isManualRun) { <span class="chip">{{ 'periodic.manual' | transloco }}</span> }</td><td>{{ d.recipientName }}</td><td><span class="chip delivery" [attr.data-status]="d.status">{{ 'periodic.status.' + d.status | transloco }}</span></td><td class="num">{{ d.status === 'Delivered' ? d.rowCount : '—' }}</td></tr>
+              <tr><td>{{ d.createdAt | wiDate: 'short' }}@if (d.isManualRun) { <span class="chip">{{ 'periodic.manual' | transloco }}</span> }</td><td>{{ d.recipientName }}</td><td><span class="chip delivery" [attr.data-status]="d.status">{{ 'periodic.status.' + d.status | transloco }}</span></td><td class="num">{{ d.status === 'Delivered' ? d.rowCount : '—' }}</td></tr>
             }
           </tbody>
         </table>
@@ -167,12 +167,12 @@
               </td>
               <td>{{ schedule(s) }}
                 @if (!s.isActive) { <div><span class="chip">{{ 'monitoring.rules.paused' | transloco }}</span></div>@if (s.pausedReason) { <div class="err small">{{ 'periodic.errors.' + s.pausedReason | transloco }}</div> } }
-                @else if (s.nextRunAt) { <div class="wi-muted small">{{ 'monitoring.rules.nextRun' | transloco }}: {{ s.nextRunAt | date: 'short' }}</div> }
+                @else if (s.nextRunAt) { <div class="wi-muted small">{{ 'monitoring.rules.nextRun' | transloco }}: {{ s.nextRunAt | wiDate: 'short' }}</div> }
               </td>
               <td><span class="small">{{ recipientsLabel(s) }}</span></td>
               <td>
                 @if (s.lastRun; as lr) {
-                  <span class="small">{{ lr.runAt | date: 'short' }}</span>
+                  <span class="small">{{ lr.runAt | wiDate: 'short' }}</span>
                   <div class="small"><span class="chip delivery" data-status="Delivered">{{ lr.delivered }}</span> <span class="chip delivery" data-status="NoData">{{ lr.noData }}</span> @if (lr.failed > 0) { <span class="chip delivery" data-status="Failed">{{ lr.failed }}</span> }</div>
                 } @else { <span class="wi-muted small">{{ 'monitoring.rules.neverRun' | transloco }}</span> }
               </td>

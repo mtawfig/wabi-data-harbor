@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -20,6 +19,7 @@ import {
 } from '../../core/monitoring/monitoring.models';
 import { MonitoringService } from '../../core/monitoring/monitoring.service';
 import { problemMessage } from '../../core/problem-message';
+import { WiDatePipe, WiNumberPipe } from '../../shared/format/locale-pipes';
 
 type AlertAction = 'acknowledge' | 'resolve' | 'dismiss' | 'reopen';
 
@@ -31,8 +31,6 @@ type AlertAction = 'acknowledge' | 'resolve' | 'dismiss' | 'reopen';
 @Component({
   selector: 'app-alerts',
   imports: [
-    DatePipe,
-    DecimalPipe,
     FormsModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -42,6 +40,8 @@ type AlertAction = 'acknowledge' | 'resolve' | 'dismiss' | 'reopen';
     MatProgressBarModule,
     MatSelectModule,
     TranslocoModule,
+    WiDatePipe,
+    WiNumberPipe,
   ],
   templateUrl: './alerts.component.html',
   styleUrl: './monitoring.scss',

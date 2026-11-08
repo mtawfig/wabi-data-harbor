@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -16,11 +15,12 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { problemMessage } from '../../../core/problem-message';
 import { Share } from '../../../core/sharing/sharing.models';
 import { SharingService } from '../../../core/sharing/sharing.service';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 /** Shared By Me (specification §24): every share the signed-in user granted, with status, expiry, last view and revocation. */
 @Component({
   selector: 'app-shared-by-me',
-  imports: [DatePipe, FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSlideToggleModule, MatTableModule, TranslocoModule],
+  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSlideToggleModule, MatTableModule, TranslocoModule, WiDatePipe],
   templateUrl: './shared-by-me.component.html',
   styleUrl: './sharing-list.scss',
 })

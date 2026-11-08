@@ -32,16 +32,16 @@
             <dt>{{ 'organizations.fields.countryCode' | transloco }}</dt><dd>{{ o.countryCode || '—' }}</dd>
             <dt>{{ 'organizations.fields.timeZone' | transloco }}</dt><dd><span class="wi-ltr">{{ o.timeZone }}</span></dd>
             <dt>{{ 'organizations.fields.defaultLanguage' | transloco }}</dt><dd>{{ (o.defaultLanguage === 'ar' ? 'common.arabic' : 'common.english') | transloco }}</dd>
-            <dt>{{ 'organizations.fields.created' | transloco }}</dt><dd>{{ o.createdAt | date: 'medium' }}</dd>
+            <dt>{{ 'organizations.fields.created' | transloco }}</dt><dd>{{ o.createdAt | wiDate: 'medium' }}</dd>
             <dt>{{ 'organizations.fields.description' | transloco }}</dt><dd>{{ o.description || '—' }}</dd>
           </dl>
         </div>
 
         <div class="stack">
           <div class="wi-card kpis">
-            <div class="kpi"><span class="kpi__value">{{ o.activeUserCount }}</span><span class="kpi__label">{{ 'organizations.kpi.activeUsers' | transloco }}</span></div>
-            <div class="kpi"><span class="kpi__value">{{ o.userCount }}</span><span class="kpi__label">{{ 'organizations.kpi.users' | transloco }}</span></div>
-            <div class="kpi"><span class="kpi__value">{{ o.applicationCount }}</span><span class="kpi__label">{{ 'organizations.kpi.applications' | transloco }}</span></div>
+            <div class="kpi"><span class="kpi__value">{{ o.activeUserCount | wiNumber }}</span><span class="kpi__label">{{ 'organizations.kpi.activeUsers' | transloco }}</span></div>
+            <div class="kpi"><span class="kpi__value">{{ o.userCount | wiNumber }}</span><span class="kpi__label">{{ 'organizations.kpi.users' | transloco }}</span></div>
+            <div class="kpi"><span class="kpi__value">{{ o.applicationCount | wiNumber }}</span><span class="kpi__label">{{ 'organizations.kpi.applications' | transloco }}</span></div>
           </div>
           <p class="wi-muted privacy"><mat-icon>lock</mat-icon>{{ 'organizations.privacyNote' | transloco }}</p>
 

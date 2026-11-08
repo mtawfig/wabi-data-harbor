@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -16,11 +15,12 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { Administrator } from '../../../core/platform/platform.models';
 import { PlatformService } from '../../../core/platform/platform.service';
 import { problemMessage } from '../../../core/problem-message';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 /** Platform Administrator management (specification §5.1). Temporary passwords are emailed, never shown. */
 @Component({
   selector: 'app-platform-administrators',
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule, WiDatePipe],
   templateUrl: './platform-administrators.component.html',
   styleUrl: '../../organization/admin/admin-catalog.scss',
 })

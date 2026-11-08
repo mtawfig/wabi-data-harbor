@@ -19,6 +19,7 @@ import { SupportModeBannerComponent } from '../../features/support/support-mode-
 import { AuthService } from '../../core/auth/auth.service';
 import { BrandLogoComponent } from '../ui/brand-logo.component';
 import { LanguageSwitcherComponent } from '../ui/language-switcher.component';
+import { WiNumberPipe } from '../format/locale-pipes';
 
 export interface NavItem {
   labelKey: string;
@@ -37,7 +38,7 @@ export interface NavSection {
  */
 @Component({
   selector: 'app-shell',
-  imports: [MatBadgeModule, MatButtonModule, MatDividerModule, MatIconModule, MatListModule, MatMenuModule, MatSidenavModule, MatToolbarModule, RouterLink, RouterLinkActive, RouterOutlet, TranslocoModule, BrandLogoComponent, LanguageSwitcherComponent, SupportModeBannerComponent],
+  imports: [MatBadgeModule, MatButtonModule, MatDividerModule, MatIconModule, MatListModule, MatMenuModule, MatSidenavModule, MatToolbarModule, RouterLink, RouterLinkActive, RouterOutlet, TranslocoModule, BrandLogoComponent, LanguageSwitcherComponent, SupportModeBannerComponent, WiNumberPipe],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
 })

@@ -68,14 +68,14 @@
 
     <table mat-table [dataSource]="items()" class="full" data-testid="ticket-table">
       <ng-container matColumnDef="reference"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.reference' | transloco }}</th><td mat-cell *matCellDef="let t"><span class="wi-ltr ref">{{ t.referenceNumber }}</span></td></ng-container>
-      <ng-container matColumnDef="subject"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.subject' | transloco }}</th><td mat-cell *matCellDef="let t"><strong>{{ t.subject }}</strong>@if (t.category) { <br /><span class="wi-muted small">{{ t.category }}</span> }<span class="wi-muted small counts"><mat-icon>forum</mat-icon>{{ t.commentCount }} <mat-icon>attach_file</mat-icon>{{ t.attachmentCount }}</span></td></ng-container>
+      <ng-container matColumnDef="subject"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.subject' | transloco }}</th><td mat-cell *matCellDef="let t"><strong>{{ t.subject }}</strong>@if (t.category) { <br /><span class="wi-muted small">{{ t.category }}</span> }<span class="wi-muted small counts"><mat-icon>forum</mat-icon>{{ t.commentCount | wiNumber }} <mat-icon>attach_file</mat-icon>{{ t.attachmentCount | wiNumber }}</span></td></ng-container>
       <ng-container matColumnDef="organization"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.organization' | transloco }}</th><td mat-cell *matCellDef="let t">{{ organizationLabel(t) }}<br /><span class="wi-muted small wi-ltr">{{ t.organizationCode }}</span></td></ng-container>
       <ng-container matColumnDef="type"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.type' | transloco }}</th><td mat-cell *matCellDef="let t"><app-ticket-type [type]="t.ticketType" /></td></ng-container>
       <ng-container matColumnDef="impact"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.impact' | transloco }}</th><td mat-cell *matCellDef="let t"><app-ticket-impact [impact]="t.impact" /></td></ng-container>
       <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.status' | transloco }}</th><td mat-cell *matCellDef="let t"><app-ticket-status [status]="t.status" [adminView]="isPlatform()" /></td></ng-container>
       <ng-container matColumnDef="requester"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.requester' | transloco }}</th><td mat-cell *matCellDef="let t">{{ t.createdByName }}</td></ng-container>
       <ng-container matColumnDef="assigned"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.assigned' | transloco }}</th><td mat-cell *matCellDef="let t">{{ t.assignedAdministratorName || '—' }}</td></ng-container>
-      <ng-container matColumnDef="lastActivity"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.lastActivity' | transloco }}</th><td mat-cell *matCellDef="let t">{{ t.lastActivityAt | date: 'medium' }}</td></ng-container>
+      <ng-container matColumnDef="lastActivity"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.lastActivity' | transloco }}</th><td mat-cell *matCellDef="let t">{{ t.lastActivityAt | wiDate: 'medium' }}</td></ng-container>
       <tr mat-header-row *matHeaderRowDef="columns()"></tr>
       <tr mat-row *matRowDef="let row; columns: columns()" class="row" (click)="open(row)" [attr.data-testid]="'ticket-row-' + row.referenceNumber"></tr>
     </table>

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,6 +12,7 @@ import { problemMessage } from '../../../core/problem-message';
 import { SharedAnalysisDetail } from '../../../core/sharing/sharing.models';
 import { SharingService } from '../../../core/sharing/sharing.service';
 import { AnalysisAnswerComponent } from '../../../shared/analysis/analysis-answer.component';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 /**
  * A shared analysis as its recipient sees it (specification §24): the owner's stored answer for any completed
@@ -20,7 +20,7 @@ import { AnalysisAnswerComponent } from '../../../shared/analysis/analysis-answe
  */
 @Component({
   selector: 'app-shared-analysis',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, MatProgressBarModule, TranslocoModule, AnalysisAnswerComponent],
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatProgressBarModule, TranslocoModule, AnalysisAnswerComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './shared-analysis.component.html',
   styleUrl: './shared-analysis.component.scss',
 })

@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -22,13 +21,14 @@ import { PlatformService } from '../../../core/platform/platform.service';
 import { baseChartOption } from '../../../shared/ui/chart-theme';
 import { BootstrapStatusComponent } from '../settings/bootstrap-status.component';
 import { TicketWidgetComponent } from '../../support/ticket-widget.component';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 type Preset = 'today' | '7d' | '30d' | 'month' | 'custom';
 
 /** Platform operations dashboard (specification §13): KPIs, trends, operational tables. Aggregates only. */
 @Component({
   selector: 'app-platform-dashboard',
-  imports: [DatePipe, DecimalPipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, NgxEchartsDirective, BootstrapStatusComponent, TicketWidgetComponent],
+  imports: [FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, NgxEchartsDirective, BootstrapStatusComponent, TicketWidgetComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './platform-dashboard.component.html',
   styleUrl: './platform-dashboard.component.scss',
 })

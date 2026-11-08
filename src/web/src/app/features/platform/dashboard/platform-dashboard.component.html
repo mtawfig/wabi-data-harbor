@@ -41,12 +41,12 @@
   @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
 
   @if (data(); as d) {
-    <p class="wi-muted dash__period">{{ 'platformDashboard.period' | transloco }}: {{ d.period.from | date: 'mediumDate' }} – {{ d.period.to | date: 'mediumDate' }}</p>
+    <p class="wi-muted dash__period">{{ 'platformDashboard.period' | transloco }}: {{ d.period.from | wiDate: 'mediumDate' }} – {{ d.period.to | wiDate: 'mediumDate' }}</p>
 
     <div class="kpis" data-testid="dash-kpis">
       @for (code of primaryKpis(); track code) {
         <div class="kpi wi-card" [attr.data-kpi]="code">
-          <span class="kpi__value">{{ kpi(code) | number }}@if (code.endsWith('Minutes')) { <small>{{ 'platformDashboard.minutes' | transloco }}</small> }</span>
+          <span class="kpi__value">{{ kpi(code) | wiNumber }}@if (code.endsWith('Minutes')) { <small>{{ 'platformDashboard.minutes' | transloco }}</small> }</span>
           <span class="kpi__label">{{ 'platformDashboard.kpis.' + code | transloco }}</span>
         </div>
       }
@@ -91,7 +91,7 @@
         <h3>{{ 'platformDashboard.errorsTable' | transloco }}</h3>
         @if (d.recentErrors.length === 0) { <p class="wi-muted">{{ 'platformDashboard.noErrors' | transloco }}</p> } @else {
           <table mat-table [dataSource]="d.recentErrors" class="full" data-testid="dash-errors">
-            <ng-container matColumnDef="at"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.at' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.at | date: 'medium' }}</td></ng-container>
+            <ng-container matColumnDef="at"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.at' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.at | wiDate: 'medium' }}</td></ng-container>
             <ng-container matColumnDef="eventType"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.eventType' | transloco }}</th><td mat-cell *matCellDef="let r"><span class="wi-ltr">{{ r.eventType }}</span></td></ng-container>
             <ng-container matColumnDef="organization"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.organization' | transloco }}</th><td mat-cell *matCellDef="let r">{{ organizationLabel(r.organizationId) }}</td></ng-container>
             <ng-container matColumnDef="detail"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.detail' | transloco }}</th><td mat-cell *matCellDef="let r"><code class="wi-ltr detail">{{ r.detail }}</code></td></ng-container>

@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -18,11 +17,12 @@ import { ReceivedReport } from '../../../core/monitoring/periodic-reports.models
 import { PeriodicReportsService } from '../../../core/monitoring/periodic-reports.service';
 import { ExportFormat, ReportFile } from '../../../core/history/history.models';
 import { problemMessage } from '../../../core/problem-message';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 /** My Reports (specification §20): every study PDF and export the signed-in user generated, with download links back to the analysis. */
 @Component({
   selector: 'app-reports-list',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule],
+  imports: [FormsModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule, WiDatePipe, WiNumberPipe],
   templateUrl: './reports-list.component.html',
   styleUrl: './reports-list.component.scss',
 })

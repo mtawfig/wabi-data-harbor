@@ -39,7 +39,7 @@
           <ng-container matColumnDef="object"><th mat-header-cell *matHeaderCellDef>{{ 'admin.metadata.object' | transloco }}</th><td mat-cell *matCellDef="let o"><span class="wi-ltr"><span class="wi-muted">{{ o.schemaName }}.</span><strong>{{ o.objectName }}</strong></span>@if (!o.isPresent) { <span class="chip removed">{{ 'admin.metadata.removed' | transloco }}</span> }</td></ng-container>
           <ng-container matColumnDef="type"><th mat-header-cell *matHeaderCellDef>{{ 'admin.metadata.type' | transloco }}</th><td mat-cell *matCellDef="let o">{{ 'admin.metadata.types.' + o.objectType | transloco }}</td></ng-container>
           <ng-container matColumnDef="names"><th mat-header-cell *matHeaderCellDef>{{ 'admin.metadata.displayNames' | transloco }}</th><td mat-cell *matCellDef="let o">{{ o.displayNameEn || '—' }}@if (o.displayNameAr) { <br /><span dir="rtl">{{ o.displayNameAr }}</span> }</td></ng-container>
-          <ng-container matColumnDef="columns"><th mat-header-cell *matHeaderCellDef class="num">{{ 'admin.metadata.columns' | transloco }}</th><td mat-cell *matCellDef="let o" class="num">{{ o.approvedColumnCount }} / {{ o.columnCount }}</td></ng-container>
+          <ng-container matColumnDef="columns"><th mat-header-cell *matHeaderCellDef class="num">{{ 'admin.metadata.columns' | transloco }}</th><td mat-cell *matCellDef="let o" class="num">{{ o.approvedColumnCount | wiNumber }} / {{ o.columnCount | wiNumber }}</td></ng-container>
           <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.status' | transloco }}</th><td mat-cell *matCellDef="let o"><span class="chip" [attr.data-on]="o.isApproved">{{ (o.isApproved ? 'admin.metadata.approved' : 'admin.metadata.pending') | transloco }}</span></td></ng-container>
           <tr mat-header-row *matHeaderRowDef="objectColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: objectColumns" class="row" [class.row--active]="detail()?.summary?.objectId === row.objectId" (click)="open(row.objectId)" [attr.data-testid]="'meta-row-' + row.objectName"></tr>
@@ -54,7 +54,7 @@
             <div>
               <p class="wi-eyebrow">{{ 'admin.metadata.types.' + d.summary.objectType | transloco }}</p>
               <h2 class="wi-ltr">{{ d.summary.schemaName }}.{{ d.summary.objectName }}</h2>
-              <p class="wi-muted small">{{ 'admin.metadata.discovered' | transloco }} {{ d.summary.discoveredAt | date: 'medium' }} · {{ 'admin.metadata.lastSeen' | transloco }} {{ d.summary.lastSeenAt | date: 'medium' }}</p>
+              <p class="wi-muted small">{{ 'admin.metadata.discovered' | transloco }} {{ d.summary.discoveredAt | wiDate: 'medium' }} · {{ 'admin.metadata.lastSeen' | transloco }} {{ d.summary.lastSeenAt | wiDate: 'medium' }}</p>
             </div>
             <button mat-icon-button type="button" (click)="close()" [attr.aria-label]="'common.cancel' | transloco"><mat-icon>close</mat-icon></button>
           </header>

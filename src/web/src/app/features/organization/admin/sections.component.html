@@ -48,7 +48,7 @@
       <ng-container matColumnDef="code"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.code' | transloco }}</th><td mat-cell *matCellDef="let s"><span class="wi-ltr">{{ s.sectionCode }}</span></td></ng-container>
       <ng-container matColumnDef="nameEn"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.nameEn' | transloco }}</th><td mat-cell *matCellDef="let s">{{ s.sectionNameEn }}</td></ng-container>
       <ng-container matColumnDef="nameAr"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.nameAr' | transloco }}</th><td mat-cell *matCellDef="let s">{{ s.sectionNameAr }}</td></ng-container>
-      <ng-container matColumnDef="users"><th mat-header-cell *matHeaderCellDef class="num">{{ 'nav.org.admin.users' | transloco }}</th><td mat-cell *matCellDef="let s" class="num">{{ s.userCount }}</td></ng-container>
+      <ng-container matColumnDef="users"><th mat-header-cell *matHeaderCellDef class="num">{{ 'nav.org.admin.users' | transloco }}</th><td mat-cell *matCellDef="let s" class="num">{{ s.userCount | wiNumber }}</td></ng-container>
       <ng-container matColumnDef="active"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.status' | transloco }}</th><td mat-cell *matCellDef="let s"><span class="chip" [attr.data-on]="s.isActive">{{ (s.isActive ? 'admin.active' : 'admin.inactive') | transloco }}</span></td></ng-container>
       <ng-container matColumnDef="actions"><th mat-header-cell *matHeaderCellDef></th><td mat-cell *matCellDef="let s"><button mat-icon-button type="button" (click)="startEdit(s)" [attr.aria-label]="'admin.sections.edit' | transloco"><mat-icon>edit</mat-icon></button></td></ng-container>
       <tr mat-header-row *matHeaderRowDef="columns"></tr>

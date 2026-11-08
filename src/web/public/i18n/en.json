@@ -438,7 +438,8 @@
       "Self": "your own records",
       "Department": "your department or branch ({{value}})",
       "Section": "your section ({{value}})"
-    }
+    },
+    "interpretationIncomplete": "The written explanation could not be finished this time. The figures, charts and tables above are verified; ask again to get the explanation."
   },
   "platform": {
     "overview": {

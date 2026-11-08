@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -18,6 +18,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { Application, ConnectionTestResult, DATABASE_TYPES, DatabaseType } from '../../../core/organizations/applications.models';
 import { ApplicationsService } from '../../../core/organizations/applications.service';
 import { problemMessage } from '../../../core/problem-message';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 /**
  * Applications (specification §11): the organization's data sources. The connection string is typed once,
@@ -25,7 +26,7 @@ import { problemMessage } from '../../../core/problem-message';
  */
 @Component({
   selector: 'app-applications',
-  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, WiDatePipe, WiNumberPipe],
   templateUrl: './applications.component.html',
   styleUrl: './applications.component.scss',
 })

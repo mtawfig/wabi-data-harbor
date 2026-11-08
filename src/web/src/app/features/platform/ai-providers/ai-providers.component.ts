@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,11 +10,12 @@ import { AI_PROVIDER_TYPES, AiProvider, AiProviderType, SaveAiProviderRequest } 
 import { AiService } from '../../../core/platform/ai.service';
 import { problemMessage } from '../../../core/problem-message';
 import { AiProviderFormComponent } from './ai-provider-form.component';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 /** Platform AI providers (specification §18): approved endpoints, the platform default and the allow-list of types organizations may configure. */
 @Component({
   selector: 'app-ai-providers',
-  imports: [DatePipe, MatButtonModule, MatCheckboxModule, MatIconModule, MatProgressBarModule, TranslocoModule, AiProviderFormComponent],
+  imports: [MatButtonModule, MatCheckboxModule, MatIconModule, MatProgressBarModule, TranslocoModule, AiProviderFormComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './ai-providers.component.html',
   styleUrl: './ai-providers.component.scss',
 })

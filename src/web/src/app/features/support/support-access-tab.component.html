@@ -69,8 +69,8 @@
       <header>
         <app-grant-status [status]="g.status" />
         <strong>{{ 'supportAccess.grantBy' | transloco: { name: g.proposedByName } }}</strong>
-        <span class="wi-muted small">{{ g.createdAt | date: 'medium' }}</span>
-        @if (g.expiresAt && (g.status === 'Approved' || g.status === 'Active')) { <span class="expires"><mat-icon>schedule</mat-icon>{{ 'supportAccess.expiresAt' | transloco }} {{ g.expiresAt | date: 'medium' }}</span> }
+        <span class="wi-muted small">{{ g.createdAt | wiDate: 'medium' }}</span>
+        @if (g.expiresAt && (g.status === 'Approved' || g.status === 'Active')) { <span class="expires"><mat-icon>schedule</mat-icon>{{ 'supportAccess.expiresAt' | transloco }} {{ g.expiresAt | wiDate: 'medium' }}</span> }
         @if (g.sessionActive) { <span class="live"><mat-icon>radio_button_checked</mat-icon>{{ 'supportAccess.sessionActive' | transloco }}</span> }
       </header>
       <p class="reason">{{ g.reason }}</p>
@@ -82,7 +82,7 @@
       <dl class="facts">
         <div><dt>{{ 'supportAccess.assignedTo' | transloco }}</dt><dd>{{ g.assignedAdministratorName }}</dd></div>
         <div><dt>{{ 'supportAccess.requestedBy' | transloco }}</dt><dd>{{ g.requestedByName }}</dd></div>
-        @if (g.approvedByName) { <div><dt>{{ 'supportAccess.approvedBy' | transloco }}</dt><dd>{{ g.approvedByName }} · {{ g.approvedAt | date: 'medium' }}</dd></div> }
+        @if (g.approvedByName) { <div><dt>{{ 'supportAccess.approvedBy' | transloco }}</dt><dd>{{ g.approvedByName }} · {{ g.approvedAt | wiDate: 'medium' }}</dd></div> }
         @if (g.decisionNote) { <div><dt>{{ 'supportAccess.note' | transloco }}</dt><dd>{{ g.decisionNote }}</dd></div> }
         <div><dt>{{ 'supportAccess.operationsExecuted' | transloco }}</dt><dd>{{ g.operationsExecuted }}</dd></div>
       </dl>
