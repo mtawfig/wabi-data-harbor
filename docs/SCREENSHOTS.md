@@ -176,7 +176,7 @@ Captured from the running app with the Wabi Bank sample organization (now with g
 | *How this was computed* in words: sources, totals, grouping, the row and group conditions, sort and row cap (no SQL) | Compliance and AML Officer | [p13-11-how-en](screenshots/p13-11-how-en.png) |
 | The same in Arabic, with Arabic dates and numbers | IT Service Desk Manager | [p13-11-how-ar](screenshots/p13-11-how-ar.png) |
 | Arabic on a phone: the list stacks | Branch Manager, Deira | [p13-11-how-ar-mobile](screenshots/p13-11-how-ar-mobile.png) |
-| Compact language switch in the header on a phone, English and Arabic | Teller, Deira | [p13-11-switcher-en-mobile](screenshots/p13-11-switcher-en-mobile.png) · [p13-11-switcher-ar-mobile](screenshots/p13-11-switcher-ar-mobile.png) |
+| Globe-only language switch on a phone, aligned with the bell and account icons, English and Arabic | Teller, Deira | [p13-11-switcher-en-mobile](screenshots/p13-11-switcher-en-mobile.png) · [p13-11-switcher-ar-mobile](screenshots/p13-11-switcher-ar-mobile.png) |
 
 ## Feature screenshots by PR
 
