@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe, JsonPipe } from '@angular/common';
+import { JsonPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,11 +7,12 @@ import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule } from '@jsverse/transloco';
 import { PlatformHealthReport } from '../../../core/platform/platform.models';
 import { PlatformService } from '../../../core/platform/platform.service';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 /** System Health (specification §13.2): live check results with status, duration and data, plus last-checked time. */
 @Component({
   selector: 'app-system-health',
-  imports: [DatePipe, DecimalPipe, JsonPipe, MatButtonModule, MatIconModule, MatProgressBarModule, MatTableModule, TranslocoModule],
+  imports: [JsonPipe, MatButtonModule, MatIconModule, MatProgressBarModule, MatTableModule, TranslocoModule, WiDatePipe, WiNumberPipe],
   templateUrl: './system-health.component.html',
   styles: `
     .status { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; font-weight: 600; background: #e2e8f0; color: var(--wi-slate); }

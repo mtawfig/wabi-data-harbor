@@ -1,9 +1,12 @@
+import { formatNumberValue } from './locale-format';
+
 /**
  * Numbers as people read them: thousands separators and at most two decimals, in the interface language
- * (Arabic-Indic digits in Arabic, as in answer tables). Used wherever a raw number would otherwise be shown.
+ * (Arabic-Indic digits in Arabic, as in answer tables). Used wherever a raw number would otherwise be shown;
+ * the formatting itself lives in `locale-format.ts`, shared with the `wiNumber` pipe.
  */
 export function formatNumber(value: number, language: string, maximumFractionDigits = 2): string {
-  return value.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', { maximumFractionDigits });
+  return formatNumberValue(value, `1.0-${maximumFractionDigits}`, language);
 }
 
 /** Formats numbers and numeric strings; anything else is returned as text unchanged. */

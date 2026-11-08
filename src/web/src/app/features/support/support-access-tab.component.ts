@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -20,6 +19,7 @@ import { GrantAction, SupportAccessGrant, SupportOperationCode, SupportOperation
 import { SupportAccessService } from '../../core/support/support-access.service';
 import { SupportArea, TicketDetail } from '../../core/support/support.models';
 import { GrantStatusComponent } from './grant-status.component';
+import { WiDatePipe } from '../../shared/format/locale-pipes';
 
 interface ProposalRow {
   definition: SupportOperationDefinition;
@@ -34,7 +34,7 @@ interface ProposalRow {
  */
 @Component({
   selector: 'app-support-access-tab',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, GrantStatusComponent],
+  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, GrantStatusComponent, WiDatePipe],
   templateUrl: './support-access-tab.component.html',
   styleUrl: './support-access-tab.component.scss',
 })

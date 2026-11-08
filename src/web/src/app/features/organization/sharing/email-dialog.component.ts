@@ -12,6 +12,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { problemMessage } from '../../../core/problem-message';
 import { DataClassification, ShareEmailResult } from '../../../core/sharing/sharing.models';
 import { SharingService } from '../../../core/sharing/sharing.service';
+import { WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 export interface EmailDialogData {
   historyId: string;
@@ -32,11 +33,11 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 @Component({
   selector: 'app-email-dialog',
-  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, TranslocoModule, WiNumberPipe],
   template: `
     <h2 mat-dialog-title><mat-icon>outgoing_mail</mat-icon>{{ 'sharing.email.title' | transloco }}</h2>
     <mat-dialog-content>
-      <p class="wi-muted title">{{ data.title }} · v{{ data.versionNumber }}</p>
+      <p class="wi-muted title">{{ data.title }} · v{{ data.versionNumber | wiNumber }}</p>
       <div class="banner" [class]="'banner banner--' + data.classification.toLowerCase()" data-testid="email-classification">
         <mat-icon>{{ data.classification === 'Internal' ? 'verified_user' : data.classification === 'Confidential' ? 'privacy_tip' : 'gpp_maybe' }}</mat-icon>
         <div>

@@ -117,4 +117,42 @@ public sealed class ProviderAdapterTests
         Assert.Equal("Flights", dashboard.Queries[0].Objective);
         Assert.Throws<JsonException>(() => QueryPlanner.Parse("no json here"));
     }
+
+    [Fact]
+    public async Task Anthropic_UsesTheRequestsOwnEffort_WhenItAsksForOne()
+    {
+        // The interpretation asks for "low" effort; it used to inherit the provider's configured effort and spend its whole
+        // output budget reasoning, leaving no text (a blank explanation).
+        var handler = new FakeHandler { Response = """{"model":"m","stop_reason":"end_turn","content":[{"type":"text","text":"{}"}],"usage":{"input_tokens":1,"output_tokens":1}}""" };
+        await new AnthropicProvider(new Factory(handler)).CompleteAsync(Descriptor(AiProviderType.Anthropic), Request with { Effort = "low" });
+        Assert.Equal("low", JsonNode.Parse(handler.Body!)!["output_config"]!["effort"]!.GetValue<string>());
+
+        await new AnthropicProvider(new Factory(handler)).CompleteAsync(Descriptor(AiProviderType.Anthropic), Request with { Effort = null });
+        Assert.Equal("medium", JsonNode.Parse(handler.Body!)!["output_config"]!["effort"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void Interpretation_CutOffOrEmpty_IsMarkedIncomplete_AndNeverShownAsAJsonFragment()
+    {
+        var usage = new PlanUsage("Anthropic", "m", 1, 1, 0, 0m, 1);
+        var complete = AnalysisService.ParseInterpretation("""{"narrative":"Two accounts stand out.","highlights":["A","B"]}""", cutOff: false, usage);
+        Assert.False(complete.Incomplete);
+        Assert.Equal("Two accounts stand out.", complete.Narrative);
+        Assert.Equal(["A", "B"], complete.Highlights);
+
+        // The provider stopped mid-JSON: no fragment such as {"narrative":"Two acc reaches the page.
+        var cut = AnalysisService.ParseInterpretation("""{"narrative":"Two acc""", cutOff: true, usage);
+        Assert.True(cut.Incomplete);
+        Assert.Equal(string.Empty, cut.Narrative);
+
+        // The whole budget went to reasoning: no text at all.
+        Assert.True(AnalysisService.ParseInterpretation(string.Empty, cutOff: true, usage).Incomplete);
+        Assert.True(AnalysisService.ParseInterpretation("""{"narrative":"","highlights":[]}""", cutOff: false, usage).Incomplete);
+
+        // A complete reply that is plain text is still shown as text.
+        var plain = AnalysisService.ParseInterpretation("Most tickets are open.", cutOff: false, usage);
+        Assert.False(plain.Incomplete);
+        Assert.Equal("Most tickets are open.", plain.Narrative);
+        Assert.True(AnalysisService.MinInterpretOutputTokens >= 4096);
+    }
 }

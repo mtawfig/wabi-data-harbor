@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -18,6 +17,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { Application, CLASSIFICATIONS, ColumnInfo, ColumnSemanticRole, DataClassification, ObjectDetail, ObjectSummary, SEMANTIC_ROLES } from '../../../core/organizations/applications.models';
 import { ApplicationsService } from '../../../core/organizations/applications.service';
 import { problemMessage } from '../../../core/problem-message';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 type ApprovalFilter = 'all' | 'approved' | 'pending';
 
@@ -33,7 +33,7 @@ interface ColumnDraft {
 /** Metadata catalog (specification §17): discovered objects and columns, EN/AR names, descriptions, classification and approval. */
 @Component({
   selector: 'app-metadata',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatButtonToggleModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule, WiDatePipe, WiNumberPipe],
   templateUrl: './metadata.component.html',
   styleUrl: './metadata.component.scss',
 })

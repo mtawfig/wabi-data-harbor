@@ -18,7 +18,7 @@
         @if (s.bootstrapCompleted) {
           <dl class="status">
             <dt>{{ 'bootstrap.completed' | transloco }}</dt><dd><mat-icon class="ok">check_circle</mat-icon></dd>
-            <dt>{{ 'bootstrap.completedAt' | transloco }}</dt><dd>{{ s.bootstrapCompletedAt | date: 'medium' }}</dd>
+            <dt>{{ 'bootstrap.completedAt' | transloco }}</dt><dd>{{ s.bootstrapCompletedAt | wiDate: 'medium' }}</dd>
             <dt>{{ 'bootstrap.administrator' | transloco }}</dt><dd><span class="wi-ltr">{{ s.bootstrapAdministratorEmail }}</span></dd>
             <dt>{{ 'bootstrap.schema' | transloco }}</dt><dd><span class="wi-ltr">{{ s.schemaVersion }}</span></dd>
           </dl>

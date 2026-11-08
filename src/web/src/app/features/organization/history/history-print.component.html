@@ -9,7 +9,7 @@
       <div>
         <p class="print__brand">{{ 'common.appName' | transloco }}</p>
         <h1>{{ d.summary.title }}</h1>
-        <p class="wi-muted">{{ language.current() === 'ar' ? d.summary.applicationNameAr : d.summary.applicationName }} · v{{ versionNumber }} · {{ d.summary.createdAt | date: 'medium' }}</p>
+        <p class="wi-muted">{{ language.current() === 'ar' ? d.summary.applicationNameAr : d.summary.applicationName }} · v{{ versionNumber | wiNumber }} · {{ d.summary.createdAt | wiDate: 'medium' }}</p>
       </div>
     </header>
     <p class="print__prompt"><strong>{{ 'history.prompt' | transloco }}:</strong> {{ d.originalPrompt }}</p>

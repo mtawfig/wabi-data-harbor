@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,10 +13,11 @@ import { TranslocoModule } from '@jsverse/transloco';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { Department, OrganizationUser, OrganizationUserStatus, Role } from '../../../core/organizations/admin.models';
 import { OrganizationAdminService } from '../../../core/organizations/admin.service';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 @Component({
   selector: 'app-users-list',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, WiDatePipe],
   templateUrl: './users-list.component.html',
   styleUrl: './admin-catalog.scss',
 })

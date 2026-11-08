@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,11 +7,12 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { SupportArea, TicketSummary } from '../../core/support/support.models';
 import { SupportService } from '../../core/support/support.service';
 import { TicketImpactComponent, TicketStatusComponent } from './ticket-chips.component';
+import { WiDatePipe } from '../../shared/format/locale-pipes';
 
 /** Dashboard widget: the five most recently active open tickets plus the open count. Used on both dashboards. */
 @Component({
   selector: 'app-ticket-widget',
-  imports: [DatePipe, MatButtonModule, MatIconModule, RouterLink, TranslocoModule, TicketStatusComponent, TicketImpactComponent],
+  imports: [MatButtonModule, MatIconModule, RouterLink, TranslocoModule, TicketStatusComponent, TicketImpactComponent, WiDatePipe],
   template: `
     <div class="wi-card widget" data-testid="ticket-widget">
       <div class="widget__head">
@@ -24,7 +24,7 @@ import { TicketImpactComponent, TicketStatusComponent } from './ticket-chips.com
         @for (t of items(); track t.ticketId) {
           <li>
             <a [routerLink]="[listLink(), t.ticketId]"><span class="wi-ltr ref">{{ t.referenceNumber }}</span> {{ t.subject }}</a>
-            <span class="meta">@if (area() === 'platform') { {{ organizationName(t) }} · }{{ t.lastActivityAt | date: 'short' }}</span>
+            <span class="meta">@if (area() === 'platform') { {{ organizationName(t) }} · }{{ t.lastActivityAt | wiDate: 'short' }}</span>
             <span class="chips"><app-ticket-impact [impact]="t.impact" /><app-ticket-status [status]="t.status" [adminView]="area() === 'platform'" /></span>
           </li>
         }

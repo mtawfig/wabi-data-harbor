@@ -31,8 +31,8 @@
         <dl class="facts">
           <div><dt>{{ 'aiProviders.fields.apiKey' | transloco }}</dt><dd>{{ p.apiKeyConfigured ? ('aiProviders.keyConfigured' | transloco: { hint: p.apiKeyHint }) : ('aiProviders.keyMissing' | transloco) }}</dd></div>
           <div><dt>{{ 'aiProviders.pricing' | transloco }}</dt><dd class="wi-ltr">${{ p.inputPricePerMillion }} / ${{ p.outputPricePerMillion }} / ${{ p.cachedInputPricePerMillion }}</dd></div>
-          <div><dt>{{ 'aiProviders.fields.effort' | transloco }}</dt><dd>{{ p.effort ? ('aiProviders.efforts.' + p.effort | transloco) : '—' }} · {{ p.maxOutputTokens }} {{ 'aiProviders.tokens' | transloco }}</dd></div>
-          <div><dt>{{ 'aiProviders.lastTest' | transloco }}</dt><dd>@if (p.lastTestAt) { <mat-icon class="inline" [class.ok]="p.lastTestSucceeded" [class.bad]="!p.lastTestSucceeded">{{ p.lastTestSucceeded ? 'check_circle' : 'error' }}</mat-icon> {{ p.lastTestAt | date: 'medium' }} @if (p.lastTestDetail) { <span class="wi-muted wi-ltr">· {{ p.lastTestDetail }}</span> } } @else { — }</dd></div>
+          <div><dt>{{ 'aiProviders.fields.effort' | transloco }}</dt><dd>{{ p.effort ? ('aiProviders.efforts.' + p.effort | transloco) : '—' }} · {{ p.maxOutputTokens | wiNumber }} {{ 'aiProviders.tokens' | transloco }}</dd></div>
+          <div><dt>{{ 'aiProviders.lastTest' | transloco }}</dt><dd>@if (p.lastTestAt) { <mat-icon class="inline" [class.ok]="p.lastTestSucceeded" [class.bad]="!p.lastTestSucceeded">{{ p.lastTestSucceeded ? 'check_circle' : 'error' }}</mat-icon> {{ p.lastTestAt | wiDate: 'medium' }} @if (p.lastTestDetail) { <span class="wi-muted wi-ltr">· {{ p.lastTestDetail }}</span> } } @else { — }</dd></div>
         </dl>
         @if (testResults()[p.providerId]; as r) { <p class="test-result">{{ r }}</p> }
       </article>

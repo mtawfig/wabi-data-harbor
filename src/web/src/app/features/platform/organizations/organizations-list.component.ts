@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,10 +14,11 @@ import { TranslocoModule } from '@jsverse/transloco';
 import { OrganizationDetail, OrganizationStatus } from '../../../core/organizations/organizations.models';
 import { OrganizationsService } from '../../../core/organizations/organizations.service';
 import { OrganizationStatusChipComponent } from './organization-status-chip.component';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 @Component({
   selector: 'app-organizations-list',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, OrganizationStatusChipComponent],
+  imports: [FormsModule, MatButtonModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, OrganizationStatusChipComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './organizations-list.component.html',
   styles: `
     .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }

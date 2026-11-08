@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,11 +9,12 @@ import { HistorySummary } from '../../../core/history/history.models';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { SharingService } from '../../../core/sharing/sharing.service';
 import { TicketWidgetComponent } from '../../support/ticket-widget.component';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 /** User dashboard: greeting, quick actions, recent analyses, items shared with the user and the support ticket widget. */
 @Component({
   selector: 'app-user-dashboard',
-  imports: [DatePipe, MatButtonModule, MatIconModule, RouterLink, TranslocoModule, TicketWidgetComponent],
+  imports: [MatButtonModule, MatIconModule, RouterLink, TranslocoModule, TicketWidgetComponent, WiDatePipe],
   template: `
     <section class="wi-page dashboard">
       <header class="wi-page__header">
@@ -36,7 +36,7 @@ import { TicketWidgetComponent } from '../../support/ticket-widget.component';
           <h3>{{ 'dashboard.recent.title' | transloco }}</h3>
           <ul>
             @for (h of recent(); track h.historyId) {
-              <li><a [routerLink]="['/app/history', h.historyId]"><strong>{{ h.title }}</strong><br /><span class="wi-muted small">{{ 'history.types.' + h.analysisType | transloco }} · {{ language.current() === 'ar' ? h.applicationNameAr : h.applicationName }} · {{ (h.updatedAt || h.createdAt) | date: 'medium' }}</span></a></li>
+              <li><a [routerLink]="['/app/history', h.historyId]"><strong>{{ h.title }}</strong><br /><span class="wi-muted small">{{ 'history.types.' + h.analysisType | transloco }} · {{ language.current() === 'ar' ? h.applicationNameAr : h.applicationName }} · {{ (h.updatedAt || h.createdAt) | wiDate: 'medium' }}</span></a></li>
             } @empty { <li class="wi-muted">{{ 'dashboard.recent.empty' | transloco }}</li> }
           </ul>
         </div>

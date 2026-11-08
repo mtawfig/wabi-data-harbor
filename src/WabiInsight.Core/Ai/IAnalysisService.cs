@@ -8,7 +8,11 @@ public interface IQueryExecutor
     Task<AnalysisResult> ExecuteAsync(Guid applicationId, CompiledQuery query, PlanVisualization? visualization, CancellationToken cancellationToken = default);
 }
 
-public sealed record Interpretation(string Narrative, IReadOnlyList<string> Highlights, PlanUsage Usage);
+/// <summary>
+/// The model's explanation of the verified panels. <see cref="Incomplete"/> is true when the provider stopped before the
+/// explanation was finished (output budget reached) or returned no text: the page then says so instead of showing a blank.
+/// </summary>
+public sealed record Interpretation(string Narrative, IReadOnlyList<string> Highlights, PlanUsage Usage, bool Incomplete = false);
 
 /// <summary>One application the signed-in user may ask about.</summary>
 public sealed record AskableApplication(Guid ApplicationId, string ApplicationCode, string ApplicationName, string ApplicationNameAr, string DatabaseType, bool IsBuiltIn, int ObjectCount, IReadOnlyList<Applications.ApplicationExampleQuestion> ExampleQuestions);

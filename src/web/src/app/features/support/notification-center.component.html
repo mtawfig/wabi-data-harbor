@@ -19,7 +19,7 @@
           <span class="icon"><mat-icon>{{ icon(n) }}</mat-icon></span>
           <div class="body">
             <p class="text">{{ text(n) }}</p>
-            <span class="wi-muted small">@if (organization(n); as o) { {{ o }} · }{{ n.createdAt | date: 'medium' }}</span>
+            <span class="wi-muted small">@if (organization(n); as o) { {{ o }} · }{{ n.createdAt | wiDate: 'medium' }}</span>
           </div>
           @if (!n.readAt) { <span class="dot"></span> }
         </li>

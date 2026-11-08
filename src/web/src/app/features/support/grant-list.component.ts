@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,11 +15,12 @@ import { GRANT_STATUSES, GrantStatus, SupportAccessGrant } from '../../core/supp
 import { SupportAccessService } from '../../core/support/support-access.service';
 import { SupportArea } from '../../core/support/support.models';
 import { GrantStatusComponent } from './grant-status.component';
+import { WiDatePipe } from '../../shared/format/locale-pipes';
 
 /** Platform Support Access page and the organization administrator's approval list: the same table, different area. */
 @Component({
   selector: 'app-grant-list',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule, GrantStatusComponent],
+  imports: [FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule, GrantStatusComponent, WiDatePipe],
   templateUrl: './grant-list.component.html',
   styleUrl: './support.scss',
 })

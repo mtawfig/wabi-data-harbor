@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -15,11 +14,12 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { problemMessage } from '../../../core/problem-message';
 import { SharedAnalysis } from '../../../core/sharing/sharing.models';
 import { SharingService } from '../../../core/sharing/sharing.service';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 /** Shared With Me (specification §24): analyses colleagues shared with the signed-in user; opening one shows the stored answer read-only. */
 @Component({
   selector: 'app-shared-with-me',
-  imports: [DatePipe, FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatTableModule, TranslocoModule],
+  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatTableModule, TranslocoModule, WiDatePipe],
   templateUrl: './shared-with-me.component.html',
   styleUrl: './sharing-list.scss',
 })

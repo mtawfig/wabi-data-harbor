@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -19,13 +18,14 @@ import { InsightsService } from '../../../../core/platform/insights.service';
 import { MetricBucket } from '../../../../core/platform/platform.models';
 import { baseChartOption } from '../../../../shared/ui/chart-theme';
 import { TicketWidgetComponent } from '../../../support/ticket-widget.component';
+import { WiDatePipe, WiNumberPipe } from '../../../../shared/format/locale-pipes';
 
 type Preset = 'today' | '7d' | '30d' | 'month' | 'custom';
 
 /** Organization Administrator dashboard (specification §14): organization-only KPIs, trends and tables, read through the insights views. */
 @Component({
   selector: 'app-organization-dashboard',
-  imports: [DatePipe, DecimalPipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, RouterLink, TranslocoModule, NgxEchartsDirective, TicketWidgetComponent],
+  imports: [FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, RouterLink, TranslocoModule, NgxEchartsDirective, TicketWidgetComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './organization-dashboard.component.html',
   styleUrls: ['../../../platform/dashboard/platform-dashboard.component.scss', './organization-dashboard.component.scss'],
 })

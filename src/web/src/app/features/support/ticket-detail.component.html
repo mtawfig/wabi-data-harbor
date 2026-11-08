@@ -16,7 +16,7 @@
         <div><dt>{{ 'support.fields.organization' | transloco }}</dt><dd>{{ organizationName() }}</dd></div>
         <div><dt>{{ 'support.fields.requester' | transloco }}</dt><dd>{{ s.createdByName }}</dd></div>
         <div><dt>{{ 'support.fields.assigned' | transloco }}</dt><dd>{{ s.assignedAdministratorName || ('support.actions.unassigned' | transloco) }}</dd></div>
-        <div><dt>{{ 'support.fields.created' | transloco }}</dt><dd>{{ s.createdAt | date: 'medium' }}</dd></div>
+        <div><dt>{{ 'support.fields.created' | transloco }}</dt><dd>{{ s.createdAt | wiDate: 'medium' }}</dd></div>
       </dl>
     </header>
 
@@ -34,13 +34,13 @@
             }
             <dl class="facts">
               @if (s.category) { <div><dt>{{ 'support.fields.category' | transloco }}</dt><dd>{{ s.category }}</dd></div> }
-              <div><dt>{{ 'support.fields.lastActivity' | transloco }}</dt><dd>{{ s.lastActivityAt | date: 'medium' }}</dd></div>
-              @if (ticket()!.firstOpenedAt) { <div><dt>{{ 'support.fields.firstOpened' | transloco }}</dt><dd>{{ ticket()!.firstOpenedAt | date: 'medium' }}</dd></div> }
-              @if (ticket()!.startedAt) { <div><dt>{{ 'support.fields.startedAt' | transloco }}</dt><dd>{{ ticket()!.startedAt | date: 'medium' }}</dd></div> }
-              @if (s.status === 'PendingUserResponse' && ticket()!.pendingResponseAt) { <div><dt>{{ 'support.fields.pendingAt' | transloco }}</dt><dd>{{ ticket()!.pendingResponseAt | date: 'medium' }}</dd></div> }
-              @if (ticket()!.resolvedAt) { <div><dt>{{ 'support.fields.resolvedAt' | transloco }}</dt><dd>{{ ticket()!.resolvedAt | date: 'medium' }}</dd></div> }
-              @if (ticket()!.cancelledAt) { <div><dt>{{ 'support.fields.cancelledAt' | transloco }}</dt><dd>{{ ticket()!.cancelledAt | date: 'medium' }}</dd></div> }
-              @if (ticket()!.reopenedCount > 0) { <div><dt>{{ 'support.fields.reopened' | transloco }}</dt><dd>{{ ticket()!.reopenedCount }}</dd></div> }
+              <div><dt>{{ 'support.fields.lastActivity' | transloco }}</dt><dd>{{ s.lastActivityAt | wiDate: 'medium' }}</dd></div>
+              @if (ticket()!.firstOpenedAt) { <div><dt>{{ 'support.fields.firstOpened' | transloco }}</dt><dd>{{ ticket()!.firstOpenedAt | wiDate: 'medium' }}</dd></div> }
+              @if (ticket()!.startedAt) { <div><dt>{{ 'support.fields.startedAt' | transloco }}</dt><dd>{{ ticket()!.startedAt | wiDate: 'medium' }}</dd></div> }
+              @if (s.status === 'PendingUserResponse' && ticket()!.pendingResponseAt) { <div><dt>{{ 'support.fields.pendingAt' | transloco }}</dt><dd>{{ ticket()!.pendingResponseAt | wiDate: 'medium' }}</dd></div> }
+              @if (ticket()!.resolvedAt) { <div><dt>{{ 'support.fields.resolvedAt' | transloco }}</dt><dd>{{ ticket()!.resolvedAt | wiDate: 'medium' }}</dd></div> }
+              @if (ticket()!.cancelledAt) { <div><dt>{{ 'support.fields.cancelledAt' | transloco }}</dt><dd>{{ ticket()!.cancelledAt | wiDate: 'medium' }}</dd></div> }
+              @if (ticket()!.reopenedCount > 0) { <div><dt>{{ 'support.fields.reopened' | transloco }}</dt><dd>{{ ticket()!.reopenedCount | wiNumber }}</dd></div> }
             </dl>
           </div>
           <aside class="actions" data-testid="ticket-actions">
@@ -81,7 +81,7 @@
           <div class="thread" data-testid="ticket-thread">
             @for (c of comments(); track c.commentId) {
               <article class="message" [class.message--mine]="isMine(c)" [class.message--platform]="c.authorType === 'PlatformAdministrator'">
-                <header><strong>{{ c.authorDisplayName }}</strong> <span class="wi-muted small">· {{ (c.authorType === 'PlatformAdministrator' ? 'support.conversation.platformTeam' : 'support.timeline.actor.OrganizationUser') | transloco }} · {{ c.createdAt | date: 'medium' }}</span></header>
+                <header><strong>{{ c.authorDisplayName }}</strong> <span class="wi-muted small">· {{ (c.authorType === 'PlatformAdministrator' ? 'support.conversation.platformTeam' : 'support.timeline.actor.OrganizationUser') | transloco }} · {{ c.createdAt | wiDate: 'medium' }}</span></header>
                 <p>{{ c.body }}</p>
               </article>
             }
@@ -117,7 +117,7 @@
                     @if (details(e); as d) { <span class="wi-muted">· {{ d }}</span> }
                   </div>
                   @if (e.note) { <p class="timeline__note">{{ e.note === 'auto_reply' ? ('support.timeline.autoReply' | transloco) : e.note }}</p> }
-                  <p class="wi-muted small">{{ e.actorDisplayName }} · {{ 'support.timeline.actor.' + e.actorType | transloco }} · {{ e.createdAt | date: 'medium' }}</p>
+                  <p class="wi-muted small">{{ e.actorDisplayName }} · {{ 'support.timeline.actor.' + e.actorType | transloco }} · {{ e.createdAt | wiDate: 'medium' }}</p>
                 </div>
               </li>
             }
@@ -141,7 +141,7 @@
                 <mat-icon>description</mat-icon>
                 <div>
                   <strong>{{ a.fileName }}</strong><br />
-                  <span class="wi-muted small">{{ 'support.attachments.size' | transloco: { size: (a.sizeBytes / 1024 | number: '1.0-1') } }} · {{ a.uploadedByDisplayName }} · {{ a.createdAt | date: 'medium' }}</span>
+                  <span class="wi-muted small">{{ 'support.attachments.size' | transloco: { size: (a.sizeBytes / 1024 | wiNumber: '1.0-1') } }} · {{ a.uploadedByDisplayName }} · {{ a.createdAt | wiDate: 'medium' }}</span>
                 </div>
                 <a mat-stroked-button [href]="downloadUrl(a)" target="_blank" rel="noopener"><mat-icon>download</mat-icon>{{ 'support.attachments.download' | transloco }}</a>
               </li>

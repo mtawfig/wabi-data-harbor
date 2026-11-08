@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,10 +14,11 @@ import { OrganizationDetail } from '../../../core/organizations/organizations.mo
 import { OrganizationsService } from '../../../core/organizations/organizations.service';
 import { AuditLogRow } from '../../../core/platform/platform.models';
 import { PlatformService } from '../../../core/platform/platform.service';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 @Component({
   selector: 'app-audit-logs',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatTableModule, TranslocoModule, WiDatePipe],
   templateUrl: './audit-logs.component.html',
   styles: `
     .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; mat-form-field { min-width: 180px; } .search { min-width: 320px; } }

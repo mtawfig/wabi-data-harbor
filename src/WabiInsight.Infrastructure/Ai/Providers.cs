@@ -103,9 +103,11 @@ public sealed class AnthropicProvider : HttpAiProvider
         ArgumentNullException.ThrowIfNull(descriptor);
         ArgumentNullException.ThrowIfNull(request);
         var outputConfig = new Dictionary<string, object?>();
-        if (!string.IsNullOrWhiteSpace(descriptor.Effort))
+        // A call may ask for its own effort (the interpretation asks for "low"); otherwise the provider's configured effort applies.
+        var effort = string.IsNullOrWhiteSpace(request.Effort) ? descriptor.Effort : request.Effort;
+        if (!string.IsNullOrWhiteSpace(effort))
         {
-            outputConfig["effort"] = descriptor.Effort;
+            outputConfig["effort"] = effort;
         }
 
         if (request.JsonSchema is not null)

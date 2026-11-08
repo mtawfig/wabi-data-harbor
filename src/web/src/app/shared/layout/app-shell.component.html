@@ -7,7 +7,7 @@
   <span class="wi-ms-auto"></span>
   <app-language-switcher [variant]="accent() === 'platform' ? 'light' : 'dark'" />
   <a mat-icon-button [routerLink]="notificationsLink()" class="shell-header__bell" [attr.aria-label]="'notifications.bell' | transloco" data-testid="notifications-bell">
-    <mat-icon [matBadge]="notifications.unread() > 99 ? '99+' : notifications.unread()" [matBadgeHidden]="notifications.unread() === 0" aria-hidden="false">notifications</mat-icon>
+    <mat-icon [matBadge]="notifications.unread() > 99 ? ('99' | wiNumber) + '+' : (notifications.unread() | wiNumber)" [matBadgeHidden]="notifications.unread() === 0" aria-hidden="false">notifications</mat-icon>
   </a>
   <button mat-button type="button" [matMenuTriggerFor]="userMenu" class="shell-header__user" data-testid="user-menu">
     <mat-icon>account_circle</mat-icon>

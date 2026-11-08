@@ -12,10 +12,11 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { Role } from '../../../core/organizations/admin.models';
 import { OrganizationAdminService } from '../../../core/organizations/admin.service';
 import { problemMessage } from '../../../core/problem-message';
+import { WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 @Component({
   selector: 'app-roles',
-  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatTableModule, TranslocoModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatTableModule, TranslocoModule, WiNumberPipe],
   templateUrl: './roles.component.html',
   styleUrl: './admin-catalog.scss',
 })

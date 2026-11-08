@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -16,6 +15,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { FILTER_OPERATORS, FilterOperator, InsightsCatalog, InsightsColumn, InsightsMetric, InsightsObject, METRIC_AGGREGATES, MetricFilter, SaveInsightsMetricRequest, SqlPreview } from '../../../core/platform/insights.models';
 import { InsightsService } from '../../../core/platform/insights.service';
 import { problemMessage } from '../../../core/problem-message';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 interface FilterDraft {
   column: string;
@@ -26,7 +26,7 @@ interface FilterDraft {
 /** Platform Insights Configuration (specification §12): read-only source status, the global view/column catalog and metric definitions. */
 @Component({
   selector: 'app-insights-config',
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTabsModule, TranslocoModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTabsModule, TranslocoModule, WiDatePipe],
   templateUrl: './insights-config.component.html',
   styleUrl: './insights-config.component.scss',
 })

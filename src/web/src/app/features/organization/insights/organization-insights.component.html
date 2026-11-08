@@ -64,14 +64,14 @@
           @if (result(); as r) {
             <div class="wi-card result" data-testid="oins-result">
               <div class="result__head">
-                <span class="total">{{ total() | number: '1.0-2' }} <small>{{ 'orgInsights.units.' + r.unit | transloco }}</small></span>
-                <span class="wi-muted small">{{ 'orgInsights.rows' | transloco: { count: r.rows.length } }} · {{ r.durationMs | number: '1.0-0' }} ms</span>
+                <span class="total">{{ total() | wiNumber: '1.0-2' }} <small>{{ 'orgInsights.units.' + r.unit | transloco }}</small></span>
+                <span class="wi-muted small">{{ 'orgInsights.rows' | transloco: { count: r.rows.length } }} · {{ r.durationMs | wiNumber: '1.0-0' }} ms</span>
               </div>
               @if (chart(); as c) { <div echarts [options]="c" class="chart"></div> }
               @if (r.rows.length === 0) { <p class="wi-muted">{{ 'orgDashboard.noData' | transloco }}</p> } @else {
                 <table class="plain full">
                   <thead><tr>@if (r.rows[0].bucket) { <th>{{ 'orgInsights.bucket' | transloco }}</th> }@if (groupBy()) { <th>{{ groupBy() }}</th> }<th class="num">{{ 'orgInsights.value' | transloco }}</th></tr></thead>
-                  <tbody>@for (row of r.rows; track $index) { <tr>@if (row.bucket) { <td>{{ row.bucket | slice: 0 : 10 }}</td> }@if (groupBy()) { <td>{{ row.group ?? '—' }}</td> }<td class="num">{{ row.value | number: '1.0-2' }}</td></tr> }</tbody>
+                  <tbody>@for (row of r.rows; track $index) { <tr>@if (row.bucket) { <td>{{ row.bucket | slice: 0 : 10 }}</td> }@if (groupBy()) { <td>{{ row.group ?? '—' }}</td> }<td class="num">{{ row.value | wiNumber: '1.0-2' }}</td></tr> }</tbody>
                 </table>
               }
             </div>

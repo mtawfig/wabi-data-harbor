@@ -1,4 +1,4 @@
-import { DecimalPipe, SlicePipe } from '@angular/common';
+import { SlicePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -18,13 +18,14 @@ import { InsightsService } from '../../../core/platform/insights.service';
 import { MetricBucket } from '../../../core/platform/platform.models';
 import { problemMessage } from '../../../core/problem-message';
 import { baseChartOption } from '../../../shared/ui/chart-theme';
+import { WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 type Preset = 'all' | '7d' | '30d' | '90d' | 'year';
 
 /** Organization Insights (specification §12/§14): run the metrics granted to the signed-in user, with period, bucket and grouping, about this organization only. */
 @Component({
   selector: 'app-organization-insights',
-  imports: [DecimalPipe, SlicePipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, NgxEchartsDirective],
+  imports: [SlicePipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, NgxEchartsDirective, WiNumberPipe],
   templateUrl: './organization-insights.component.html',
   styleUrl: './organization-insights.component.scss',
 })

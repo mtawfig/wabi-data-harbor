@@ -38,7 +38,7 @@
     </div>
     @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
     <table mat-table [dataSource]="items()" data-testid="audit-table">
-      <ng-container matColumnDef="createdAt"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.at' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.createdAt | date: 'medium' }}</td></ng-container>
+      <ng-container matColumnDef="createdAt"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.at' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.createdAt | wiDate: 'medium' }}</td></ng-container>
       <ng-container matColumnDef="eventType"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.eventType' | transloco }}</th><td mat-cell *matCellDef="let r"><span class="wi-ltr">{{ r.eventType }}</span></td></ng-container>
       <ng-container matColumnDef="actor"><th mat-header-cell *matHeaderCellDef>{{ 'audit.actor' | transloco }}</th><td mat-cell *matCellDef="let r">{{ r.actorDisplayName }}<br /><span class="actor">{{ 'audit.actors.' + r.actorType | transloco }}@if (r.ipAddress) { · <span class="wi-ltr">{{ r.ipAddress }}</span> }</span></td></ng-container>
       <ng-container matColumnDef="organization"><th mat-header-cell *matHeaderCellDef>{{ 'platformDashboard.organization' | transloco }}</th><td mat-cell *matCellDef="let r">{{ organizationLabel(r.organizationId) }}</td></ng-container>

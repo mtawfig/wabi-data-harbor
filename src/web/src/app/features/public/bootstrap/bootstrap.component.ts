@@ -1,5 +1,4 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { ProblemDetails } from '../../../core/auth/session.model';
 import { BrandLogoComponent } from '../../../shared/ui/brand-logo.component';
 import { LanguageSwitcherComponent } from '../../../shared/ui/language-switcher.component';
+import { WiDatePipe } from '../../../shared/format/locale-pipes';
 
 export interface BootstrapStatus {
   bootstrapCompleted: boolean;
@@ -26,7 +26,7 @@ export interface BootstrapStatus {
 /** Protected first-administrator initialization (specification §7): status plus a one-time secret-guarded action. */
 @Component({
   selector: 'app-bootstrap',
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, RouterLink, TranslocoModule, BrandLogoComponent, LanguageSwitcherComponent],
+  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, RouterLink, TranslocoModule, BrandLogoComponent, LanguageSwitcherComponent, WiDatePipe],
   templateUrl: './bootstrap.component.html',
   styleUrl: '../login/login.component.scss',
 })

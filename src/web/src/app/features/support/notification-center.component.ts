@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +9,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
 import { AppNotification, NotificationsService } from '../../core/notifications/notifications.service';
 import { SupportArea } from '../../core/support/support.models';
+import { WiDatePipe } from '../../shared/format/locale-pipes';
 
 const ICONS: Record<string, string> = {
   'Ticket.Created': 'add_comment',
@@ -27,7 +27,7 @@ const ICONS: Record<string, string> = {
 /** Notification centre: localized from codes and parameters; clicking opens the related ticket and marks the item read. */
 @Component({
   selector: 'app-notification-center',
-  imports: [DatePipe, MatButtonModule, MatIconModule, MatPaginatorModule, MatProgressBarModule, MatSlideToggleModule, TranslocoModule],
+  imports: [MatButtonModule, MatIconModule, MatPaginatorModule, MatProgressBarModule, MatSlideToggleModule, TranslocoModule, WiDatePipe],
   templateUrl: './notification-center.component.html',
   styles: `
     .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-bottom: 12px; }

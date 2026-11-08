@@ -9,7 +9,7 @@
         </div>
         <a mat-flat-button [href]="reportUrl()" target="_blank" rel="noopener" data-testid="ask-report-download"><mat-icon>picture_as_pdf</mat-icon>{{ 'ask.report.download' | transloco }}</a>
       </div>
-      <div class="ask__report-meta wi-muted small"><mat-icon>description</mat-icon><span class="wi-ltr">{{ r.fileName }}</span> · {{ 'ask.report.size' | transloco: { kb: (r.sizeBytes / 1024 | number: '1.0-0') } }} · {{ 'ask.report.sections' | transloco: { count: r.sections.length } }}</div>
+      <div class="ask__report-meta wi-muted small"><mat-icon>description</mat-icon><span class="wi-ltr">{{ r.fileName }}</span> · {{ 'ask.report.size' | transloco: { kb: (r.sizeBytes / 1024 | wiNumber: '1.0-0') } }} · {{ 'ask.report.sections' | transloco: { count: r.sections.length } }}</div>
       <ol class="ask__report-toc">
         <li>{{ 'ask.report.summary' | transloco }}</li>
         @for (s of r.sections; track $index) { <li>{{ sectionTitle(s.title) }}</li> }
@@ -39,6 +39,9 @@
       </p>
     }
     @if (a.interpretation?.narrative) { <p class="ask__narrative" data-testid="ask-narrative">{{ a.interpretation!.narrative }}</p> }
+    @if (a.interpretation && (a.interpretation.incomplete || !a.interpretation.narrative)) {
+      <p class="ask__incomplete" role="status" data-testid="ask-interpretation-incomplete"><mat-icon>info</mat-icon><span>{{ 'ask.interpretationIncomplete' | transloco }}</span></p>
+    }
     @if (a.interpretation?.highlights?.length) { <ul class="ask__highlights">@for (h of a.interpretation!.highlights; track h) { <li><mat-icon>check_circle</mat-icon>{{ h }}</li> }</ul> }
     @if (panels().length > 1) { <p class="ask__panels-note wi-muted small"><mat-icon>verified</mat-icon>{{ 'ask.panelsNote' | transloco: { count: panels().length } }}</p> }
     @if (truncatedRows() > 0) { <p class="ask__truncated"><mat-icon>warning_amber</mat-icon>{{ 'ask.truncated' | transloco: { count: truncatedRows() } }}</p> }
@@ -83,7 +86,7 @@
         <h4>{{ a.panels.length > 1 ? ('ask.queryOf' | transloco: { title: p.title || p.plan.objective }) : ('ask.sql' | transloco) }}</h4>
         <pre class="ask__sql">{{ p.compiledSqlPreview }}</pre>
       }
-      <p class="wi-muted small">{{ 'ask.usage' | transloco: { model: a.planUsage.model, tokens: totalTokens(), cost: (a.totalEstimatedCost | number: '1.4-4'), ms: (a.totalDurationMs | number: '1.0-0'), rows: totalRows() } }}</p>
+      <p class="wi-muted small">{{ 'ask.usage' | transloco: { model: a.planUsage.model, tokens: totalTokens(), cost: (a.totalEstimatedCost | wiNumber: '1.4-4'), ms: (a.totalDurationMs | wiNumber: '1.0-0'), rows: totalRows() } }}</p>
     </mat-expansion-panel>
   </div>
 }

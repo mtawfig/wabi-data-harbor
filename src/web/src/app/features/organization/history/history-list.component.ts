@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -21,6 +20,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { AskableApplication } from '../../../core/platform/ai.models';
 import { AiService } from '../../../core/platform/ai.service';
 import { problemMessage } from '../../../core/problem-message';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 /**
  * My History and Favorites (specification §23): the signed-in user's saved analyses with search, application,
@@ -29,7 +29,7 @@ import { problemMessage } from '../../../core/problem-message';
  */
 @Component({
   selector: 'app-history-list',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatSlideToggleModule, MatTableModule, TranslocoModule],
+  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule, MatSlideToggleModule, MatTableModule, TranslocoModule, WiDatePipe, WiNumberPipe],
   templateUrl: './history-list.component.html',
   styleUrl: './history-list.component.scss',
 })

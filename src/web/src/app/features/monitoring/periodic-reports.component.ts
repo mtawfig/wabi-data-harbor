@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -27,6 +26,7 @@ import { PeriodicReportsService } from '../../core/monitoring/periodic-reports.s
 import { OrganizationUser } from '../../core/organizations/admin.models';
 import { OrganizationAdminService } from '../../core/organizations/admin.service';
 import { problemMessage } from '../../core/problem-message';
+import { WiDatePipe } from '../../shared/format/locale-pipes';
 
 interface SubscriptionForm {
   subscriptionId: string | null;
@@ -49,7 +49,7 @@ interface SubscriptionForm {
  */
 @Component({
   selector: 'app-periodic-reports',
-  imports: [DatePipe, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatSlideToggleModule, RouterLink, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatSlideToggleModule, RouterLink, TranslocoModule, WiDatePipe],
   templateUrl: './periodic-reports.component.html',
   styleUrl: './monitoring.scss',
 })

@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -18,6 +18,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { Application, ConnectionTestResult, DATABASE_TYPES, DatabaseType } from '../../../core/organizations/applications.models';
 import { ApplicationsService } from '../../../core/organizations/applications.service';
 import { problemMessage } from '../../../core/problem-message';
+import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 interface ExampleControls {
   en: FormControl<string>;
@@ -30,7 +31,7 @@ interface ExampleControls {
  */
 @Component({
   selector: 'app-applications',
-  imports: [DatePipe, DecimalPipe, NgTemplateOutlet, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, RouterLink, TranslocoModule, WiDatePipe, WiNumberPipe],
   templateUrl: './applications.component.html',
   styleUrl: './applications.component.scss',
 })

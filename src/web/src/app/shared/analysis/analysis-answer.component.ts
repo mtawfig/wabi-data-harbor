@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -10,6 +9,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { AnalysisPanel, AskResponse, EmailDraft } from '../../core/platform/ai.models';
 import { baseChartOption } from '../ui/chart-theme';
 import { answerAccess } from './answer-access';
+import { WiNumberPipe } from '../format/locale-pipes';
 
 interface KpiCard {
   title: string;
@@ -30,7 +30,7 @@ interface ChartCard {
  */
 @Component({
   selector: 'app-analysis-answer',
-  imports: [DecimalPipe, MatButtonModule, MatExpansionModule, MatIconModule, TranslocoModule, NgxEchartsDirective],
+  imports: [MatButtonModule, MatExpansionModule, MatIconModule, TranslocoModule, NgxEchartsDirective, WiNumberPipe],
   templateUrl: './analysis-answer.component.html',
   styleUrl: './analysis-answer.component.scss',
 })
