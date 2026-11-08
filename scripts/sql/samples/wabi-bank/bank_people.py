@@ -4,7 +4,7 @@ Personnel is the system of record. Every other system reuses these identifiers u
   DepartmentCode  a Head Office department (FIN) or a banking branch (BR-DXB01); also the finance cost centre
   SectionCode     a sub-unit of a department or branch (FIN-PRC, BR-DXB01-TLR); IT sections are help-desk groups
   EmployeeNumber  the person (W1001)
-  UserId          the person's single login across all systems (FHASSAN); service accounts have no employee
+  UserId          the person's single login across all systems (CASHBY); service accounts have no employee
 
 Everything is deterministic (seeded random.Random, sorted iteration) so all five scripts agree on every value.
 """
@@ -15,7 +15,7 @@ from functools import lru_cache
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from build_common import UAE_HOLIDAYS_2025, rng  # noqa: E402
-from build_people import NAMES  # noqa: E402
+import bank_names  # noqa: E402
 
 ORG_CODE = "WBK"
 ORG_NAME = "Wabi Bank"
@@ -224,14 +224,14 @@ SERVICE_ACCOUNTS = [  # user id, description, systems
 
 # The eight people who also get Wabi Insight accounts in 06-seed-wabiinsightdb.sql (keep in sync).
 SEED_PEOPLE = [  # number, first, last, first Ar, last Ar, gender, nationality, unit, position, birth, hire, wabi role, language
-    ("W1001", "Huda", "Al Marzooqi", "هدى", "المرزوقي", "F", "AE", "ITD-SEC", "head", "1986-04-17", "2014-09-07", "OrganizationAdmin", "en"),
-    ("W1002", "Rashid", "Al Hammadi", "راشد", "الحمادي", "M", "AE", "CEO", "chief", "1969-02-08", "2008-01-06", "Management", "ar"),
-    ("W1003", "Omar", "Haddad", "عمر", "حداد", "M", "JO", "BR-DXB01", "chief", "1981-10-23", "2011-05-15", "BranchManager", "en"),
-    ("W1004", "Priya", "Menon", None, None, "F", "IN", "BR-DXB01-TLR", "Teller", "1996-07-02", "2021-02-14", "Teller", "en"),
-    ("W1005", "Mariam", "Al Ketbi", "مريم", "الكتبي", "F", "AE", "HRD-PSV", "HR Officer", "1993-12-11", "2018-10-07", "HROfficer", "ar"),
-    ("W1006", "Imran", "Qureshi", None, None, "M", "PK", "FIN-BGP", "Budget Controller", "1985-03-29", "2015-06-21", "BudgetController", "en"),
-    ("W1007", "Layla", "Darwish", "ليلى", "درويش", "F", "LB", "CMP-AML", "Senior AML Officer", "1990-01-19", "2017-03-12", "ComplianceOfficer", "en"),
-    ("W1008", "Mark", "Santos", None, None, "M", "PH", "ITD-SD", "head", "1984-08-05", "2016-11-20", "ServiceDeskManager", "en"),
+    ("W1001", "Clara", "Ashby", "كلارا", "آشبي", "F", "AE", "ITD-SEC", "head", "1986-04-17", "2014-09-07", "OrganizationAdmin", "en"),
+    ("W1002", "Victor", "Lindley", "فيكتور", "ليندلي", "M", "AE", "CEO", "chief", "1969-02-08", "2008-01-06", "Management", "ar"),
+    ("W1003", "Daniel", "Hartwell", "دانيال", "هارتويل", "M", "JO", "BR-DXB01", "chief", "1981-10-23", "2011-05-15", "BranchManager", "en"),
+    ("W1004", "Emily", "Carver", "إيميلي", "كارفر", "F", "IN", "BR-DXB01-TLR", "Teller", "1996-07-02", "2021-02-14", "Teller", "en"),
+    ("W1005", "Sophie", "Langley", "صوفي", "لانغلي", "F", "AE", "HRD-PSV", "HR Officer", "1993-12-11", "2018-10-07", "HROfficer", "ar"),
+    ("W1006", "Martin", "Calder", "مارتن", "كالدر", "M", "PK", "FIN-BGP", "Budget Controller", "1985-03-29", "2015-06-21", "BudgetController", "en"),
+    ("W1007", "Laura", "Bexley", "لورا", "بيكسلي", "F", "LB", "CMP-AML", "Senior AML Officer", "1990-01-19", "2017-03-12", "ComplianceOfficer", "en"),
+    ("W1008", "Simon", "Varley", "سايمون", "فارلي", "M", "PH", "ITD-SD", "head", "1984-08-05", "2016-11-20", "ServiceDeskManager", "en"),
 ]
 
 
@@ -353,13 +353,8 @@ def _people():
             slots.append({"dept": s["DepartmentCode"], "section": s["SectionCode"], "pos": _position_code(s["SectionCode"], t), "grade": g, "level": "Staff", "title": t})
 
     def name_for(nat, female):
-        group = nat[5]
-        gk = "f" if female else "m"
-        if group in ("arab", "emirati"):
-            first, first_ar = r.choice(NAMES[f"{group}_{gk}"])
-            last, last_ar = r.choice(NAMES[f"{group}_l"])
-            return first, last, first_ar, last_ar
-        return r.choice(NAMES[f"{group}_{gk}"]), r.choice(NAMES[f"{group}_l"]), None, None
+        (first, first_ar), (last, last_ar) = bank_names.pick(r, nat[5], female)
+        return first, last, first_ar, last_ar
 
     def unique_email(first, last):
         base = f"{first}.{last}".lower().replace(" ", "").replace("'", "")

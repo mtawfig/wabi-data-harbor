@@ -175,10 +175,10 @@ VENDOR_GROUPS = [  # code, vendor category, count, name suffixes, payment terms
     ("VEHICLES", "Motor vehicles", 2, ["Motors LLC"], [30]),
     ("MARKET", "Market data", 2, ["Financial Information FZ-LLC"], [30, 60]),
 ]
-VENDOR_PREFIXES = ["Falcon", "Desert Line", "Gulf Star", "Al Noor", "Horizon", "Pearl Coast", "Oasis", "Crescent", "Summit", "Atlas", "Al Reef", "Blue Dune",
-                   "Jebel", "Marina", "Sahara", "Palm Grove", "Saqr", "Bayt", "Al Waha", "Al Fajr", "Silver Sands", "Corniche", "Meridian", "Al Bustan",
-                   "Qamar", "Najm", "Sidra", "Ghaf", "Areej", "Rimal", "Dana", "Masar", "Tamr", "Nujoom", "Wadi", "Liwa", "Hatta", "Arabian Gulf",
-                   "Seven Emirates", "Creekside", "Dhow", "Mirage", "Zenith", "Coral", "Sandstone", "Lighthouse", "Al Majd", "Fanar"]
+VENDOR_PREFIXES = ["Falcon", "Desert Line", "Northstar", "Brightline", "Horizon", "Pearl Coast", "Oasis", "Crescent", "Summit", "Atlas", "Clearview", "Blue Dune",
+                   "Ridgeway", "Marina", "Sahara", "Palm Grove", "Keystone", "Bluegate", "Greenfield", "Daybreak", "Silver Sands", "Seafront", "Meridian", "Gardenia",
+                   "Moonlight", "Starling", "Willow", "Juniper", "Amberline", "Sandbar", "Maple", "Pathway", "Orchard", "Starfield", "Valley", "Riverside", "Highland", "Bayside",
+                   "Seven Seas", "Creekside", "Sailboat", "Mirage", "Zenith", "Coral", "Sandstone", "Lighthouse", "Pinnacle", "Beacon"]
 UAE_BANK_CODES = ["026", "030", "033", "035", "044", "046", "047", "050", "053", "057"]
 
 # Spend categories: name, Arabic, GL account (expense or fixed-asset cost), vendor group, lead days, Goods/Services, asset class, useful life, items.
@@ -1256,7 +1256,7 @@ class Finance:
     # ---------------------------------------------------------------------------------------- budget versions, transfers, periods
     def make_versions(self):
         r = rng(9696)
-        ba = U["IQURESHI"]["UserId"]
+        ba = NUM["W1006"]["UserId"]  # the budget controller (a Wabi Insight sample user)
         rows = []
         for code, name, ar, vtype, eff, prep, appr, current, notes in (
                 (ORIGINAL, "FY2025 original budget", "الموازنة الأصلية للسنة المالية 2025", "Original", "2025-01", dt.date(2024, 11, 27), dt.date(2024, 12, 18), False,

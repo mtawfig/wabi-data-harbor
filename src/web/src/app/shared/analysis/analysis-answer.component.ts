@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +10,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { AnalysisPanel, AskResponse, EmailDraft } from '../../core/platform/ai.models';
 import { baseChartOption } from '../ui/chart-theme';
 import { answerAccess } from './answer-access';
+import { PlanDescription, describePanel } from './plan-description';
 import { WiNumberPipe } from '../format/locale-pipes';
 
 interface KpiCard {
@@ -48,9 +50,13 @@ export class AnalysisAnswerComponent {
   readonly access = computed(() => answerAccess(this.panels()));
   readonly truncatedRows = computed(() => this.panels().filter((p) => p.result.truncated).reduce((n, p) => n + p.result.rowCount, 0));
   readonly totalRows = computed(() => this.panels().reduce((n, p) => n + p.result.rowCount, 0));
-  readonly totalTokens = computed(() => {
-    const a = this.answer();
-    return a.planUsage.inputTokens + a.planUsage.outputTokens + (a.interpretation?.usage?.inputTokens ?? 0) + (a.interpretation?.usage?.outputTokens ?? 0);
+  /** Re-evaluates once the active language's translations have loaded, so the plain-language text never shows keys. */
+  private readonly translation = toSignal(this.transloco.selectTranslation());
+  /** "How this was computed": each panel's validated plan in plain words, in the interface language (no SQL). */
+  readonly descriptions = computed<PlanDescription[]>(() => {
+    this.translation();
+    const language = this.language.current();
+    return this.panels().map((p) => describePanel(p, language, (key, params) => this.transloco.translate(key, params)));
   });
 
   /** Single-number panels become headline cards: the first numeric cell of the first row. */
@@ -101,6 +107,10 @@ export class AnalysisAnswerComponent {
       return value.slice(0, 10);
     }
     return String(value);
+  }
+
+  join(items: string[]): string {
+    return items.join(this.language.current() === 'ar' ? '، ' : ', ');
   }
 
   /** Column aliases come from the plan (snake_case identifiers); show them as words. */

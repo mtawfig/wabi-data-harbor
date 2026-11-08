@@ -108,3 +108,24 @@ internal sealed class AnalysisCollectionItemConfiguration : IEntityTypeConfigura
         builder.HasIndex(i => new { i.OrganizationId, i.HistoryId });
     }
 }
+
+internal sealed class AnalysisQueryLogConfiguration : IEntityTypeConfiguration<AnalysisQueryLog>
+{
+    public void Configure(EntityTypeBuilder<AnalysisQueryLog> builder)
+    {
+        builder.ToTable("AnalysisQueryLogs");
+        builder.HasKey(l => l.LogId);
+        builder.Property(l => l.LogId).ValueGeneratedNever();
+        builder.HasOne<Core.Entities.Platform.Organization>().WithMany().HasForeignKey(l => l.OrganizationId).OnDelete(DeleteBehavior.Cascade);
+        builder.Property(l => l.Question).HasMaxLength(4000).IsRequired();
+        builder.Property(l => l.Language).HasMaxLength(5).IsRequired();
+        builder.Property(l => l.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(l => l.FailureStage).HasMaxLength(40);
+        builder.Property(l => l.FailureCode).HasMaxLength(100);
+        builder.Property(l => l.PlanJson).IsRequired();
+        builder.Property(l => l.QueriesJson).IsRequired();
+        builder.HasIndex(l => new { l.OrganizationId, l.CreatedAt });
+        builder.HasIndex(l => new { l.OrganizationId, l.ApplicationId, l.CreatedAt });
+        builder.HasIndex(l => l.MetricId);
+    }
+}

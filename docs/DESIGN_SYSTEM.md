@@ -44,6 +44,10 @@ The mark is a lighthouse (navy tower with ocean bands, aqua lamp) over three dat
 ## Translations
 Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped by area (`common`, `landing`, `login`, `changePassword`, `bootstrap`, `nav`, `ask`, `platform`, `platformDashboard`, `health`, `audit`, `platformAdmins`, `organizations`, `admin`, `support`, `notifications`). Status codes and error codes from the API are mapped to keys (`login.errors.<code>`, `changePassword.errors.<code>`); codes themselves are never shown.
 
+## "How this was computed" and the language switch (P13.11)
+- The answer's *How this was computed* panel lists the assumptions, then each query as a definition list (*Data from*, *Calculated*, *Grouped by*, *Only rows where*, *Only groups where*, *Sorted by*, *Rows*) built from the validated plan and the catalogue's display names; never SQL, tokens or cost. On phones the list stacks (label above value). In Arabic, names and codes without an Arabic display name are wrapped in Unicode isolates so they stay whole inside the sentence.
+- `app-language-switcher` names the language it switches to. Up to 600 px it is a compact 36 px pill with the globe and that language's short name in its own script ("ع" or "EN"); shells must not restyle its internals.
+
 ## Dates and numbers (P13.10)
 - Templates format dates with `| wiDate: 'medium' | 'mediumDate' | 'short' | 'shortDate' | 'shortTime'` and numbers with `| wiNumber: '1.0-2'` (`shared/format/locale-pipes.ts`), never Angular's `date`/`number` pipes, which follow the build locale only. In Arabic they use `ar-EG`: month names ("٨ نوفمبر ٢٠٢٦") and Arabic-Indic digits with Arabic separators, the same convention as answer tables; in English they give the same text as the Angular pipes of the same names.
 - Numbers passed to translations (`{{count}}`) are formatted by `LocalizedTranspiler`: Arabic digits in Arabic, grouped from 10,000 so years and versions read naturally; English text is unchanged. Raw counts in templates go through `wiNumber`; codes (reference numbers, employee numbers) stay as text.

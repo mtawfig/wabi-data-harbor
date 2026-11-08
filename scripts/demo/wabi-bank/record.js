@@ -5,11 +5,11 @@
  * (scripts/sql/samples/wabi-bank). Nothing is mocked: the questions go to the organization's real AI provider, and
  * row scopes, the scheduler and the alert centre are the product's own.
  *
- *   1. Omar Haddad (Branch Manager, Deira) asks for cash deposits and withdrawals per teller in December 2025. The
+ *   1. Daniel Hartwell (Branch Manager, Deira) asks for cash deposits and withdrawals per teller in December 2025. The
  *      role reads Core Banking with the DEPARTMENT row scope on the posting unit, so only Deira's tellers come back.
- *   2. Priya Menon (Teller, Deira) asks the same question. The Teller role reads only the staff view of postings with the
- *      SELF row scope: the answer holds only Priya's own postings.
- *   3. Layla Darwish (Compliance and AML Officer) opens Alerts: the rule "Cash deposits of AED 55,000 or more in a
+ *   2. Emily Carver (Teller, Deira) asks the same question. The Teller role reads only the staff view of postings with the
+ *      SELF row scope: the answer holds only Emily's own postings.
+ *   3. Laura Bexley (Compliance and AML Officer) opens Alerts: the rule "Cash deposits of AED 55,000 or more in a
  *      day (individuals)" found customer C100503, who split cash deposits to stay under the reporting threshold.
  *      The alert is acknowledged with a note. Alerts never block anyone automatically.
  *
@@ -32,9 +32,9 @@ const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : fallback; };
 const BASE = process.env.WI_BASE_URL || 'http://localhost:4200';
 const PASSWORD = process.env.WI_SAMPLE_PASSWORD || 'Wabi#Sample#2026';
-const MANAGER = 'omar.haddad@wabibank.example';
-const TELLER = 'priya.menon@wabibank.example';
-const AML = 'layla.darwish@wabibank.example';
+const MANAGER = 'daniel.hartwell@wabibank.example';
+const TELLER = 'emily.carver@wabibank.example';
+const AML = 'laura.bexley@wabibank.example';
 const RULE_NAME = 'Cash deposits of AED 55,000 or more in a day (individuals)';
 const QUESTION = 'Cash deposits and withdrawals per teller in December 2025';
 const GIF = opt('--gif', null);
@@ -132,15 +132,15 @@ async function cashAlert(page) {
 
   // Scene 1: the branch manager sees only the Deira branch.
   const one = await scene(MANAGER);
-  await ask(one.page, 'Omar (Branch Manager, Deira) asks for the branch’s cash postings per teller.', QUESTION,
+  await ask(one.page, 'Daniel (Branch Manager, Deira) asks for the branch’s cash postings per teller.', QUESTION,
     'Row scope DEPARTMENT: only Deira (BR-DXB01) comes back — filtered by the platform, not the prompt — and the answer says so.');
   await screen(one.page, 'wbk-01-branch-manager-tellers');
   await one.context.close();
 
   // Scene 2: the teller sees only their own postings.
   const two = await scene(TELLER);
-  await ask(two.page, 'Priya (Teller, Deira) asks the same question.', QUESTION,
-    'Row scope SELF: only Priya’s own postings come back, and the answer says it is not the whole branch.');
+  await ask(two.page, 'Emily (Teller, Deira) asks the same question.', QUESTION,
+    'Row scope SELF: only Emily’s own postings come back, and the answer says it is not the whole branch.');
   await screen(two.page, 'wbk-02-teller-own-postings');
   await two.context.close();
 
@@ -148,7 +148,7 @@ async function cashAlert(page) {
   const three = await scene(AML);
   const alert = await cashAlert(three.page);
   await three.page.goto(`${BASE}/app/alerts`);
-  await caption(three.page, 'Layla (AML) has a High alert: an individual’s cash deposits reached AED 55,000 within 24 hours.');
+  await caption(three.page, 'Laura (AML) has a High alert: an individual’s cash deposits reached AED 55,000 within 24 hours.');
   await three.page.waitForSelector('[data-testid="alerts-list"]');
   if (alert.status !== 'Open') {
     // The list opens on open alerts; a re-recording shows the acknowledged one.

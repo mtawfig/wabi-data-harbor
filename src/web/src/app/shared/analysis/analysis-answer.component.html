@@ -82,11 +82,22 @@
     <mat-expansion-panel class="ask__how" data-testid="ask-how">
       <mat-expansion-panel-header><mat-panel-title>{{ 'ask.how' | transloco }}</mat-panel-title></mat-expansion-panel-header>
       @if (a.assumptions.length) { <h4>{{ 'ask.assumptions' | transloco }}</h4><ul>@for (s of a.assumptions; track s) { <li>{{ s }}</li> }</ul> }
-      @for (p of a.panels; track $index) {
-        <h4>{{ a.panels.length > 1 ? ('ask.queryOf' | transloco: { title: p.title || p.plan.objective }) : ('ask.sql' | transloco) }}</h4>
-        <pre class="ask__sql">{{ p.compiledSqlPreview }}</pre>
+      @for (d of descriptions(); track $index) {
+        <section class="ask__how-query" data-testid="ask-how-query">
+          @if (descriptions().length > 1) { <h4>{{ d.title }}</h4> }
+          <dl class="ask__how-list">
+            @if (d.sources.length) { <dt>{{ 'ask.plan.from' | transloco }}</dt><dd>{{ join(d.sources) }}</dd> }
+            @if (d.measures.length) { <dt>{{ 'ask.plan.measures' | transloco }}</dt><dd>{{ join(d.measures) }}</dd> }
+            @if (d.columns.length) { <dt>{{ 'ask.plan.columns' | transloco }}</dt><dd>{{ join(d.columns) }}</dd> }
+            @if (d.groups.length) { <dt>{{ 'ask.plan.groups' | transloco }}</dt><dd>{{ join(d.groups) }}</dd> }
+            @if (d.filters) { <dt>{{ 'ask.plan.filters' | transloco }}</dt><dd>{{ d.filters }}</dd> }
+            @if (d.having.length) { <dt>{{ 'ask.plan.having' | transloco }}</dt><dd>{{ join(d.having) }}</dd> }
+            @if (d.order.length) { <dt>{{ 'ask.plan.order' | transloco }}</dt><dd>{{ join(d.order) }}</dd> }
+            @if (d.limit) { <dt>{{ 'ask.plan.rows' | transloco }}</dt><dd>{{ 'ask.plan.limit' | transloco: { count: d.limit } }}</dd> }
+          </dl>
+        </section>
       }
-      <p class="wi-muted small">{{ 'ask.usage' | transloco: { model: a.planUsage.model, tokens: totalTokens(), cost: (a.totalEstimatedCost | wiNumber: '1.4-4'), ms: (a.totalDurationMs | wiNumber: '1.0-0'), rows: totalRows() } }}</p>
+      <p class="wi-muted small">{{ 'ask.plan.checked' | transloco }}</p>
     </mat-expansion-panel>
   </div>
 }

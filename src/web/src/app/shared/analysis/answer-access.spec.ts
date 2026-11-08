@@ -5,7 +5,6 @@ import { answerAccess } from './answer-access';
 const panel = (rowScopes?: AnalysisPanel['rowScopes']): AnalysisPanel => ({
   title: 't',
   plan: { objective: 'o', assumptions: [] } as unknown as AnalysisPanel['plan'],
-  compiledSqlPreview: 'SELECT 1',
   result: { columns: [], rows: [], rowCount: 0, truncated: false, kpis: [], series: [], durationMs: 0 } as unknown as AnalysisPanel['result'],
   rowScopes,
 });

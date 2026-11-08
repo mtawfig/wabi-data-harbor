@@ -97,12 +97,55 @@ export interface AnalysisResult {
   durationMs: number;
 }
 
+/** An object the plan reads: the main source or a join. */
+export interface PlanObjectView {
+  schema?: string;
+  object: string;
+  alias: string;
+}
+
+/** One output column: a plain column, an aggregate (count without a column counts rows) or a date bucket. */
+export interface PlanSelectItemView {
+  alias: string;
+  column?: string | null;
+  aggregate?: 'count' | 'count_distinct' | 'sum' | 'avg' | 'min' | 'max' | string | null;
+  dateTrunc?: 'day' | 'week' | 'month' | 'quarter' | 'year' | string | null;
+}
+
+/** A condition: values (or an `$asker.*` placeholder for the asker's own code) or another column in compareTo. */
+export interface PlanConditionView {
+  column: string;
+  operator: string;
+  values?: string[];
+  compareTo?: string | null;
+}
+
+export interface PlanFilterGroupView {
+  logic?: 'and' | 'or' | string;
+  conditions?: PlanConditionView[];
+  groups?: PlanFilterGroupView[];
+}
+
+/** The validated query plan of a panel; the page explains it in plain words ("How this was computed"). */
 export interface QueryPlanView {
   title: string;
   objective: string;
   assumptions: string[];
+  source?: PlanObjectView | null;
+  joins?: PlanObjectView[] | null;
+  select?: PlanSelectItemView[] | null;
+  filters?: PlanFilterGroupView | null;
+  groupBy?: string[] | null;
+  having?: PlanConditionView[] | null;
+  orderBy?: { alias: string; direction?: 'asc' | 'desc' | string }[] | null;
   visualization?: { type: 'table' | 'bar' | 'line' | 'pie' | 'kpi'; x?: string | null; y: string[] } | null;
   limit?: number | null;
+}
+
+/** A catalogue display name in English and Arabic (either may be missing). */
+export interface DisplayLabel {
+  en?: string | null;
+  ar?: string | null;
 }
 
 /** A row scope that limited a panel to what the asker may see, with the asker's own value it was bound to. */
@@ -111,14 +154,18 @@ export interface PanelRowScope {
   value: string;
 }
 
-/** One executed query of an answer: a KPI, a chart or a table with its own verified rows and redacted SQL. */
+/**
+ * One executed query of an answer: a KPI, a chart or a table with its own plan and verified rows. The SQL it ran never
+ * reaches the browser; the server keeps it for reference and accuracy checks.
+ */
 export interface AnalysisPanel {
   title: string;
   plan: QueryPlanView;
-  compiledSqlPreview: string;
   result: AnalysisResult;
   /** Row scopes applied to this panel; empty or absent when every row of the queried objects was read (older answers too). */
   rowScopes?: PanelRowScope[] | null;
+  /** Catalogue display names keyed as the plan writes them ("alias" and "alias.Column"); absent on older answers. */
+  labels?: Record<string, DisplayLabel> | null;
 }
 
 export interface ReportSection {

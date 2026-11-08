@@ -6,9 +6,9 @@ Result: [`docs/demo/p13-6-wabi-bank.gif`](../../../docs/demo/p13-6-wabi-bank.gif
 
 ## The story
 
-1. **Omar Haddad** (Branch Manager, Deira) asks for cash deposits and withdrawals per teller in December 2025. The Branch Manager role reads Core Banking with the `DEPARTMENT` row scope on the posting unit, so only Deira's tellers come back. The answer shows *Rows limited to what you may see: your department or branch (BR-DXB01)*, and the narrative says the figures cover the branch, not the bank.
-2. **Priya Menon** (Teller, Deira) asks the same question. The Teller role reads only the staff view of postings with the `SELF` row scope: the answer holds only Priya's own postings and says it is not the whole branch.
-3. **Layla Darwish** (Compliance and AML Officer) opens *Alerts*. The rule *Cash deposits of AED 55,000 or more in a day (individuals)* found customer C100503, who deposited cash just under AED 50,000 on several days and then twice a day on the last two days. Layla acknowledges it with a note; alerts never block anyone automatically.
+1. **Daniel Hartwell** (Branch Manager, Deira) asks for cash deposits and withdrawals per teller in December 2025. The Branch Manager role reads Core Banking with the `DEPARTMENT` row scope on the posting unit, so only Deira's tellers come back. The answer shows *Rows limited to what you may see: your department or branch (BR-DXB01)*, and the narrative says the figures cover the branch, not the bank.
+2. **Emily Carver** (Teller, Deira) asks the same question. The Teller role reads only the staff view of postings with the `SELF` row scope: the answer holds only Emily's own postings and says it is not the whole branch.
+3. **Laura Bexley** (Compliance and AML Officer) opens *Alerts*. The rule *Cash deposits of AED 55,000 or more in a day (individuals)* found customer C100503, who deposited cash just under AED 50,000 on several days and then twice a day on the last two days. Laura acknowledges it with a note; alerts never block anyone automatically.
 
 ## Run it
 

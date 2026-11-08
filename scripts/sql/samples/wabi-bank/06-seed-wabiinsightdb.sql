@@ -827,6 +827,20 @@ BEGIN TRY
     UPDATE u SET UserId = ou.UserId FROM #Users u JOIN dbo.OrganizationUsers ou ON ou.OrganizationId = @OrgId AND ou.NormalizedEmail = UPPER(LTRIM(RTRIM(u.Email)));
     UPDATE u SET UserId = ou.UserId FROM #Users u JOIN dbo.OrganizationUsers ou ON ou.OrganizationId = @OrgId AND ou.EmployeeNumber = u.EmployeeNumber WHERE u.UserId IS NULL;
     UPDATE #Users SET UserId = NEWID() WHERE UserId IS NULL;
+    -- Sample users created by an earlier version keep their account (matched by employee number above) and take the current
+    -- generic names; a sample e-mail (@wabibank.example) follows Personnel too, while a real mailbox set by an administrator is kept.
+    UPDATE ou SET FullName = u.FullName FROM dbo.OrganizationUsers ou JOIN #Users u ON u.UserId = ou.UserId WHERE ou.FullName <> u.FullName;
+    UPDATE li SET NormalizedEmail = UPPER(LTRIM(RTRIM(u.Email)))
+    FROM dbo.LoginIdentities li JOIN dbo.OrganizationUsers ou ON li.PrincipalType = N'OrganizationUser' AND li.PrincipalId = ou.UserId
+    JOIN #Users u ON u.UserId = ou.UserId
+    WHERE ou.NormalizedEmail LIKE N'%@WABIBANK.EXAMPLE' AND ou.NormalizedEmail <> UPPER(LTRIM(RTRIM(u.Email)))
+      AND NOT EXISTS (SELECT 1 FROM dbo.LoginIdentities x WHERE x.NormalizedEmail = UPPER(LTRIM(RTRIM(u.Email))));
+    UPDATE ou SET Email = LTRIM(RTRIM(u.Email)), NormalizedEmail = UPPER(LTRIM(RTRIM(u.Email)))
+    FROM dbo.OrganizationUsers ou JOIN #Users u ON u.UserId = ou.UserId
+    JOIN dbo.LoginIdentities li ON li.PrincipalType = N'OrganizationUser' AND li.PrincipalId = ou.UserId AND li.NormalizedEmail = UPPER(LTRIM(RTRIM(u.Email)))
+    WHERE ou.NormalizedEmail LIKE N'%@WABIBANK.EXAMPLE' AND ou.NormalizedEmail <> UPPER(LTRIM(RTRIM(u.Email)));
+    UPDATE dbo.Organizations SET ContactEmail = (SELECT Email FROM #Users WHERE EmployeeNumber = N'W1001')
+    WHERE OrganizationId = @OrgId AND ContactEmail LIKE N'%@wabibank.example' AND ContactEmail <> (SELECT Email FROM #Users WHERE EmployeeNumber = N'W1001');
     INSERT INTO dbo.OrganizationUsers (UserId, OrganizationId, Email, NormalizedEmail, FullName, EmployeeNumber, PhoneNumber, DepartmentId, SectionId, PreferredLanguage, Status,
                                        MustChangePassword, PasswordHash, SecurityStamp, FailedLoginCount, CreatedAt)
     SELECT u.UserId, @OrgId, LTRIM(RTRIM(u.Email)), UPPER(LTRIM(RTRIM(u.Email))), u.FullName, u.EmployeeNumber, u.MobileNumber, d.DepartmentId, s.SectionId, u.PreferredLanguage, N'Active',
@@ -837,7 +851,8 @@ BEGIN TRY
     WHERE NOT EXISTS (SELECT 1 FROM dbo.OrganizationUsers ou WHERE ou.UserId = u.UserId);
     INSERT INTO dbo.LoginIdentities (NormalizedEmail, PrincipalType, PrincipalId, OrganizationId, CreatedAt)
     SELECT UPPER(LTRIM(RTRIM(u.Email))), N'OrganizationUser', u.UserId, @OrgId, @Now FROM #Users u
-    WHERE NOT EXISTS (SELECT 1 FROM dbo.LoginIdentities li WHERE li.NormalizedEmail = UPPER(LTRIM(RTRIM(u.Email))));
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.LoginIdentities li WHERE li.NormalizedEmail = UPPER(LTRIM(RTRIM(u.Email))))
+      AND NOT EXISTS (SELECT 1 FROM dbo.LoginIdentities li WHERE li.PrincipalType = N'OrganizationUser' AND li.PrincipalId = u.UserId);
     INSERT INTO dbo.UserRoles (UserId, RoleId, OrganizationId, AssignedAt)
     SELECT u.UserId, r.RoleId, @OrgId, @Now FROM #UserRoles ur JOIN #Users u ON u.EmployeeNumber = ur.EmployeeNumber
     JOIN dbo.Roles r ON r.OrganizationId = @OrgId AND r.RoleCode = ur.RoleCode

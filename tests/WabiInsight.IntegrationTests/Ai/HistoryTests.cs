@@ -88,6 +88,8 @@ public sealed class HistoryTests : IDisposable
             Assert.Equal(historyId, stored.GetProperty("historyId").GetGuid());
             Assert.Equal("Stored narrative.", stored.GetProperty("interpretation").GetProperty("narrative").GetString());
             Assert.Equal(answer.GetProperty("panels")[1].GetProperty("result").GetProperty("rows").GetRawText(), stored.GetProperty("panels")[1].GetProperty("result").GetProperty("rows").GetRawText());
+            // The stored answer carries the plan and display labels, never the SQL (kept in AnalysisQueryLogs only).
+            Assert.All(stored.GetProperty("panels").EnumerateArray(), p => Assert.False(p.TryGetProperty("compiledSqlPreview", out _)));
             Assert.Equal(requestsBefore, FakeAiProvider.Requests.Count);
             await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
             {

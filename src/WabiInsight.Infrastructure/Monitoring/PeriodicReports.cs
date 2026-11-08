@@ -104,7 +104,7 @@ public sealed class PeriodicReportRenderer
             {
                 var compiled = compiler.Compile(query);
                 var result = await _executor.ExecuteAsync(applicationId, compiled, query.Plan.Visualization, cancellationToken);
-                panels.Add(new AnalysisPanel(query.Plan.Title, query.Plan, compiled.RedactedPreview, result, PanelAccess.From(query)));
+                panels.Add(new AnalysisPanel(query.Plan.Title, query.Plan, result, PanelAccess.From(query), PanelLabels.From(query)));
             }
         }
         catch (DomainException ex)

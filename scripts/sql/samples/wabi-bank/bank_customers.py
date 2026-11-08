@@ -5,20 +5,21 @@ import datetime as dt
 import math
 from functools import lru_cache
 
+import bank_names
 import bank_people as bp
 from build_common import rng
 
 BRANCH_NUM = {"BR-DXB01": "101", "BR-DXB02": "102", "BR-AUH01": "201", "BR-AAN01": "202", "BR-SHJ01": "301", "BR-RAK01": "401"}
 BANK_CODE = "095"  # fictional
 OTHER_BANKS = [  # fictional banks used as counterparties: code, name
-    ("021", "Gulf Union Bank"), ("033", "Emirates Crescent Bank"), ("044", "Arabian Gate Bank"), ("046", "Al Sahil Bank"),
+    ("021", "Union Coast Bank"), ("033", "Crescent Harbour Bank"), ("044", "Gateway Merchant Bank"), ("046", "Seashore Bank"),
     ("051", "Desert Pearl Bank"), ("057", "Union Trust Bank"), ("062", "Palm Coast Bank"), ("071", "Oasis National Bank"),
 ]
 FOREIGN_BANKS = [("IN", "Bank of Kerala Coast"), ("PK", "Indus Valley Bank"), ("PH", "Manila Harbour Bank"), ("EG", "Nile Delta Bank"),
                  ("GB", "Thames Merchant Bank"), ("JO", "Petra Commercial Bank"), ("LB", "Cedar Trust Bank"), ("US", "Hudson River Bank")]
-COMPANY_A = ["Al Noor", "Gulf Star", "Desert Rose", "Emirates Horizon", "Blue Wave", "Falcon", "Oasis", "Pearl Coast", "Sahara", "Silver Palm",
-             "Crescent", "Al Bayan", "Golden Sands", "Royal Dune", "Marina", "Creekside", "Al Waha", "Summit", "Bright Path", "Zenith", "Al Reef",
-             "Coral Bay", "Dune Valley", "Skyline", "Harbour Gate", "Al Jazira Line", "Palm Grove", "New Dawn", "Twin Towers", "Sea Breeze"]
+COMPANY_A = ["Northfield", "Brightstar", "Desert Rose", "Wide Horizon", "Blue Wave", "Falcon", "Oasis", "Pearl Coast", "Sahara", "Silver Palm",
+             "Crescent", "Clearwater", "Golden Sands", "Grand Dune", "Marina", "Creekside", "Greenleaf", "Summit", "Bright Path", "Zenith", "Countryside",
+             "Coral Bay", "Dune Valley", "Skyline", "Harbour Gate", "Island Line", "Palm Grove", "New Dawn", "Twin Oaks", "Sea Breeze"]
 COMPANY_B = ["Trading", "General Trading", "Contracting", "Logistics", "Restaurants", "Technology", "Real Estate", "Auto Parts", "Medical Supplies",
              "Textiles", "Electronics", "Foodstuff", "Building Materials", "Travel and Tourism", "Engineering Consultants", "Facilities Management",
              "Printing and Packaging", "Furniture", "Jewellery", "Laundry Services"]
@@ -124,13 +125,8 @@ def customers():
         n += 1
         nat = bp._pick(r, groups)
         female = r.random() < 0.38
-        gk = "f" if female else "m"
-        if nat[5] in ("arab", "emirati"):
-            first, first_ar = r.choice(bp.NAMES[f"{nat[5]}_{gk}"])
-            last, last_ar = r.choice(bp.NAMES[f"{nat[5]}_l"])
-            name_ar = f"{first_ar} {last_ar}"
-        else:
-            first, last, name_ar = r.choice(bp.NAMES[f"{nat[5]}_{gk}"]), r.choice(bp.NAMES[f"{nat[5]}_l"]), None
+        (first, first_ar), (last, last_ar) = bank_names.pick(r, nat[5], female)
+        name_ar = f"{first_ar} {last_ar}"
         branch = bp._pick(r, branch_weights)
         age = int(22 + (r.random() ** 1.4) * 50)
         dob = dt.date(2025 - age, r.randint(1, 12), r.randint(1, 28))

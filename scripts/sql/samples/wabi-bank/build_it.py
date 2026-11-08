@@ -14,7 +14,7 @@ Who does what (enforced in Python before the SQL is written, and checked again i
   * Requesters: every employee with a UserId (ITSM role Requester) uses the self-service Portal on days they are at work
     and within their shift. Drivers, messengers and security guards have no login: they phone or walk in, and an ITD-SD
     agent logs the ticket. Phone, Email and WalkIn tickets are always created by an ITD-SD agent at work at that time.
-  * Agents are ITD staff (Agent); the ITD section heads are GroupLead and W1008 Mark Santos is ServiceDeskManager. The
+  * Agents are ITD staff (Agent); the ITD section heads are GroupLead and W1008 Simon Varley is ServiceDeskManager. The
     assignment groups are the five ITD sections. Staff act only on days they are at work, within Head Office hours
     (Mon-Fri 08:00-16:30, closed on UAE public holidays) or their own shift; outside those hours only on-call engineers
     of ITD-INF, ITD-NET and ITD-APP act, on P1/P2 work, on days they are not on leave or absent.
@@ -1307,8 +1307,13 @@ class Generator:
                     inc = self.new_incident(typ, "ATM", PLANTED_ATM, 3, 1, rep, t, "Phone", agent, r.choice(typ[10]).replace("{ci}", PLANTED_ATM))
                     self.run_incident(inc)
                     continue
-            # The last one falls just after midnight, so even a window that ends "now" holds four incidents from early on 31 December.
-            t = at(d, r.randint(20, 90)) if d == dt.date(2025, 12, 31) else at(d, r.randint(0, 1439))
+            if d == dt.date(2025, 12, 31):
+                # The last one opens at midnight, so a window that ends "now" (31 December = today on the live view) holds all four
+                # at any hour. The minute drawn here before is still drawn so every later generated value stays the same.
+                r.randint(20, 90)
+                t = at(d, 0)
+            else:
+                t = at(d, r.randint(0, 1439))
             inc = self.new_incident(typ, "ATM", PLANTED_ATM, 3, 1, None, t, "Monitoring", "SYS_MONITOR", (typ[11] or typ[10])[0].replace("{ci}", PLANTED_ATM), loc=branch)
             self.run_incident(inc, res_code="Hardware replaced" if d == dt.date(2025, 12, 10) else None)
         self.atm_days = days
