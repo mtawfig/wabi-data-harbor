@@ -81,4 +81,69 @@ public sealed class QueryPlanValidatorTests
         Assert.Contains(errors, e => e.Code == "plan_filter_nesting_invalid");
         Assert.Contains(errors, e => e.Code == "plan_filter_value_too_long");
     }
+
+    [Fact]
+    public void Validate_AcceptsHavingOnAggregates_ColumnComparisons_AndAskerPlaceholders()
+    {
+        var plan = Plan(Good);
+        plan.Having = [new PlanCondition { Column = "total", Operator = "gt", Values = ["1000"] }];
+        plan.Filters!.Conditions.Add(new PlanCondition { Column = "o.ShippedDate", Operator = "gt", CompareTo = "o.DueDate" });
+        plan.Filters.Conditions.Add(new PlanCondition { Column = "c.DeptCode", Operator = "eq", Values = [AskerValues.Department] });
+        Assert.Empty(QueryPlanValidator.Validate(plan));
+
+        // The compared column is a referenced column, so the authorizer checks it like any other.
+        Assert.Contains("o.DueDate", QueryPlanValidator.ReferencedColumns(plan).Select(c => c.ToString()));
+        Assert.Contains("\"having\"", AnalysisPlanSchema.Json, StringComparison.Ordinal);
+        Assert.Contains("\"compareTo\"", QueryPlanSchema.Defs, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("having", "customer", "gt", "1", null, "plan_having_invalid")]       // not an aggregate alias
+    [InlineData("having", "total", "contains", "1", null, "plan_having_invalid")]    // operator not allowed on totals
+    [InlineData("having", "total", "gt", "", null, "plan_filter_values_invalid")]    // no value
+    [InlineData("having", "total", "gt", "$asker.department", null, "plan_filter_values_invalid")]
+    [InlineData("having", "total", "gt", null, "customer", "plan_having_invalid")]   // compared with a non-aggregate
+    [InlineData("filters", "o.OrderDate", "between", null, "o.DueDate", "plan_compare_invalid")]
+    [InlineData("filters", "o.OrderDate", "gt", "2026-01-01", "o.DueDate", "plan_compare_invalid")] // values and compareTo
+    [InlineData("filters", "o.OrderDate", "gt", null, "x.DueDate", "plan_column_invalid")]
+    [InlineData("filters", "o.DeptCode", "contains", "$asker.department", null, "plan_asker_value_invalid")]
+    [InlineData("filters", "o.DeptCode", "eq", "$asker.manager", null, "plan_asker_value_invalid")]
+    public void Validate_RejectsMalformedHaving_Comparisons_AndPlaceholders(string where, string column, string op, string? value, string? compareTo, string code)
+    {
+        var plan = Plan(Good);
+        var condition = new PlanCondition { Column = column, Operator = op, Values = value is null ? [] : [value], CompareTo = compareTo };
+        if (where == "having")
+        {
+            plan.Having = [condition];
+        }
+        else
+        {
+            plan.Filters!.Conditions.Add(condition);
+        }
+
+        Assert.Contains(QueryPlanValidator.Validate(plan), e => e.Code == code);
+    }
+
+    [Fact]
+    public void Validate_RejectsHavingWithoutAggregates()
+    {
+        var plan = Plan(Good.Replace("\"aggregate\":\"sum\"", "\"aggregate\":null", StringComparison.Ordinal).Replace("\"groupBy\":[\"customer\",\"month\"]", "\"groupBy\":[]", StringComparison.Ordinal));
+        plan.Having = [new PlanCondition { Column = "total", Operator = "gt", Values = ["1"] }];
+        Assert.Contains(QueryPlanValidator.Validate(plan), e => e.Code == "plan_having_invalid");
+    }
+
+    [Fact]
+    public void EmptyStrings_FromTheModel_ReadAsNone_SoTheSchemaStaysWithinTheProvidersGrammarLimit()
+    {
+        // The structured-output schema uses plain strings ("" = none) instead of nullable unions, which providers count heavily.
+        var plan = Plan(Good.Replace("{\"alias\":\"customer\",\"column\":\"c.Name\",\"aggregate\":null,\"dateTrunc\":null}", "{\"alias\":\"customer\",\"column\":\"c.Name\",\"aggregate\":\"\",\"dateTrunc\":\"\"}", StringComparison.Ordinal)
+            .Replace("\"values\":[\"Paid\",\"Shipped\"]}", "\"values\":[\"Paid\",\"Shipped\"],\"compareTo\":\"\"}", StringComparison.Ordinal));
+        Assert.Null(plan.Select[0].Aggregate);
+        Assert.Null(plan.Select[0].DateTrunc);
+        Assert.Null(plan.Filters!.Conditions[0].CompareTo);
+        Assert.Empty(Plan(Good.Replace("\"groupBy\":", "\"having\":null,\"groupBy\":", StringComparison.Ordinal)).Having);
+        Assert.Empty(QueryPlanValidator.Validate(plan));
+        Assert.DoesNotContain("{ \"type\": \"null\" }", QueryPlanSchema.Defs.Split("\"filterGroup\"")[0], StringComparison.Ordinal);
+        Assert.Contains("\"having\": { \"type\": \"array\"", AnalysisPlanSchema.Json, StringComparison.Ordinal);
+    }
 }
