@@ -77,6 +77,25 @@ public sealed class ReportTests
     }
 
     [Fact]
+    public void ReportComposer_Parse_RemovesMarkdownTheModelAddedAnyway()
+    {
+        var json = """
+            {"title":"## **Cheque** study","subtitle":"","introduction":"","sections":[{"title":"Overview","body":"Returns rose.\n- **Insufficient funds:** 72% of returns\n* *Post-dated* cheques: 48","panels":[0]}],
+             "summary":"Three points:\n- **Sharjah** leads\n- 2 * 3 = 6 stays","keyFindings":["**546** returned"],"recommendations":[{"title":"__Check__ dates","detail":"Use `intake` checks."}],
+             "email":{"subject":"**Summary**","body":"1. **Total overrun:** AED 1,267,822.\n2. Second point."}}
+            """;
+        var content = ReportComposer.Parse(json, panelCount: 1, wantsEmail: true);
+        Assert.Equal("Cheque study", content.Title);
+        Assert.Equal("Returns rose.\n• Insufficient funds: 72% of returns\n• Post-dated cheques: 48", content.Sections[0].Body);
+        Assert.Equal("Three points:\n• Sharjah leads\n• 2 * 3 = 6 stays", content.Summary);
+        Assert.Equal(["546 returned"], content.KeyFindings);
+        Assert.Equal("Check dates", content.Recommendations[0].Title);
+        Assert.Equal("Use intake checks.", content.Recommendations[0].Detail);
+        Assert.Equal("Summary", content.Email!.Subject);
+        Assert.Equal("1. Total overrun: AED 1,267,822.\n2. Second point.", content.Email.Body);
+    }
+
+    [Fact]
     public void QuestPdfReportRenderer_ProducesAPdf_WithLogoChartsTablesAndArabic()
     {
         var content = new ReportContent

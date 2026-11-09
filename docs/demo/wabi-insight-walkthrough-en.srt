@@ -1,0 +1,482 @@
+1
+00:00:00,778 --> 00:00:02,923
+Every organization runs on data.
+
+2
+00:00:02,973 --> 00:00:07,312
+But the answers people need are
+locked inside different systems,
+
+3
+00:00:07,362 --> 00:00:11,222
+and getting them usually means
+waiting days for a report.
+
+4
+00:00:11,872 --> 00:00:15,069
+Meet Wabi Insight, by WabiTex Solutions.
+
+5
+00:00:15,119 --> 00:00:18,478
+Ask a question in plain English or Arabic,
+
+6
+00:00:18,528 --> 00:00:23,429
+and get a verified answer from
+your own databases in seconds.
+
+7
+00:00:23,479 --> 00:00:24,160
+Securely.
+
+8
+00:00:25,389 --> 00:00:30,092
+Wabi Insight is built for any
+organization: banks and insurers,
+
+9
+00:00:30,142 --> 00:00:36,428
+airlines and airports, hospitals, government
+entities, retailers, telecom operators,
+
+10
+00:00:36,478 --> 00:00:41,558
+universities, logistics companies,
+hotels, energy and manufacturing.
+
+11
+00:00:42,975 --> 00:00:48,370
+If your data lives in SQL Server or
+Oracle, Wabi Insight can work with it.
+
+12
+00:00:48,420 --> 00:00:52,344
+Contact WabiTex Solutions
+for a demo on your own data,
+
+13
+00:00:52,394 --> 00:00:56,391
+and we will organize the
+setup together with your team.
+
+14
+00:00:57,618 --> 00:00:59,134
+Here is how it works.
+
+15
+00:00:59,184 --> 00:01:04,129
+Your administrators connect your
+databases with read-only accounts,
+
+16
+00:01:04,179 --> 00:01:09,199
+and decide exactly which tables,
+columns and rows each role may see.
+
+17
+00:01:09,849 --> 00:01:15,090
+When someone asks a question, the AI
+writes a structured plan, never SQL.
+
+18
+00:01:15,140 --> 00:01:20,743
+Wabi Insight checks that plan against
+the person's permissions, builds a safe,
+
+19
+00:01:20,793 --> 00:01:24,077
+read-only query, and runs it on your database.
+
+20
+00:01:24,727 --> 00:01:28,938
+So every number on the screen
+comes from a verified query.
+
+21
+00:01:30,163 --> 00:01:35,540
+Let's see it working on Wabi Bank, a
+fictional bank with five systems: personnel,
+
+22
+00:01:35,590 --> 00:01:39,561
+core banking, finance, digital
+banking and the IT help desk,
+
+23
+00:01:39,611 --> 00:01:41,839
+and staff in many different roles.
+
+24
+00:01:42,716 --> 00:01:46,263
+Clara is the bank's
+organization administrator.
+
+25
+00:01:46,313 --> 00:01:52,080
+Her dashboard shows users, sign-ins and
+activity, for her organization only.
+
+26
+00:01:52,730 --> 00:01:55,936
+Under Applications, she connects each system.
+
+27
+00:01:55,986 --> 00:02:02,013
+Every connection is encrypted on the server,
+and tested to confirm it can only read.
+
+28
+00:02:03,105 --> 00:02:08,409
+The catalogue lists each table and
+column, with English and Arabic names,
+
+29
+00:02:08,459 --> 00:02:11,270
+descriptions and a data classification.
+
+30
+00:02:11,320 --> 00:02:14,350
+Only approved objects can ever be queried.
+
+31
+00:02:15,359 --> 00:02:19,681
+Roles describe what people do,
+and permissions are set per role.
+
+32
+00:02:19,731 --> 00:02:24,873
+A branch manager, for example, reads
+core banking only for their own branch,
+
+33
+00:02:24,923 --> 00:02:27,196
+and never sees restricted columns.
+
+34
+00:02:28,270 --> 00:02:31,934
+Users are added with their
+department, section and roles,
+
+35
+00:02:31,984 --> 00:02:34,931
+and receive their temporary password by email.
+
+36
+00:02:36,391 --> 00:02:41,365
+Now Victor, the chief executive. On
+the Ask page he chooses a system,
+
+37
+00:02:41,415 --> 00:02:45,662
+and types his question, or
+picks one of the suggested ones.
+
+38
+00:02:46,848 --> 00:02:49,679
+In seconds: a chart, the verified figures,
+
+39
+00:02:49,729 --> 00:02:52,696
+and a written explanation of what they mean.
+
+40
+00:02:53,346 --> 00:02:56,710
+How this was computed
+explains, in plain words,
+
+41
+00:02:56,760 --> 00:03:00,777
+which data was used and how
+it was grouped and filtered.
+
+42
+00:03:00,827 --> 00:03:05,206
+And every query is logged on
+the server for accuracy reviews.
+
+43
+00:03:06,029 --> 00:03:10,634
+Ask for a dashboard, and Wabi
+Insight builds one: headline numbers,
+
+44
+00:03:10,684 --> 00:03:14,524
+trends and breakdowns, each
+from its own verified query.
+
+45
+00:03:17,682 --> 00:03:21,494
+Here are all the IT incidents
+of the year, by priority,
+
+46
+00:03:21,544 --> 00:03:23,600
+by month and by support group.
+
+47
+00:03:25,092 --> 00:03:28,163
+For deeper questions, ask for a study.
+
+48
+00:03:28,213 --> 00:03:33,254
+Wabi Insight runs up to ten
+queries, explains what stands out,
+
+49
+00:03:33,304 --> 00:03:35,965
+and writes a complete PDF report.
+
+50
+00:03:36,832 --> 00:03:41,894
+The report has a cover, contents,
+charts, findings and recommendations,
+
+51
+00:03:41,944 --> 00:03:43,911
+ready to download and share.
+
+52
+00:03:45,050 --> 00:03:49,307
+Every figure in it is the same
+verified data you saw on screen.
+
+53
+00:03:50,725 --> 00:03:54,169
+It also writes your emails. Ask for an email,
+
+54
+00:03:54,219 --> 00:03:59,137
+and you get a ready-to-send draft
+built on the verified figures.
+
+55
+00:04:01,048 --> 00:04:07,063
+Ask for a report and an email together, and
+the PDF report is attached to the draft.
+
+56
+00:04:07,113 --> 00:04:12,261
+Here, Victor asks for third-quarter
+expenses against the revised budget,
+
+57
+00:04:12,311 --> 00:04:14,139
+for the finance committee.
+
+58
+00:04:16,263 --> 00:04:21,321
+The report is attached, the email
+is written, and one click copies it.
+
+59
+00:04:23,574 --> 00:04:29,422
+And everything works in Arabic too: right
+to left, with Arabic numbers and dates.
+
+60
+00:04:34,740 --> 00:04:40,077
+Every answer is saved in My History,
+with its question, its type and its cost.
+
+61
+00:04:40,966 --> 00:04:44,636
+Open one to see its
+versions. Run it again later,
+
+62
+00:04:44,686 --> 00:04:48,658
+and you get a new version
+without losing the old one.
+
+63
+00:04:50,876 --> 00:04:57,827
+Mark favorites, group analyses into
+collections, and export to PDF, Word or Excel.
+
+64
+00:05:07,846 --> 00:05:12,535
+These are real files created
+by Wabi Insight: a PDF study,
+
+65
+00:05:12,585 --> 00:05:15,639
+a Word document and an Excel workbook.
+
+66
+00:05:15,689 --> 00:05:18,499
+My Reports keeps every one of them.
+
+67
+00:05:19,853 --> 00:05:24,864
+Share an analysis with a colleague,
+with a message and an expiry date.
+
+68
+00:05:24,914 --> 00:05:28,913
+They see exactly what you
+saw. Nothing is queried again.
+
+69
+00:05:35,027 --> 00:05:40,225
+Or send it by email. Wabi Insight
+checks the data's classification first:
+
+70
+00:05:40,275 --> 00:05:43,533
+restricted data never leaves the organization,
+
+71
+00:05:43,583 --> 00:05:47,200
+and confidential data needs
+your explicit approval.
+
+72
+00:05:48,022 --> 00:05:50,886
+Permissions apply to every single question.
+
+73
+00:05:50,936 --> 00:05:55,225
+When the Deira branch manager
+asks for cash deposits per teller,
+
+74
+00:05:55,275 --> 00:05:58,953
+only Deira's tellers come
+back, and the answer says so.
+
+75
+00:05:59,603 --> 00:06:03,628
+A teller asking about cash
+sees only her own postings.
+
+76
+00:06:07,782 --> 00:06:11,853
+And when the HR officer asks
+for Emirates ID numbers,
+
+77
+00:06:11,903 --> 00:06:17,217
+that column is restricted for her
+role, so the AI never even sees it.
+
+78
+00:06:20,215 --> 00:06:24,960
+Each organization's data is fully
+separated, every action is audited,
+
+79
+00:06:25,010 --> 00:06:29,267
+and even platform support can
+only come in with your approval.
+
+80
+00:06:30,088 --> 00:06:34,147
+Wabi Insight also works for
+you when nobody is asking.
+
+81
+00:06:34,197 --> 00:06:37,722
+Monitoring Rules watch
+your data on a schedule.
+
+82
+00:06:38,372 --> 00:06:42,681
+Describe a rule in plain
+words. Wabi Insight drafts it,
+
+83
+00:06:42,731 --> 00:06:45,216
+and you review it before saving.
+
+84
+00:06:51,878 --> 00:06:55,717
+Each rule runs under its
+owner's permissions, never more.
+
+85
+00:06:59,489 --> 00:07:04,048
+When a rule fires, an alert appears,
+and the right people are notified.
+
+86
+00:07:05,074 --> 00:07:10,702
+Here, an individual customer deposited just
+under fifty thousand dirhams in cash on
+
+87
+00:07:10,752 --> 00:07:14,533
+several days, then fifty-eight
+thousand in a single day.
+
+88
+00:07:15,183 --> 00:07:17,635
+Laura acknowledges it with a note.
+
+89
+00:07:17,685 --> 00:07:22,051
+Alerts inform people; they never
+block anyone automatically.
+
+90
+00:07:23,384 --> 00:07:26,792
+Access rules watch how data is used, too.
+
+91
+00:07:26,842 --> 00:07:33,372
+When someone outside compliance looks
+up KYC documents, compliance is alerted.
+
+92
+00:07:33,422 --> 00:07:36,577
+And everyone can get one daily digest.
+
+93
+00:07:37,399 --> 00:07:40,137
+Need the same report every week?
+
+94
+00:07:40,187 --> 00:07:46,322
+Periodic Reports email a saved analysis
+on a schedule, as PDF or Excel.
+
+95
+00:07:51,561 --> 00:07:56,097
+Each recipient receives figures
+computed under their own permissions.
+
+96
+00:07:57,853 --> 00:08:03,709
+Administrators also see how Wabi Insight
+is used in their organization: users,
+
+97
+00:08:03,759 --> 00:08:06,661
+sign-ins and activity, over any period.
+
+98
+00:08:07,517 --> 00:08:11,994
+And the Support Desk tracks every
+request with the WabiTex team,
+
+99
+00:08:12,044 --> 00:08:14,328
+from first message to resolution.
+
+100
+00:08:17,488 --> 00:08:24,008
+Wabi Insight: verified answers, dashboards,
+reports and alerts from your own data.
+
+101
+00:08:24,058 --> 00:08:28,013
+Secure, bilingual, and
+ready for any organization.
+
+102
+00:08:28,883 --> 00:08:33,675
+Contact WabiTex Solutions
+today for a demo on your data.
+
+103
+00:08:33,725 --> 00:08:35,577
+Visit wabitex dot com.

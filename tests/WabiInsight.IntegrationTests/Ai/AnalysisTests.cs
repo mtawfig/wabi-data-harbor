@@ -454,6 +454,7 @@ public sealed class AnalysisTests : IDisposable
             Assert.DoesNotContain(FakeAiProvider.Requests.Skip(requestsBefore), r => r.SchemaName == "wabi_interpretation");
             var reportRequest = FakeAiProvider.Requests.Last(r => r.SchemaName == "wabi_report");
             Assert.Contains("emailRequested: yes", reportRequest.UserContent, StringComparison.Ordinal);
+            Assert.Contains("reportAttached: yes", reportRequest.UserContent, StringComparison.Ordinal);
             Assert.Contains("\"title\":\"Tickets by status\"", reportRequest.UserContent, StringComparison.Ordinal);
 
             var analysisId = response.GetProperty("analysisId").GetGuid();
@@ -470,6 +471,28 @@ public sealed class AnalysisTests : IDisposable
                 Assert.NotNull(metric.ReportArtifactKey);
                 Assert.True(metric.ReportInputTokens > 0);
             }
+
+            // An email without a report: the writer is told nothing is attached, and the draft carries no attachment.
+            FakeAiProvider.Script = (request) => request.SchemaName switch
+            {
+                "wabi_report" => """
+                    {"title":"Tickets","subtitle":"","introduction":"","sections":[],"summary":"Most tickets are open.","keyFindings":["Finding one"],"recommendations":[],
+                     "email":{"subject":"Ticket summary","body":"Dear team,\n\nMost tickets are open.\n\nRegards"}}
+                    """,
+                _ => """
+                    {"objective":"Ticket email","assumptions":[],"deliverables":["email"],"queries":[
+                      {"title":"Total tickets","source":{"schema":"dbo","object":"SupportTickets","alias":"t"},"joins":[],"select":[{"alias":"tickets","column":null,"aggregate":"count","dateTrunc":null}],"filters":null,"groupBy":[],"orderBy":[],"limit":null,"visualization":{"type":"kpi","x":null,"y":["tickets"]}}]}
+                    """,
+            };
+            var emailOnly = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Draft an email to the team with the ticket count" });
+            Assert.True(emailOnly.StatusCode == HttpStatusCode.OK, await emailOnly.Content.ReadAsStringAsync());
+            var emailAnswer = await emailOnly.ReadJsonAsync();
+            Assert.True(!emailAnswer.TryGetProperty("report", out var noReport) || noReport.ValueKind == JsonValueKind.Null);
+            Assert.Equal("Ticket summary", emailAnswer.GetProperty("emailDraft").GetProperty("subject").GetString());
+            Assert.True(!emailAnswer.GetProperty("emailDraft").TryGetProperty("attachmentFileName", out var noAttachment) || noAttachment.ValueKind == JsonValueKind.Null);
+            var emailRequest = FakeAiProvider.Requests.Last(r => r.SchemaName == "wabi_report");
+            Assert.Contains("emailRequested: yes", emailRequest.UserContent, StringComparison.Ordinal);
+            Assert.Contains("reportAttached: no", emailRequest.UserContent, StringComparison.Ordinal);
 
             Assert.Equal(HttpStatusCode.NoContent, (await alice.DeleteAsync(new Uri("/api/organization/logo", UriKind.Relative))).StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await manager.GetAsync("/api/organization/logo")).StatusCode);

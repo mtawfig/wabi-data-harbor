@@ -22,6 +22,10 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 
 Sample data: `scripts/sql/samples` creates three realistic source databases (flight operations, HR/payroll/attendance, procurement/stores) and seeds a ready-to-use organization with an administrator, a management user and two role-scoped users into `WabiInsightDB`; see its [README](scripts/sql/samples/README.md). A second sample organization, the fictional **Wabi Bank** (Personnel, Core Banking, Finance, Digital Banking and IT Help Desk databases, eight role-scoped users, Monitoring Rules on planted findings), is in [`scripts/sql/samples/wabi-bank`](scripts/sql/samples/wabi-bank/README.md).
 
+## Product walkthrough
+
+An eight-minute narrated walkthrough of the application on the Wabi Bank sample (English, with subtitles and chapters): [`docs/demo/wabi-insight-walkthrough-en.mp4`](docs/demo/wabi-insight-walkthrough-en.mp4); script with timecodes in [`docs/demo/wabi-insight-walkthrough-en.md`](docs/demo/wabi-insight-walkthrough-en.md); generator in [`scripts/demo/walkthrough`](scripts/demo/walkthrough/README.md).
+
 ## Status
 
 Version 1 feature-complete: phases 1–13 of the implementation plan are merged (see `docs/PROGRESS.md`). Phase 14, the proactive agent (design in `docs/PROACTIVE_AGENT.md`), is merged too (P14.1–P14.5): the access ledger and scheduler, Monitoring Rules and Alerts, Periodic Reports, and natural-language and system rules. A recorded demo of the agent on the sample organization is in `docs/demo/p14-5-proactive-agent-alert.gif` (how to run it: `scripts/demo/proactive-agent/README.md`). Google Drive / OneDrive publishing (P10.2) is deferred to the next version by owner decision. CI runs the .NET and Angular suites, the dependency audits and the container image builds on every pull request; deployments are started by hand from the Actions tab (*Deploy (Linux)* / *Deploy (Windows)*: frontend, backend or both, with or without database migration).

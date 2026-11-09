@@ -466,8 +466,8 @@ public sealed partial class AnalysisService : IAnalysisService
             return new Interpretation(string.Empty, [], usage, Incomplete: true);
         }
 
-        var narrative = PromptBuilder.Sanitize(parsed?.Narrative ?? text, 4000);
-        var highlights = (parsed?.Highlights ?? []).Select(h => PromptBuilder.Sanitize(h, 300)).Where(h => h.Length > 0).Take(6).ToList();
+        var narrative = PromptBuilder.Sanitize(PromptBuilder.PlainText(parsed?.Narrative ?? text), 4000);
+        var highlights = (parsed?.Highlights ?? []).Select(h => PromptBuilder.Sanitize(PromptBuilder.PlainText(h), 300)).Where(h => h.Length > 0).Take(6).ToList();
         return new Interpretation(narrative, highlights, usage, Incomplete: narrative.Length == 0 || (cutOff && parsed is null));
     }
 

@@ -1,0 +1,231 @@
+{
+  "title": "Wabi Insight — product walkthrough (English)",
+  "voice": "en_US-bryce-medium",
+  "lengthScale": 0.9,
+  "contact": {
+    "company": "WabiTex Solutions",
+    "website": "wabitex.com",
+    "email": "support@wabitex.com"
+  },
+  "scenes": [
+    {
+      "id": "intro",
+      "chapter": "Wabi Insight",
+      "screen": "Title card: scattered systems, then the Wabi Insight wordmark and tagline.",
+      "kind": "graphic",
+      "graphic": "title.html",
+      "beats": [
+        "Every organization runs on data. But the answers people need are locked inside different systems, and getting them usually means waiting days for a report.",
+        "Meet Wabi Insight, by WabiTex Solutions. Ask a question in plain English or Arabic, and get a verified answer from your own databases in seconds. Securely."
+      ]
+    },
+    {
+      "id": "industries",
+      "chapter": "For every organization",
+      "screen": "Twelve industry tiles, SQL Server and Oracle chips, contact details of WabiTex Solutions.",
+      "kind": "graphic",
+      "graphic": "industries.html",
+      "beats": [
+        "Wabi Insight is built for any organization: banks and insurers, airlines and airports, hospitals, government entities, retailers, telecom operators, universities, logistics companies, hotels, energy and manufacturing.",
+        "If your data lives in SQL Server or Oracle, Wabi Insight can work with it. Contact WabiTex Solutions for a demo on your own data, and we will organize the setup together with your team."
+      ]
+    },
+    {
+      "id": "how",
+      "chapter": "How it works",
+      "screen": "Animated flow: question → AI plan → validation and permissions → read-only SQL → verified answer; output types.",
+      "kind": "graphic",
+      "graphic": "how.html",
+      "beats": [
+        "Here is how it works. Your administrators connect your databases with read-only accounts, and decide exactly which tables, columns and rows each role may see.",
+        "When someone asks a question, the AI writes a structured plan, never SQL. Wabi Insight checks that plan against the person's permissions, builds a safe, read-only query, and runs it on your database.",
+        "So every number on the screen comes from a verified query."
+      ]
+    },
+    {
+      "id": "bank",
+      "chapter": "Demo: Wabi Bank",
+      "screen": "Wabi Bank card: five systems and the eight sample people (fictional data).",
+      "kind": "graphic",
+      "graphic": "bank.html",
+      "beats": [
+        "Let's see it working on Wabi Bank, a fictional bank with five systems: personnel, core banking, finance, digital banking and the IT help desk, and staff in many different roles."
+      ]
+    },
+    {
+      "id": "admin",
+      "chapter": "1 · Connect your data",
+      "screen": "Clara Ashby (Organization Administrator, w1001): Organization Dashboard KPIs; Applications (stored connection test); Metadata (Customers object and its columns); Roles; Permissions (Branch Manager on CORE-BANKING); Organization Users and the New user form.",
+      "kind": "app",
+      "user": "w1001",
+      "beats": [
+        "Clara is the bank's organization administrator. Her dashboard shows users, sign-ins and activity, for her organization only.",
+        "Under Applications, she connects each system. Every connection is encrypted on the server, and tested to confirm it can only read.",
+        "The catalogue lists each table and column, with English and Arabic names, descriptions and a data classification. Only approved objects can ever be queried.",
+        "Roles describe what people do, and permissions are set per role. A branch manager, for example, reads core banking only for their own branch, and never sees restricted columns.",
+        "Users are added with their department, section and roles, and receive their temporary password by email."
+      ]
+    },
+    {
+      "id": "ask",
+      "chapter": "2 · Ask in plain language",
+      "screen": "Victor Lindley (Management, w1002) on Ask Wabi Insight: picks CORE-BANKING, suggested questions, asks for deposit balances by branch; answer with chart, figures and narrative; 'How this was computed' expanded.",
+      "kind": "app",
+      "user": "w1002",
+      "beats": [
+        "Now Victor, the chief executive. On the Ask page he chooses a system, and types his question, or picks one of the suggested ones.",
+        "In seconds: a chart, the verified figures, and a written explanation of what they mean.",
+        "How this was computed explains, in plain words, which data was used and how it was grouped and filtered. And every query is logged on the server for accuracy reviews."
+      ]
+    },
+    {
+      "id": "dashboard",
+      "chapter": "3 · Dashboards",
+      "screen": "Victor asks IT-HELPDESK for a dashboard of 2025 incidents: KPI cards and several charts.",
+      "kind": "app",
+      "user": "w1002",
+      "beats": [
+        "Ask for a dashboard, and Wabi Insight builds one: headline numbers, trends and breakdowns, each from its own verified query.",
+        "Here are all the IT incidents of the year, by priority, by month and by support group."
+      ]
+    },
+    {
+      "id": "study",
+      "chapter": "4 · Studies and PDF reports",
+      "screen": "Victor asks CORE-BANKING for a study of 2025 cheque returns; the PDF report card; pages of the generated PDF.",
+      "kind": "app",
+      "user": "w1002",
+      "beats": [
+        "For deeper questions, ask for a study. Wabi Insight runs up to ten queries, explains what stands out, and writes a complete PDF report.",
+        "The report has a cover, contents, charts, findings and recommendations, ready to download and share.",
+        "Every figure in it is the same verified data you saw on screen."
+      ]
+    },
+    {
+      "id": "email",
+      "chapter": "5 · Email drafts",
+      "screen": "Victor asks for an email draft (no attachment), then a FINANCE report with an email to the finance committee (PDF attached); copies the draft.",
+      "kind": "app",
+      "user": "w1002",
+      "beats": [
+        "It also writes your emails. Ask for an email, and you get a ready-to-send draft built on the verified figures.",
+        "Ask for a report and an email together, and the PDF report is attached to the draft. Here, Victor asks for third-quarter expenses against the revised budget, for the finance committee.",
+        "The report is attached, the email is written, and one click copies it."
+      ]
+    },
+    {
+      "id": "arabic",
+      "chapter": "6 · English and Arabic",
+      "screen": "Language switched to Arabic (right to left); an Arabic question on PERSONNEL and its Arabic answer.",
+      "kind": "app",
+      "user": "w1002",
+      "beats": [
+        "And everything works in Arabic too: right to left, with Arabic numbers and dates."
+      ]
+    },
+    {
+      "id": "history",
+      "chapter": "7 · History, versions and files",
+      "screen": "My History list; a saved analysis re-run (new version kept beside the old one); favorite, Word and Excel exports, a new collection.",
+      "kind": "app",
+      "user": "w1002",
+      "beats": [
+        "Every answer is saved in My History, with its question, its type and its cost.",
+        "Open one to see its versions. Run it again later, and you get a new version without losing the old one.",
+        "Mark favorites, group analyses into collections, and export to PDF, Word or Excel."
+      ]
+    },
+    {
+      "id": "files",
+      "chapter": "Files created by Wabi Insight",
+      "screen": "The generated files: PDF study pages, the Word document and the Excel workbook.",
+      "kind": "graphic",
+      "graphic": "files.html",
+      "beats": [
+        "These are real files created by Wabi Insight: a PDF study, a Word document and an Excel workbook. My Reports keeps every one of them."
+      ]
+    },
+    {
+      "id": "share",
+      "chapter": "8 · Share safely",
+      "screen": "Victor shares the study with Martin Calder (message, 30-day expiry); Martin's Shared With Me; the email dialog with the data-classification check.",
+      "kind": "app",
+      "user": "w1002",
+      "beats": [
+        "Share an analysis with a colleague, with a message and an expiry date. They see exactly what you saw. Nothing is queried again.",
+        "Or send it by email. Wabi Insight checks the data's classification first: restricted data never leaves the organization, and confidential data needs your explicit approval."
+      ]
+    },
+    {
+      "id": "security",
+      "chapter": "9 · Security in every answer",
+      "screen": "Daniel Hartwell (branch manager, Deira): tellers of his branch only; Emily Carver (teller): her own postings; Sophie Langley (HR officer): Emirates ID column withheld; Clara's Support Access page.",
+      "kind": "app",
+      "user": "w1003",
+      "beats": [
+        "Permissions apply to every single question. When the Deira branch manager asks for cash deposits per teller, only Deira's tellers come back, and the answer says so.",
+        "A teller asking about cash sees only her own postings.",
+        "And when the HR officer asks for Emirates ID numbers, that column is restricted for her role, so the AI never even sees it.",
+        "Each organization's data is fully separated, every action is audited, and even platform support can only come in with your approval."
+      ]
+    },
+    {
+      "id": "rules",
+      "chapter": "10 · Monitoring rules",
+      "screen": "Victor's Monitoring Rules: describes a rule in plain words, reviews the AI draft, saves it.",
+      "kind": "app",
+      "user": "w1002",
+      "beats": [
+        "Wabi Insight also works for you when nobody is asking. Monitoring Rules watch your data on a schedule.",
+        "Describe a rule in plain words. Wabi Insight drafts it, and you review it before saving.",
+        "Each rule runs under its owner's permissions, never more."
+      ]
+    },
+    {
+      "id": "alerts",
+      "chapter": "11 · Alerts",
+      "screen": "Laura Bexley (Compliance, w1007): alert list and bell; cash-deposit alert detail; note and acknowledge; KYC access alert; daily digest preview.",
+      "kind": "app",
+      "user": "w1007",
+      "beats": [
+        "When a rule fires, an alert appears, and the right people are notified.",
+        "Here, an individual customer deposited just under fifty thousand dirhams in cash on several days, then fifty-eight thousand in a single day.",
+        "Laura acknowledges it with a note. Alerts inform people; they never block anyone automatically.",
+        "Access rules watch how data is used, too. When someone outside compliance looks up KYC documents, compliance is alerted. And everyone can get one daily digest."
+      ]
+    },
+    {
+      "id": "periodic",
+      "chapter": "12 · Scheduled reports",
+      "screen": "Victor creates a weekly periodic report (PDF) of the cheque study for two recipients and runs it now.",
+      "kind": "app",
+      "user": "w1002",
+      "beats": [
+        "Need the same report every week? Periodic Reports email a saved analysis on a schedule, as PDF or Excel.",
+        "Each recipient receives figures computed under their own permissions."
+      ]
+    },
+    {
+      "id": "insights",
+      "chapter": "13 · Usage insights and support",
+      "screen": "Clara: Organization Insights metric; Support Desk new request form.",
+      "kind": "app",
+      "user": "w1001",
+      "beats": [
+        "Administrators also see how Wabi Insight is used in their organization: users, sign-ins and activity, over any period.",
+        "And the Support Desk tracks every request with the WabiTex team, from first message to resolution."
+      ]
+    },
+    {
+      "id": "outro",
+      "chapter": "WabiTex Solutions",
+      "screen": "Wordmark, five pillars, contact WabiTex Solutions: wabitex.com · support@wabitex.com.",
+      "kind": "graphic",
+      "graphic": "outro.html",
+      "beats": [
+        "Wabi Insight: verified answers, dashboards, reports and alerts from your own data. Secure, bilingual, and ready for any organization.",
+        "Contact WabiTex Solutions today for a demo on your data. Visit wabitex dot com."
+      ]
+    }
+  ]
+}

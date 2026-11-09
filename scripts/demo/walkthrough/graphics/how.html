@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>How it works</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  .flow { display: flex; align-items: stretch; margin-top: 70px; }
+  .node { width: 228px; padding: 30px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .node .material-icons { font-size: 58px; color: var(--aqua); }
+  .node b { font: 700 27px/1.2 Inter; }
+  .node small { font: 500 21px/1.35 Inter; color: var(--muted); }
+  .node.final { background: linear-gradient(160deg, rgb(8 125 242 / 45%), rgb(34 184 207 / 30%)); border-color: rgb(142 240 208 / 60%); }
+  .node.final .material-icons { color: #8ef0d0; }
+  body[data-step="2"] .node.final { box-shadow: 0 0 0 0 rgb(142 240 208 / 55%); animation: glow 1.8s ease-out 2; }
+  @keyframes glow { to { box-shadow: 0 0 0 36px rgb(142 240 208 / 0%); } }
+  .arrow { width: 54px; display: flex; align-items: center; justify-content: center; color: rgb(255 255 255 / 55%); }
+  .arrow .material-icons { font-size: 40px; }
+  .note { margin-top: 56px; display: flex; gap: 22px; }
+  .never { border-color: rgb(255 140 140 / 55%); }
+  .never .material-icons { color: #ff9a9a; }
+</style></head>
+<body>
+  <div class="aurora"><i></i><i></i><i></i></div><div class="grid"></div>
+  <div class="stage">
+    <div class="eyebrow" data-beat="0">How it works</div>
+    <h2 data-beat="0" style="--i:1">From question to <span class="grad">verified answer</span></h2>
+    <div class="flow">
+      <div class="node card" data-beat="0" style="--i:2"><span class="material-icons">storage</span><b>Your databases</b><small>SQL Server or Oracle, read-only accounts</small></div>
+      <div class="arrow" data-beat="0" style="--i:3"><span class="material-icons">east</span></div>
+      <div class="node card" data-beat="0" style="--i:4"><span class="material-icons">rule</span><b>Catalogue &amp; permissions</b><small>Tables, columns and rows per role</small></div>
+      <div class="arrow" data-beat="1"><span class="material-icons">east</span></div>
+      <div class="node card" data-beat="1" style="--i:1"><span class="material-icons">psychology</span><b>AI writes a plan</b><small>A structured plan, never SQL</small></div>
+      <div class="arrow" data-beat="1" style="--i:2"><span class="material-icons">east</span></div>
+      <div class="node card" data-beat="1" style="--i:3"><span class="material-icons">verified_user</span><b>Checked &amp; authorized</b><small>Against the asker's permissions</small></div>
+      <div class="arrow" data-beat="1" style="--i:4"><span class="material-icons">east</span></div>
+      <div class="node card" data-beat="1" style="--i:5"><span class="material-icons">lock</span><b>Safe, read-only query</b><small>Built by Wabi Insight, run on your data</small></div>
+      <div class="arrow" data-beat="2"><span class="material-icons">east</span></div>
+      <div class="node card final" data-beat="2" style="--i:1"><span class="material-icons">task_alt</span><b>Verified answer</b><small>Every number from the query</small></div>
+    </div>
+    <div class="note" data-stagger>
+      <span class="chip never" data-beat="1" style="--i:6"><span class="material-icons">block</span>AI-written SQL is never executed</span>
+      <span class="chip" data-beat="2" style="--i:2"><span class="material-icons">insights</span>Answers</span>
+      <span class="chip" data-beat="2" style="--i:3"><span class="material-icons">dashboard</span>Dashboards</span>
+      <span class="chip" data-beat="2" style="--i:4"><span class="material-icons">picture_as_pdf</span>Reports</span>
+      <span class="chip" data-beat="2" style="--i:5"><span class="material-icons">mail</span>Email drafts</span>
+      <span class="chip" data-beat="2" style="--i:6"><span class="material-icons">notifications_active</span>Alerts</span>
+    </div>
+  </div>
+  <script src="stage.js"></script>
+</body></html>

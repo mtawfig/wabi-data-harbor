@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Wabi Insight</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  .chaos { display: grid; grid-template-columns: 620px 1fr; gap: 90px; align-items: center; }
+  .chaos img { width: 620px; filter: drop-shadow(0 30px 60px rgb(0 0 0 / 35%)); }
+  .chaos h2 { text-align: left; font-size: 74px; }
+  .chaos .lead { text-align: left; margin-top: 30px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 40px; }
+  .hero { text-align: center; }
+  .hero .mark { width: 1080px; filter: drop-shadow(0 20px 70px rgb(34 184 207 / 40%)); }
+  .hero .tagline { font: 700 54px/1.2 Inter; margin-top: 46px; }
+  .hero .by { margin-top: 34px; font: 600 28px/1 Inter; color: var(--muted); letter-spacing: .08em; }
+  .hero .by b { color: var(--white); }
+  .pulse { position: absolute; width: 1400px; height: 1400px; border-radius: 50%; border: 2px solid rgb(34 184 207 / 30%); left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.2); opacity: 0; }
+  body[data-step="1"] .pulse { animation: pulse 3.2s var(--ease) .2s 2; }
+  body[data-step="1"] .pulse.two { animation-delay: 1.2s; }
+  @keyframes pulse { 0% { opacity: .9; transform: translate(-50%, -50%) scale(.15); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); } }
+</style></head>
+<body>
+  <div class="aurora"><i></i><i></i><i></i></div><div class="grid"></div>
+  <div class="layer">
+    <div class="chaos">
+      <img data-beat="0" data-until="1" src="__WEB__/public/illustrations/data-chaos.svg" alt="">
+      <div>
+        <h2 data-beat="0" data-until="1" style="--i:1">Your answers are <span class="grad">scattered</span> across systems.</h2>
+        <p class="lead" data-beat="0" data-until="1" style="--i:2">Reports take days. Questions wait in a queue.</p>
+        <div class="tags" data-stagger>
+          <span class="chip" data-beat="0" data-until="1"><span class="material-icons">storage</span>Core systems</span>
+          <span class="chip" data-beat="0" data-until="1"><span class="material-icons">table_view</span>Spreadsheets</span>
+          <span class="chip" data-beat="0" data-until="1"><span class="material-icons">mail</span>Email requests</span>
+          <span class="chip" data-beat="0" data-until="1"><span class="material-icons">hourglass_top</span>Waiting</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pulse"></div><div class="pulse two"></div>
+  <div class="layer hero">
+    <img class="mark" data-beat="1" src="__WEB__/public/brand/wabi-insight-wordmark-light.svg" alt="Wabi Insight">
+    <div class="tagline" data-beat="1" style="--i:3">Ask your data. <span class="grad">Trust the answer.</span></div>
+    <div class="by" data-beat="1" style="--i:6">by <b>WabiTex Solutions</b></div>
+  </div>
+  <script src="stage.js"></script>
+</body></html>
