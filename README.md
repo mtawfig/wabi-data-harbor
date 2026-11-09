@@ -24,7 +24,7 @@ Sample data: `scripts/sql/samples` creates three realistic source databases (fli
 
 ## Product walkthrough
 
-An eight-minute narrated walkthrough of the application on the Wabi Bank sample (English, with subtitles and chapters): [`docs/demo/wabi-insight-walkthrough-en.mp4`](docs/demo/wabi-insight-walkthrough-en.mp4); script with timecodes in [`docs/demo/wabi-insight-walkthrough-en.md`](docs/demo/wabi-insight-walkthrough-en.md); generator in [`scripts/demo/walkthrough`](scripts/demo/walkthrough/README.md).
+A narrated walkthrough of the application on the Wabi Bank sample, with subtitles and chapters, in English ([`docs/demo/wabi-insight-walkthrough-en.mp4`](docs/demo/wabi-insight-walkthrough-en.mp4), script [`…-en.md`](docs/demo/wabi-insight-walkthrough-en.md)) and Arabic ([`docs/demo/wabi-insight-walkthrough-ar.mp4`](docs/demo/wabi-insight-walkthrough-ar.mp4), script [`…-ar.md`](docs/demo/wabi-insight-walkthrough-ar.md)); generator in [`scripts/demo/walkthrough`](scripts/demo/walkthrough/README.md).
 
 ## Status
 

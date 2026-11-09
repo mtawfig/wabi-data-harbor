@@ -1,0 +1,13 @@
+/* Arabic graphic scenes: the app's Arabic typeface (IBM Plex Sans Arabic), right to left, no letter spacing (it would
+   break joined letters). Loaded after base.css; record.js copies these pages over the English ones for --lang ar. */
+@import url('__WEB__/node_modules/@fontsource/ibm-plex-sans-arabic/400.css');
+@import url('__WEB__/node_modules/@fontsource/ibm-plex-sans-arabic/500.css');
+@import url('__WEB__/node_modules/@fontsource/ibm-plex-sans-arabic/600.css');
+@import url('__WEB__/node_modules/@fontsource/ibm-plex-sans-arabic/700.css');
+
+body, body * { font-family: 'IBM Plex Sans Arabic', Inter, system-ui, sans-serif !important; letter-spacing: 0 !important; text-transform: none !important; }
+.material-icons { font-family: 'Material Icons' !important; }
+h1, h2 { line-height: 1.3 !important; font-weight: 700 !important; }
+.grad { padding-bottom: .1em; }
+.eyebrow { font-size: 26px !important; }
+.ltr { direction: ltr; unicode-bidi: isolate; }

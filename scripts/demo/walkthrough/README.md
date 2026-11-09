@@ -1,14 +1,15 @@
 # Product walkthrough video
 
-Generates the Wabi Insight walkthrough video (English, about eight minutes) from the **running application** with the
-Wabi Bank sample organization: real pages, real AI answers and real generated files, with narration, title graphics,
-subtitles and chapters. The finished video and its script are in `docs/demo/`:
+Generates the Wabi Insight walkthrough video, in English and in Arabic (about eight to nine minutes each), from the
+**running application** with the Wabi Bank sample organization: real pages, real AI answers and real generated files,
+with narration, title graphics, subtitles and chapters. The finished videos and their scripts are in `docs/demo/`:
 
 | File | What |
 |---|---|
 | `docs/demo/wabi-insight-walkthrough-en.mp4` | The video (1920×1080, H.264/AAC, English subtitle track and chapter markers) |
 | `docs/demo/wabi-insight-walkthrough-en.srt` | English subtitles |
 | `docs/demo/wabi-insight-walkthrough-en.md` | The narration script with the time of every scene and line |
+| `docs/demo/wabi-insight-walkthrough-ar.mp4`, `.srt`, `.md` | The Arabic video (Arabic interface, Arabic questions and answers, Arabic subtitle track), its subtitles and script |
 
 The Platform Administrator is deliberately not shown: the video is for organizations evaluating the product.
 
@@ -16,11 +17,11 @@ The Platform Administrator is deliberately not shown: the video is for organizat
 
 | File | Role |
 |---|---|
-| `script.en.json` | The script: scenes in order, chapter titles, what is on screen, the narration lines (one "beat" per line), voice and contact details. Edit this to change what is said. |
-| `prepare.mjs` | One-off preparation of a freshly seeded Wabi Bank: first sign-in password change for the eight sample users, read-only connection + test + approval for the five applications, English as preferred language, one KYC look-up and the monitoring rules made due (so the planted alerts exist). |
-| `tts.py` | Narration with [Piper](https://github.com/rhasspy/piper) (offline neural TTS, MIT) and the `en_US-bryce-medium` male voice (trained on a public-domain dataset, so the narration may be used commercially), at the rate set by `lengthScale` in the script. One WAV per line plus `durations.json`. |
-| `graphics/` | HTML title cards (intro, industries, how it works, Wabi Bank, generated files, outro), animated line by line by `stage.js`. |
-| `record.js` | Playwright recorder. Signs in as each sample user, plays every scene (cursor, clicks, typing, spotlight, chapter label, callouts) and records frames with the Chrome DevTools screencast. Narration lines are paced from `durations.json`; waits for the AI are marked as cuts. |
+| `script.en.json`, `script.ar.json` | The script per language: scenes in order, chapter titles, what is on screen, the narration lines (one "beat" per line), voice, pronunciation help and contact details. Edit these to change what is said. |
+| `prepare.mjs` | One-off preparation of a freshly seeded Wabi Bank: first sign-in password change for the eight sample users, read-only connection + test + approval for the five applications, the video's language (`WI_DEMO_LANGUAGE`, `en` or `ar`) as every user's preferred language, one KYC look-up and the monitoring rules made due (so the planted alerts exist). |
+| `tts.py` | Narration, one WAV per line plus `durations.json`. English: [Piper](https://github.com/rhasspy/piper) (offline neural TTS, MIT) with the `en_US-bryce-medium` male voice (trained on a public-domain dataset, so the narration may be used commercially), at the rate set by `lengthScale`. Arabic: the Azure AI Speech neural voice `ar-AE-HamdanNeural` (UAE, male; licensed for commercial use under the Azure terms) through the text-to-speech REST API of the Speech resource's region, key from `AZURE_SPEECH_KEY`. |
+| `graphics/` | HTML title cards (intro, industries, how it works, Wabi Bank, generated files, outro), animated line by line by `stage.js`; `graphics/ar/` holds the Arabic pages (right to left, IBM Plex Sans Arabic like the app), used over the English ones for `--lang ar`. |
+| `record.js` | Playwright recorder. Signs in as each sample user, plays every scene (cursor, clicks, typing, spotlight, chapter label, callouts) and records frames with the Chrome DevTools screencast. Narration lines are paced from `durations.json`; waits for the AI are marked as cuts. `--lang` picks the script, the interface language, and the questions, typed text and callouts (`TEXT` in the file). |
 | `compose.py` | Rebuilds each scene without the cuts, places the narration, adds a music bed generated in the script (no third-party music), click and transition sounds, crossfades the scenes, and writes the MP4, SRT and the timecoded script. |
 
 ## Run it
@@ -66,8 +67,18 @@ Notes:
 
 ## Arabic version
 
-Copy `script.en.json` to `script.ar.json` and translate the chapters, screen notes and lines; pick an Arabic Piper
-voice (for example `ar_JO-kareem-medium`) in `voice`; run `tts.py --script script.ar.json`. In `record.js`, the scenes
-type English questions and keep the interface in English: give each scene its Arabic question and switch the users'
-language to Arabic (`--lang ar` reads `script.ar.json`). The graphics are English HTML pages; add Arabic copies with
-`dir="rtl"` and point the graphic scenes of `script.ar.json` at them.
+The same steps with the Arabic script, on a fresh database prepared in Arabic (scenes acknowledge an alert and create
+analyses, so record each language on its own fresh copy of the sample):
+
+```bash
+OUT=out/ar
+WI_DEMO_LANGUAGE=ar WI_DEMO_PASSWORD='<password>' WI_SQLCMD="sqlcmd …" node prepare.mjs
+AZURE_SPEECH_KEY='<Azure Speech key>' python3 tts.py --script script.ar.json --out $OUT
+WI_DEMO_PASSWORD='<password>' node record.js --lang ar --out $OUT
+python3 compose.py --script script.ar.json --work $OUT --video ../../../docs/demo/wabi-insight-walkthrough-ar.mp4
+```
+
+The Arabic narration needs an Azure AI Speech resource (the free F0 tier covers it) in the region named in
+`script.ar.json` (`tts.region`, UAE North). The Arabic video's "other language" chapter switches the interface to
+English and asks in English. The scenes are recorded independently of the voice, so the narration can be regenerated
+(another voice, rate or wording) and the video composed again without recording.

@@ -12,7 +12,7 @@
  *
  * Nothing here touches the source databases; it only uses the product's own API, as an administrator would.
  *
- *   WI_API_URL=http://localhost:5080 WI_DEMO_PASSWORD='<new password>' \
+ *   WI_API_URL=http://localhost:5080 WI_DEMO_PASSWORD='<new password>' WI_DEMO_LANGUAGE=en|ar \
  *   WI_SQL_SERVER='localhost,1433' WI_SQLCMD="sqlcmd -S localhost,1433 -U sa -P '<sa password>' -C -d WabiInsightDB" \
  *     node scripts/demo/walkthrough/prepare.mjs
  */
@@ -22,6 +22,7 @@ const API = process.env.WI_API_URL || 'http://localhost:5080';
 const INITIAL = process.env.WI_SAMPLE_PASSWORD || 'Wabi#Sample#2026';
 const DEMO = process.env.WI_DEMO_PASSWORD;
 const SQL_SERVER = process.env.WI_SQL_SERVER || 'localhost,1433';
+const LANGUAGE = process.env.WI_DEMO_LANGUAGE || 'en'; // the language of the video being recorded
 if (!DEMO) throw new Error('Set WI_DEMO_PASSWORD: the password the demo accounts get at their first sign-in.');
 
 const USERS = ['w1001', 'w1002', 'w1003', 'w1004', 'w1005', 'w1006', 'w1007', 'w1008'].map((u) => `${u}@wabibank.example`);
@@ -104,15 +105,15 @@ for (const app of listed.items ?? listed) {
   console.log(`${app.applicationCode}: connection ${stored.status}, test ${tested.status} ${JSON.stringify(tested.json)}, approval ${approved.status}`);
 }
 
-// The recording is in English: users whose saved language is Arabic (the CEO and the HR officer) switch to English,
-// because the app applies the saved language on every page load. The Arabic scene switches language on screen.
+// Every user's saved language becomes the video's language (WI_DEMO_LANGUAGE, en or ar), because the app applies the
+// saved language on every page load. The "other language" scene switches language on screen.
 const users = (await admin.call('GET', '/api/users?pageSize=50')).json;
-for (const u of (users.items ?? users).filter((x) => x.preferredLanguage !== 'en')) {
+for (const u of (users.items ?? users).filter((x) => x.preferredLanguage !== LANGUAGE)) {
   const updated = await admin.call('PUT', `/api/users/${u.userId}`, {
     fullName: u.fullName, employeeNumber: u.employeeNumber, phoneNumber: u.phoneNumber, departmentId: u.departmentId ?? null,
-    sectionId: u.sectionId ?? null, preferredLanguage: 'en', roleCodes: u.roles,
+    sectionId: u.sectionId ?? null, preferredLanguage: LANGUAGE, roleCodes: u.roles,
   });
-  console.log(`${u.email}: preferred language en (${updated.status})`);
+  console.log(`${u.email}: preferred language ${LANGUAGE} (${updated.status})`);
 }
 
 // The access rule "KYC documents looked up outside Compliance" needs a look-up to report: the CEO asks one question
