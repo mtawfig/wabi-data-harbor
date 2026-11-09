@@ -47,6 +47,18 @@ def read_wav(path):
     return data
 
 
+VOICE_RMS = 0.164    # spoken level every narration line is brought to (about -15.7 dBFS while speaking)
+
+
+def level(audio):
+    """Brings a narration line to VOICE_RMS while speaking, so voices from different engines sound equally loud."""
+    speaking = audio[np.abs(audio) > 0.02]
+    if speaking.size == 0:
+        return audio
+    gain = VOICE_RMS / float(np.sqrt(np.mean(speaking ** 2)))
+    return audio * min(gain, 1.1 / max(float(np.abs(audio).max()), 1e-6))
+
+
 def write_wav(path, stereo):
     pcm = (np.clip(stereo, -1, 1) * 32767).astype(np.int16)
     with wave.open(path, "wb") as w:
@@ -349,7 +361,7 @@ def main():
     for scene, offset in zip(scenes, offsets):
         for n, text in enumerate(scene.spec["beats"]):
             start = offset + scene.out(scene.beats[n] + LEAD)
-            audio = read_wav(os.path.join(args.work, "audio", f"{scene.id}-{n}.wav"))
+            audio = level(read_wav(os.path.join(args.work, "audio", f"{scene.id}-{n}.wav")))
             add(voice, start, audio, 0.9)
             i = int(start * RATE)
             speaking[i:i + len(audio)] = 1
@@ -374,6 +386,9 @@ def main():
     duck = np.convolve(speaking, kernel, mode="same")
     gain = 10 ** ((MUSIC_DB + DUCK_DB * duck) / 20)
     bed = music_bed(len(voice) / RATE)
+    if len(bed) < len(voice):  # rounding can leave the bed a sample short
+        bed = np.pad(bed, ((0, len(voice) - len(bed)), (0, 0)))
+    bed = bed[: len(voice)]
     bed[: int(2 * RATE)] *= np.linspace(0, 1, int(2 * RATE))[:, None]
     tail = int(4 * RATE)
     end = int(total * RATE)
