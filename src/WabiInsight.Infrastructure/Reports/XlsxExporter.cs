@@ -95,10 +95,12 @@ public sealed class XlsxExporter : IAnswerExporter
             {
                 row++;
                 summary.Cell(row++, 1).SetValue(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective).Style.Font.SetBold();
-                using var png = new MemoryStream(ChartImageRenderer.RenderPng(type, panel.Result.Series));
-                // Rows above may be taller than the default because of wrapped text; anchor one row lower and leave room below the image.
-                summary.AddPicture(png).MoveTo(summary.Cell(row + 1, 1)).WithSize(ChartImageRenderer.Width, ChartImageRenderer.Height);
-                row += 22;
+                var chart = ChartImageRenderer.RenderImage(type, panel.Result.Series, culture: rtl ? CultureInfo.GetCultureInfo("ar-AE") : CultureInfo.InvariantCulture);
+                using var png = new MemoryStream(chart.Png);
+                // Rows above may be taller than the default because of wrapped text; anchor one row lower and leave room below the
+                // image (default rows are 20 px; a chart with angled labels is taller than 340 px).
+                summary.AddPicture(png).MoveTo(summary.Cell(row + 1, 1)).WithSize(chart.Width, chart.Height);
+                row += (int)Math.Ceiling(chart.Height / 20d) + 5;
             }
         }
 

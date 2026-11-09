@@ -74,6 +74,12 @@ public sealed class ExportTests
             Assert.DoesNotContain(technical, text, StringComparison.OrdinalIgnoreCase);
         }
 
+        // P13.16: the data table keeps the PDF's content-based column widths, and its figures never wrap.
+        var rowsTable = body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Table>().Last();
+        Assert.Equal(DocumentFormat.OpenXml.Wordprocessing.TableLayoutValues.Fixed, rowsTable.Descendants<DocumentFormat.OpenXml.Wordprocessing.TableLayout>().Single().Type!.Value);
+        Assert.Equal(3, rowsTable.Descendants<DocumentFormat.OpenXml.Wordprocessing.GridColumn>().Count(c => c.Width is not null));
+        Assert.Equal(6, rowsTable.Descendants<DocumentFormat.OpenXml.Wordprocessing.NoWrap>().Count());
+
         WriteFixture($"sample-{(arabic ? "ar" : "en")}.docx", bytes);
     }
 

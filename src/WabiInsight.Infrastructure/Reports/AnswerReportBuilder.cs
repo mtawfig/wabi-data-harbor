@@ -18,9 +18,10 @@ public static class AnswerReportBuilder
             {
                 Title = report.Title,
                 Subtitle = report.Subtitle,
-                Introduction = report.Introduction,
-                Sections = report.Sections.Select(s => new ReportSection { Title = s.Title, Body = s.Body, Panels = [.. s.Panels] }).ToList(),
-                Summary = report.Summary,
+                // Studies written before P13.16 may carry "Figure:" labels; the exported document captions its figures itself.
+                Introduction = ReportComposer.WithoutCaptionLabels(report.Introduction),
+                Sections = report.Sections.Select(s => new ReportSection { Title = s.Title, Body = ReportComposer.WithoutCaptionLabels(s.Body), Panels = [.. s.Panels] }).ToList(),
+                Summary = ReportComposer.WithoutCaptionLabels(report.Summary),
                 KeyFindings = [.. report.KeyFindings],
                 Recommendations = report.Recommendations.Select(r => new ReportRecommendation { Title = r.Title, Detail = r.Detail }).ToList(),
             };

@@ -127,4 +127,100 @@ public sealed class ReportTests
         Assert.Equal("Monthly Traffic", QuestPdfReportRenderer.StripNumbering("2. 2. Monthly Traffic"));
         Assert.Equal("Overview", QuestPdfReportRenderer.StripNumbering("Overview"));
     }
+
+    // P13.16: report layout. Figures and words never break, chart labels never overlap, figure references read naturally.
+
+    [Fact]
+    public void LayoutTable_SizesColumnsSoFiguresAndHeaderWordsStayWhole()
+    {
+        string[] headers = ["Branch", "Opening cash", "Cash in", "Cash out", "Cash difference", "Transactions", "Tellers", "Business days"];
+        bool[] numeric = [false, true, true, true, true, true, true, true];
+        IReadOnlyList<string>[] rows =
+        [
+            ["Deira (Dubai Main)", "83,887,000", "390,180,346.11", "290,383,847.84", "-100", "50,791", "7", "251"],
+            ["Ras Al Khaimah", "92,171,000", "85,504,344.48", "60,702,140.19", "250", "15,287", "6", "251"],
+        ];
+        var layout = QuestPdfReportRenderer.LayoutTable(headers, numeric, rows);
+
+        Assert.Equal(QuestPdfReportRenderer.TableWidth, layout.Widths.Sum(), 1);
+        for (var i = 0; i < headers.Length; i++)
+        {
+            var inner = layout.Widths[i] - 2 * layout.PaddingX;
+            Assert.True(inner >= TextMetrics.LongestWord(headers[i], layout.HeaderFontSize, bold: true), headers[i]);
+            if (numeric[i])
+            {
+                Assert.True(inner >= rows.Max(r => TextMetrics.Width(r[i], layout.FontSize)), headers[i]);
+            }
+        }
+
+        // A table too wide for the page keeps every figure whole by using smaller type, never below 6.5 pt.
+        var many = Enumerable.Range(1, 14).Select(i => $"Amount {i}").ToList();
+        var wide = QuestPdfReportRenderer.LayoutTable(many, many.Select(_ => true).ToList(), [many.Select(_ => "1,234,567,890.12").ToList()]);
+        Assert.InRange(wide.FontSize, 6.5f, 8.9f);
+        Assert.Equal(3f, wide.PaddingX);
+        Assert.Empty(QuestPdfReportRenderer.LayoutTable([], [], []).Widths);
+    }
+
+    [Fact]
+    public void SvgChartBuilder_WrapsOrAnglesLongCategoryLabels_InsteadOfOverlappingThem()
+    {
+        string[] branches = ["Sharjah", "Al Ain", "Business Bay", "Deira (Dubai Main)", "Abu Dhabi Main", "Ras Al Khaimah"];
+        var twoLines = SvgChartBuilder.Render("bar", [new ResultSeries("cash_difference", branches, [-6390, -250, -150, -100, 50, 250])], 520, 240);
+        Assert.Contains(">Deira (Dubai</text>", twoLines.Svg, StringComparison.Ordinal);
+        Assert.Contains(">Main)</text>", twoLines.Svg, StringComparison.Ordinal);
+        Assert.DoesNotContain("…", twoLines.Svg, StringComparison.Ordinal);
+        Assert.DoesNotContain("rotate(", twoLines.Svg, StringComparison.Ordinal);
+
+        // Forty tellers: labels are drawn at an angle and the chart grows to hold them; the plot keeps its height.
+        var tellers = Enumerable.Range(1, 40).Select(i => $"Teller number {i:00} of the branch").ToList();
+        var angled = SvgChartBuilder.Render("bar", [new ResultSeries("transactions", tellers, tellers.Select((_, i) => (double)(i + 1)).ToList())], 520, 240);
+        Assert.Contains("rotate(-45", angled.Svg, StringComparison.Ordinal);
+        Assert.True(angled.Height > 240, angled.Height.ToString(CultureInfo.InvariantCulture));
+        Assert.Contains($"height=\"{angled.Height.ToString(CultureInfo.InvariantCulture)}\"", angled.Svg, StringComparison.Ordinal);
+
+        // Short labels stay on one line, unchanged.
+        var days = SvgChartBuilder.Render("bar", [new ResultSeries("flights", ["Mon", "Tue", "Wed"], [1, 2, 3])], 520, 240);
+        Assert.Equal(240, days.Height);
+        Assert.Contains(">Tue</text>", days.Svg, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SvgChartBuilder_NamesSeriesInWords_MonthsByName_AndBillionsCompactly()
+    {
+        string[] months = ["2025-01-01", "2025-02-01", "2025-03-01"];
+        var chart = SvgChartBuilder.Build("line", [new ResultSeries("cash_in", months, [1, 2, 3]), new ResultSeries("cash_out", months, [1, 1, 2])]);
+        Assert.Contains(">Cash in</text>", chart, StringComparison.Ordinal);
+        Assert.DoesNotContain("cash_in", chart, StringComparison.Ordinal);
+        Assert.Contains(">Jan 2025</text>", chart, StringComparison.Ordinal);
+
+        Assert.Equal(["Jan 2025", "Feb 2025"], SvgChartBuilder.CategoryLabels(["2025-01-01T00:00:00", "2025-02-01T00:00:00"], CultureInfo.InvariantCulture));
+        Assert.Equal(["2024", "2025"], SvgChartBuilder.CategoryLabels(["2024-01-01", "2025-01-01"], CultureInfo.InvariantCulture));
+        Assert.Equal(["2025-01-15", "2025-02-01"], SvgChartBuilder.CategoryLabels(["2025-01-15", "2025-02-01"], CultureInfo.InvariantCulture));
+        Assert.Equal(["Deira", "Sharjah"], SvgChartBuilder.CategoryLabels(["Deira", "Sharjah"], CultureInfo.InvariantCulture));
+        Assert.Equal(["2025-01", "2025-02"], SvgChartBuilder.CategoryLabels(["2025-01-01", "2025-02-01"], CultureInfo.GetCultureInfo("ar-AE")));
+        Assert.Equal("1.35B", SvgChartBuilder.Compact(1_354_955_706));
+    }
+
+    [Fact]
+    public void ChartImageRenderer_SizesTheImage_ToTheChart()
+    {
+        var tellers = Enumerable.Range(1, 40).Select(i => $"Teller number {i:00} of the branch").ToList();
+        var image = ChartImageRenderer.RenderImage("bar", [new ResultSeries("transactions", tellers, tellers.Select((_, i) => (double)i).ToList())]);
+        Assert.Equal(ChartImageRenderer.Width, image.Width);
+        Assert.True(image.Height > ChartImageRenderer.Height);
+        Assert.Equal(0x89, image.Png[0]);
+    }
+
+    [Fact]
+    public void ReportText_DropsFigureAndTableLabels_TheDocumentCaptionsItself()
+    {
+        var json = """
+            {"title":"Cash","introduction":"Figure: Total cash in and Table: Cash by branch summarise the year.","sections":[{"title":"Trend","body":"Figure: Monthly cash in shows the trend. يوضح الشكل: الاتجاه الشهري.","panels":[0]}],"summary":"Chart: Branches lead."}
+            """;
+        var content = ReportComposer.Parse(json, 1, wantsEmail: false);
+        Assert.Equal("Total cash in and Cash by branch summarise the year.", content.Introduction);
+        Assert.Equal("Monthly cash in shows the trend. يوضح الاتجاه الشهري.", content.Sections[0].Body);
+        Assert.Equal("Branches lead.", content.Summary);
+        Assert.Equal("The figures in the table below", ReportComposer.WithoutCaptionLabels("The figures in the table below"));
+    }
 }

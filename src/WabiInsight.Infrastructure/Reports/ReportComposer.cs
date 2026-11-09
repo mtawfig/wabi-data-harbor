@@ -9,7 +9,7 @@ namespace WabiInsight.Infrastructure.Reports;
 /// verified panels, which are passed as delimited data. Everything it returns is sanitized; the charts and
 /// tables of the PDF are drawn from the panel data by the renderer, not from this text.
 /// </summary>
-public sealed class ReportComposer
+public sealed partial class ReportComposer
 {
     public const int RowsPerPanel = 60;
     public const int TotalRows = 480;
@@ -20,7 +20,7 @@ public sealed class ReportComposer
     private const string SystemPrompt = """
         You write executive reports and professional emails for business users of Wabi Insight.
         You receive the user's request, the objective, and one entry per analysis panel with its verified rows. Use only numbers that appear in the RESULT block; never invent, extrapolate or recompute beyond simple comparisons of listed values. Where a figure is not in the data, say so rather than guessing.
-        Structure the report like a professional study: an introduction (purpose, scope and period in business terms, how to read the report), then standard analytical sections in a logical order (overview first, then one section per dimension the panels cover, then quality or performance aspects), an executive summary, key findings, and recommendations. Every panel index must appear in exactly one section's "panels" list, placed where its chart or table supports the text; refer to it in the text (for example "Figure: Volume by day of week").
+        Structure the report like a professional study: an introduction (purpose, scope and period in business terms, how to read the report), then standard analytical sections in a logical order (overview first, then one section per dimension the panels cover, then quality or performance aspects), an executive summary, key findings, and recommendations. Every panel index must appear in exactly one section's "panels" list, placed where its chart or table supports the text. Refer to charts and tables naturally by what they show (for example "the chart below shows the monthly trend" or "the table below lists every teller"); never write "Figure:" or "Table:" labels or figure numbers, because the document adds a numbered caption to each chart and table.
         Recommendations are practical: operational actions, process changes, and where useful the kind of systems or tools that would help (for example predictive delay management, airport collaborative decision making, resource planning, dashboards, alerting). Keep each recommendation specific to a finding.
         If an email is requested, write a concise professional email with greeting and sign-off and no placeholders in square brackets; otherwise set email to null. When reportAttached is yes, the email introduces the attached report and its three or four most important findings. When reportAttached is no, nothing is attached: the email states the three or four most important findings itself and never mentions an attachment or an attached report.
         Each panel states its access. When access is limited to what the reader may see (their own records, their department, or their section), the panel does not cover the whole organization: state that scope in the introduction, and never conclude that other people, departments or sections have no data, fewer rows or lower values.
@@ -81,11 +81,11 @@ public sealed class ReportComposer
 
         content.Title = PromptBuilder.Sanitize(PromptBuilder.PlainText(content.Title), 200);
         content.Subtitle = PromptBuilder.Sanitize(PromptBuilder.PlainText(content.Subtitle), 300);
-        content.Introduction = PromptBuilder.SanitizeText(PromptBuilder.PlainText(content.Introduction), 6000);
-        content.Summary = PromptBuilder.SanitizeText(PromptBuilder.PlainText(content.Summary), 6000);
+        content.Introduction = WithoutCaptionLabels(PromptBuilder.SanitizeText(PromptBuilder.PlainText(content.Introduction), 6000));
+        content.Summary = WithoutCaptionLabels(PromptBuilder.SanitizeText(PromptBuilder.PlainText(content.Summary), 6000));
         content.KeyFindings = content.KeyFindings.Select(k => PromptBuilder.Sanitize(PromptBuilder.PlainText(k), 400)).Where(k => k.Length > 0).Take(10).ToList();
         content.Recommendations = content.Recommendations.Where(r => r is not null).Select(r => new ReportRecommendation { Title = PromptBuilder.Sanitize(PromptBuilder.PlainText(r.Title), 200), Detail = PromptBuilder.SanitizeText(PromptBuilder.PlainText(r.Detail), 2000) }).Where(r => r.Title.Length > 0 || r.Detail.Length > 0).Take(ReportSchema.MaxRecommendations).ToList();
-        content.Sections = content.Sections.Where(s => s is not null).Select(s => new ReportSection { Title = PromptBuilder.Sanitize(PromptBuilder.PlainText(s.Title), 200), Body = PromptBuilder.SanitizeText(PromptBuilder.PlainText(s.Body), 8000), Panels = s.Panels.Where(i => i >= 0 && i < panelCount).Distinct().ToList() }).Where(s => s.Title.Length > 0 || s.Body.Length > 0).Take(ReportSchema.MaxSections).ToList();
+        content.Sections = content.Sections.Where(s => s is not null).Select(s => new ReportSection { Title = PromptBuilder.Sanitize(PromptBuilder.PlainText(s.Title), 200), Body = WithoutCaptionLabels(PromptBuilder.SanitizeText(PromptBuilder.PlainText(s.Body), 8000)), Panels = s.Panels.Where(i => i >= 0 && i < panelCount).Distinct().ToList() }).Where(s => s.Title.Length > 0 || s.Body.Length > 0).Take(ReportSchema.MaxSections).ToList();
         var referenced = content.Sections.SelectMany(s => s.Panels).ToHashSet();
         var missing = Enumerable.Range(0, panelCount).Where(i => !referenced.Contains(i)).ToList();
         if (missing.Count > 0)
@@ -110,4 +110,14 @@ public sealed class ReportComposer
             : null;
         return content;
     }
+
+    /// <summary>
+    /// The document numbers and captions every chart and table itself; "Figure:" / "Table:" labels the writer adds anyway
+    /// ("Figure: Monthly cash in shows the trend") are removed so the text reads naturally.
+    /// </summary>
+    internal static string WithoutCaptionLabels(string text)
+        => string.IsNullOrEmpty(text) ? text : CaptionLabel().Replace(text, string.Empty);
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(?:Figure|Table|Chart)\s*:\s*|(?:الشكل|شكل|الجدول|جدول)\s*:\s*")]
+    private static partial System.Text.RegularExpressions.Regex CaptionLabel();
 }
