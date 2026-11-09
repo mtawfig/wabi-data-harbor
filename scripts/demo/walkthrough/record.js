@@ -10,7 +10,10 @@
  * Before recording: Wabi Bank seeded (scripts/sql/samples/wabi-bank/01-06), prepare.mjs run once, narration
  * generated (tts.py), API on :5080 and the web app on :4200.
  *
- *   WI_DEMO_PASSWORD='<demo accounts password>' node scripts/demo/walkthrough/record.js --out <dir> [--only admin,ask] [--lang en]
+ *   WI_DEMO_PASSWORD='<demo accounts password>' node scripts/demo/walkthrough/record.js --out <dir> [--only admin,ask] [--lang en|ar]
+ *
+ * --lang picks script.<lang>.json, the interface language, the graphics (graphics/<lang>/ over the English pages) and
+ * the questions, typed text and callouts of the scenes (TEXT below).
  *
  * Every scene is recorded independently, so one scene can be re-recorded with --only. Scenes that need files from
  * earlier ones (the files graphic uses the exports of "history") read them from <dir>/graphics/files.
@@ -35,6 +38,71 @@ const SIZE = { width: 1920, height: 1080 };
 const GAP = 0.55;      // silence after each narration line, in seconds
 const LEAD = 0.25;     // the voice starts this long after a line's mark
 if (!PASSWORD) throw new Error('Set WI_DEMO_PASSWORD (the password prepare.mjs gave the demo accounts).');
+/** Everything the scenes type, choose or show in callouts, per language of the video (script.<lang>.json). */
+const TEXT = {
+  en: {
+    qDeposits: 'Total deposit balances by branch at the end of December 2025',
+    qDashboard: 'Give me a dashboard of IT incidents in 2025: totals, by priority, by month and by assignment group',
+    qStudy: 'Study cheque returns in 2025: by month, by branch and by return reason, and explain what stands out',
+    qEmail: 'Draft an email to the branch managers summarizing returned cheques by branch in December 2025',
+    qFinance: 'Prepare a report on Q3 2025 expenses versus the revised budget by department, and draft an email to the finance committee with the report attached',
+    qOther: 'ما عدد الموظفين النشطين في كل قطاع؟',
+    qBranch: 'Cash deposits and withdrawals per teller in December 2025',
+    qTeller: 'My cash deposits and withdrawals per day in December 2025',
+    qHr: 'List the employees of the HR department with their Emirates ID numbers',
+    rule: 'Alert me when a branch has more than 20 returned inward cheques in a single day',
+    depositsRow: 'Total deposit balances',
+    studyRow: /Study.*cheque/i,
+    collection: 'Board pack',
+    shareMessage: 'Please review before Sunday\'s board meeting.',
+    alertNote: 'Reviewed with the branch. Filing a suspicious transaction report.',
+    periodicName: 'Weekly cheque returns for the board',
+    weekly: 'Weekly',
+    ticketSubject: 'Connect our new Treasury system',
+    ticketBody: 'Please help us add the Treasury database as a new application.',
+    c: {
+      encrypted: 'Encrypted, tested, read-only', branchOnly: 'Branch managers: their own branch only', tempPassword: 'Temporary password sent by email',
+      logged: 'Every query is logged for accuracy reviews', reportReady: 'Report attached, email ready to send', newVersion: 'New version added, earlier versions kept',
+      shared: 'Shared with Martin Calder, budget controller', classification: 'Classification checked before anything is sent',
+      branch: 'Daniel Hartwell · Deira branch only', teller: 'Emily Carver · her own postings only', hr: 'Restricted column: never shown to the AI',
+      separated: 'Organizations separated · every action audited', support: 'Platform support enters only with your approval',
+      owner: 'Runs under its owner\'s permissions', neverBlock: 'Alerts never block anyone automatically',
+      recipients: 'Administrators can add recipients', eachRecipient: 'Each recipient gets figures under their own permissions',
+    },
+  },
+  ar: {
+    qDeposits: 'إجمالي أرصدة الودائع حسب الفرع في نهاية ديسمبر 2025',
+    qDashboard: 'أعطني لوحة معلومات لحوادث تقنية المعلومات في عام 2025: الإجمالي، وحسب الأولوية، وحسب الشهر، وحسب مجموعة الدعم',
+    qStudy: 'ادرس الشيكات المرتجعة في عام 2025: حسب الشهر وحسب الفرع وحسب سبب الإرجاع، ووضّح أبرز ما يلفت الانتباه',
+    qEmail: 'اكتب مسودة بريد إلكتروني إلى مديري الفروع تلخّص الشيكات المرتجعة حسب الفرع في ديسمبر 2025',
+    qFinance: 'أعدّ تقريرًا عن مصروفات الربع الثالث من 2025 مقارنةً بالموازنة المعدّلة حسب الإدارة، واكتب مسودة بريد إلكتروني إلى لجنة المالية مرفقًا بها التقرير',
+    qOther: 'How many active employees are there in each division?',
+    qBranch: 'الإيداعات والسحوبات النقدية لكل صرّاف في ديسمبر 2025',
+    qTeller: 'إيداعاتي وسحوباتي النقدية يوميًا في ديسمبر 2025',
+    qHr: 'اعرض موظفي إدارة الموارد البشرية مع أرقام الهوية الإماراتية',
+    rule: 'نبّهني عندما يتجاوز عدد الشيكات الواردة المرتجعة في فرع واحد 20 شيكًا في يوم واحد',
+    depositsRow: /أرصدة الودائع/,
+    studyRow: /ادرس الشيكات|دراسة الشيكات/,
+    collection: 'ملف مجلس الإدارة',
+    shareMessage: 'يرجى المراجعة قبل اجتماع مجلس الإدارة يوم الأحد.',
+    alertNote: 'تمت المراجعة مع الفرع، وسيُرفع بلاغ عن معاملة مشبوهة.',
+    periodicName: 'الشيكات المرتجعة أسبوعيًا لمجلس الإدارة',
+    weekly: 'أسبوعيًا',
+    ticketSubject: 'ربط نظام الخزينة الجديد',
+    ticketBody: 'نرجو مساعدتنا في إضافة قاعدة بيانات الخزينة كتطبيق جديد.',
+    c: {
+      encrypted: 'مشفّر ومُختبر وللقراءة فقط', branchOnly: 'مديرو الفروع: فروعهم فقط', tempPassword: 'كلمة المرور المؤقتة تصل بالبريد',
+      logged: 'كل استعلام يُسجَّل لمراجعة الدقة', reportReady: 'التقرير مرفق والبريد جاهز للإرسال', newVersion: 'إصدار جديد مع الاحتفاظ بالسابق',
+      shared: 'تمت المشاركة مع مارتن كالدر، مراقب الموازنة', classification: 'يُتحقق من تصنيف البيانات قبل أي إرسال',
+      branch: 'دانيال هارتويل · فرع ديرة فقط', teller: 'إيميلي كارفر · قيودها فقط', hr: 'عمود مقيّد: لا يُعرض على الذكاء الاصطناعي',
+      separated: 'المؤسسات منفصلة · كل إجراء مُدقَّق', support: 'دعم المنصة لا يدخل إلا بموافقتك',
+      owner: 'تعمل بصلاحيات مالكها', neverBlock: 'التنبيهات لا توقف أحدًا تلقائيًا',
+      recipients: 'يمكن للمسؤولين إضافة مستلمين', eachRecipient: 'كل مستلم يتلقى أرقامًا وفق صلاحياته',
+    },
+  },
+};
+const T = TEXT[LANG];
+if (!T) throw new Error(`No recorder texts for --lang ${LANG}`);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => Date.now() / 1000;
@@ -44,23 +112,25 @@ const now = () => Date.now() / 1000;
 const OVERLAY = `(() => {
   if (window.__wi) return;
   const css = \`
-  #wi-ov{position:fixed;inset:0;pointer-events:none;z-index:2147483000;font-family:Inter,system-ui,sans-serif}
+  #wi-ov{position:fixed;inset:0;pointer-events:none;z-index:2147483000;font-family:Inter,'IBM Plex Sans Arabic',system-ui,sans-serif}
   #wi-ov .cursor{position:absolute;left:0;top:0;width:30px;height:38px;transform:translate(1560px,760px);transition:transform .65s cubic-bezier(.3,.7,.2,1);filter:drop-shadow(0 4px 6px rgba(0,0,0,.35));z-index:5}
   #wi-ov .ripple{position:absolute;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;border:3px solid #22b8cf;animation:wiRip .65s ease-out forwards;z-index:4}
   @keyframes wiRip{from{transform:scale(.2);opacity:1}to{transform:scale(1.5);opacity:0}}
   #wi-ov .spot{position:absolute;border-radius:14px;box-shadow:0 0 0 4px rgba(34,184,207,.95),0 0 0 9999px rgba(6,20,42,.34),0 0 40px 10px rgba(34,184,207,.45);transition:all .55s cubic-bezier(.2,.8,.2,1);opacity:0}
   #wi-ov .spot.on{opacity:1}
-  #wi-ov .chapter{position:absolute;left:26px;bottom:24px;display:flex;align-items:center;gap:12px;padding:11px 22px 11px 12px;border-radius:999px;background:linear-gradient(90deg,#0b1f3a,#14427a);color:#fff;font:600 21px/1 Inter,sans-serif;box-shadow:0 10px 30px rgba(11,31,58,.35);transform:translateY(130px);transition:transform .8s cubic-bezier(.2,.8,.2,1);z-index:3}
+  #wi-ov .chapter{position:absolute;left:26px;bottom:24px;display:flex;align-items:center;gap:12px;padding:11px 22px 11px 12px;border-radius:999px;background:linear-gradient(90deg,#0b1f3a,#14427a);color:#fff;font:600 21px/1.2 Inter,'IBM Plex Sans Arabic',sans-serif;box-shadow:0 10px 30px rgba(11,31,58,.35);transform:translateY(130px);transition:transform .8s cubic-bezier(.2,.8,.2,1);z-index:3}
   #wi-ov .chapter.on{transform:none}
   #wi-ov .chapter b{display:grid;place-items:center;min-width:32px;height:32px;padding:0 8px;border-radius:999px;background:linear-gradient(135deg,#087df2,#22b8cf);font:800 16px/1 Inter,sans-serif}
-  #wi-ov .callout{position:absolute;right:30px;bottom:28px;max-width:560px;display:flex;gap:14px;align-items:center;padding:18px 24px;border-radius:18px;background:rgba(11,31,58,.95);color:#fff;font:600 22px/1.35 Inter,sans-serif;box-shadow:0 16px 40px rgba(0,0,0,.3);border:1px solid rgba(34,184,207,.6);opacity:0;transform:translateY(24px);transition:all .6s cubic-bezier(.2,.8,.2,1);z-index:3}
+  #wi-ov .callout{position:absolute;right:30px;bottom:28px;max-width:560px;display:flex;gap:14px;align-items:center;padding:18px 24px;border-radius:18px;background:rgba(11,31,58,.95);color:#fff;font:600 22px/1.4 Inter,'IBM Plex Sans Arabic',sans-serif;box-shadow:0 16px 40px rgba(0,0,0,.3);border:1px solid rgba(34,184,207,.6);opacity:0;transform:translateY(24px);transition:all .6s cubic-bezier(.2,.8,.2,1);z-index:3}
   #wi-ov .callout.on{opacity:1;transform:none}
   #wi-ov .callout i{font-family:'Material Icons';font-style:normal;font-size:30px;color:#22b8cf;line-height:1}
   #wi-ov .gallery{position:absolute;inset:0;background:rgba(6,20,42,.86);display:flex;align-items:center;justify-content:center;gap:36px;opacity:0;transition:opacity .6s;z-index:2}
   #wi-ov .gallery.on{opacity:1}
   #wi-ov .gallery img{height:840px;border-radius:8px;box-shadow:0 30px 70px rgba(0,0,0,.55);transform:translateY(50px) scale(.95);opacity:0;transition:all .9s cubic-bezier(.2,.8,.2,1)}
   #wi-ov .gallery.on img{transform:none;opacity:1}
-  #wi-ov .tick{position:absolute;left:0;top:0;width:2px;height:2px;opacity:.01}\`;
+  #wi-ov .tick{position:absolute;left:0;top:0;width:2px;height:2px;opacity:.01}
+  #wi-ov.rtl .chapter{left:auto;right:26px;padding:11px 12px 11px 22px}
+  #wi-ov.rtl .callout{right:auto;left:30px}\`;
   const arrow = '<svg viewBox="0 0 30 38" width="30" height="38"><path d="M3 2 L3 30 L10 23 L15 35 L20 33 L15 21 L25 21 Z" fill="#fff" stroke="#0b1f3a" stroke-width="2.2" stroke-linejoin="round"/></svg>';
   let root = null, cursor = null, spot = null, chapter = null, callout = null, gallery = null, tick = null;
   function ensure() {
@@ -78,8 +148,8 @@ const OVERLAY = `(() => {
     ripple(x, y) { ensure(); const r = document.createElement('div'); r.className = 'ripple'; r.style.left = x + 'px'; r.style.top = y + 'px'; root.appendChild(r); setTimeout(() => r.remove(), 800); },
     spot(r) { ensure(); Object.assign(spot.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' }); spot.classList.add('on'); },
     unspot() { ensure(); spot.classList.remove('on'); },
-    chapter(num, text) { ensure(); chapter.querySelector('b').textContent = num; chapter.querySelector('b').style.display = num ? '' : 'none'; chapter.querySelector('span').textContent = text; chapter.classList.add('on'); },
-    callout(text, icon) { ensure(); if (!text) { callout.classList.remove('on'); return; } callout.querySelector('i').textContent = icon || 'info'; callout.querySelector('span').textContent = text; callout.classList.add('on'); },
+    chapter(num, text) { ensure(); root.classList.toggle('rtl', document.documentElement.dir === 'rtl'); chapter.querySelector('b').textContent = num; chapter.querySelector('b').style.display = num ? '' : 'none'; chapter.querySelector('span').textContent = text; chapter.classList.add('on'); },
+    callout(text, icon) { ensure(); root.classList.toggle('rtl', document.documentElement.dir === 'rtl'); if (!text) { callout.classList.remove('on'); return; } callout.querySelector('i').textContent = icon || 'info'; callout.querySelector('span').textContent = text; callout.querySelector('span').dir = 'auto'; callout.classList.add('on'); },
     gallery(srcs) { ensure(); gallery.innerHTML = srcs.map((s) => '<img src="' + s + '">').join(''); requestAnimationFrame(() => requestAnimationFrame(() => gallery.classList.add('on'))); },
     ungallery() { ensure(); gallery.classList.remove('on'); },
     tick() { ensure(); tick.style.opacity = tick.style.opacity === '0.02' ? '0.01' : '0.02'; },
@@ -260,7 +330,7 @@ async function userPage(user) {
   if (sessions[user]) return sessions[user];
   const context = await browser.newContext({ viewport: SIZE, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'Asia/Dubai', acceptDownloads: true });
   await context.addInitScript(OVERLAY);
-  await context.addInitScript(() => { try { if (!sessionStorage.getItem('wi.walkthrough')) { localStorage.setItem('wi.lang', 'en'); sessionStorage.setItem('wi.walkthrough', '1'); } } catch {} });
+  await context.addInitScript((lang) => { try { if (!sessionStorage.getItem('wi.walkthrough')) { localStorage.setItem('wi.lang', lang); sessionStorage.setItem('wi.walkthrough', '1'); } } catch {} }, LANG);
   const page = await context.newPage();
   for (let attempt = 0; attempt < 3; attempt++) {
     await page.goto(`${BASE}/login`);
@@ -272,14 +342,15 @@ async function userPage(user) {
     if (attempt === 2) throw new Error(`${user}: sign-in failed`);
     await sleep(65000); // sign-in rate limit
   }
-  await english(page);
+  await language(page);
   sessions[user] = page;
   return page;
 }
 
-async function english(page) {
+/** Keeps the interface in the video's language (the app applies each user's saved language on every page load). */
+async function language(page, lang = LANG) {
   await page.waitForTimeout(1500);
-  for (let i = 0; i < 2 && (await page.locator('html').getAttribute('lang')) !== 'en'; i++) {
+  for (let i = 0; i < 2 && (await page.locator('html').getAttribute('lang')) !== lang; i++) {
     await page.getByTestId('language-switcher').first().click();
     await page.waitForTimeout(1500);
   }
@@ -288,7 +359,7 @@ async function english(page) {
 async function open(page, url) {
   await page.goto(`${BASE}${url}`);
   await page.waitForLoadState('networkidle').catch(() => {});
-  await english(page);
+  await language(page);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(800);
 }
@@ -325,10 +396,14 @@ async function download(page, click) {
 function prepareGraphics() {
   const dir = path.join(OUT, 'graphics');
   fs.mkdirSync(path.join(dir, 'files'), { recursive: true });
-  for (const f of fs.readdirSync(path.join(HERE, 'graphics'))) {
-    const text = fs.readFileSync(path.join(HERE, 'graphics', f), 'utf-8')
-      .replaceAll('__WEB__', WEB).replaceAll('__WEBSITE__', SCRIPT.contact.website).replaceAll('__EMAIL__', SCRIPT.contact.email);
-    fs.writeFileSync(path.join(dir, f), text);
+  // The English pages and shared files, then the video language's own pages (graphics/<lang>/) over them.
+  for (const source of [path.join(HERE, 'graphics'), path.join(HERE, 'graphics', LANG)]) {
+    if (!fs.existsSync(source)) continue;
+    for (const f of fs.readdirSync(source).filter((f) => fs.statSync(path.join(source, f)).isFile())) {
+      const text = fs.readFileSync(path.join(source, f), 'utf-8')
+        .replaceAll('__WEB__', WEB).replaceAll('__WEBSITE__', SCRIPT.contact.website).replaceAll('__EMAIL__', SCRIPT.contact.email);
+      fs.writeFileSync(path.join(dir, f), text);
+    }
   }
 }
 
@@ -370,7 +445,7 @@ const SCENES = {
     await d.click(p.getByTestId('app-test-stored-CORE-BANKING'), 300);
     await p.locator('mat-snack-bar-container').first().waitFor({ timeout: 30000 });
     await d.spot(p.getByTestId('app-table').locator('tr', { hasText: 'CORE-BANKING' }).first(), 6);
-    await d.callout('Encrypted, tested, read-only', 'lock');
+    await d.callout(T.c.encrypted, 'lock');
     await d.wait(2600);
     await d.callout(null); await d.unspot();
 
@@ -390,12 +465,12 @@ const SCENES = {
     await d.wait(900);
     await d.unspot();
     await d.nav('permissions');
-    await d.select(p.getByTestId('perm-role'), 'Branch Manager');
+    await d.select(p.getByTestId('perm-role'), 'BranchManager');
     const app = await p.getByTestId('perm-app').innerText().catch(() => '');
     if (!app.includes('CORE-BANKING')) await d.select(p.getByTestId('perm-app'), 'CORE-BANKING');
     await d.wait(400);
     await d.spot(p.getByTestId('perm-matrix'));
-    await d.callout('Branch managers: their own branch only', 'store');
+    await d.callout(T.c.branchOnly, 'store');
     await d.wait(1600);
     await d.callout(null); await d.unspot();
 
@@ -406,7 +481,7 @@ const SCENES = {
     await d.unspot();
     await d.click(p.getByTestId('user-new'), 1000);
     await d.spot(p.getByTestId('user-form'));
-    await d.callout('Temporary password sent by email', 'mail');
+    await d.callout(T.c.tempPassword, 'mail');
     await d.wait(1500);
     await d.callout(null); await d.unspot();
     return d.end();
@@ -421,7 +496,7 @@ const SCENES = {
     await d.spot(p.getByTestId('ask-examples'));
     await d.wait(1500);
     await d.unspot();
-    await d.ask('CORE-BANKING', 'Total deposit balances by branch at the end of December 2025');
+    await d.ask('CORE-BANKING', T.qDeposits);
 
     await d.beat(1);
     await d.scrollTo(p.getByTestId('ask-answer'));
@@ -434,7 +509,7 @@ const SCENES = {
     await d.click(p.getByTestId('ask-how').locator('mat-expansion-panel-header'), 1000);
     await d.scrollTo(p.getByTestId('ask-how'), 'start');
     await d.spot(p.getByTestId('ask-how'));
-    await d.callout('Every query is logged for accuracy reviews', 'fact_check');
+    await d.callout(T.c.logged, 'fact_check');
     await d.wait(3000);
     await d.callout(null); await d.unspot();
     return d.end();
@@ -445,7 +520,7 @@ const SCENES = {
     await open(p, '/app/ask');
     await d.attach(p);
     await d.beat(0);
-    await d.ask('IT-HELPDESK', 'Give me a dashboard of IT incidents in 2025: totals, by priority, by month and by assignment group');
+    await d.ask('IT-HELPDESK', T.qDashboard);
     await d.scrollTo(p.getByTestId('ask-answer'));
     await d.spot(p.getByTestId('ask-kpis'));
     await d.wait(2000);
@@ -466,7 +541,7 @@ const SCENES = {
     await open(p, '/app/ask');
     await d.attach(p);
     await d.beat(0);
-    await d.ask('CORE-BANKING', 'Study cheque returns in 2025: by month, by branch and by return reason, and explain what stands out');
+    await d.ask('CORE-BANKING', T.qStudy);
     await d.scrollTo(p.getByTestId('ask-answer'));
     await d.wait(1500);
 
@@ -503,7 +578,7 @@ const SCENES = {
     await open(p, '/app/ask');
     await d.attach(p);
     await d.beat(0);
-    await d.ask('CORE-BANKING', 'Draft an email to the branch managers summarizing returned cheques by branch in December 2025');
+    await d.ask('CORE-BANKING', T.qEmail);
     await d.scrollTo(p.getByTestId('ask-email'), 'start');
     await d.spot(p.getByTestId('ask-email'));
     await d.wait(2600);
@@ -511,7 +586,7 @@ const SCENES = {
 
     await d.beat(1);
     await d.scrollTop();
-    await d.ask('FINANCE', 'Prepare a report on Q3 2025 expenses versus the revised budget by department, and draft an email to the finance committee with the report attached');
+    await d.ask('FINANCE', T.qFinance);
     await d.scrollTo(p.getByTestId('ask-report'), 'start');
     await d.spot(p.getByTestId('ask-report'));
     await d.wait(2200);
@@ -522,19 +597,22 @@ const SCENES = {
     await d.spot(p.getByTestId('ask-email'));
     await d.wait(1000);
     await d.click(p.getByTestId('ask-email-copy'), 900);
-    await d.callout('Report attached, email ready to send', 'attach_email');
+    await d.callout(T.c.reportReady, 'attach_email');
     await d.wait(2200);
     await d.callout(null); await d.unspot();
     return d.end();
   },
 
-  async arabic(d) {
+  /** The other interface language: "arabic" in the English video, "english" in the Arabic one. */
+  async arabic(d) { return SCENES.otherLanguage(d); },
+  async english(d) { return SCENES.otherLanguage(d); },
+  async otherLanguage(d) {
     const p = await userPage('w1002');
     await open(p, '/app/ask');
     await d.attach(p);
     await d.beat(0);
     await d.click(p.getByTestId('language-switcher').first(), 1800);
-    await d.ask('PERSONNEL', 'ما عدد الموظفين النشطين في كل قطاع؟', { visibleWaitMs: 1200 });
+    await d.ask('PERSONNEL', T.qOther, { visibleWaitMs: 1200 });
     await d.scrollTo(p.getByTestId('ask-answer'));
     await d.wait(3200);
     const timeline = await d.end();
@@ -554,7 +632,7 @@ const SCENES = {
     await d.unspot();
 
     await d.beat(1);
-    await d.click(p.locator('[data-testid^="history-row-"]', { hasText: 'Total deposit balances' }).first(), 1800);
+    await d.click(p.locator('[data-testid^="history-row-"]', { hasText: T.depositsRow }).first(), 1800);
     await d.spot(p.getByTestId('history-versions'));
     await d.wait(1200);
     await d.unspot();
@@ -565,13 +643,13 @@ const SCENES = {
     await p.waitForTimeout(1500);
     d.cut(false);
     await d.spot(p.getByTestId('history-versions'));
-    await d.callout('New version added, earlier versions kept', 'history');
+    await d.callout(T.c.newVersion, 'history');
     await d.wait(2400);
     await d.callout(null); await d.unspot();
 
     await d.beat(2);
     await d.nav('history');
-    await d.click(p.locator('[data-testid^="history-row-"]', { hasText: /Study.*cheque/i }).first(), 1800);
+    await d.click(p.locator('[data-testid^="history-row-"]', { hasText: T.studyRow }).first(), 1800);
     await d.click(p.getByTestId('history-favorite'), 900);
     const exports = {};
     for (const [fmt, id] of [['docx', 'history-export-docx'], ['xlsx', 'history-export-xlsx']]) {
@@ -582,7 +660,7 @@ const SCENES = {
     renderFile(exports.docx, 'docx', 1);
     renderFile(exports.xlsx, 'xlsx', 1);
     await d.nav('history');
-    await d.type(p.getByTestId('collection-name'), 'Board pack');
+    await d.type(p.getByTestId('collection-name'), T.collection);
     await d.click(p.getByTestId('collection-create'), 1200);
     await d.spot(p.getByTestId('history-collections'));
     await d.wait(1500);
@@ -595,7 +673,7 @@ const SCENES = {
     const martin = await userPage('w1006');
     await open(martin, '/app/shared-with-me');
     await open(p, '/app/history');
-    await p.locator('[data-testid^="history-row-"]', { hasText: /Study.*cheque/i }).first().click();
+    await p.locator('[data-testid^="history-row-"]', { hasText: T.studyRow }).first().click();
     await p.getByTestId('history-share').waitFor();
     await p.waitForTimeout(1200);
     await d.attach(p);
@@ -604,13 +682,14 @@ const SCENES = {
     await d.type(p.getByTestId('share-search'), 'Martin');
     await d.wait(1200);
     await d.click(p.locator('[data-testid^="share-recipient-"]').first(), 600);
-    await d.type(p.getByTestId('share-message'), 'Please review before Sunday\'s board meeting.');
-    await d.select(p.getByTestId('share-expiry'), '30');
+    await d.type(p.getByTestId('share-message'), T.shareMessage);
+    await d.click(p.getByTestId('share-expiry'), 500);
+    await d.click(p.locator('mat-option').nth(2), 500); // 30 days
     await d.click(p.getByTestId('share-submit'), 1500);
     await martin.reload(); await martin.waitForLoadState('networkidle').catch(() => {}); await martin.waitForTimeout(1500);
     await d.attach(martin);
     await d.spot(martin.getByTestId('shared-with-me-table'));
-    await d.callout('Shared with Martin Calder, budget controller', 'share');
+    await d.callout(T.c.shared, 'share');
     await d.wait(2200);
     await d.callout(null); await d.unspot();
 
@@ -624,7 +703,7 @@ const SCENES = {
     await d.type(p.getByTestId('email-recipients'), 'board.secretary@wabibank.example');
     await d.wait(600);
     await d.spot(p.locator('mat-dialog-container').first(), 4);
-    await d.callout('Classification checked before anything is sent', 'policy');
+    await d.callout(T.c.classification, 'policy');
     await d.wait(2600);
     await d.callout(null); await d.unspot();
     await p.keyboard.press('Escape');
@@ -642,37 +721,37 @@ const SCENES = {
 
     await d.attach(bm);
     await d.beat(0);
-    await d.ask('CORE-BANKING', 'Cash deposits and withdrawals per teller in December 2025');
+    await d.ask('CORE-BANKING', T.qBranch);
     await d.scrollTo(bm.getByTestId('ask-answer'));
     await d.spot(bm.getByTestId('ask-access'));
-    await d.callout('Daniel Hartwell · Deira branch only', 'store');
+    await d.callout(T.c.branch, 'store');
     await d.wait(2400);
     await d.callout(null); await d.unspot();
 
     await d.beat(1);
     await d.attach(teller);
-    await d.ask('CORE-BANKING', 'My cash deposits and withdrawals per day in December 2025');
+    await d.ask('CORE-BANKING', T.qTeller);
     await d.scrollTo(teller.getByTestId('ask-answer'));
     await d.spot(teller.getByTestId('ask-access'));
-    await d.callout('Emily Carver · her own postings only', 'person');
+    await d.callout(T.c.teller, 'person');
     await d.wait(2200);
     await d.callout(null); await d.unspot();
 
     await d.beat(2);
     await d.attach(hr);
-    await d.ask('PERSONNEL', 'List the employees of the HR department with their Emirates ID numbers');
+    await d.ask('PERSONNEL', T.qHr);
     await d.scrollTo(hr.getByTestId('ask-answer'));
     await d.spot(hr.getByTestId('ask-narrative'));
-    await d.callout('Restricted column: never shown to the AI', 'visibility_off');
+    await d.callout(T.c.hr, 'visibility_off');
     await d.wait(2600);
     await d.callout(null); await d.unspot();
 
     await d.beat(3);
     await d.attach(admin);
-    await d.callout('Organizations separated · every action audited', 'verified_user');
+    await d.callout(T.c.separated, 'verified_user');
     await d.wait(2200);
     await d.spot(admin.getByTestId('grant-table'));
-    await d.callout('Platform support enters only with your approval', 'admin_panel_settings');
+    await d.callout(T.c.support, 'admin_panel_settings');
     await d.wait(2600);
     await d.callout(null); await d.unspot();
     return d.end();
@@ -690,7 +769,7 @@ const SCENES = {
     await d.beat(1);
     await d.click(p.getByTestId('rules-new'), 1000);
     await d.scrollTo(p.getByTestId('rules-describe'), 'center');
-    await d.type(p.getByTestId('rules-describe-text'), 'Alert me when a branch has more than 20 returned inward cheques in a single day');
+    await d.type(p.getByTestId('rules-describe-text'), T.rule);
     await d.click(p.getByTestId('rules-describe-go'), 1200);
     d.cut(true);
     await p.getByTestId('rules-draft').waitFor({ timeout: 180000 });
@@ -711,7 +790,7 @@ const SCENES = {
     const focus = (await bindings.count()) ? bindings : p.getByTestId('rule-form');
     await d.scrollTo(focus, 'center');
     await d.spot(focus, 10);
-    await d.callout('Runs under its owner\'s permissions', 'shield');
+    await d.callout(T.c.owner, 'shield');
     await d.wait(1800);
     await d.callout(null); await d.unspot();
     await d.click(p.getByTestId('rule-save'), 2000);
@@ -735,15 +814,15 @@ const SCENES = {
     await d.unspot();
 
     await d.beat(1);
-    await d.click(p.locator('[data-testid^="alert-"]', { hasText: 'Cash deposits' }).first(), 1500);
+    await d.click(p.locator('[data-testid^="alert-"]', { hasText: /Cash deposits|الإيداعات النقدية/ }).first(), 1500);
     await d.spot(p.getByTestId('alert-detail'));
     await d.wait(3000);
     await d.unspot();
 
     await d.beat(2);
-    await d.type(p.getByTestId('alert-note'), 'Reviewed with the branch. Filing a suspicious transaction report.');
+    await d.type(p.getByTestId('alert-note'), T.alertNote);
     await d.click(p.getByTestId('alert-ack'), 1500);
-    await d.callout('Alerts never block anyone automatically', 'front_hand');
+    await d.callout(T.c.neverBlock, 'front_hand');
     await d.wait(2400);
     await d.callout(null);
 
@@ -772,33 +851,33 @@ const SCENES = {
       for (const s of (listed.items ?? listed).filter((x) => x.name === name)) {
         await fetch(`/api/subscriptions/${s.subscriptionId}`, { method: 'DELETE', headers: { 'X-XSRF-TOKEN': token } });
       }
-    }, 'Weekly cheque returns for the board');
+    }, T.periodicName);
     await open(p, '/app/periodic-reports');
     await d.attach(p);
     await d.beat(0);
     await d.click(p.getByTestId('periodic-new'), 1000);
-    await d.select(p.getByTestId('periodic-analysis'), /Study.*cheque/i);
+    await d.select(p.getByTestId('periodic-analysis'), T.studyRow);
     const name = p.getByTestId('periodic-name');
     await name.fill('');
-    await d.type(name, 'Weekly cheque returns for the board');
-    await d.select(p.locator('[data-testid="periodic-form"] mat-select[name="recurrence"]'), 'Weekly');
+    await d.type(name, T.periodicName);
+    await d.select(p.locator('[data-testid="periodic-form"] mat-select[name="recurrence"]'), T.weekly);
     await d.select(p.locator('[data-testid="periodic-form"] mat-select[name="format"]'), 'PDF');
     // Victor is not an administrator, so the report is for him; administrators also choose other recipients.
     await d.spot(p.getByTestId('periodic-form'));
-    await d.callout('Administrators can add recipients', 'group_add');
+    await d.callout(T.c.recipients, 'group_add');
     await d.wait(1600);
     await d.callout(null); await d.unspot();
     await d.click(p.getByTestId('periodic-save'), 2000);
 
     await d.beat(1);
-    await d.click(p.getByTestId('periodic-run-Weekly cheque returns for the board').first(), 1000);
+    await d.click(p.getByTestId(`periodic-run-${T.periodicName}`).first(), 1000);
     d.cut(true);
     await p.getByTestId('periodic-run-result').waitFor({ timeout: 300000 });
     await p.waitForTimeout(1000);
     d.cut(false);
     await d.scrollTo(p.getByTestId('periodic-run-result'), 'center');
     await d.spot(p.getByTestId('periodic-run-result'));
-    await d.callout('Each recipient gets figures under their own permissions', 'groups');
+    await d.callout(T.c.eachRecipient, 'groups');
     await d.wait(2600);
     await d.callout(null); await d.unspot();
     return d.end();
@@ -818,8 +897,8 @@ const SCENES = {
     await d.beat(1);
     await d.nav('support');
     await d.click(p.getByTestId('ticket-new'), 1500);
-    await d.type(p.getByTestId('ticket-subject'), 'Connect our new Treasury system');
-    await d.type(p.getByTestId('ticket-description'), 'Please help us add the Treasury database as a new application.', 14);
+    await d.type(p.getByTestId('ticket-subject'), T.ticketSubject);
+    await d.type(p.getByTestId('ticket-description'), T.ticketBody, 14);
     await d.spot(p.getByTestId('ticket-form'));
     await d.wait(1600);
     await d.unspot();
