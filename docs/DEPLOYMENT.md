@@ -19,10 +19,41 @@ Wabi Insight is three deployable parts: the **Angular build** (static files), th
 | A public HTTPS name | `Platform:BaseUrl` (e.g. `https://insight.example.com`) is used in every email link. TLS terminates at nginx / IIS / your load balancer; the API itself listens on plain HTTP behind it and emits HSTS when not in Development. |
 | SMTP account | Temporary passwords, notifications and shared reports go out through it. Port 465 (implicit TLS) or 587 (STARTTLS). |
 | AI provider key | `Ai:Anthropic:ApiKey` (Claude Opus 5.5 by default). Other providers are configured per organization in the UI after bootstrap. |
-| Persistent disk | `Storage:RootPath` (reports, exports, attachments, logos) and `DataProtection:KeyRingPath` (the keys that decrypt every stored connection string and provider key). **Losing the key ring makes every encrypted secret unreadable** — back it up with the database. |
+| Persistent disk | `Storage:RootPath` (reports, exports, attachments, logos — or a private Azure Blob Storage container instead, see [File storage](#file-storage-server-disk-or-azure-blob-storage)) and `DataProtection:KeyRingPath` (the keys that decrypt every stored connection string and provider key). **Losing the key ring makes every encrypted secret unreadable** — back it up with the database. |
 | Optional ClamAV | `AttachmentScanning:Provider=ClamAv`, `Host`, `Port` (3310). The scanner fails closed: uploads are refused while clamd is unreachable unless `FailOpen=true`. |
 
 Configuration keys can be given as environment variables with `__` as the section separator (`Email__Password`), through `appsettings.Local.json` next to the API (git-ignored), or with `dotnet user-secrets` in development. Never put real secrets in `appsettings.json` in a public repository.
+
+### File storage: server disk or Azure Blob Storage
+
+Every file the application keeps — study PDFs, stored answers (`analysis-results`), PDF/Word/Excel exports, periodic report files, support attachments and organization logos — goes through one storage component, so the whole set lives in one of two places, chosen by `Storage:Provider` in `appsettings.json`:
+
+| `Storage:Provider` | Where | Settings |
+|---|---|---|
+| `FileSystem` (default, active) | The server disk, under `Storage:RootPath` (one folder per kind, files `yyyy/MM/<random>.bin`) | `Storage:RootPath` |
+| `AzureBlob` | A private Azure Blob Storage container, same names as on the disk | `Storage:AzureBlob:ConnectionString` (secret), `Storage:AzureBlob:ContainerName` (default `wabi-insight-files`), `Storage:AzureBlob:ReadFromDiskWhenMissing` (default `true`) |
+
+`appsettings.json` carries both lines; the Azure one is commented out:
+
+```jsonc
+"Provider": "FileSystem",
+// "Provider": "AzureBlob",
+```
+
+**Switch to Azure Blob Storage:**
+
+1. In the Azure portal, on the storage account: *Configuration* → **Allow Blob anonymous access: Disabled**, **Minimum TLS version: 1.2**; optionally *Networking* → allow only the server's public IP. Then *Security + networking → Access keys* → copy **Connection string** (key1).
+2. On the server, put the connection string in `appsettings.Local.json` next to the API (or the environment variable `Storage__AzureBlob__ConnectionString`), never in `appsettings.json`:
+   ```json
+   { "Storage": { "AzureBlob": { "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=…;AccountKey=…;EndpointSuffix=core.windows.net" } } }
+   ```
+   (Merge it into the existing file; the Windows guide shows a PowerShell way.)
+3. In `appsettings.json` **in the repository**, comment the `"Provider": "FileSystem"` line and uncomment `"Provider": "AzureBlob"`, then deploy (a deployment publishes `appsettings.json` again, so a change made only to the server's copy lasts until the next deployment). For a switch on one server only, set `"Storage": { "Provider": "AzureBlob" }` in that server's `appsettings.Local.json` instead: it overrides `appsettings.json` and no deployment touches it.
+4. Run `dotnet WabiInsight.Api.dll storage-check` in the API folder: it writes, reads back and deletes a test file and prints `Storage check passed`, or the reason (HTTP 403: wrong key or network rules; 404: wrong account). It never prints the key.
+5. Restart the API. The container is created on first use (private) when the key may create it.
+6. Optional, once: `dotnet WabiInsight.Api.dll storage-copy` copies the files already on the disk to the container under the same names (safe to run again; it skips files already there). Until then — and as long as `ReadFromDiskWhenMissing` is `true` — files saved on the disk before the switch still open from the disk. The disk copies are left in place; delete them yourself once the copy is verified.
+
+To switch back, swap the two lines again (files created while on Azure stay in the container; copy them down with `azcopy` if needed). The server needs outbound HTTPS to `<account>.blob.core.windows.net`. With Azure, back up the container with Azure's own protection (soft delete for blobs and containers, versioning, or geo-redundant storage) instead of the disk folder.
 
 ### Reverse proxy and client addresses
 
@@ -108,7 +139,7 @@ Don't mount the API as an IIS sub-application named `api`. IIS would remove `/ap
 
 ## 6. Operations checklist
 
-- **Backups:** the database and `Storage:RootPath` and `DataProtection:KeyRingPath` together — a restore without the key ring cannot decrypt connection strings or provider keys.
+- **Backups:** the database and `Storage:RootPath` (or, with `Storage:Provider=AzureBlob`, the container's soft delete / versioning) and `DataProtection:KeyRingPath` together — a restore without the key ring cannot decrypt connection strings or provider keys.
 - **Logs:** the API writes to stdout (journald / Docker logs / IIS stdout when enabled); `Api.Error` usage events and the *System Health* page show error trends without exception text.
 - **Email:** the outbox (`EmailMessages`) records every queued message with its status; failed deliveries are retried `Email:MaxAttempts` times. Attachments (shared reports) go through MimeKit with the SMTP account's size limit.
 - **Rate limits:** 429 responses carry `Retry-After`; raise `Security:ApiRateLimitPerMinute` for automation clients.

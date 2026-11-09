@@ -22,7 +22,7 @@ Wabi Insight (platform code AP-AIR) is a bilingual (EN/AR), multi-organization e
 - Branches: one PR per branch, titled `P<phase>.<n> — <description>`; `main` is merged by the owner only.
 
 ## Secrets and local configuration
-- Owner decision G: the configuration-database connection string is committed in `src/WabiInsight.Api/appsettings.json` (private repository). Keep it valid JSON; CI loads the file.
+- Owner decision G: the configuration-database connection string is committed in `src/WabiInsight.Api/appsettings.json` (private repository). Keep it valid JSON; CI loads the file. `//` comment lines are allowed (the .NET settings loader accepts them): the `Storage` section keeps the Azure Blob provider line commented as an on/off switch.
 - Every other secret (SMTP password, AI keys, OAuth tokens, bootstrap secret) stays out of source control: use the git-ignored `appsettings.Local.json` (see `appsettings.Local.example.json`), `dotnet user-secrets`, or environment variables.
 - Temporary passwords are emailed to the account owner and never returned by the API or shown in the UI.
 - Local development against the docker-compose SQL Server and the File email sink: copy the example file to `appsettings.Local.json`.
@@ -42,10 +42,14 @@ dotnet run --project src/WabiInsight.Api          # http://localhost:5080
 dotnet run --project src/WabiInsight.Api -- migrate   # apply pending migrations (deployment step)
 dotnet run --project src/WabiInsight.Api -- bootstrap # create the first Platform Administrator from Bootstrap:* settings (once)
 dotnet run --project src/WabiInsight.Api -- seed-demo # Development only: demo organization + demo.user@demo.test
+dotnet run --project src/WabiInsight.Api -- storage-check   # write/read/delete a test file in the configured storage (disk or Azure Blob)
+dotnet run --project src/WabiInsight.Api -- storage-copy    # after switching to AzureBlob: copy the disk files to the container
 dotnet tool restore && dotnet ef migrations add <Name> --project src/WabiInsight.Infrastructure --startup-project src/WabiInsight.Infrastructure --output-dir Persistence/Migrations
 
 # Integration tests need SQL Server: either Docker (Testcontainers) or
 WI_TEST_SQLSERVER_CONNECTION="Server=localhost,1433;Database=master;User Id=sa;Password=WabiInsight_Dev_2026!;TrustServerCertificate=True;Encrypt=True" dotnet test WabiInsight.slnx
+# Azure Blob storage tests need Azurite: Docker (Testcontainers) or a local `azurite-blob --skipApiVersionCheck` with
+# WI_TEST_AZURITE_CONNECTION="UseDevelopmentStorage=true"
 
 # Web (from src/web)
 npm ci

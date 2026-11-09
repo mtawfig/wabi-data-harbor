@@ -86,6 +86,16 @@ if (args.Length > 0)
     {
         return await SeedDemoCommand.RunAsync(app, CancellationToken.None);
     }
+
+    if (string.Equals(args[0], StorageCheckCommand.Name, StringComparison.OrdinalIgnoreCase))
+    {
+        return await StorageCheckCommand.RunAsync(app, CancellationToken.None);
+    }
+
+    if (string.Equals(args[0], StorageCopyCommand.Name, StringComparison.OrdinalIgnoreCase))
+    {
+        return await StorageCopyCommand.RunAsync(app, CancellationToken.None);
+    }
 }
 
 app.UseForwardedHeaders();

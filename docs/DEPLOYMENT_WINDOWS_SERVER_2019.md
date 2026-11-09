@@ -704,6 +704,35 @@ If the database is on another server, change `ConfigurationDatabase` to that ser
 (Get-Content $localPath -Raw | ConvertFrom-Json).Platform.BaseUrl         # https://<your domain>
 ```
 
+### 17.1 Optional: keep the files in Azure Blob Storage
+
+Files go to `D:\wabi-insight\files` unless you switch to a private Azure Blob Storage container ([DEPLOYMENT.md, File storage](DEPLOYMENT.md#file-storage-server-disk-or-azure-blob-storage)). You can do it now or at any time later.
+
+**Do:** in the Azure portal copy the storage account's **Connection string** (*Security + networking → Access keys*), then add it to `appsettings.Local.json` (the key is read without echo and never shown):
+
+```powershell
+$cs = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host 'Azure Storage connection string' -AsSecureString)))
+$localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
+$settings = Get-Content $localPath -Raw | ConvertFrom-Json
+if (-not $settings.Storage) { $settings | Add-Member -NotePropertyName Storage -NotePropertyValue ([pscustomobject]@{}) }
+$settings.Storage | Add-Member -Force -NotePropertyName AzureBlob -NotePropertyValue ([pscustomobject]@{ ConnectionString = $cs })
+$settings | ConvertTo-Json -Depth 6 | Set-Content $localPath -Encoding UTF8
+Remove-Variable cs
+```
+
+Then switch the provider: in `src\WabiInsight.Api\appsettings.json` of the repository, put `//` in front of `"Provider": "FileSystem",`, remove the `//` in front of `"Provider": "AzureBlob",`, commit and deploy. (To switch this server only, add `"Provider": "AzureBlob"` next to `AzureBlob` in `appsettings.Local.json` instead.)
+
+**Verify** (once the switch is deployed):
+
+```powershell
+Push-Location (Join-Path $WI.Root 'web\api'); $env:ASPNETCORE_ENVIRONMENT = 'Production'
+dotnet .\WabiInsight.Api.dll storage-check     # "Storage check passed"
+dotnet .\WabiInsight.Api.dll storage-copy      # optional: copies files already in D:\wabi-insight\files
+Pop-Location
+```
+
+Restart the API site afterwards (`Restart-WebAppPool WabiInsightApi`). Editing only the server's `web\api\appsettings.json` also works, but the next deployment publishes the repository's copy again.
+
 ## 18. Create the database schema (migrations)
 
 **Check:** this lists applied migrations:

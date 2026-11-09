@@ -143,8 +143,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlatformHealthService, PlatformHealthService>();
 
         services.AddOptions<SupportDeskOptions>().Bind(configuration.GetSection(SupportDeskOptions.SectionName));
-        services.AddOptions<StorageOptions>().Bind(configuration.GetSection(StorageOptions.SectionName));
-        services.TryAddSingleton<IArtifactStorage, FileSystemArtifactStorage>();
+        // Files go to the server disk (default) or a private Azure Blob Storage container, chosen by Storage:Provider.
+        services.AddOptions<StorageOptions>().Bind(configuration.GetSection(StorageOptions.SectionName))
+            .Validate(o => o.Problem() is null, "Invalid Storage settings: see Storage:Provider and Storage:AzureBlob.");
+        services.TryAddSingleton<FileSystemArtifactStorage>();
+        services.TryAddSingleton<AzureBlobArtifactStorage>();
+        services.TryAddSingleton<IArtifactStorage>(sp => sp.GetRequiredService<IOptions<StorageOptions>>().Value.UsesAzureBlob
+            ? sp.GetRequiredService<AzureBlobArtifactStorage>()
+            : sp.GetRequiredService<FileSystemArtifactStorage>());
         services.AddOptions<AttachmentScanningOptions>().Bind(configuration.GetSection(AttachmentScanningOptions.SectionName));
         services.TryAddSingleton<IAttachmentScanner>(sp =>
         {

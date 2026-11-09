@@ -492,6 +492,9 @@ Bootstrap__Enabled=false
 # Optional overrides of appsettings.json, e.g.:
 # Email__Password=...
 # Ai__Anthropic__ApiKey=...
+# Files in Azure Blob Storage instead of the disk (DEPLOYMENT.md, "File storage"):
+# Storage__Provider=AzureBlob
+# Storage__AzureBlob__ConnectionString=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
 EOF
 chmod 600 /etc/wabi-insight/api.env && chown root:root /etc/wabi-insight/api.env
 ```
