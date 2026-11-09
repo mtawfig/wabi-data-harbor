@@ -10,10 +10,10 @@ describe('LocalizedTranspiler', () => {
     const transloco = TestBed.inject(TranslocoService);
 
     transloco.setActiveLang('en');
-    expect(transloco.translate('ask.rowsOf', { count: 12500 })).toBe('12500 rows');
+    expect(transloco.translate('ask.truncated', { count: 12500 })).toContain('first 12500 results');
 
     transloco.setActiveLang('ar');
-    expect(transloco.translate('ask.rowsOf', { count: 12500 })).toContain('١٢٬٥٠٠');
-    expect(transloco.translate('ask.rowsOf', { count: 6 })).toContain('٦');
+    expect(transloco.translate('ask.truncated', { count: 12500 })).toContain('١٢٬٥٠٠');
+    expect(transloco.translate('ask.truncated', { count: 6 })).toContain('٦');
   });
 });

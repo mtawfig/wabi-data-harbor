@@ -41,7 +41,6 @@
             <li [class.active]="v.versionNumber === versionNumber()">
               <button type="button" (click)="selectVersion(v.versionNumber)" [attr.data-testid]="'shared-version-' + v.versionNumber">
                 <strong>v{{ v.versionNumber | wiNumber }}</strong> · <span class="wi-muted">{{ v.createdAt | wiDate: 'medium' }}</span><br />
-                <span class="wi-muted small">{{ 'sharing.view.versionMeta' | transloco: { panels: v.panelCount, rows: v.rowCount } }}</span>
                 @if (v.hasReport) { <mat-icon class="pdf" [title]="'ask.report.title' | transloco">picture_as_pdf</mat-icon> }
               </button>
             </li>

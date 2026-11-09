@@ -11,8 +11,8 @@ namespace WabiInsight.Infrastructure.Reports;
 /// <summary>
 /// Renders a report to PDF with QuestPDF (specification §20, review C1): A4, the organization's logo on the
 /// top-left of every page, page numbers, executive summary, sections with charts (SVG drawn from the panel
-/// series) and tables (panel rows), recommendations and a methodology appendix. EN left-to-right with Inter,
-/// AR right-to-left with IBM Plex Sans Arabic.
+/// series) and tables (panel rows) and recommendations. Business content only: no methodology, query or row-count
+/// details (they stay in the server's query log). EN left-to-right with Inter, AR right-to-left with IBM Plex Sans Arabic.
 /// </summary>
 public sealed class QuestPdfReportRenderer : IReportRenderer
 {
@@ -157,10 +157,6 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                                         figure.Item().Element(c => Table(c, panel, culture));
                                     }
 
-                                    if (panel.Result.Rows.Count > MaxTableRows && !isChart)
-                                    {
-                                        figure.Item().PaddingTop(2).Text(rtl ? $"تُعرض أول {MaxTableRows} صفًا من {panel.Result.RowCount}." : $"First {MaxTableRows} of {panel.Result.RowCount} rows shown.").FontSize(8.5f).FontColor(Muted);
-                                    }
                                 });
                             }
                         });
@@ -188,21 +184,6 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                         });
                     }
 
-                    column.Item().PaddingTop(10).Column(appendix =>
-                    {
-                        appendix.Item().PaddingBottom(2).Text(rtl ? "المنهجية ومصادر البيانات" : "Methodology and data sources").FontSize(13).SemiBold().FontColor(Ocean);
-                        appendix.Item().Text(rtl
-                            ? $"أُجيب عن الطلب بـ {request.Panels.Count.ToString(culture)} استعلامًا نُفِّذت للقراءة فقط على مصدر {request.ApplicationName} في مؤسسة {request.OrganizationName}. كل رقم في هذا التقرير مأخوذ مباشرة من نتائج تلك الاستعلامات المتحقق منها؛ وتُحسب الرسوم البيانية والجداول من الصفوف نفسها. النص التحليلي والتوصيات أُعدّت بمساعدة الذكاء الاصطناعي وتخضع لمراجعة القارئ."
-                            : $"The request was answered with {request.Panels.Count.ToString(culture)} queries executed read-only on the {request.ApplicationName} source of {request.OrganizationName}. Every figure in this report comes directly from the verified results of those queries; charts and tables are drawn from the same rows. The analytical text and the recommendations were drafted with AI assistance and are subject to the reader's review.").FontSize(9.5f);
-                        foreach (var panel in request.Panels)
-                        {
-                            appendix.Item().Row(row =>
-                            {
-                                row.ConstantItem(14).Text("•").FontColor(Blue);
-                                row.RelativeItem().Text($"{(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective)} — {panel.Result.RowCount.ToString(culture)} {(rtl ? "صفًا" : "rows")}").FontSize(9).FontColor(Muted);
-                            });
-                        }
-                    });
                 });
                 page.Footer().Element(footer => Footer(footer, generatedOn, rtl));
             });

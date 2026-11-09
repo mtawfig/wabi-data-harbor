@@ -76,7 +76,7 @@
             <li [class.active]="v.versionNumber === versionNumber()" [class.failed]="v.status === 'Failed'">
               <button type="button" (click)="selectVersion(v.versionNumber)" [attr.data-testid]="'history-version-' + v.versionNumber">
                 <strong>v{{ v.versionNumber | wiNumber }}</strong> · <span class="wi-muted">{{ v.createdAt | wiDate: 'medium' }}</span><br />
-                @if (v.status === 'Failed') { <span class="chip chip--failed">{{ 'history.statusFailed' | transloco }}</span> } @else { <span class="wi-muted small">{{ 'history.versionMeta' | transloco: { panels: v.panelCount, rows: v.rowCount, cost: (v.estimatedCost | wiNumber: '1.2-2') } }}</span> }
+                @if (v.status === 'Failed') { <span class="chip chip--failed">{{ 'history.statusFailed' | transloco }}</span> }
                 @if (v.hasReport) { <mat-icon class="pdf" [title]="'ask.report.title' | transloco">picture_as_pdf</mat-icon> }
               </button>
             </li>
