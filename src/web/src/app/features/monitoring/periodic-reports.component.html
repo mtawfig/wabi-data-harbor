@@ -112,10 +112,10 @@
       @if (r.result.errorCode) { <p class="callout callout--warn"><mat-icon>error_outline</mat-icon>{{ 'periodic.errors.' + r.result.errorCode | transloco }}</p> }
       <div class="scroll">
         <table class="plain">
-          <thead><tr><th>{{ 'periodic.recipient' | transloco }}</th><th>{{ 'monitoring.alerts.status' | transloco }}</th><th class="num">{{ 'periodic.rows' | transloco }}</th><th>{{ 'periodic.file' | transloco }}</th></tr></thead>
+          <thead><tr><th>{{ 'periodic.recipient' | transloco }}</th><th>{{ 'monitoring.alerts.status' | transloco }}</th><th>{{ 'periodic.file' | transloco }}</th></tr></thead>
           <tbody>
             @for (d of r.result.deliveries; track d.deliveryId) {
-              <tr><td>{{ d.recipientName }}</td><td><span class="chip delivery" [attr.data-status]="d.status">{{ 'periodic.status.' + d.status | transloco }}</span>@if (d.errorCode && d.status === 'Failed') { <div class="err small">{{ 'periodic.errors.' + d.errorCode | transloco }}</div> }</td><td class="num">{{ d.status === 'Delivered' ? d.rowCount : '—' }}</td><td class="wi-ltr small">{{ d.fileName ?? '—' }}</td></tr>
+              <tr><td>{{ d.recipientName }}</td><td><span class="chip delivery" [attr.data-status]="d.status">{{ 'periodic.status.' + d.status | transloco }}</span>@if (d.errorCode && d.status === 'Failed') { <div class="err small">{{ 'periodic.errors.' + d.errorCode | transloco }}</div> }</td><td class="wi-ltr small">{{ d.fileName ?? '—' }}</td></tr>
             }
           </tbody>
         </table>
@@ -133,10 +133,10 @@
       </div>
       <div class="scroll">
         <table class="plain">
-          <thead><tr><th>{{ 'periodic.when' | transloco }}</th><th>{{ 'periodic.recipient' | transloco }}</th><th>{{ 'monitoring.alerts.status' | transloco }}</th><th class="num">{{ 'periodic.rows' | transloco }}</th></tr></thead>
+          <thead><tr><th>{{ 'periodic.when' | transloco }}</th><th>{{ 'periodic.recipient' | transloco }}</th><th>{{ 'monitoring.alerts.status' | transloco }}</th></tr></thead>
           <tbody>
             @for (d of l.items; track d.deliveryId) {
-              <tr><td>{{ d.createdAt | wiDate: 'short' }}@if (d.isManualRun) { <span class="chip">{{ 'periodic.manual' | transloco }}</span> }</td><td>{{ d.recipientName }}</td><td><span class="chip delivery" [attr.data-status]="d.status">{{ 'periodic.status.' + d.status | transloco }}</span></td><td class="num">{{ d.status === 'Delivered' ? d.rowCount : '—' }}</td></tr>
+              <tr><td>{{ d.createdAt | wiDate: 'short' }}@if (d.isManualRun) { <span class="chip">{{ 'periodic.manual' | transloco }}</span> }</td><td>{{ d.recipientName }}</td><td><span class="chip delivery" [attr.data-status]="d.status">{{ 'periodic.status.' + d.status | transloco }}</span></td></tr>
             }
           </tbody>
         </table>

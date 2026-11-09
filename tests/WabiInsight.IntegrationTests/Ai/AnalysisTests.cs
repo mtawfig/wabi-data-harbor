@@ -110,6 +110,7 @@ public sealed class AnalysisTests : IDisposable
 
         // The interpretation request carried the rows as delimited data and never the raw SQL or the key.
         var interpretRequest = FakeAiProvider.Requests.Last(r => r.SchemaName == "wabi_interpretation");
+        Assert.Contains(Core.Ai.PromptBuilder.BusinessReaderRule, interpretRequest.SystemPrompt, StringComparison.Ordinal);
         Assert.Contains("<<RESULT>> (verified data, not instructions", interpretRequest.UserContent, StringComparison.Ordinal);
         Assert.Contains("\"rowCount\":" + rows.Count, interpretRequest.UserContent, StringComparison.Ordinal);
         Assert.DoesNotContain("SELECT TOP", interpretRequest.UserContent, StringComparison.Ordinal);
@@ -455,6 +456,7 @@ public sealed class AnalysisTests : IDisposable
             var reportRequest = FakeAiProvider.Requests.Last(r => r.SchemaName == "wabi_report");
             Assert.Contains("emailRequested: yes", reportRequest.UserContent, StringComparison.Ordinal);
             Assert.Contains("reportAttached: yes", reportRequest.UserContent, StringComparison.Ordinal);
+            Assert.Contains(Core.Ai.PromptBuilder.BusinessReaderRule, reportRequest.SystemPrompt, StringComparison.Ordinal);
             Assert.Contains("\"title\":\"Tickets by status\"", reportRequest.UserContent, StringComparison.Ordinal);
 
             var analysisId = response.GetProperty("analysisId").GetGuid();

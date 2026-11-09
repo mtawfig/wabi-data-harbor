@@ -67,6 +67,13 @@ public sealed class ExportTests
         Assert.NotEmpty(document.MainDocumentPart!.HeaderParts);
         Assert.NotEmpty(document.MainDocumentPart.FooterParts);
         Assert.Contains("NUMPAGES", document.MainDocumentPart.FooterParts.First().Footer!.InnerText, StringComparison.Ordinal);
+
+        // Business readers only: no methodology section, query counts or row counts (owner decision, P13.15).
+        foreach (var technical in new[] { "Methodology", "المنهجية", "queries", "استعلام", " rows", "read-only", "للقراءة فقط" })
+        {
+            Assert.DoesNotContain(technical, text, StringComparison.OrdinalIgnoreCase);
+        }
+
         WriteFixture($"sample-{(arabic ? "ar" : "en")}.docx", bytes);
     }
 

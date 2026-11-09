@@ -43,7 +43,6 @@
       <p class="ask__incomplete" role="status" data-testid="ask-interpretation-incomplete"><mat-icon>info</mat-icon><span>{{ 'ask.interpretationIncomplete' | transloco }}</span></p>
     }
     @if (a.interpretation?.highlights?.length) { <ul class="ask__highlights">@for (h of a.interpretation!.highlights; track h) { <li><mat-icon>check_circle</mat-icon>{{ h }}</li> }</ul> }
-    @if (panels().length > 1) { <p class="ask__panels-note wi-muted small"><mat-icon>verified</mat-icon>{{ 'ask.panelsNote' | transloco: { count: panels().length } }}</p> }
     @if (truncatedRows() > 0) { <p class="ask__truncated"><mat-icon>warning_amber</mat-icon>{{ 'ask.truncated' | transloco: { count: truncatedRows() } }}</p> }
 
     @if (kpis().length > 0) {
@@ -67,7 +66,7 @@
 
     @for (p of tables(); track $index) {
       <div class="ask__table-card">
-        @if (panels().length > 1) { <h3>{{ p.title || p.plan.objective }} <span class="wi-muted small">{{ 'ask.rowsOf' | transloco: { count: p.result.rowCount } }}</span></h3> }
+        @if (panels().length > 1) { <h3>{{ p.title || p.plan.objective }}</h3> }
         <div class="ask__table-wrap">
           <table class="ask__table" data-testid="ask-table">
             <thead><tr>@for (col of p.result.columns; track col.name) { <th [class.num]="col.isNumeric">{{ label(col.name) }}</th> }</tr></thead>

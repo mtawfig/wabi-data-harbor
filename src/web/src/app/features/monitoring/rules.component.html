@@ -349,7 +349,7 @@
         <span class="wi-ms-auto"></span>
         <button mat-icon-button type="button" (click)="test.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
       </div>
-      <p>{{ 'monitoring.rules.testSummary' | transloco: { matches: t.result.matchCount, rows: (t.result.rowsExamined | wiNumber) } }}</p>
+      <p>{{ 'monitoring.rules.testSummary' | transloco: { matches: t.result.matchCount } }}</p>
       @if (t.result.errorCode) { <p class="callout callout--warn"><mat-icon>error_outline</mat-icon>{{ 'monitoring.errors.' + t.result.errorCode | transloco }}</p> }
       @if (t.result.redacted) { <p class="callout"><mat-icon>visibility_off</mat-icon>{{ 'monitoring.rules.testRedacted' | transloco }}</p> }
       @if (t.result.matches.length > 0) {

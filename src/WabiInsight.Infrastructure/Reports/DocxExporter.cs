@@ -12,9 +12,9 @@ namespace WabiInsight.Infrastructure.Reports;
 
 /// <summary>
 /// DOCX export with the Open XML SDK (specification §20): title block, executive summary, key findings,
-/// numbered sections with KPI tables, chart images (server-rendered PNG) and row tables, recommendations and
-/// a methodology note; bidirectional paragraphs and right-to-left tables for Arabic; logo and page numbers in
-/// the header and footer. Every number comes from the panel data.
+/// numbered sections with KPI tables, chart images (server-rendered PNG) and row tables, and recommendations;
+/// bidirectional paragraphs and right-to-left tables for Arabic; logo and page numbers in the header and footer.
+/// Every number comes from the panel data. Business content only: no methodology, query or row-count details.
 /// </summary>
 public sealed class DocxExporter : IAnswerExporter
 {
@@ -97,10 +97,6 @@ public sealed class DocxExporter : IAnswerExporter
                     else
                     {
                         body.Append(RowsTable(panel, rtl, culture));
-                        if (panel.Result.Rows.Count > MaxTableRows)
-                        {
-                            body.Append(Paragraph(rtl ? $"تُعرض أول {MaxTableRows} صفًا من {panel.Result.RowCount}." : $"First {MaxTableRows} of {panel.Result.RowCount} rows shown.", rtl, "Muted"));
-                        }
                     }
                 }
             }
@@ -116,11 +112,6 @@ public sealed class DocxExporter : IAnswerExporter
                     Paragraphs(body, rec.Detail, rtl);
                 }
             }
-
-            body.Append(Paragraph(rtl ? "المنهجية ومصادر البيانات" : "Methodology and data sources", rtl, "Heading1"));
-            body.Append(Paragraph(rtl
-                ? $"أُجيب عن الطلب بـ {request.Answer.Panels.Count.ToString(culture)} استعلامًا نُفِّذت للقراءة فقط على مصدر {request.ApplicationName}. كل رقم في هذا المستند مأخوذ من نتائج تلك الاستعلامات المتحقق منها."
-                : $"The request was answered with {request.Answer.Panels.Count.ToString(culture)} queries executed read-only on the {request.ApplicationName} source. Every figure in this document comes from the verified results of those queries.", rtl, "Muted"));
 
             AddHeaderFooter(main, request, content.Title, rtl, font);
             body.Append(SectionProperties(main, rtl));
