@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Narration for the walkthrough: one WAV per beat of script.<lang>.json, plus durations.json for record.js and compose.py.
 
-Uses Piper (offline neural text-to-speech, MIT licence) with the voice named in the script (en_GB-cori-high by default:
-trained on public-domain LibriVox recordings, so the audio can be used commercially).
+Uses Piper (offline neural text-to-speech, MIT licence) with the voice and speaking rate named in the script
+(en_US-bryce-medium: a male voice trained on a public-domain dataset, so the audio can be used commercially).
 
     python3 -m venv .venv && .venv/bin/pip install piper-tts
-    curl -L -o voices/en_GB-cori-high.onnx      https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/cori/high/en_GB-cori-high.onnx
-    curl -L -o voices/en_GB-cori-high.onnx.json https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/cori/high/en_GB-cori-high.onnx.json
+    curl -L -o voices/en_US-bryce-medium.onnx      https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/bryce/medium/en_US-bryce-medium.onnx
+    curl -L -o voices/en_US-bryce-medium.onnx.json https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/bryce/medium/en_US-bryce-medium.onnx.json
     .venv/bin/python tts.py --script script.en.json --voices voices --out out/en
 
-Re-running only synthesizes beats whose text changed (the text is kept next to each WAV).
+Re-running only synthesizes beats whose text, voice or rate changed (they are kept next to each WAV).
 """
 import argparse
 import json
@@ -29,6 +29,7 @@ SAY = {
     "PDF": "P D F",
     "IT ": "I T ",
     "HR ": "H R ",
+    "Deira": "Dayra",
 }
 
 
@@ -44,11 +45,12 @@ def main():
     parser.add_argument("--voices", default="voices")
     parser.add_argument("--out", default="out/en")
     parser.add_argument("--piper", default=os.path.join(os.path.dirname(sys.executable), "piper"))
-    parser.add_argument("--length-scale", default="1.0", help="above 1 speaks slower")
+    parser.add_argument("--length-scale", default=None, help="above 1 speaks slower (default: the script's lengthScale, else 1)")
     args = parser.parse_args()
 
     script = json.load(open(args.script, encoding="utf-8"))
     model = os.path.join(args.voices, f"{script['voice']}.onnx")
+    scale = str(args.length_scale or script.get("lengthScale", 1.0))
     audio_dir = os.path.join(args.out, "audio")
     os.makedirs(audio_dir, exist_ok=True)
     durations = {}
@@ -56,10 +58,11 @@ def main():
         for n, text in enumerate(scene["beats"]):
             key = f"{scene['id']}-{n}"
             wav, txt = os.path.join(audio_dir, f"{key}.wav"), os.path.join(audio_dir, f"{key}.txt")
-            if not (os.path.exists(wav) and os.path.exists(txt) and open(txt, encoding="utf-8").read() == text):
-                subprocess.run([args.piper, "-m", model, "-f", wav, "--sentence-silence", "0.3", "--length-scale", args.length_scale],
+            stamp = f"{script['voice']} {scale}\n{text}"
+            if not (os.path.exists(wav) and os.path.exists(txt) and open(txt, encoding="utf-8").read() == stamp):
+                subprocess.run([args.piper, "-m", model, "-f", wav, "--sentence-silence", "0.3", "--length-scale", scale],
                                input=spoken(text).encode("utf-8"), check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                open(txt, "w", encoding="utf-8").write(text)
+                open(txt, "w", encoding="utf-8").write(stamp)
             with wave.open(wav) as w:
                 durations[key] = round(w.getnframes() / w.getframerate(), 3)
     json.dump(durations, open(os.path.join(args.out, "durations.json"), "w"), indent=1)

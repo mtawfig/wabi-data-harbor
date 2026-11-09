@@ -140,6 +140,26 @@ public static partial class PromptBuilder
         return result.Length <= maxLength ? result : result[..maxLength];
     }
 
+    /// <summary>
+    /// Model-written prose is shown as plain text (on the page, in PDF, Word and Excel files and in e-mails), so Markdown the
+    /// model adds anyway is removed: bold and italic markers, heading marks and code ticks; "-" or "*" list markers become "•".
+    /// Line breaks are kept. Asterisks used as a symbol (for example "2 * 3") are left alone.
+    /// </summary>
+    public static string PlainText(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var text = MarkdownStrong().Replace(value, "$2");
+        text = MarkdownEmphasis().Replace(text, "$1");
+        text = text.Replace("**", string.Empty, StringComparison.Ordinal).Replace("`", string.Empty, StringComparison.Ordinal);
+        text = MarkdownHeading().Replace(text, string.Empty);
+        text = MarkdownBullet().Replace(text, "• ");
+        return text;
+    }
+
     private static object? Labels(string? en, string? ar) => string.IsNullOrWhiteSpace(en) && string.IsNullOrWhiteSpace(ar) ? null : new { en = Sanitize(en, 200), ar = Sanitize(ar, 200) };
 
     [GeneratedRegex(@"[\p{Cc}\p{Cf}]")]
@@ -153,4 +173,16 @@ public static partial class PromptBuilder
 
     [GeneratedRegex(@"[ \t\f\v]+")]
     private static partial Regex HorizontalWhitespace();
+
+    [GeneratedRegex(@"(\*\*|__)(?=\S)(.+?)(?<=\S)\1")]
+    private static partial Regex MarkdownStrong();
+
+    [GeneratedRegex(@"(?<![\w*])\*(?=[^\s*])([^*\n]+?)(?<=[^\s*])\*(?![\w*])")]
+    private static partial Regex MarkdownEmphasis();
+
+    [GeneratedRegex(@"^[ \t]*#{1,6}[ \t]+", RegexOptions.Multiline)]
+    private static partial Regex MarkdownHeading();
+
+    [GeneratedRegex(@"^[ \t]*[-*•][ \t]+", RegexOptions.Multiline)]
+    private static partial Regex MarkdownBullet();
 }

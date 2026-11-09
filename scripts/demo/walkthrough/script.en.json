@@ -1,6 +1,7 @@
 {
   "title": "Wabi Insight — product walkthrough (English)",
-  "voice": "en_GB-cori-high",
+  "voice": "en_US-bryce-medium",
+  "lengthScale": 0.9,
   "contact": {
     "company": "WabiTex Solutions",
     "website": "wabitex.com",

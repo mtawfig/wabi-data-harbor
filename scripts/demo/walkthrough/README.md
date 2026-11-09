@@ -18,7 +18,7 @@ The Platform Administrator is deliberately not shown: the video is for organizat
 |---|---|
 | `script.en.json` | The script: scenes in order, chapter titles, what is on screen, the narration lines (one "beat" per line), voice and contact details. Edit this to change what is said. |
 | `prepare.mjs` | One-off preparation of a freshly seeded Wabi Bank: first sign-in password change for the eight sample users, read-only connection + test + approval for the five applications, English as preferred language, one KYC look-up and the monitoring rules made due (so the planted alerts exist). |
-| `tts.py` | Narration with [Piper](https://github.com/rhasspy/piper) (offline neural TTS, MIT) and the `en_GB-cori-high` voice (trained on public-domain LibriVox recordings). One WAV per line plus `durations.json`. |
+| `tts.py` | Narration with [Piper](https://github.com/rhasspy/piper) (offline neural TTS, MIT) and the `en_US-bryce-medium` male voice (trained on a public-domain dataset, so the narration may be used commercially), at the rate set by `lengthScale` in the script. One WAV per line plus `durations.json`. |
 | `graphics/` | HTML title cards (intro, industries, how it works, Wabi Bank, generated files, outro), animated line by line by `stage.js`. |
 | `record.js` | Playwright recorder. Signs in as each sample user, plays every scene (cursor, clicks, typing, spotlight, chapter label, callouts) and records frames with the Chrome DevTools screencast. Narration lines are paced from `durations.json`; waits for the AI are marked as cuts. |
 | `compose.py` | Rebuilds each scene without the cuts, places the narration, adds a music bed generated in the script (no third-party music), click and transition sounds, crossfades the scenes, and writes the MP4, SRT and the timecoded script. |
@@ -40,8 +40,8 @@ WI_SQLCMD="sqlcmd -S localhost,1433 -U sa -P '<sa password>' -C -d WabiInsightDB
 
 # 2. narration (only changed lines are re-synthesized)
 python3 -m venv .venv && .venv/bin/pip install piper-tts
-mkdir -p voices && for f in en_GB-cori-high.onnx en_GB-cori-high.onnx.json; do
-  curl -L -o voices/$f https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/cori/high/$f; done
+mkdir -p voices && for f in en_US-bryce-medium.onnx en_US-bryce-medium.onnx.json; do
+  curl -L -o voices/$f https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/bryce/medium/$f; done
 .venv/bin/python tts.py --script script.en.json --voices voices --out $OUT
 
 # 3. record every scene (about 25 minutes: the AI answers run live; re-record one scene with --only <id>)
@@ -57,7 +57,11 @@ Notes:
   *ask* and *study*; the *files* card shows the PDF, Word and Excel files downloaded in *study* and *history*.
 - *alerts* acknowledges the cash-deposit alert. To record it again, reopen that alert first (or re-run step 1 on a
   fresh database).
-- `compose.py --only intro,admin` builds a quick preview of some scenes.
+- `compose.py --only intro,admin` builds a quick preview of some scenes; `--plan` prints the timing of every scene
+  without encoding; `--reuse-clips` keeps the scene clips of an earlier run (to change only the final quality, `--crf`).
+- The narration can change without recording again: `compose.py` re-times each scene to the current `durations.json`
+  (idle stretches between lines are sped up, and the picture holds still where a line is longer than the recorded gap).
+- *periodic* removes Victor's earlier "Weekly cheque returns for the board" report first (names are unique per owner).
 - The sign-in rate limit (10 per minute) is respected: the recorder keeps one signed-in browser per user.
 
 ## Arabic version

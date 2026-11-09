@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Walkthrough composer: turns the recorded scenes (record.js), the narration (tts.py) and the script into the final video.
 
-For every scene it rebuilds the visible timeline (the stretches marked as cuts, such as waiting for the AI, are removed),
-places each narration line where record.js marked it, and encodes the scene. Scenes are joined with short crossfades.
+For every scene it rebuilds the visible timeline (the stretches marked as cuts, such as waiting for the AI, are removed)
+and re-times it to the narration: each line starts where record.js marked it and plays over the screen at normal speed;
+the stretches between lines (cursor moves, typing, pages loading) are sped up; and where a line is longer than the
+recorded gap before the next one, the picture holds still until it ends. So the narration can be regenerated (another
+voice, another rate, edited lines) without recording the scenes again. Scenes are joined with short crossfades.
 The soundtrack is the narration over a quiet music bed generated here (no third-party music), with soft click and
 transition sounds. It also writes English subtitles (SRT, also embedded as a subtitle track) and chapter markers.
 
@@ -26,6 +29,9 @@ FADE = 0.5           # crossfade between scenes, seconds
 LEAD = 0.25          # the voice starts this long after its mark (record.js uses the same value)
 MUSIC_DB = -27.0     # music bed level under the voice
 DUCK_DB = -7.0       # extra music reduction while the voice speaks
+GAP_SPEED = 1.8      # speed of the stretches between narration lines in screen recordings
+PAUSE = 0.35         # normal-speed margin kept before and after every line
+TAIL = 0.9           # normal-speed end of every scene
 
 
 def read_wav(path):
@@ -82,17 +88,60 @@ class Scene:
                 cut += t - a
         return t - self.start - cut
 
+    def retime(self, durations, speed):
+        """Plans the output timing: (start, end, speed) segments over the visible timeline plus still holds (at, seconds)."""
+        segments, holds, pos = [], [], 0.0
+
+        def play(to, rate=1.0):
+            nonlocal pos
+            if to > pos + 1e-6:
+                segments.append((pos, to, rate))
+                pos = to
+
+        order = sorted(self.beats)
+        play(self.beats[order[0]] + LEAD)
+        for i, n in enumerate(order):
+            last = i + 1 == len(order)
+            start = self.beats[n] + LEAD
+            end = start + durations[f"{self.id}-{n}"]
+            boundary = self.duration if last else self.beats[order[i + 1]]
+            following = self.duration if last else boundary + LEAD
+            margin = TAIL if last else PAUSE
+            if end + margin > boundary:
+                # The line runs past the next mark: hold the picture there until it has been heard.
+                play(boundary)
+                holds.append((boundary, end + margin - boundary))
+                play(following)
+            else:
+                fast_from, fast_to = end + PAUSE, following - (TAIL if last else PAUSE)
+                if speed > 1 and fast_to - fast_from > 0.4:
+                    play(fast_from)
+                    play(fast_to, speed)
+                play(following)
+        play(self.duration)
+        self.segments, self.holds = segments, holds
+        self.length = self.out(self.duration)
+
+    def out(self, t):
+        """Output time (seconds from the start of this scene's clip) of visible time t."""
+        o = 0.0
+        for a, b, rate in self.segments:
+            if t <= a:
+                break
+            o += (min(t, b) - a) / rate
+        return o + sum(h for at, h in self.holds if at <= t + 1e-9)
+
     def encode(self, path):
-        """Encodes the scene's frames at a constant frame rate (each frame held until the next one)."""
+        """Encodes the re-timed frames at a constant frame rate (each frame held until the next one)."""
         listing = os.path.join(self.dir, "frames.txt")
         with open(listing, "w", encoding="utf-8") as f:
-            for i, (v, name) in enumerate(self.frames):
-                nxt = self.frames[i + 1][0] if i + 1 < len(self.frames) else self.duration
-                f.write(f"file 'frames/{name}'\nduration {max(nxt - v, 0.001):.4f}\n")
+            times = [self.out(v) for v, _ in self.frames] + [self.length]
+            for i, (_, name) in enumerate(self.frames):
+                f.write(f"file 'frames/{name}'\nduration {max(times[i + 1] - times[i], 0.0005):.4f}\n")
             f.write(f"file 'frames/{self.frames[-1][1]}'\n")
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", listing,
-                        "-vf", f"fps={FPS},scale=1920:1080:flags=lanczos,format=yuv420p", "-t", f"{self.duration:.3f}",
-                        "-c:v", "libx264", "-preset", "veryfast", "-crf", "12", path], check=True)
+                        "-vf", f"fps={FPS},scale=1920:1080:flags=lanczos,format=yuv420p", "-t", f"{self.length:.3f}",
+                        "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", path], check=True)
 
 
 # ------------------------------------------------------------------------------------------------ sound
@@ -245,7 +294,7 @@ def write_script(path, script, scenes, offsets, total):
             lines += [f"## {clock(offset)} — {chapter}", ""]
         lines += [f"**On screen:** {spec.get('screen', '')}", ""]
         for n, text in enumerate(spec["beats"]):
-            lines.append(f"- `{clock(offset + scene.beats[n] + LEAD)}` {text}")
+            lines.append(f"- `{clock(offset + scene.out(scene.beats[n] + LEAD))}` {text}")
         lines.append("")
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -257,8 +306,10 @@ def main():
     parser.add_argument("--script", default="script.en.json")
     parser.add_argument("--work", default="out/en")
     parser.add_argument("--video", required=True)
-    parser.add_argument("--crf", default="24")
+    parser.add_argument("--crf", default="26", help="final H.264 quality (lower is better and larger)")
     parser.add_argument("--only", help="comma-separated scene ids, for a quick preview of some scenes")
+    parser.add_argument("--plan", action="store_true", help="print the timing of every scene and stop")
+    parser.add_argument("--reuse-clips", action="store_true", help="keep scene clips encoded by an earlier run (same recordings and narration)")
     args = parser.parse_args()
 
     with open(args.script, encoding="utf-8") as f:
@@ -272,14 +323,19 @@ def main():
     os.makedirs(clips, exist_ok=True)
     offsets, at = [], 0.0
     for i, scene in enumerate(scenes):
-        clip = os.path.join(clips, f"{i:02d}-{scene.id}.mp4")
-        scene.encode(clip)
-        scene.clip = clip
+        scene.retime(durations, 1.0 if scene.spec["kind"] == "graphic" else GAP_SPEED)
         offsets.append(at)
-        at += scene.duration - (FADE if i + 1 < len(scenes) else 0)
-        print(f"{scene.id:<11} {scene.duration:6.1f} s  starts {offsets[-1]:6.1f} s")
+        at += scene.length - (FADE if i + 1 < len(scenes) else 0)
+        held = sum(h for _, h in scene.holds)
+        print(f"{scene.id:<11} recorded {scene.duration:6.1f} s  final {scene.length:6.1f} s  (held {held:4.1f} s)  starts {offsets[-1]:6.1f} s")
     total = at
     print(f"total {total:.1f} s ({total / 60:.2f} min)")
+    if args.plan:
+        return
+    for i, scene in enumerate(scenes):
+        scene.clip = os.path.join(clips, f"{i:02d}-{scene.id}.mp4")
+        if not (args.reuse_clips and os.path.exists(scene.clip)):
+            scene.encode(scene.clip)
 
     # Soundtrack: narration, music bed ducked under the voice, clicks and transition sounds.
     voice = np.zeros((int((total + 2) * RATE), 2), np.float32)
@@ -287,7 +343,7 @@ def main():
     srt, number = [], 1
     for scene, offset in zip(scenes, offsets):
         for n, text in enumerate(scene.spec["beats"]):
-            start = offset + scene.beats[n] + LEAD
+            start = offset + scene.out(scene.beats[n] + LEAD)
             audio = read_wav(os.path.join(args.work, "audio", f"{scene.id}-{n}.wav"))
             add(voice, start, audio, 0.9)
             i = int(start * RATE)
@@ -303,7 +359,7 @@ def main():
                 t += d
         tick = click_sound()
         for c in scene.clicks:
-            add(voice, offset + c + 0.05, tick, 0.18)
+            add(voice, offset + scene.out(c) + 0.05, tick, 0.18)
     swoosh = whoosh()
     for i, offset in enumerate(offsets[1:], 1):
         add(voice, offset - 0.35, swoosh, 0.10)

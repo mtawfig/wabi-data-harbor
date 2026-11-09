@@ -571,7 +571,7 @@ const SCENES = {
 
     await d.beat(2);
     await d.nav('history');
-    await d.click(p.locator('[data-testid^="history-row-"]', { hasText: 'heque' }).first(), 1800);
+    await d.click(p.locator('[data-testid^="history-row-"]', { hasText: /Study.*cheque/i }).first(), 1800);
     await d.click(p.getByTestId('history-favorite'), 900);
     const exports = {};
     for (const [fmt, id] of [['docx', 'history-export-docx'], ['xlsx', 'history-export-xlsx']]) {
@@ -595,7 +595,7 @@ const SCENES = {
     const martin = await userPage('w1006');
     await open(martin, '/app/shared-with-me');
     await open(p, '/app/history');
-    await p.locator('[data-testid^="history-row-"]', { hasText: 'heque' }).first().click();
+    await p.locator('[data-testid^="history-row-"]', { hasText: /Study.*cheque/i }).first().click();
     await p.getByTestId('history-share').waitFor();
     await p.waitForTimeout(1200);
     await d.attach(p);
@@ -764,33 +764,41 @@ const SCENES = {
 
   async periodic(d) {
     const p = await userPage('w1002');
+    // A periodic report name is unique per owner: remove the one an earlier recording saved.
+    await open(p, '/app/periodic-reports');
+    await p.evaluate(async (name) => {
+      const token = (await (await fetch('/api/auth/csrf')).json()).token;
+      const listed = await (await fetch('/api/subscriptions')).json();
+      for (const s of (listed.items ?? listed).filter((x) => x.name === name)) {
+        await fetch(`/api/subscriptions/${s.subscriptionId}`, { method: 'DELETE', headers: { 'X-XSRF-TOKEN': token } });
+      }
+    }, 'Weekly cheque returns for the board');
     await open(p, '/app/periodic-reports');
     await d.attach(p);
     await d.beat(0);
     await d.click(p.getByTestId('periodic-new'), 1000);
-    await d.select(p.getByTestId('periodic-analysis'), 'heque');
+    await d.select(p.getByTestId('periodic-analysis'), /Study.*cheque/i);
     const name = p.getByTestId('periodic-name');
     await name.fill('');
     await d.type(name, 'Weekly cheque returns for the board');
     await d.select(p.locator('[data-testid="periodic-form"] mat-select[name="recurrence"]'), 'Weekly');
     await d.select(p.locator('[data-testid="periodic-form"] mat-select[name="format"]'), 'PDF');
-    await d.click(p.getByTestId('periodic-recipients'), 600);
-    for (const who of ['Martin Calder', 'Clara Ashby']) await d.click(p.locator('mat-option', { hasText: who }).first(), 400);
-    await p.keyboard.press('Escape');
+    // Victor is not an administrator, so the report is for him; administrators also choose other recipients.
     await d.spot(p.getByTestId('periodic-form'));
-    await d.wait(1500);
-    await d.unspot();
+    await d.callout('Administrators can add recipients', 'group_add');
+    await d.wait(1600);
+    await d.callout(null); await d.unspot();
     await d.click(p.getByTestId('periodic-save'), 2000);
 
     await d.beat(1);
-    await d.click(p.locator('[data-testid^="periodic-run-"]').first(), 1000);
+    await d.click(p.getByTestId('periodic-run-Weekly cheque returns for the board').first(), 1000);
     d.cut(true);
     await p.getByTestId('periodic-run-result').waitFor({ timeout: 300000 });
     await p.waitForTimeout(1000);
     d.cut(false);
     await d.scrollTo(p.getByTestId('periodic-run-result'), 'center');
     await d.spot(p.getByTestId('periodic-run-result'));
-    await d.callout('Each recipient: their own permissions', 'groups');
+    await d.callout('Each recipient gets figures under their own permissions', 'groups');
     await d.wait(2600);
     await d.callout(null); await d.unspot();
     return d.end();
@@ -801,7 +809,7 @@ const SCENES = {
     await open(p, '/app/admin/insights');
     await d.attach(p);
     await d.beat(0);
-    await d.click(p.getByTestId('oins-metrics').locator('button, li, a', { hasText: 'Users who signed in' }).first(), 800);
+    await d.click(p.getByTestId('oins-metrics').locator('li:not(.active) button').first(), 800);
     await d.click(p.getByTestId('oins-run'), 1800);
     await d.spot(p.getByTestId('oins-result'));
     await d.wait(2400);
