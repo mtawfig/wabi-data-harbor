@@ -383,11 +383,12 @@ function renderFile(file, prefix, pages = 1) {
   });
 }
 
-async function download(page, click) {
+/** Saves a download under a fixed name (the app names exports after the analysis title, in the interface language). */
+async function download(page, click, name) {
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), click()]);
   const dir = path.join(OUT, 'downloads');
   fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, dl.suggestedFilename());
+  const file = path.join(dir, name);
   await dl.saveAs(file);
   return file;
 }
@@ -654,7 +655,7 @@ const SCENES = {
     const exports = {};
     for (const [fmt, id] of [['docx', 'history-export-docx'], ['xlsx', 'history-export-xlsx']]) {
       await d.click(p.getByTestId('history-export'), 700);
-      exports[fmt] = await download(p, () => d.click(p.getByTestId(id), 300));
+      exports[fmt] = await download(p, () => d.click(p.getByTestId(id), 300), `export.${fmt}`);
       await d.wait(900);
     }
     renderFile(exports.docx, 'docx', 1);
@@ -909,7 +910,8 @@ const SCENES = {
 // ------------------------------------------------------------------------------------------------ main
 (async () => {
   prepareGraphics();
-  browser = await chromium.launch();
+  // A UTF-8 locale lets the browser keep non-Latin download names (Arabic analysis titles) instead of "download".
+  browser = await chromium.launch({ env: { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' } });
   const only = ONLY ? ONLY.split(',') : null;
   for (const scene of SCRIPT.scenes) {
     if (only && !only.includes(scene.id)) continue;
