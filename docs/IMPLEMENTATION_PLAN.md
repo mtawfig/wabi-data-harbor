@@ -1,6 +1,6 @@
 # Wabi Insight — Implementation Plan (Phases and Pull Requests)
 
-**Status:** Phases 1–14 merged; Phase 14 (Proactive Agent) was approved by the owner on 2026-11-07, design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P13.5 (second sample organization, Wabi Bank), P13.6 (its follow-ups), P13.7 (answer accuracy fixes found with it), P13.8 (query plans: totals, column comparisons and the asker's own codes), P13.9 (example questions per application, readable alert numbers) and P13.10 (complete explanations, Arabic dates and numbers) merged; P13.11 (plain-language explanation of each query, compact language switch, generic Wabi Bank names) in review.
+**Status:** Phases 1–14 merged; Phase 14 (Proactive Agent) was approved by the owner on 2026-11-07, design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P13.5 (second sample organization, Wabi Bank), P13.6 (its follow-ups), P13.7 (answer accuracy fixes found with it), P13.8 (query plans: totals, column comparisons and the asker's own codes), P13.9 (example questions per application, readable alert numbers), P13.10 (complete explanations, Arabic dates and numbers) and P13.11 (plain-language explanation of each query, compact language switch, generic Wabi Bank names) merged. Version 2 is planned in *Version 2* (Sign in with Microsoft; P0.2 in review).
 **Specification:** [`docs/WABI_INSIGHT_SPECIFICATION.md`](./WABI_INSIGHT_SPECIFICATION.md) (v1.2; §35 added for Phase 14).
 **Review of the original prompt:** [`docs/SPEC_REVIEW.md`](./SPEC_REVIEW.md).
 
@@ -30,6 +30,7 @@
 | PR | Branch | Scope |
 |---|---|---|
 | P0.1 | `claude/query-harbor-plan-qjo2sh` | Revised specification, spec review, implementation plan, `CLAUDE.md`, `PROGRESS.md`. No application code. |
+| P0.2 | `wi/p00-02-v2-microsoft-sign-in` | Version 2 plan: Sign in with Microsoft (Microsoft Entra ID), in *Version 2* below. No application code. |
 
 ### Phase 1 — Foundation and Multi-Tenant Identity
 **Acceptance:** A Platform Administrator can be bootstrapped and sign in; the schema makes an organization user without a valid organization impossible; CI is green on both stacks.
@@ -157,6 +158,46 @@
 | P14.3 — Periodic Reports | Subscriptions, per-recipient execution under the recipient's permissions, PDF/XLSX, outbox delivery with attachment and link, delivery log, pause after three failures, administrator pages, Management self-service, "sent to me" in My Reports. |
 | P14.4 — Natural-language rules and system rules | `wabi_monitoring_rule` schema and prompt, draft → confirm → save, system rules (connections, AI budget, email, metadata drift), `RuleInvalid` rule-health alerts, screenshots and docs. |
 | P14.5 — Wrap-up | Recorded proactive-agent demo on the sample organization (`scripts/demo/proactive-agent`), scheduler lease release fix, Phase 14 screenshot index, status docs. |
+
+## Version 2 (planned, not started)
+
+Work the owner has moved to version 2. Nothing here is built in version 1; each item starts only after the owner approves it.
+
+### Sign in with Microsoft (Microsoft Entra ID)
+**Owner decision (2026-11-08):** planned for version 2. Version 1 keeps local e-mail and password sign-in only (specification §8).
+
+**Goal.** People sign in with **Sign in with Microsoft** instead of typing a password into Wabi Insight. Microsoft checks the password and the second step (Microsoft Authenticator or a one-time code); Wabi Insight never sees either. Users can have any e-mail address: Outlook/Hotmail (personal Microsoft accounts), company Microsoft 365 accounts, Gmail and other providers.
+
+**What the owner sets up in Microsoft (no server, no Microsoft 365 or company domain needed).**
+- The Microsoft Entra directory that came with the owner's Azure subscription (an `@outlook.com` Azure account is enough).
+- One **app registration** for Wabi Insight: application (client) ID, a client certificate or secret (kept in secrets or environment variables, never in source control), redirect URI `https://<host>/signin-oidc` per environment, sign-out URI.
+- Users are **invited as guests** by e-mail (Microsoft Entra B2B): Microsoft-account users sign in with Microsoft, company users with their company account, Gmail users with Google (once Google is enabled as an identity provider) or a one-time e-mail code, anyone else with a one-time e-mail code.
+- **Two-step sign-in** is required in Entra: security defaults (free) or a Conditional Access policy for the Wabi Insight app (Microsoft Entra ID P1). The exact behaviour for guest accounts is confirmed against Microsoft's documentation when the work starts.
+- Later options, not in the first version 2 release: a multi-tenant registration so a customer organization on Microsoft 365 links its own directory, and Microsoft Entra External ID for self-service sign-up at scale.
+
+**Rules (the version 1 invariants stay).**
+- Entra proves *who* the person is; Wabi Insight decides *what they may see*. A Microsoft sign-in is accepted only for an **existing, active** `Administrators` or `OrganizationUsers` row created or invited by an administrator. No account is created automatically from a Microsoft sign-in.
+- Accounts are linked by Microsoft's immutable identifiers (directory `tid` + user `oid`), never by e-mail alone. The first sign-in links through the invitation (a one-time link token, or a verified match on the invited address); after that only `tid` + `oid` count, so a changed or reused e-mail address cannot move access to someone else.
+- `OrganizationId` still comes from the linked user record through `ITenantContext`, never from token claims; row scopes, roles and support-access rules are unchanged.
+- Same session handling as today: cookie session, CSRF protection, security stamp, inactive-user and suspended-organization denial. `MustChangePassword` does not apply to Microsoft-only users.
+- A per-organization setting chooses the allowed sign-in methods (password, Microsoft, or both); a platform setting does the same for Platform Administrators (for example Microsoft with two-step sign-in only).
+- Audit events: `Auth.ExternalLinked`, `Auth.ExternalUnlinked`, `Auth.ExternalSignIn`, `Auth.ExternalSignInRejected` (stable reason codes: not invited, inactive, wrong directory, link mismatch). Secrets are never returned to the browser.
+
+**Data.** New `ExternalLogins` table: principal type and id, provider (`MicrosoftEntra`), directory id (`tid`), object id (`oid`), linked at, last sign-in at; unique on provider + `tid` + `oid`, and on principal + provider. Sign-in methods are stored on the organization and in platform settings.
+
+**Interface (EN/AR).** *Sign in with Microsoft* button on the login page; invitation acceptance offers *Use my Microsoft account*; the profile shows the linked account (unlink only while a password exists); Organization Administration → Settings: allowed sign-in methods; Platform Administration: provider status (configured or not, never the secret).
+
+**Tests.** Integration tests with a test OpenID Connect issuer and signing key, always with two organizations: an uninvited user is refused; the first sign-in links and later sign-ins use `tid` + `oid`; a token from another directory is refused; an inactive user or suspended organization is refused; an e-mail match alone does not sign in a linked account; tenant isolation holds; audit entries are written.
+
+**Documentation.** App registration and guest invitation steps in the deployment guides (Windows Server 2019, Linux), redirect URIs per environment, `SECURITY.md`, specification §8.
+
+| PR | Scope |
+|---|---|
+| V2.1 — Microsoft sign-in: backend | OpenID Connect sign-in with Microsoft Entra ID (Microsoft.Identity.Web), `ExternalLogins` and migration, link and sign-in services, sign-in method settings, audit, integration tests. |
+| V2.2 — Microsoft sign-in: interface and guides | Login button, invitation and profile linking, organization and platform settings (EN/AR), deployment-guide steps for the app registration and guest invitations, screenshots. |
+
+### Google Drive and OneDrive publishing
+Deferred from P10.2 (owner decision, 2026-11-06); see Phase 10 for the scope.
 
 ## Milestone verification (every PR)
 

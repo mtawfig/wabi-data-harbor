@@ -139,4 +139,4 @@ Shares are explicit grants inside one organization: the recipient must be an act
 `AuditLogs` is append-only (application guard plus `scripts/sql/create-runtime-login.sql`). Records carry actor type/id, event code, entity, JSON details without secrets, correlation id and client IP.
 
 ## Deferred to the next version
-Google Drive / OneDrive publishing (P10.2, owner decision). Everything else in the specification's security scope is implemented and tested.
+Google Drive / OneDrive publishing (P10.2, owner decision) and Sign in with Microsoft (Microsoft Entra ID; owner decision 2026-11-08, design in `IMPLEMENTATION_PLAN.md` → *Version 2*: accounts linked by directory and object id only for invited, active users, `OrganizationId` still from the linked record). Everything else in the specification's security scope is implemented and tested.
