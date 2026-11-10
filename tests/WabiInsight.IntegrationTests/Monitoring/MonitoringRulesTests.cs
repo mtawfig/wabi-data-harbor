@@ -210,7 +210,10 @@ public sealed class MonitoringRulesTests : IDisposable
         var (managerId, managerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, RoleId("Management"), "Scope Manager");
         var (scopedId, scopedEmail) = await UserAsync("Operations Officer", departmentId, departmentRole);
         var (wideId, wideEmail) = await UserAsync("Group Auditor", null, allRowsRole);
-        var (_, scopedAdminEmail) = await UserAsync("Operations Administrator", departmentId, SystemRoles.OrganizationAdmin, departmentRole);
+        var (scopedAdminId, scopedAdminEmail) = await UserAsync("Operations Administrator", departmentId, SystemRoles.OrganizationAdmin, departmentRole);
+        // The database is shared with the other test classes: this second Organization Administrator of A is demoted again when
+        // the test ends (pass or fail), so tests that count A's administrators are not affected by the order the classes run in.
+        await using var demote = new Deferred(() => alice.PutAsJsonAsync(new Uri($"/api/users/{scopedAdminId}", UriKind.Relative), new { fullName = "Operations Administrator", employeeNumber = (string?)null, departmentId, preferredLanguage = "en", roleCodes = new[] { departmentRole } }));
         using var manager = await LoginAsync(managerEmail);
         using var scoped = await LoginAsync(scopedEmail);
         using var wide = await LoginAsync(wideEmail);
@@ -548,5 +551,11 @@ public sealed class MonitoringRulesTests : IDisposable
 
         await context.SaveChangesAsync();
         return (userId, email);
+    }
+
+    /// <summary>Runs an asynchronous clean-up when the test leaves scope.</summary>
+    private sealed class Deferred(Func<Task> cleanup) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync() => await cleanup();
     }
 }
