@@ -53,7 +53,12 @@ Other guides:
   - **Check:** tells you whether the step is already done. If it is, skip **Do**.
   - **Do:** the actions or commands.
   - **Verify:** proves the step worked. **Don't continue until it does.**
-- **Copy and paste** commands exactly. In PowerShell, paste with a **right-click**. Paste a whole block at once.
+- **Copy and paste** commands exactly. In PowerShell, paste with a **right-click**, a whole block at once, then press
+  **Enter**.
+- **Blocks between `. {` and `}`** ask you for a password or must stop at the first error. Paste the whole block,
+  **including those two lines**: nothing runs until the closing `}`, then PowerShell asks its questions one at a time.
+  If the prompt shows `>>` after pasting, press **Enter** once more. If such a block stops with red text, nothing after
+  the error has run: fix the cause and paste the whole block again.
   Lines starting with `#` are comments and are ignored. A comment at the end of a line, such as `# True`, shows the
   output you should see.
 - Text in `<angle brackets>` is a placeholder. Replace it with your own value, without the brackets.
@@ -280,12 +285,14 @@ function Invoke-WiSql {
     # Runs SQL on the local SQL Server Express. Works once SQL Server and its PowerShell module are installed (steps 18-20).
     # Signs in with your Windows administrator account (sysadmin), or with -Credential.
     [CmdletBinding()]
-    param([string]$Query, [string]$InputFile, [string]$Database = 'master', [pscredential]$Credential)
+    # -Tables shows every result of a script as its own table (the sample scripts return several).
+    param([string]$Query, [string]$InputFile, [string]$Database = 'master', [pscredential]$Credential, [switch]$Tables)
     Import-Module SqlServer -Verbose:$false
     $p = @{ ServerInstance = 'localhost,1433'; Database = $Database; TrustServerCertificate = $true; QueryTimeout = 600; DisableVariables = $true; ErrorAction = 'Stop' }
     if ($InputFile) { $p.InputFile = $InputFile } else { $p.Query = $Query }
     if ($Credential) { $p.Credential = $Credential }
-    Invoke-Sqlcmd @p
+    if ($Tables) { Invoke-Sqlcmd @p -OutputAs DataTables | ForEach-Object { $_ | Format-Table -AutoSize | Out-String -Width 250 } }
+    else { Invoke-Sqlcmd @p }
 }
 ```
 
@@ -604,6 +611,7 @@ This installs SQL Server unattended, with these choices:
 **Do:** paste the **`sa` password** from step 7 when asked. Setup takes 5–15 minutes and shows nothing until it ends.
 
 ```powershell
+. {
 $sa = Read-WiSecret 'sa password (step 7)'
 $media = Join-Path $WI.Root 'install\sql'
 $package = (Get-ChildItem $media -Filter 'SQLEXPR*.exe' | Select-Object -First 1).FullName
@@ -618,6 +626,7 @@ $arguments = @(
 $p = Start-Process (Join-Path $setupDir 'setup.exe') -ArgumentList $arguments -Wait -PassThru
 "setup exit code $($p.ExitCode)"      # 0 = success, 3010 = success, reboot required
 Remove-Variable sa
+}
 ```
 
 - **Exit code 3010:** restart the VPS (**Start → Power → Restart**), reconnect, and paste the session settings, `$WI`
@@ -704,19 +713,23 @@ If both have values (an earlier installation), keep the existing password and go
 **Do:** paste the **password of `wabiinsightdbowner`** from step 7 when asked:
 
 ```powershell
+. {
 $dbPassword = Read-WiSecret 'Password of wabiinsightdbowner (step 7)'
 Invoke-WiSql "IF DB_ID(N'WabiInsightDB') IS NULL CREATE DATABASE [WabiInsightDB];"
 Invoke-WiSql "IF SUSER_ID(N'wabiinsightdbowner') IS NULL CREATE LOGIN [wabiinsightdbowner] WITH PASSWORD = N'$dbPassword', DEFAULT_DATABASE = [WabiInsightDB], CHECK_POLICY = ON;"
 Invoke-WiSql -Database WabiInsightDB "IF DATABASE_PRINCIPAL_ID(N'wabiinsightdbowner') IS NULL CREATE USER [wabiinsightdbowner] FOR LOGIN [wabiinsightdbowner]; ALTER ROLE db_owner ADD MEMBER [wabiinsightdbowner];"
+}
 ```
 
 **Verify** by signing in as the new login:
 
 ```powershell
+. {
 if (-not $dbPassword) { $dbPassword = Read-WiSecret 'Password of wabiinsightdbowner (step 7)' }
 $dbCredential = New-Object pscredential 'wabiinsightdbowner', (ConvertTo-SecureString $dbPassword -AsPlainText -Force)
 Invoke-WiSql -Database WabiInsightDB -Credential $dbCredential "SELECT DB_NAME() AS Db, IS_ROLEMEMBER('db_owner') AS DbOwner, IS_SRVROLEMEMBER('sysadmin') AS Sysadmin"
 # WabiInsightDB 1 0
+}
 ```
 
 `Login failed` means a wrong password, or that step 19 (mixed mode) isn't done.
@@ -813,6 +826,7 @@ it.**
 it alone; to write it again, delete it first.
 
 ```powershell
+. {
 if (-not $dbPassword) { $dbPassword = Read-WiSecret 'Password of wabiinsightdbowner (step 7)' }
 $localSettings = [ordered]@{
     ConnectionStrings = [ordered]@{ ConfigurationDatabase = "Server=localhost,1433;Database=WabiInsightDB;User Id=wabiinsightdbowner;Password=$dbPassword;Encrypt=True;TrustServerCertificate=True;" }
@@ -823,6 +837,7 @@ $localSettings = [ordered]@{
 $localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
 if (-not (Test-Path $localPath)) { $localSettings | ConvertTo-Json -Depth 5 | Set-Content -Path $localPath -Encoding UTF8 }
 Remove-Variable dbPassword, dbCredential -ErrorAction SilentlyContinue
+}
 ```
 
 - **Database on another server:** change `ConfigurationDatabase` to that server.
@@ -930,12 +945,14 @@ Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*$($WI.Do
    **Option B: a certificate you already have (`.pfx` file).** Copy the file to the VPS, then (replace the path):
 
    ```powershell
+   . {
    $pfxPassword = Read-Host 'PFX password' -AsSecureString
    $cert = Import-PfxCertificate -FilePath 'C:\path\to\certificate.pfx' -CertStoreLocation Cert:\LocalMachine\My -Password $pfxPassword
    if (-not (Get-WebBinding -Name 'WabiInsight' -Protocol https)) {
        New-WebBinding -Name 'WabiInsight' -Protocol https -Port 443 -HostHeader $WI.Domain -SslFlags 1
    }
    (Get-WebBinding -Name 'WabiInsight' -Protocol https).AddSslCertificate($cert.Thumbprint, 'My')
+   }
    ```
 
    You renew this certificate yourself before it expires: import the new file the same way.
@@ -1027,6 +1044,7 @@ Get-Service -Name 'actions.runner.*' -ErrorAction SilentlyContinue | Select-Obje
 check the download's fingerprint:
 
 ```powershell
+. {
 $runnerDir = 'C:\actions-runner'
 New-Item -ItemType Directory -Force -Path $runnerDir | Out-Null
 icacls $runnerDir /inheritance:r /grant:r 'SYSTEM:(OI)(CI)F' 'BUILTIN\Administrators:(OI)(CI)F' | Out-Null
@@ -1040,6 +1058,7 @@ if ($expected) { if ($actual -ne $expected) { throw 'Runner checksum mismatch' }
 else { "SHA-256 ${actual}: compare it with the hash on GitHub's 'New self-hosted runner' page." }
 Expand-Archive $zip -DestinationPath $runnerDir -Force
 Remove-Item $zip
+}
 ```
 
 **Do, part 2:** register it:
@@ -1048,6 +1067,7 @@ Remove-Item $zip
 2. **[VPS PowerShell]** paste the token when asked:
 
 ```powershell
+. {
 Set-Location 'C:\actions-runner'
 $token = Read-Host 'Runner registration token'
 .\config.cmd --unattended --url "https://github.com/$($WI.Repo)" --token $token `
@@ -1057,6 +1077,7 @@ $service = Get-Service -Name 'actions.runner.*' | Select-Object -First 1
 sc.exe config $service.Name obj= LocalSystem | Out-Null          # deployments change protected folders
 sc.exe config $service.Name start= delayed-auto | Out-Null
 Restart-Service $service.Name
+}
 ```
 
 **Verify:**
@@ -1100,6 +1121,7 @@ Test-Path (Join-Path $WI.Backup 'backup.ps1')
 `backup.ps1` into the backup folder, and registers the task:
 
 ```powershell
+. {
 $backup = $WI.Backup
 icacls $backup /grant 'NT Service\MSSQL$SQLEXPRESS:(OI)(CI)M' | Out-Null             # SQL Server writes the .bak file
 Invoke-WiSql "IF SUSER_ID(N'NT AUTHORITY\SYSTEM') IS NULL CREATE LOGIN [NT AUTHORITY\SYSTEM] FROM WINDOWS;"
@@ -1130,6 +1152,7 @@ $action    = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoPro
 $trigger   = New-ScheduledTaskTrigger -Daily -At '02:30'
 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -TaskName 'Wabi Insight backup' -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+}
 ```
 
 The key ring is still empty at this point; it gets its first key when the API starts (step 31). Test the task after
@@ -1178,6 +1201,7 @@ and paste work through Remote Desktop), then run only the first line and the las
 **Do, part 2:** **[VPS PowerShell]** paste the token when asked:
 
 ```powershell
+. {
 $deployDir = Join-Path $WI.Root 'deploy'
 $ghToken = Read-WiSecret 'GitHub token (Contents: read)'
 Invoke-WebRequest -UseBasicParsing -OutFile (Join-Path $deployDir 'Deploy-WabiInsight.ps1') `
@@ -1186,6 +1210,7 @@ Invoke-WebRequest -UseBasicParsing -OutFile (Join-Path $deployDir 'Deploy-WabiIn
 Remove-Variable ghToken
 Unblock-File (Join-Path $deployDir 'Deploy-WabiInsight.ps1')                # downloaded files are blocked by default
 & (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -ScriptVersion            # 3
+}
 ```
 
 Then delete the token: **[GitHub]** *Fine-grained tokens* → the token → **Delete**.
@@ -1259,6 +1284,7 @@ turn it on for this one command only. (`appsettings.Local.json` would override t
 2. Run this. The bootstrap settings exist only inside this PowerShell process and are removed afterwards:
 
 ```powershell
+. {
 $adminPassword = Read-WiSecret 'First password for the Platform Administrator'
 Push-Location (Join-Path $WI.Root 'web\api')
 $env:ASPNETCORE_ENVIRONMENT = 'Production'
@@ -1272,6 +1298,7 @@ dotnet .\WabiInsight.Api.dll bootstrap
     ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 Remove-Variable adminPassword
 Pop-Location
+}
 ```
 
 **Verify:** the output includes `Bootstrap completed. AdministratorId=…`, the **Check** query returns `1`, and:
@@ -1332,6 +1359,7 @@ Invoke-WiSql "SELECT name FROM sys.databases WHERE name IN (N'FlightOperationsDB
 delete it afterwards.
 
 ```powershell
+. {
 $samples = Join-Path $WI.Root 'install\samples'
 New-Item -ItemType Directory -Force -Path $samples | Out-Null
 $sampleFiles = '01-create-flightoperationsdb.sql', '02-create-humanresourcesdb.sql', '03-create-procurementstoresdb.sql', '04-seed-wabiinsightdb.sql'
@@ -1342,6 +1370,7 @@ foreach ($f in $sampleFiles) {
         -Headers @{ Authorization = "Bearer $ghToken"; Accept = 'application/vnd.github.raw'; 'User-Agent' = 'wabi-insight-setup' }
 }
 Remove-Variable ghToken
+}
 ```
 
 Without a token: download the four files from the repository's `scripts/sql/samples` folder on GitHub (each file →
@@ -1363,7 +1392,7 @@ Get-ChildItem $samples | Select-Object Name, Length          # the four files, n
 ```powershell
 $sampleFiles | ForEach-Object {
     "== $_"
-    Invoke-WiSql -InputFile (Join-Path $samples $_) | Format-Table -AutoSize | Out-String -Width 220
+    Invoke-WiSql -InputFile (Join-Path $samples $_) -Tables
 }
 ```
 
@@ -1429,6 +1458,7 @@ VPS then needs outgoing HTTPS to `<account>.blob.core.windows.net`. The settings
 without being shown:
 
 ```powershell
+. {
 $cs = Read-WiSecret 'Azure Storage connection string'
 $localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
 $settings = Get-Content $localPath -Raw | ConvertFrom-Json
@@ -1440,6 +1470,7 @@ Push-Location (Join-Path $WI.Root 'web\api'); $env:ASPNETCORE_ENVIRONMENT = 'Pro
 dotnet .\WabiInsight.Api.dll storage-check     # Storage check passed: a test file was written, read back identical and deleted.
 Pop-Location
 Restart-WebAppPool 'WabiInsightApi'
+}
 ```
 
 `storage-check` never prints the key. On failure it says why (HTTP 403: wrong key or network rules; 404: wrong
@@ -1664,6 +1695,7 @@ Node.js 22 (Angular 22 needs Node `^22.22.3`, `^24.15` or newer). This downloads
 checks its SHA-256 against nodejs.org:
 
 ```powershell
+. {
 $sums = (Invoke-WebRequest 'https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt' -UseBasicParsing).Content -split "`n"
 $line = $sums | Where-Object { $_ -match '\snode-v22\.[\d\.]+-x64\.msi$' } | Select-Object -First 1
 $hash, $name = $line.Trim() -split '\s+'
@@ -1671,6 +1703,7 @@ $msi = Get-WiDownload "https://nodejs.org/dist/latest-v22.x/$name" $name
 if ((Get-FileHash $msi -Algorithm SHA256).Hash -ne $hash.ToUpper()) { throw "Checksum mismatch for $name" }
 $p = Start-Process msiexec.exe -ArgumentList '/i', "`"$msi`"", '/qn', '/norestart' -Wait -PassThru; "exit code $($p.ExitCode)"
 Update-WiPath
+}
 ```
 
 **Verify:** the **Check** block shows the three versions, and `npm --version` prints a version.
@@ -1786,6 +1819,7 @@ loaded.
 **Do:** first create the folders (step 10 **Check** and **Do**). Then stop the sites and copy everything across:
 
 ```powershell
+. {
 Import-Module WebAdministration
 $old = 'C:\WabiInsight'
 Stop-Website 'WabiInsight'; Stop-Website 'WabiInsightApi'; Stop-WebAppPool 'WabiInsightApi'
@@ -1807,6 +1841,7 @@ $settings | ConvertTo-Json -Depth 6 | Set-Content $localPath -Encoding UTF8
 # IIS sites point at the new folders
 Set-ItemProperty 'IIS:\Sites\WabiInsightApi' -Name physicalPath -Value (Join-Path $WI.Root 'web\api')
 Set-ItemProperty 'IIS:\Sites\WabiInsight' -Name physicalPath -Value (Join-Path $WI.Root 'web\app')
+}
 ```
 
 Then:

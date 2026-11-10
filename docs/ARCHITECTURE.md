@@ -167,7 +167,7 @@ Integration tests run against a real SQL Server: `WI_TEST_SQLSERVER_CONNECTION` 
 
 Background work: `EmailOutboxWorker` (hosted service) consumes an in-process bounded channel fed by `EmailOutbox`, sends through the configured `IEmailSender` (`SmtpEmailSender`, `FileEmailSender`, `NullEmailSender`) and records the outcome on the `EmailMessages` row.
 
-CLI commands handled before the pipeline starts: `migrate` (apply migrations) and `bootstrap` (create the first Platform Administrator). See `docs/SECURITY.md` for the authentication design.
+CLI commands handled before the pipeline starts: `migrate` (apply migrations), `bootstrap` (create the first Platform Administrator), `seed-demo` (Development only), `storage-check` and `storage-copy` (file storage). See `docs/SECURITY.md` for the authentication design.
 
 ## Endpoints (P1.1)
 

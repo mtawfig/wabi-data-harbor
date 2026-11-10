@@ -1134,6 +1134,7 @@ this appendix doesn't cover it.
      PowerShell as administrator:
 
      ```powershell
+     . {
      $WI = Import-Clixml C:\wabitex-apps\wabi-insight\wabi-insight.vars.xml
      $azureName = 'wabi-insight-acme'                                        # CHANGE: your deployment name (step 7)
      $sp = 'C:\wabitex-apps\wabi-insight\tools\sqlpackage\SqlPackage.exe'
@@ -1144,6 +1145,7 @@ this appendix doesn't cover it.
      $azPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
      & $sp /Action:Import /SourceFile:$bacpac /TargetConnectionString:"Server=tcp:$azureName-sql.database.windows.net,1433;Initial Catalog=WabiInsightDB;User ID=wabiadmin;Password=$azPassword;Encrypt=True;TrustServerCertificate=False;" /p:DatabaseEdition=Standard /p:DatabaseServiceObjective=S0
      Remove-Variable azPassword, secure, localDb
+     }
      ```
 
    - **Verify:** the import ends with a success message, and **[Azure portal] → SQL databases** lists
@@ -1196,6 +1198,7 @@ this appendix doesn't cover it.
    - **Windows** (PowerShell as administrator; `Storage:RootPath` comes from `appsettings.Local.json`):
 
      ```powershell
+     . {
      Push-Location C:\wabitex-apps\wabi-insight\web\api
      $env:ASPNETCORE_ENVIRONMENT = 'Production'
      $env:Storage__Provider = 'AzureBlob'
@@ -1205,6 +1208,7 @@ this appendix doesn't cover it.
      Remove-Item Env:Storage__Provider, Env:Storage__AzureBlob__ConnectionString
      Remove-Variable secure
      Pop-Location
+     }
      ```
 
    - **Verify:** it ends with `Storage copy finished: … copied, … already in the container, 0 failed.` Run it again:
