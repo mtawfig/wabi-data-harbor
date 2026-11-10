@@ -16,7 +16,7 @@ public static class SupportOperations
 
     public static readonly IReadOnlyList<SupportOperationDefinition> Catalog =
     [
-        new(CreateOrganizationUser, SupportTargetType.None, Executable: true, "Create an organization user with the listed roles; the temporary password is emailed to the user."),
+        new(CreateOrganizationUser, SupportTargetType.AssignableRole, Executable: true, "Create an organization user. The roles are limited to the ones listed in the grant; with no role listed the user is created without roles. The temporary password is emailed to the user."),
         new(ResetOrganizationUserPassword, SupportTargetType.OrganizationUser, Executable: true, "Issue a new temporary password to the listed user(s)."),
         new(ConfigureRole, SupportTargetType.RoleOrNew, Executable: true, "Create or update the listed role(s): code, names, description, active flag."),
         new(UpdateOrganizationSettings, SupportTargetType.None, Executable: true, "Update the organization profile: names, description, contacts, time zone, default language."),
@@ -38,6 +38,15 @@ public enum SupportTargetType
     /// <summary>A role id, or the literal "new" to create one.</summary>
     RoleOrNew = 3,
     Application = 4,
+    /// <summary>
+    /// Role ids the operation may assign to what it creates. The list is optional (none: no role may be assigned) and
+    /// the execution names no target: the roles it asks for are checked against the list instead.
+    /// </summary>
+    AssignableRole = 5,
 }
 
-public sealed record SupportOperationDefinition(string Code, SupportTargetType TargetType, bool Executable, string Description);
+public sealed record SupportOperationDefinition(string Code, SupportTargetType TargetType, bool Executable, string Description)
+{
+    /// <summary>True when a proposal must list at least one target and every execution names one of them.</summary>
+    public bool RequiresTarget => TargetType is not (SupportTargetType.None or SupportTargetType.AssignableRole);
+}

@@ -77,9 +77,11 @@ public sealed class SupportAccessTests : IDisposable
         Assert.Contains(targets.GetProperty("roles").EnumerateArray(), r => r.GetProperty("roleCode").GetString() == "Analyst");
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).StatusCode);
 
+        var analystRoleId = targets.GetProperty("roles").EnumerateArray().Single(r => r.GetProperty("roleCode").GetString() == "Analyst").GetProperty("roleId").GetGuid();
+
         var grant = await ProposeAsync(platform, ticketId, new object[]
         {
-            new { operation = "CreateOrganizationUser", targetReferences = Array.Empty<string>() },
+            new { operation = "CreateOrganizationUser", targetReferences = new[] { analystRoleId.ToString() } }, // the only role the new user may be given
             new { operation = "ResetOrganizationUserPassword", targetReferences = new[] { _db.Data.UserAChangerId.ToString() } },
             new { operation = "ConfigureRole", targetReferences = new[] { "new" } },
         }, expiryHours: 2);
@@ -168,6 +170,130 @@ public sealed class SupportAccessTests : IDisposable
         Assert.Contains("SupportAccess.Completed", audit);
         var everything = string.Join("\n", await context.AuditLogs.AsNoTracking().Where(a => a.OrganizationId == _db.Data.OrganizationAId).Select(a => a.DetailsJson).ToListAsync());
         Assert.DoesNotContain(temporary, everything, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateOrganizationUser_AssignsOnlyTheRolesTheOrganizationApproved()
+    {
+        using var alice = await LoginAsync(TestData.AliceEmail); // OrganizationAdmin of A
+        await SetSecondApprovalAsync(alice, false);
+        var ticketId = await CreateTicketAsync(alice, "Please create an analyst account");
+        using var platform = await LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
+        await platform.PostJsonAsync("/api/platform/support/session/exit", new { });
+
+        // The catalog tells the proposal screen that this operation's targets are the roles the new user may be given.
+        var catalog = (await (await platform.GetAsync("/api/platform/support/operations")).ReadJsonAsync()).EnumerateArray().ToList();
+        var definition = catalog.Single(o => o.GetProperty("code").GetString() == "CreateOrganizationUser");
+        Assert.Equal("AssignableRole", definition.GetProperty("targetType").GetString());
+        Assert.False(definition.GetProperty("requiresTarget").GetBoolean());
+        Assert.Contains("limited to the ones listed in the grant", definition.GetProperty("description").GetString(), StringComparison.Ordinal);
+
+        var targets = await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync();
+        var analyst = targets.GetProperty("roles").EnumerateArray().Single(r => r.GetProperty("roleCode").GetString() == "Analyst");
+        var analystRoleId = analyst.GetProperty("roleId").GetGuid();
+
+        // A role of another organization cannot be listed.
+        var crossOrg = await platform.PostJsonAsync($"/api/platform/support/tickets/{ticketId}/access-grants", new { operations = new[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { _db.Data.RoleAdminBId.ToString() } } }, reason = "x" });
+        Assert.Equal(HttpStatusCode.BadRequest, crossOrg.StatusCode);
+        Assert.Contains("support_target_not_in_organization", await crossOrg.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        // 1. A grant that lists the Analyst role: the approver sees exactly which role support may assign, in both languages.
+        var grantId = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { analystRoleId.ToString() } } })).GetProperty("grantId").GetGuid();
+        var pending = await (await alice.GetAsync($"/api/support/access-grants/{grantId}")).ReadJsonAsync();
+        var operation = pending.GetProperty("operations").EnumerateArray().Single();
+        Assert.Equal("CreateOrganizationUser", operation.GetProperty("operation").GetString());
+        Assert.Equal(analystRoleId, operation.GetProperty("targetReferences").EnumerateArray().Single().GetGuid());
+        Assert.Equal($"{analyst.GetProperty("nameEn").GetString()} (Analyst)", pending.GetProperty("targetLabels").GetProperty(analystRoleId.ToString()).GetString());
+        Assert.Equal($"{analyst.GetProperty("nameAr").GetString()} (Analyst)", pending.GetProperty("targetLabelsAr").GetProperty(analystRoleId.ToString()).GetString());
+        Assert.Contains("approve", pending.GetProperty("allowedActions").EnumerateArray().Select(a => a.GetString()));
+        Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/support/access-grants/{grantId}/approve", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{grantId}/enter", new { })).StatusCode);
+
+        // The approved role is assigned.
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        var approvedEmail = $"approved.{tag}@org-a.test";
+        var approved = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = approvedEmail, fullName = "Approved Analyst", roleCodes = new[] { "Analyst" } });
+        Assert.True(approved.StatusCode == HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
+        Assert.Equal(new[] { "Analyst" }, await RoleCodesOfAsync(approvedEmail));
+
+        // Any other role is refused: nothing is created, whoever's mailbox the request names.
+        foreach (var roleCodes in new[] { new[] { "Management" }, new[] { "OrganizationAdmin" }, new[] { "Analyst", "Management" }, new[] { "management" }, new[] { "NoSuchRole" } })
+        {
+            var refusedEmail = $"refused.{Guid.NewGuid():N}@elsewhere.test";
+            var refused = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = refusedEmail, fullName = "Refused", roleCodes });
+            Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+            Assert.Contains("support_role_not_granted", await refused.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+            Assert.Null(await RoleCodesOfAsync(refusedEmail));
+        }
+
+        // A payload that is not a list of role codes is not read as "no roles".
+        var malformedEmail = $"malformed.{tag}@org-a.test";
+        var malformed = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = malformedEmail, fullName = "Malformed", roleCodes = "Management" });
+        Assert.Equal(HttpStatusCode.BadRequest, malformed.StatusCode);
+        Assert.Null(await RoleCodesOfAsync(malformedEmail));
+
+        // The denial is audited like any other out-of-scope operation, with the roles that were asked for.
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var denials = await context.AuditLogs.AsNoTracking().Where(a => a.EntityId == grantId.ToString() && a.EventType == "SupportAccess.OperationDenied").Select(a => new { a.OrganizationId, a.DetailsJson }).ToListAsync();
+            Assert.Equal(5, denials.Count);
+            Assert.All(denials, d =>
+            {
+                Assert.Equal(_db.Data.OrganizationAId, d.OrganizationId);
+                Assert.Contains("support_role_not_granted", d.DetailsJson, StringComparison.Ordinal);
+                Assert.Contains("CreateOrganizationUser", d.DetailsJson, StringComparison.Ordinal);
+            });
+            Assert.Contains(denials, d => d.DetailsJson!.Contains("\"Management\"", StringComparison.Ordinal));
+            Assert.Contains(denials, d => d.DetailsJson!.Contains("\"OrganizationAdmin\"", StringComparison.Ordinal));
+        }
+
+        Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{grantId}/complete", new { note = "Done." })).StatusCode);
+
+        // 2. A grant without role targets (as every grant approved before this rule): a user without roles only.
+        var bareGrantId = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = Array.Empty<string>() } })).GetProperty("grantId").GetGuid();
+        Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/support/access-grants/{bareGrantId}/approve", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{bareGrantId}/enter", new { })).StatusCode);
+        var withRole = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = $"withrole.{tag}@org-a.test", fullName = "With Role", roleCodes = new[] { "Analyst" } });
+        Assert.Equal(HttpStatusCode.Forbidden, withRole.StatusCode);
+        Assert.Contains("support_role_not_granted", await withRole.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Null(await RoleCodesOfAsync($"withrole.{tag}@org-a.test"));
+        var bareEmail = $"bare.{tag}@org-a.test";
+        var bare = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = bareEmail, fullName = "No Roles", roleCodes = Array.Empty<string>() });
+        Assert.True(bare.StatusCode == HttpStatusCode.OK, await bare.Content.ReadAsStringAsync());
+        Assert.Empty((await RoleCodesOfAsync(bareEmail))!);
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            Assert.Equal(1, await context.AuditLogs.AsNoTracking().CountAsync(a => a.EntityId == bareGrantId.ToString() && a.EventType == "SupportAccess.OperationDenied"));
+        }
+
+        Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{bareGrantId}/complete", new { note = "Done." })).StatusCode);
+
+        // Organization B sees neither grant and none of the created users.
+        using var bob = await LoginAsync(TestData.BobEmail);
+        Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/support/access-grants/{grantId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/support/access-grants/{bareGrantId}")).StatusCode);
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var created = await context.OrganizationUsers.IgnoreQueryFilters().Where(u => u.Email == approvedEmail || u.Email == bareEmail).Select(u => u.OrganizationId).ToListAsync();
+            Assert.Equal(new[] { _db.Data.OrganizationAId, _db.Data.OrganizationAId }, created);
+        }
+    }
+
+    /// <summary>Role codes of the user with this email, or null when no such user exists.</summary>
+    private async Task<List<string>?> RoleCodesOfAsync(string email)
+    {
+        await using var context = _db.CreateContext(_db.Data.PlatformAdministrator);
+        var user = await context.OrganizationUsers.IgnoreQueryFilters().AsNoTracking().SingleOrDefaultAsync(u => u.Email == email);
+        if (user is null)
+        {
+            var normalized = email.Trim().ToUpperInvariant();
+            Assert.False(await context.LoginIdentities.IgnoreQueryFilters().AnyAsync(l => l.NormalizedEmail == normalized));
+            return null;
+        }
+
+        return await context.UserRoles.IgnoreQueryFilters().Where(ur => ur.UserId == user.UserId)
+            .Join(context.Roles.IgnoreQueryFilters(), ur => ur.RoleId, r => r.RoleId, (ur, r) => r.RoleCode)
+            .OrderBy(c => c).ToListAsync();
     }
 
     [Fact]

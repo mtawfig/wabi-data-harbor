@@ -221,7 +221,7 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
         var output = await _runner.RunAsync(rule, RuleRunMode.Test, cancellationToken);
         _audit.Append(AuditEvents.MonitoringRuleTested, "MonitoringRule", ruleId.ToString(), new { outcome = output.Result.Outcome.ToString(), matches = output.Result.Matches.Count });
         await _context.SaveChangesAsync(cancellationToken);
-        return await ToTestResultAsync(rule.Kind, RuleDefinition.Parse(rule.DefinitionJson), output.Result, cancellationToken);
+        return await ToTestResultAsync(rule.Kind, RuleDefinition.Parse(rule.DefinitionJson), rule.OwnerUserId, output.Result, cancellationToken);
     }
 
     public async Task<RuleTestResultDto> TestDraftAsync(SaveMonitoringRuleCommand command, CancellationToken cancellationToken = default)
@@ -232,7 +232,7 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
         var draft = new MonitoringRule { RuleId = Guid.Empty, OrganizationId = organizationId, CreatedByUserId = Self };
         Apply(draft, command, owner);
         var output = await _runner.RunAsync(draft, RuleRunMode.Draft, cancellationToken);
-        return await ToTestResultAsync(draft.Kind, command.Definition, output.Result, cancellationToken);
+        return await ToTestResultAsync(draft.Kind, command.Definition, owner, output.Result, cancellationToken);
     }
 
     public async Task<MonitoringSettingsDto> GetSettingsAsync(CancellationToken cancellationToken = default)
@@ -599,13 +599,13 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
     private async Task<string> TimeZoneAsync(Guid organizationId, CancellationToken cancellationToken) =>
         await _context.Organizations.AsNoTracking().Where(o => o.OrganizationId == organizationId).Select(o => o.TimeZone).SingleAsync(cancellationToken);
 
-    private async Task<RuleTestResultDto> ToTestResultAsync(MonitoringRuleKind kind, RuleDefinition definition, RuleRunResult result, CancellationToken cancellationToken)
+    private async Task<RuleTestResultDto> ToTestResultAsync(MonitoringRuleKind kind, RuleDefinition definition, Guid ownerUserId, RuleRunResult result, CancellationToken cancellationToken)
     {
         if (kind == MonitoringRuleKind.Data && definition.Data is { } data && result.Matches.Count > 0)
         {
-            // The caller sees values only if their own permissions cover them (an administrator testing someone else's rule usually does not).
+            // The caller sees values only as the rule's owner or if their own permissions cover them with row scope ALL (an administrator testing someone else's rule usually does not).
             var viewer = await _permissions.ResolveForUserAsync(_tenantContext.RequireOrganizationId(), Self, cancellationToken);
-            if (!RuleCatalog.CanSeeDetails(viewer, data))
+            if (!RuleCatalog.CanSeeDetails(viewer, data, ownerUserId))
             {
                 return new RuleTestResultDto(result.Outcome, result.Matches.Count, result.RowsExamined, result.ErrorCode, true, []);
             }

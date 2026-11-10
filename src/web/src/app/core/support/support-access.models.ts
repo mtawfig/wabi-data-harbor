@@ -1,13 +1,19 @@
 export type GrantStatus = 'Proposed' | 'Approved' | 'Active' | 'Expired' | 'Revoked' | 'Completed' | 'Declined';
 export type GrantAction = 'enter' | 'exit' | 'complete' | 'revoke' | 'approve' | 'decline';
 export type SupportOperationCode = 'CreateOrganizationUser' | 'ResetOrganizationUserPassword' | 'ConfigureRole' | 'UpdateTablePermissions' | 'RefreshMetadata' | 'DiagnoseApplicationConnection' | 'UpdateOrganizationSettings';
-export type SupportTargetType = 'None' | 'OrganizationUser' | 'Role' | 'RoleOrNew' | 'Application';
+/** `AssignableRole`: the targets are the roles the operation may give to what it creates (optional; none means no role). */
+export type SupportTargetType = 'None' | 'OrganizationUser' | 'Role' | 'RoleOrNew' | 'Application' | 'AssignableRole';
+
+/** Operations whose grant targets are the roles they may assign, so a grant can say which roles those are without the catalog. */
+export const ROLE_ASSIGNING_OPERATIONS: readonly SupportOperationCode[] = ['CreateOrganizationUser'];
 
 export const GRANT_STATUSES: GrantStatus[] = ['Proposed', 'Approved', 'Active', 'Completed', 'Declined', 'Revoked', 'Expired'];
 
 export interface SupportOperationDefinition {
   code: SupportOperationCode;
   targetType: SupportTargetType;
+  /** True when a proposal must list a target and every run names one of them. */
+  requiresTarget: boolean;
   executable: boolean;
   description: string;
 }
@@ -28,6 +34,8 @@ export interface SupportAccessGrant {
   status: GrantStatus;
   operations: SupportOperationEntry[];
   targetLabels: Record<string, string>;
+  /** The same labels with Arabic role names. */
+  targetLabelsAr?: Record<string, string>;
   reason: string;
   decisionNote?: string;
   requestedByUserId: string;

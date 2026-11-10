@@ -37,10 +37,33 @@ public sealed class SupportAccessScopeTests
     {
         Assert.Contains("support_operations_required", SupportAccessScope.ValidateProposal([], null));
         Assert.Contains("support_target_required", SupportAccessScope.ValidateProposal([new(SupportOperations.ConfigureRole, [])], null));
-        Assert.Contains("support_target_not_applicable", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, ["x"])], null));
+        Assert.Contains("support_target_not_applicable", SupportAccessScope.ValidateProposal([new(SupportOperations.UpdateOrganizationSettings, ["x"])], null));
+        // Roles a created user may be given are optional targets: none listed means no role may be assigned.
+        Assert.Empty(SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [Guid.NewGuid().ToString()])], null));
+        Assert.Empty(SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [])], null));
         Assert.Contains("support_operations_duplicate", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, []), new(SupportOperations.CreateOrganizationUser, [])], null));
         Assert.Contains("support_expiry_out_of_range", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [])], 100));
         Assert.Empty(SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, []), new(SupportOperations.ConfigureRole, ["new"])], 8));
+    }
+
+    [Fact]
+    public void CreateOrganizationUser_TakesItsAssignableRolesFromTheGrant()
+    {
+        var definition = SupportOperations.Find(SupportOperations.CreateOrganizationUser)!;
+        Assert.Equal(SupportTargetType.AssignableRole, definition.TargetType);
+        Assert.False(definition.RequiresTarget);
+        Assert.True(SupportOperations.Find(SupportOperations.UpdateTablePermissions)!.RequiresTarget);
+        Assert.False(SupportOperations.Find(SupportOperations.UpdateOrganizationSettings)!.RequiresTarget);
+
+        // The call names no target; the roles it asks for are compared with the roles the grant lists.
+        Assert.Null(SupportAccessScope.Validate([new(SupportOperations.CreateOrganizationUser, [Guid.NewGuid().ToString()])], SupportOperations.CreateOrganizationUser, null));
+        Assert.Empty(SupportAccessScope.RolesOutsideGrant(["Analyst", "Viewer"], ["Analyst"]));
+        Assert.Empty(SupportAccessScope.RolesOutsideGrant(["Analyst"], []));
+        Assert.Empty(SupportAccessScope.RolesOutsideGrant([], []));
+        Assert.Equal(["Management"], SupportAccessScope.RolesOutsideGrant(["Analyst"], ["Analyst", "Management"]));
+        Assert.Equal(["OrganizationAdmin", "Management"], SupportAccessScope.RolesOutsideGrant(["Analyst"], ["OrganizationAdmin", "Management", "management"]));
+        // A grant without role targets approves no role at all.
+        Assert.Equal(["Analyst"], SupportAccessScope.RolesOutsideGrant([], ["Analyst"]));
     }
 
     [Fact]

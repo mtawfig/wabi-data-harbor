@@ -76,9 +76,47 @@ public sealed class SupportAccessAuthorizer : ISupportAccessAuthorizer
         return new SupportExecutionContext(grant.GrantId, session!.SessionId, grant.TicketId, grant.OrganizationId, administratorId, operation, targetReference?.Trim());
     }
 
-    private async Task DenyAsync(SupportAccessGrant? grant, string operation, string? targetReference, string code, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> AuthorizeRoleAssignmentAsync(SupportExecutionContext context, IReadOnlyCollection<string> roleCodes, CancellationToken cancellationToken = default)
     {
-        await _audit.AppendAndSaveAsync(AuditEvents.SupportOperationDenied, "SupportAccessGrant", grant?.GrantId.ToString(), new { operation, targetReference, code }, grant?.OrganizationId, cancellationToken);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(roleCodes);
+        var requested = roleCodes.Select(c => c.Trim()).Where(c => c.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (requested.Count == 0)
+        {
+            return [];
+        }
+
+        // The approved list is read from the grant itself, never from the request: role ids the organization approved for this operation.
+        var grant = await _context.SupportAccessGrants.AsPlatformScope(_tenantContext).AsNoTracking().SingleAsync(g => g.GrantId == context.GrantId && g.OrganizationId == context.OrganizationId, cancellationToken);
+        var allowed = JsonSerializer.Deserialize<List<SupportOperationEntry>>(grant.AllowedOperationsJson, SupportAccessService.JsonOptions) ?? [];
+        var definition = SupportOperations.Find(context.Operation);
+        var entry = allowed.FirstOrDefault(a => string.Equals(a.Operation, context.Operation, StringComparison.Ordinal));
+        var grantedIds = definition?.TargetType == SupportTargetType.AssignableRole && entry is not null
+            ? entry.TargetReferences.Select(t => Guid.TryParse(t, out var id) ? id : Guid.Empty).Where(id => id != Guid.Empty).Distinct().ToList()
+            : [];
+        var grantedCodes = grantedIds.Count == 0
+            ? []
+            : await _context.Roles.AsPlatformScope(_tenantContext).AsNoTracking()
+                .Where(r => r.OrganizationId == context.OrganizationId && grantedIds.Contains(r.RoleId))
+                .Select(r => r.RoleCode)
+                .ToListAsync(cancellationToken);
+        var refused = SupportAccessScope.RolesOutsideGrant(grantedCodes, requested);
+        if (refused.Count > 0)
+        {
+            await DenyAsync(grant, context.Operation, context.TargetReference, "support_role_not_granted", refused, cancellationToken);
+        }
+
+        // The codes as stored, so what is assigned is exactly what was checked.
+        return grantedCodes.Where(code => requested.Contains(code, StringComparer.OrdinalIgnoreCase)).ToList();
+    }
+
+    private Task DenyAsync(SupportAccessGrant? grant, string operation, string? targetReference, string code, CancellationToken cancellationToken)
+        => DenyAsync(grant, operation, targetReference, code, null, cancellationToken);
+
+    private async Task DenyAsync(SupportAccessGrant? grant, string operation, string? targetReference, string code, IReadOnlyList<string>? roleCodes, CancellationToken cancellationToken)
+    {
+        object details = roleCodes is null ? new { operation, targetReference, code } : new { operation, targetReference, code, roleCodes };
+        await _audit.AppendAndSaveAsync(AuditEvents.SupportOperationDenied, "SupportAccessGrant", grant?.GrantId.ToString(), details, grant?.OrganizationId, cancellationToken);
         throw new SupportAccessDeniedException(code, true);
     }
 }
