@@ -105,7 +105,7 @@ The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and s
 | G5 | **An organization's own e-mail server (SMTP)** in every plan, the Cloud plan included; the platform's server is used when the organization sets none | Owner, 2026-11-10 | Must | M |
 | G6 | **Reaching an organization's systems from the owner's cloud** (its business databases and APIs, and its own database, files, model and mail server): the supported ways, with a recommendation | Owner, 2026-11-10 | Must | L |
 | G7 | **Wabi Data Gateway:** a small program in the organization's network that connects out to the platform, runs the platform's checked plans read-only on the organization's own databases and returns the rows (Cloud plan) | Owner, 2026-11-10 | Must | L |
-| G8 | **Wabi Hub:** the owner's central portal for on-premises installations: licences, update packages, support tickets and health, with operational data only, never business data | Proposed | Should | L |
+| G8 | **Wabi Hub:** the owner's central portal for on-premises installations: licences, update packages, support tickets and health, with operational data only, never business data | Owner, 2026-11-10 (with decision 24) | Must | L |
 
 ### H. Outputs: branding, language and templates
 
@@ -151,7 +151,7 @@ Only the items that need more than their line in the tables are described here.
 
 A Cloud-plan organization can therefore use its own e-mail server and nothing else of its own; a Hybrid-plan organization is one that keeps its files and model, and possibly its database, at its own location. What is set is shown to the Organization Administrator and to Platform Administrators (the fact, never the secret).
 
-**How the plans are positioned (proposed, §7 question 24).**
+**How the plans are positioned (owner decision 24).**
 - **On-premises is the lead plan** for banks, government and large companies: it answers "where does our data go?" completely, matches the data-residency rules these buyers work under, and is sold the way they buy (licence plus a yearly support contract, §10).
 - **Cloud is the second plan**, for small and mid-size organizations, trials and demonstrations: it is already built, and a new organization can start in days.
 - **Hybrid is not advertised.** It is the hardest to build and support and the weakest promise (the answers still pass through the owner's cloud); it is offered only as a custom project to a customer who insists.
@@ -290,7 +290,7 @@ The more a way relies on the organization's firewall opening a door (4), the qui
 
 **Not in the gateway:** the model, the files, the catalogue editing, the users. It only answers questions about data.
 
-### G8. Wabi Hub (proposed)
+### G8. Wabi Hub (owner decision 24, 2026-11-10)
 
 **Goal.** On-premises installations are run by each organization's IT team and the owner has no account in them (G3). The owner still needs to issue licences, ship updates, receive support requests and see whether installations are healthy. The **Wabi Hub** is the owner's own central portal for that.
 
@@ -306,7 +306,7 @@ The more a way relies on the organization's firewall opening a door (4), the qui
 **Goal.** A user sends a question by e-mail and receives the answer by reply, as long as their e-mail address is registered.
 
 **Requirements.**
-- **The question address:** one per organization on its own mail server (G5, for example `ask@` its domain) or the platform's address. The API reads it with a background worker (IMAP or the mail provider's API) or receives it from the provider's inbound webhook: no new service.
+- **The question address (owner decision 26):** the organization's own address when it has its own mail server (G5, for example `ask@` its domain), otherwise the platform's question address. Either way each user also has the personal question address below. The API reads it with a background worker (IMAP or the mail provider's API) or receives it from the provider's inbound webhook: no new service.
 - **Who is asking (the critical part; an e-mail's sender is easy to fake).** A question is accepted only when the message passes the mail system's sender checks (SPF, DKIM, DMARC), the sender is an **active user** of that organization (matched to their sign-in address), and it is sent to the user's **personal question address**, a random address shown on their profile that they can renew (for example `ask+k7f3q@…`). The organization, roles and scopes come from the user record, never from the message.
 - **The question:** the subject and the first part of the body; quoted replies, signatures and attachments are ignored; the language comes from the text (H2); the application is the user's default or named in the subject (`[Finance] …`). Request limits and the AI budget apply.
 - **The answer:** a reply in the same thread with a short summary and the key figures, the PDF study or Excel attached (with the organization's template, H1 to H4), and a link to the analysis in My History. A reply in the thread is a follow-up question (B3).
@@ -318,9 +318,12 @@ The more a way relies on the organization's firewall opening a door (4), the qui
 **Goal.** A user sends a question from WhatsApp and receives the answer there, as long as their WhatsApp number is registered and confirmed.
 
 **Requirements.**
-- **Meta's WhatsApp Business Platform (Cloud API)**, directly or through a provider (Twilio, 360dialog, Infobip). It needs a verified Meta business account, a dedicated number and message templates approved by Meta. Messages arrive at an HTTPS webhook in the API and answers go out through Meta's API. The platform's number is the default; an organization can use its own (the same rule as G5).
+- **Provider (owner decision 25): Twilio**, on top of Meta's WhatsApp Business Platform (Cloud API). Every provider ends at Meta's Cloud API, so availability is Meta's in all cases; Twilio adds the simplest integration (a maintained .NET library, a test sandbox, one webhook format, clear delivery statuses), a published service level and support, for a small fee per message on top of Meta's. The code talks to an interface, so moving to Meta directly later, when volumes make the fee matter, changes one adapter. It needs a verified Meta business account, a dedicated number and message templates approved by Meta. Messages arrive at an HTTPS webhook in the API and answers go out through Meta's API. The platform's number is the default; an organization can use its own (the same rule as G5).
 - **Who is asking:** the user registers their number in their profile and confirms it with a one-time code sent by WhatsApp; only confirmed numbers of active users are accepted; the administrator can switch a number off at once (numbers are recycled and phones lost); an optional PIN for sensitive applications.
-- **The answer:** a short summary with the key figures (WhatsApp allows 4,096 characters; Arabic shows correctly), the chart as an image, the PDF or Excel as a document, or only a link to the application. **Default: summary and link**; figures and files only when the organization allows it.
+- **The answer (owner decision 25):**
+  - **a short summary** of the answer (WhatsApp allows 4,096 characters; Arabic shows correctly), in the question's language (H2);
+  - **a link to download** the study, the Excel file or the analysis. The link is personal: it opens only for that user, expires after 24 hours, and for Restricted data asks the user to sign in;
+  - **a dashboard is also sent as a large, high-quality image** (rendered at twice the screen resolution as PNG or high-quality JPEG; up to 5 MB it is sent as an image, above that as a document so WhatsApp does not compress it), with the organization's template and logo (H1, H3).
 - **Rules of WhatsApp:** free replies within 24 hours of the user's last message; after that only approved templates, which matters for alerts and Periodic Reports sent by WhatsApp.
 - **Where the data goes:** with the Cloud API, Meta's servers process the messages on the business side, and Meta no longer offers an on-premises version. D4 is therefore for the **Cloud plan and organizations that accept Meta's processing**; the settings page says so before it is switched on.
 - **Cost:** Meta charges per conversation or message by country, plus the provider's fee; shown to the organization before it is switched on.
@@ -497,9 +500,6 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 17 | The organization's own model: is one named model tested and recommended by the owner for Arabic and English, or is any model that passes the fitness check accepted? | G2 |
 | 18 | Which plan does the first paying customer need? The order in §8 should follow it. | G1 |
 
-| 24 | Plans and prices: adopt the positioning in G1 (On-premises first, Cloud second, Hybrid only as a custom project) and the cost model in §10? | G1, §10 |
-| 25 | Ask by WhatsApp: which provider (Meta directly, or Twilio, 360dialog, Infobip), and may figures and files be sent in the chat or only a summary and a link (proposed default)? | D4 |
-| 26 | Ask by e-mail: one question address per organization on its own mail server, or one platform address for everyone (proposed: the organization's when it has its own mail server, otherwise the platform's)? | D3 |
 
 **Decided** (kept here for reference):
 
@@ -511,6 +511,9 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 22 | The "Powered by" line | As recommended: Arabic wording «مدعوم من Wabi Insight من WabiTex Solutions FZE», in outputs only, not in the application's pages (H4). |
 | 23 | Templates | As recommended: organizations choose a template per kind of output and set their colours; no editor; designs are made by the platform team, privately for an organization on request (H3). |
 | 10 | Reaching an organization's systems | On-premises: nothing to solve. Cloud and Hybrid: the recommendation of G6 (firewall rule as the minimum, outbound connector as the standard, VPN on request) plus the Wabi Data Gateway (G7) as an option. |
+| 24 | Plans and prices | Adopted: On-premises as the lead plan, Cloud second, Hybrid only as a custom project (G1); the business model and the proposed prices in §10. |
+| 25 | Ask by WhatsApp | The answer is a summary and a personal download link; a dashboard is also sent as a large, high-quality image. Provider: Twilio, as recommended (D4). |
+| 26 | Ask by e-mail: the question address | As recommended: the organization's address when it has its own mail server, otherwise the platform's (D3). |
 
 ## 8. Proposed order
 
@@ -551,9 +554,9 @@ As in version 1, every pull request:
 - is verified live on the sample organizations (Gulf Aviation Services, Wabi Bank) where the feature reads data;
 - states which plans it applies to, and is checked in each of them: a feature is not done while it works only in the Cloud plan. The On-premises check runs on a server with no internet and a privately served model.
 
-## 10. Business model (proposed, not part of the technical scope)
+## 10. Business model (adopted, not part of the technical scope)
 
-A proposal for the owner (§7 question 24); figures are typical ranges in the software market, to be set by the owner.
+Adopted by the owner (§7 decision 24); the figures are starting points to be confirmed with the first customers.
 
 **On-premises (lead plan: banks, government, large companies).**
 
@@ -579,6 +582,26 @@ A proposal for the owner (§7 question 24); figures are typical ranges in the so
 - **Support without access:** the owner cannot sign in to on-premises installations, so support works from the diagnostic file and shared-screen sessions, and several versions are in the field at once. Roughly half a support engineer per 5 to 10 on-premises customers; the SMC price has to cover it.
 - **WhatsApp (D4)** has a per-message cost from Meta that a plan either includes up to a limit or passes on.
 
+**Proposed prices (owner question, 2026-11-10).** Starting points to test with the first customers, in US dollars (one US dollar is 3.6725 UAE dirhams), not market facts. They sit below the large international analytics suites (which are licensed per user per month and cost a mid-size organization tens of thousands of dollars a year) and above simple reporting tools, because Wabi Insight adds questions in Arabic and English, row-level permissions, studies, monitoring and periodic reports.
+
+| On-premises | Users | Perpetual licence | Yearly SMC (20%) | Yearly licence instead (with support) |
+|---|---|---|---|---|
+| Starter | up to 50 | 30,000 | 6,000 | 12,000 |
+| Business | up to 200 | 75,000 | 15,000 | 28,000 |
+| Enterprise | up to 1,000 | 150,000 | 30,000 | 55,000 |
+| Group | unlimited, several companies of one group | from 250,000 | from 50,000 | by quotation |
+
+- **Setup and implementation:** from 10,000, plus about 3,000 to 5,000 per connected application (database or API) for preparing its catalogue and permissions, plus training days. Usually 25 to 40% of the licence.
+- **SMC levels:** *Standard* at 20% a year (business hours, response next working day, all updates); *Premium* at 25% (extended hours, response within 4 hours for severe issues, a named engineer). The SMC starts after a 3- to 6-month warranty included with the licence.
+- **First customers:** 40 to 50% off the licence for the first two or three, in exchange for a reference and a case study.
+
+| Cloud | Price |
+|---|---|
+| Base per organization | 300 to 500 a month |
+| Per user | 15 to 25 a month |
+| AI | A monthly allowance of questions included (for example 50 per user); packs of 500 extra questions priced from the measured cost per question with a margin |
+| WhatsApp (D4) | A monthly allowance of messages included; beyond it, Meta's and Twilio's charges passed on |
+
 ## 11. Change log
 
 | Date | Change |
@@ -591,3 +614,4 @@ A proposal for the owner (§7 question 24); figures are typical ranges in the so
 | 2026-11-10 | Owner decisions 21 (waiting time of digests and Periodic Reports by frequency: 12, 48, 72 hours), 22 (the "Powered by" line as recommended) and 23 (choose templates, no editor). Question 21 stays open for messages that do not repeat. |
 | 2026-11-10 | Owner decision 21 completed: a waiting temporary password goes through the platform's default server after one hour; other one-off messages wait 72 hours. |
 | 2026-11-10 | Owner decision 10 (On-premises: nothing to solve; Cloud: the G6 recommendation plus the Wabi Data Gateway). New items: Wabi Data Gateway (G7), Wabi Hub (G8, proposed), ask by e-mail (D3), ask by WhatsApp (D4). Plan positioning (G1) and business model (§10) proposed. Invariants: the gateway and the hub named as the two exceptions to "no separate applications". Open decisions 24–26; releases 2.6 and 2.7. |
+| 2026-11-10 | Owner decisions 24 (plans and business model adopted; proposed prices added in §10; the Wabi Hub becomes a Must), 25 (WhatsApp: summary, personal download link, dashboards as a high-quality image; Twilio) and 26 (e-mail question address as recommended). |
