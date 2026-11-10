@@ -103,6 +103,15 @@ The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and s
 | G5 | **An organization's own e-mail server (SMTP)** in every plan, the Cloud plan included; the platform's server is used when the organization sets none | Owner, 2026-11-10 | Must | M |
 | G6 | **Reaching an organization's systems from the owner's cloud** (its business databases and APIs, and its own database, files, model and mail server): the supported ways, with a recommendation | Owner, 2026-11-10 | Must | L |
 
+### H. Outputs: branding, language and templates
+
+| ID | Item | Source | Priority | Size |
+|---|---|---|---|---|
+| H1 | **The organization's logo and name on every output**, the name in the output's language; the platform's logo with the organization's name when it has no logo | Owner, 2026-11-10 | Must | M |
+| H2 | **The output's language and direction follow the question**, not the language the user's screen is set to | Owner, 2026-11-10 | Must | M |
+| H3 | **A template gallery per kind of output** (study, Word, Excel, dashboard, e-mails): the organization chooses, and users may pick another at the moment they create an output | Owner, 2026-11-10 | Must | L |
+| H4 | **"Powered by Wabi Insight by WabiTex Solutions FZE"** on every output | Owner, 2026-11-10 | Must | S |
+
 ## 5. Requirements in detail
 
 Only the items that need more than their line in the tables are described here.
@@ -196,7 +205,14 @@ A Cloud-plan organization can therefore use its own e-mail server and nothing el
 - The Organization Administrator enters the server, port, encryption (TLS required), user name and password, the sender address and the display name, and an optional reply-to address. The password is encrypted like every other secret and never shown again.
 - **Send a test message** before the settings take effect; they are used only after one test succeeded.
 - **Which messages.** Everything sent to that organization's users goes through its server. Messages about the platform itself (to Platform Administrators) always use the platform's server.
-- **No silent fallback (proposed, §7 question 19).** When the organization's server refuses or is down, the message is retried and then shown as failed, with the reason, to the Organization Administrator; it is not sent through the platform's server instead, because the organization chose where its mail leaves from. A system alert tells the administrators.
+- **When the organization's server is down (owner decision, 2026-11-10).** The message is **not** sent through the platform's server instead: the organization chose where its mail leaves from. It waits and is **rescheduled until the organization's server accepts it** (every 5 minutes for the first hour, then every 30 minutes). Meanwhile the platform **notifies the organization's administrators automatically, through the platform's default server**:
+  - once when the server stops accepting mail ("Your mail server is not accepting messages; N messages are waiting"), in the app and by e-mail;
+  - a reminder once a day while it stays down, with the number of waiting messages;
+  - once when it works again ("Your mail server is working again; the waiting messages were sent").
+
+  The notice goes to every active Organization Administrator **and to the organization's contact e-mail** (organization profile), because an administrator whose mailbox is on the same broken server would not receive it; the contact address should therefore be on another domain, and the settings page says so.
+  Waiting messages have to be kept until they are sent, encrypted, and erased once delivered; that is the E4 change (§7 question 8 is answered for this case). How long a message may wait, and what happens to a **temporary password** that is waiting, are §7 question 21.
+- **Getting a mail server (owner decision, 2026-11-10).** An organization that wants its own sender needs **a domain of its own and a mailbox on it** (from any e-mail provider: Microsoft 365, Google Workspace, its hosting company, its own server), and the SMTP details of that mailbox. Its Organization Administrator then enters them on the settings page, **or asks the platform team for help** through a support ticket: the help is a support grant with a new typed operation, *configure the e-mail server*, which the organization approves like any other (specification §16), so the platform team enters the details without seeing anything else. The settings page explains the steps (domain, mailbox, SMTP details, SPF and DKIM records for that domain) in English and Arabic. Pricing of that help is commercial and not part of this document.
 - **The address is checked** like an organization's AI provider (P13.25): a public address, unless a Platform Administrator approved a private host for that organization (G6).
 - The platform's default sender keeps working for everyone else; its domain needs correct SPF, DKIM and DMARC records so its mail is not marked as spam (a deployment step, not code).
 - Usage and audit record which server sent a message (platform or organization), never the credentials.
@@ -212,6 +228,18 @@ A Cloud-plan organization can therefore use its own e-mail server and nothing el
 | 3 | **Private link in the same cloud** | When the organization's systems are in the same public cloud as the platform: a private endpoint or network peering. | No internet at all; managed by the cloud. | Only when both sides are in the same cloud. |
 | 4 | **Firewall rule for the platform's fixed address** (the minimum, for a quick start) | The organization opens the database or API port **only** to the platform's fixed public address. | Nothing to install; minutes to set up; many organizations already do this for other suppliers. | The port faces the internet, even if filtered; depends on the platform's address never changing; one rule per system. |
 | 5 | **A read-only API in front of the data** | The organization publishes a read-only API (an API gateway) and the platform uses it as an API data source (A1), with a key or mutual TLS. | The database itself is never reachable; the organization decides exactly what is offered. | Work for the organization; only as rich as the API; needs A1. |
+
+**In plain words** (for the choice in §7 question 10). The platform runs on the owner's server on the internet; the organization's database sits behind its own firewall, which by default lets nothing in. Something has to let the platform's questions through that firewall, safely. The five ways differ in **who opens what** and **what the organization's network team has to do**:
+
+| # | Picture it as | What the organization does | What the owner does | Typical time to set up | Ongoing cost |
+|---|---|---|---|---|---|
+| 1 | A phone line the organization dials out on, and keeps open: the platform talks back on that same line | Installs one small program on one server inside its network | Runs the other end (a free or low-cost service, or a small relay) | Hours | Low |
+| 2 | A private, encrypted pipe between the two buildings | Its network team configures its firewall or router | Configures a VPN gateway on the platform side, per organization | Days (two teams agree on settings) | A VPN gateway (tens of dollars a month), per organization |
+| 3 | Both sit in the same cloud, joined by the cloud's own private road | Asks its cloud team for a private endpoint or peering | The same on the platform side | Hours to days | Small cloud charge |
+| 4 | A door in the organization's wall that opens only for the platform's badge (its fixed address) | Opens one port on its firewall for one address | Keeps its address fixed forever and says so in the contract | Minutes | None |
+| 5 | A reception desk: the organization answers set questions through its own API, the database stays inside | Builds or configures a read-only API | Registers it as an API data source (A1) | Weeks | Its API platform |
+
+The more a way relies on the organization's firewall opening a door (4), the quicker it is and the more exposed the database is; the more it relies on a connection made from inside (1, 2, 3), the safer it is and the more set-up it needs.
 
 **Never offered:** a database port open to the whole internet; a copy of the organization's data pushed to the owner's cloud to be asked there.
 
@@ -245,6 +273,64 @@ A Cloud-plan organization can therefore use its own e-mail server and nothing el
 |---|---|---|
 | On-premises | Directly: the server is in the organization's domain, so sign-in is silent on domain computers | Yes, when the server may reach Microsoft |
 | Hybrid and Cloud | Not directly: a server in the owner's cloud is not in the organization's domain. Through the organization's federation service (AD FS), or through Microsoft Entra ID when the organization synchronizes its directory to it; both can still be silent on domain computers | Yes |
+
+### H1. The organization's logo and name on every output (owner decision, 2026-11-10)
+
+**Today (version 1).** PDF studies and Word files carry the organization's logo top-left when one was uploaded, and the organization's English name as text when none was. Excel files, e-mails, dashboards and printed pages carry neither.
+
+**Version 2.**
+- Every output carries a header with **the logo and the organization's name**: PDF studies, Word, Excel (first sheet header and the printed header), Periodic Reports, shared analyses, alert digests and every e-mail to organization users, and the printed dashboard.
+- **The name is in the output's language** (H2): the Arabic name in an Arabic output, the English name in an English one. In an Arabic output the header is mirrored (logo on the right).
+- **The organization's logo when it has one, otherwise the platform's logo** next to the organization's name. Nothing is ever left blank.
+- Optional second logo for dark backgrounds (e-mail headers, cover pages); when it is missing, the normal logo is placed on a light panel.
+- The logo rules of P13.25 stay: PNG or JPEG, 1 MB, checked against its content. Each output records which logo it used, so an output made last year still opens with last year's logo.
+
+**How it will be done.** One branding object built per output from the organization's record (logo, Arabic and English names, colours from H3) and the output's language, given to every renderer (PDF, Word, Excel, e-mail). The renderers already receive a branding object for the logo; it gains the name, the language and the fallback to the platform's logo, and the e-mail and Excel renderers start using it.
+
+### H2. The output's language follows the question (owner decision, 2026-11-10)
+
+**Today (version 1).** An answer, its explanation and its files are written in the language the user's screen is set to, whatever language the question was asked in.
+
+**Version 2.** The language and direction of everything produced for a question come from **the question itself**: a question written in Arabic gives an Arabic answer, Arabic explanation, right-to-left PDF, Word and Excel, Arabic chart labels and an Arabic e-mail draft, even when the user's screen is in English, and the other way round. The screen's own labels (menus, buttons) keep following the user's choice.
+
+**Rules.**
+- **Detection without the model:** the server counts the letters of the question (numbers, codes and punctuation are ignored): mostly Arabic letters gives Arabic, mostly Latin gives English. A question with no letters at all (only a code or a number) uses the user's screen language.
+- **An explicit request wins:** "answer in English" / «أجب بالعربية» in the question sets the language.
+- **The language is stored with the analysis**, so a re-run, an export, a share and a Periodic Report keep it. A Periodic Report's language option becomes *as asked* (default), *English*, *Arabic* or *each recipient's language*.
+- The user can still change it per answer with one click (the answer is written again in the other language; the figures do not change).
+- Names from the catalogue (tables, columns, values) are shown in the output's language where the catalogue has both names (the Arabic headers of P13.28 are the basis).
+
+**How it will be done.** A small language detector in the server is applied to the question before planning; its result replaces the language the screen sends today, is passed to the planner, the writer and every renderer (they all already take a language), and is saved with the analysis.
+
+### H3. A template gallery for every kind of output (owner decision, 2026-11-10)
+
+**Goal.** Each organization chooses how its outputs look from a gallery of ready designs, for every kind of output, instead of the one design of version 1.
+
+| Kind of output | What a template decides |
+|---|---|
+| PDF study | Cover page (with or without), header and footer, colours, fonts, the order and style of the sections (summary, findings, figures, tables, recommendations), table style, chart palette |
+| Word file | The same as the study, as an editable document |
+| Excel file | Sheet header, table style, a summary sheet or not, chart sheets or not |
+| Dashboard | Arrangement of the panels (KPI row on top, two columns, one column), card style, chart palette |
+| E-mails | One design for each message: shared analysis, Periodic Report, alert digest, account messages (new account, password reset) |
+
+**Requirements.**
+- **Templates are designs, not code.** A template is a stored description (layout, colours, fonts, sections, options) that the existing renderers read. Organizations never upload HTML, scripts or documents to be filled in: an e-mail cannot be made to carry something the platform does not produce, and a study cannot leave out the permission and data rules.
+- **The gallery** starts with four or five designs per kind (for example *Classic*, *Modern*, *Executive*, *Compact*, *Minimal*), each shown with a real preview in English and Arabic.
+- **The organization's colours:** the Organization Administrator sets a main and a second colour (and optionally picks them from the logo); every template uses them. Contrast is checked, so text stays readable.
+- **Who chooses:** the Organization Administrator sets the default template for each kind; when creating an output (exporting a study, scheduling a Periodic Report, sharing by e-mail) a user may pick another template from the gallery, unless the administrator locked the default.
+- **Every template works in both languages and directions**, and always includes H1 (logo and name) and H4 (the "Powered by" line); a template can place them but not remove them.
+- An output records the template and version it was made with; changing a template later does not change outputs already made.
+- New designs are added to the gallery by the platform team (on request, an organization's own design can be made by the platform team as a private template for that organization).
+
+**How it will be done.** A `ReportTemplates` table (kind, code, names in both languages, version, design as JSON, preview images, platform-wide or private to one organization) and an organization setting per kind. The PDF, Word, Excel and e-mail renderers, which today have one design written in code, are changed to read the design from the template; the existing design becomes the first template (*Classic*), so nothing changes for an organization that chooses nothing. A *Templates* page in the organization's settings shows the gallery with previews and the colours.
+
+### H4. "Powered by Wabi Insight by WabiTex Solutions FZE" on every output (owner decision, 2026-11-10)
+
+- Every output carries the line **Powered by Wabi Insight by WabiTex Solutions FZE**: the footer of every page of a PDF study and a Word file, the printed footer and the last line of an Excel file, the bottom of every e-mail sent to organization users, and the footer of a printed or shared dashboard.
+- In an Arabic output the line is in Arabic, with the names kept in Latin letters (proposed: «مدعوم من Wabi Insight من WabiTex Solutions FZE», §7 question 22).
+- It is part of every template and cannot be removed by an organization or a template, in every plan.
+- It is small, in the template's muted colour, and links to the platform's website in e-mails and PDFs.
 
 ### A1. API data sources (owner decision, 2026-11-10)
 
@@ -326,7 +412,7 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 7 | Sharing sends the owner's stored result to the recipient, whatever the recipient's own permissions. Keep this (the owner decides), or check the recipient's permissions too? | Sharing |
 | 8 | E-mails: accept storing the message encrypted until it is sent (E4), or keep the version 1 rule that bodies are never stored? | E4 |
 | 9 | Which of the *Could* items should move up or be dropped? | All |
-| 10 | Reaching an organization's systems: which of the five ways in G6 are offered, and which first? (Recommended: the firewall rule with its conditions as the minimum, an outbound connector with an existing product as the standard, a site-to-site VPN on request.) | G2, G4, G5, G6 |
+| 10 | Reaching an organization's systems: which of the five ways in G6 are offered, and which first? (Recommended: the firewall rule with its conditions as the minimum, an outbound connector with an existing product as the standard, a site-to-site VPN on request.) The owner asked for more explanation (2026-11-10): see *In plain words* in G6. | G2, G4, G5, G6 |
 | 11 | Hybrid with the platform database at the organization's location: a dedicated installation per organization in the owner's cloud (proposed, keeps one database per installation), or a shared installation with a separate database per organization (a change to the architecture)? | G4 |
 | 12 | Hybrid, files: which stores are supported first (Azure Blob Storage in the organization's subscription, S3-compatible storage, a network share)? | G4 |
 | 13 | On-premises licence: contract only, or a licence file the installation checks (organization, expiry, number of users)? | G3 |
@@ -335,8 +421,16 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 16 | Active Directory for Hybrid and Cloud organizations: offer federation (AD FS), or only Microsoft Entra ID for them? | C11 |
 | 17 | The organization's own model: is one named model tested and recommended by the owner for Arabic and English, or is any model that passes the fitness check accepted? | G2 |
 | 18 | Which plan does the first paying customer need? The order in §8 should follow it. | G1 |
-| 19 | An organization's own e-mail server is down: show the message as failed (proposed), or send it through the platform's server instead? | G5 |
-| 20 | May a Cloud-plan organization use its own e-mail server at no extra charge, or is it part of a paid plan? (Commercial; decides only where the setting is shown.) | G5 |
+| 21 | An organization's mail server stays down: how long may a waiting message wait before it is given up (proposed: 3 days, then shown as failed to the administrators)? And a **temporary password** that is waiting: may it go through the platform's server after one hour (proposed, so a new user is not locked out for days), or wait like the others? | G5 |
+| 22 | The Arabic wording of the "Powered by" line (proposed: «مدعوم من Wabi Insight من WabiTex Solutions FZE»), and whether it also appears in the application's own pages (proposed: only in outputs, as decided). | H4 |
+| 23 | Template gallery: may an organization only choose and set its colours (proposed), or also design its own templates in an editor? | H3 |
+
+**Decided** (kept here for reference):
+
+| # | Question | Decision (owner, 2026-11-10) |
+|---|---|---|
+| 19 | An organization's own e-mail server is down | The messages are rescheduled until its server accepts them, never sent through the platform's server; the organization's administrators are notified automatically through the platform's default server (G5). |
+| 20 | How an organization gets its own e-mail server | It buys a domain, creates a mailbox on it and obtains its SMTP details; its administrator configures them, or asks the platform team for help through a support ticket (G5). |
 
 ## 8. Proposed order
 
@@ -345,6 +439,7 @@ A proposal, in releases that can each be deployed on their own. Version 2 starts
 | Release | Content | Pull requests |
 |---|---|---|
 | **2.0 — Sign-in** | C1, C11 | `V2.1` Microsoft sign-in: backend · `V2.2` Microsoft sign-in: interface and guides (as already planned) · `V2.3` Active Directory sign-in |
+| **2.0b — Outputs** | H1, H2, H4, then H3 | `V2.16` logo and name on every output, language from the question, the "Powered by" line · `V2.17` template gallery: storage, renderers read the design, the existing design as *Classic* · `V2.18` template page, previews, more designs |
 | **2.1 — Own model and On-premises plan** | G1, G2, G3 | `V2.4` plans recorded; approved private model addresses; fitness check · `V2.5` on-premises package, one-step set-up, disconnected test, diagnostic file, guide |
 | **2.2 — Hybrid plan** | G4, G5, G6 | `V2.6` a file store and an e-mail server per organization (G5) · `V2.7` the chosen ways to reach an organization's systems (G6), dedicated installation with the database at the organization's location, network path and guide |
 | **2.3 — API data sources** | A1 | `V2.8` registration, catalogue and secrets · `V2.9` executor, limits and row scopes · `V2.10` interface, sample API and guides |
@@ -357,6 +452,7 @@ Reasons for this order:
 - **The plans before the features:** they decide which organizations can use the product at all; the features that follow are then built once and work in every plan.
 - **On-premises before Hybrid:** it is the smaller step (the model address already works for a Platform Administrator, the deployment guides exist) and it is the plan that fully answers the data concern.
 - **API sources before drill-down:** drill-down then works on both kinds of source from its first day.
+- **Outputs early (2.0b):** every customer sees them in every report and e-mail, they do not depend on the plans, and H3 is easier before more kinds of output (drill-down levels, published reports) exist. Their pull-request numbers (`V2.16`–`V2.18`) follow the others so the numbers already given do not change.
 
 If the first customer needs another plan, the order changes (§7, question 18).
 
@@ -379,3 +475,4 @@ As in version 1, every pull request:
 | 2026-11-10 | Owner decision: fixes belong to version 1. The 23 items carried over from the review were moved out, to P13.25–P13.30 in the implementation plan; the release "2.0 — Safe base" and the open decision on the audit page went with them. Version 2 keeps the four owner decisions and the proposals. |
 | 2026-11-10 | Owner decisions: three service plans chosen per organization, Cloud, On-premises and Hybrid (G1, G3, G4); an organization's own AI model at a private address (G2); sign-in with classic Active Directory without a password (C11). For version 1, organization-managed AI providers are switched off by configuration. Open decisions 10–18 and a new proposed order. |
 | 2026-11-10 | Owner decisions: an organization's own e-mail server in every plan, with the platform's as the default (G5); the rule "the organization's own, or the platform's default" stated for e-mail, files, model, sign-in and database (G1); the ways to reach an organization's systems from the owner's cloud, with a recommendation, for the owner to choose from at that step (G6). Open decision 10 rewritten; 19 and 20 added. |
+| 2026-11-10 | Owner decisions: decision 19 (an organization's mail server down: messages rescheduled, administrators notified through the platform's server) and 20 (a domain and mailbox of its own, configured by its administrator or with the platform team's help) recorded in G5; decision 10 explained in plain words in G6. New group H: the organization's logo and name on every output (H1), the output's language from the question (H2), a template gallery per kind of output (H3), the "Powered by Wabi Insight by WabiTex Solutions FZE" line (H4), each with how it will be done. Open decisions 21–23. Release 2.0b. |
