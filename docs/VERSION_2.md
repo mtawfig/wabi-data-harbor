@@ -514,7 +514,7 @@ The requirements worked out for version 2, kept so that version 3 starts from th
 | 22 | The "Powered by" line | As recommended: Arabic wording «مدعوم من Wabi Insight من WabiTex Solutions FZE», in outputs only, not in the application's pages (H4). |
 | 23 | Templates | As recommended: organizations choose a template per kind of output and set their colours; no editor; designs are made by the platform team, privately for an organization on request (H3). |
 | 10 | Reaching an organization's systems | On-premises: nothing to solve. Cloud and Hybrid: the recommendation of G6 (firewall rule as the minimum, outbound connector as the standard, VPN on request) plus the Wabi Data Gateway (G7) as an option. |
-| 24 | Plans and prices | Adopted: On-premises as the lead plan, Cloud second, Hybrid only as a custom project (G1); the business model in §10: paid analysts, each adding 50 calls a month to a pool shared by the organization, free viewers, all amounts in AED (owner, 2026-11-10). |
+| 24 | Plans and prices | Adopted: On-premises as the lead plan, Cloud second, Hybrid only as a custom project (G1); the business model in §10: paid users, each adding 50 calls a month to a pool shared by the organization, free viewers, all amounts in AED (owner, 2026-11-10). |
 | 25 | Ask by WhatsApp | The answer is a summary and a personal download link; a dashboard is also sent as a large, high-quality image. Provider: Twilio, as recommended (D4). |
 | 26 | Ask by e-mail: the question address | As recommended (the organization's address when it has its own mail server, otherwise the platform's); asking by e-mail was then moved to version 3 with this decision (§6). |
 
@@ -531,7 +531,7 @@ A proposal, in releases that can each be deployed on their own. Version 2 starts
 | **2.3 — API data sources** | A1 | `V2.8` registration, catalogue and secrets · `V2.9` executor, limits and row scopes · `V2.10` interface, sample API and guides |
 | **2.4 — Drill-down** | B1, then B3 | `V2.11` plan, authorization and history · `V2.12` charts and interface · `V2.13` follow-up questions |
 | **2.5 — Publishing** | D1 | `V2.14` connections and publishing · `V2.15` interface and guides |
-| **2.6 — Gateway and Hub** | G7, G8 | `V2.19` Wabi Data Gateway (outbound connection, plans compiled at the organization, structured rows, registration) · `V2.20` Wabi Hub (licences with the tier, analysts and viewers, the shared call meter with its warnings, update packages, support tickets, health, with consent) |
+| **2.6 — Gateway and Hub** | G7, G8 | `V2.19` Wabi Data Gateway (outbound connection, plans compiled at the organization, structured rows, registration) · `V2.20` Wabi Hub (licences with the tier, users and viewers, the shared call meter with its warnings, update packages, support tickets, health, with consent) |
 | **2.7 — Ask by WhatsApp** | D4 | `V2.21` ask by WhatsApp: number confirmation, Twilio adapter, summary, personal download links, dashboard images |
 | **Later** | The *Could* items the owner keeps (A4, A5, B4, B5, D2, E4–E6) | one or two pull requests each |
 
@@ -559,26 +559,26 @@ As in version 1, every pull request:
 
 ## 10. Business model (adopted, not part of the technical scope)
 
-Adopted by the owner (§7 decision 24). **Pricing model (owner decision, 2026-11-10): analysts with a pooled allowance of calls, and free viewers.**
-- **Analysts** are the users who ask questions; the organization pays per analyst.
-- **Each analyst adds 50 calls a month to one pool shared by the whole organization.** A heavy user can use what light users leave, so nobody is capped individually and no one has a reason to share an account.
-- **Viewers are free and unlimited:** users who only read what others produce (Periodic Reports they receive, analyses shared with them, alerts). They need no paid seat; the calls a Periodic Report uses come from the pool.
+Adopted by the owner (§7 decision 24). **Pricing model (owner decision, 2026-11-10): users with a pooled allowance of calls, and free viewers.**
+- **Users** are the people who ask questions; the organization pays per user. (In this section "user" means this paid role; viewers also have accounts in the organization but are free.)
+- **Each user adds 50 calls a month to one pool shared by the whole organization.** A heavy user can use what light users leave, so nobody is capped individually and no one has a reason to share an account.
+- **Viewers are free and unlimited:** people who only read what others produce (Periodic Reports they receive, analyses shared with them, alerts). They need no paid seat; the calls a Periodic Report uses come from the pool.
 
-This was chosen over two alternatives: calls only (hard for a buyer to estimate) and a fixed allowance per user (unfair to heavy users, and it pushes customers to share logins, which breaks permissions and the audit trail).
+This was chosen over two alternatives: calls only (hard for a buyer to estimate) and a fixed allowance for each person on their own (unfair to heavy users, and it pushes customers to share logins, which breaks permissions and the audit trail).
 
 All amounts are in **UAE dirhams (AED)**, excluding VAT; they are starting points to be confirmed with the first customers, not market facts.
 
-### Analysts and viewers
+### Users and viewers
 
-| | Analyst (paid) | Viewer (free) |
+| | User (paid) | Viewer (free) |
 |---|---|---|
 | Asks questions (in the application or by WhatsApp), runs saved analyses again, drafts Monitoring Rules from a description | Yes | No |
 | Reads analyses shared with them, receives Periodic Reports and alerts, opens My Reports | Yes | Yes |
 | Exports and prints what they can read | Yes | Yes |
 | Counts towards the price | Yes | No |
 
-- The **Organization Administrator** decides who is an analyst and can change it at any time (the change counts from the next billing month on Cloud, at the next true-up on-premises). Organization Administrators and Management users are analysts when they ask questions; an administrator who only administers can be a viewer.
-- A viewer who tries to ask a question sees a clear message ("Ask your administrator for analyst access"), in English and Arabic.
+- The **Organization Administrator** decides who is a user and who is a viewer, and can change it at any time (the change counts from the next billing month on Cloud, at the next true-up on-premises). Organization Administrators and Management staff who ask questions are users; an administrator who only administers can be a viewer.
+- A viewer who tries to ask a question sees a clear message ("Ask your administrator for user access"), in English and Arabic.
 
 ### What counts as a call
 
@@ -593,16 +593,16 @@ A **call** is one answer the platform produces with the AI, which is what costs 
 | A Monitoring Rule drafted from a description (it uses the AI) | Administration (users, permissions, catalogue, settings) |
 
 **Best practice applied:**
-- **The pool is the organization's**: 50 calls a month per analyst, added together. On-premises it is **a yearly pool** (12 times the monthly figure), which absorbs the busy months (year-end, budget season) without overage; on Cloud it is **a monthly pool**.
+- **The pool is the organization's**: 50 calls a month per user, added together. On-premises it is **a yearly pool** (12 times the monthly figure), which absorbs the busy months (year-end, budget season) without overage; on Cloud it is **a monthly pool**.
 - **A usage meter** for the Organization Administrator, by month, application and user, with warnings at **80%** and **100%**.
 - **Nobody is stopped mid-task:** after 100%, a grace of 10% continues to work. On Cloud a top-up pack is then needed; on-premises the overage is reported to the Wabi Hub (G8) and settled at renewal or by moving up a tier. Periodic Reports are never cut off mid-run.
 - **Unused calls do not roll over** (Cloud: one month's carry-over at most).
-- **Counting is local and tamper-evident:** the installation counts its own calls and analysts, and the signed licence file (G8) states the tier (number of analysts and the pool).
+- **Counting is local and tamper-evident:** the installation counts its own calls and users, and the signed licence file (G8) states the tier (number of users and the pool).
 - **Typical use, for sizing:** an active business user asks 15 to 30 questions a month, a manager 5 to 10; Periodic Reports add one call per recipient per run.
 
 ### On-premises (lead plan: banks, government, large companies)
 
-| Tier | Analysts | Pooled calls a year | Perpetual licence | SMC per year (20%) | Or a yearly licence (support included) |
+| Tier | Users | Pooled calls a year | Perpetual licence | SMC per year (20%) | Or a yearly licence (support included) |
 |---|---|---|---|---|---|
 | **Starter** | up to 20 | 12,000 | AED 110,000 | AED 22,000 | AED 45,000 |
 | **Business** | up to 100 | 60,000 | AED 275,000 | AED 55,000 | AED 100,000 |
@@ -610,8 +610,8 @@ A **call** is one answer the platform produces with the AI, which is what costs 
 | **Group** | unlimited, several companies of one group | unlimited | from AED 900,000 | from AED 180,000 | By quotation |
 
 - **Viewers, applications and organizations inside one installation:** unlimited in every tier.
-- **More analysts than the tier:** additional analysts at **AED 5,500 each** (licence; 20% a year in SMC), each adding 600 calls a year to the pool, or moving up a tier with the licence difference credited.
-- **Extra calls** (above the yearly pool and its grace) without more analysts: packs of 10,000 calls at **AED 25,000**.
+- **More users than the tier:** additional users at **AED 5,500 each** (licence; 20% a year in SMC), each adding 600 calls a year to the pool, or moving up a tier with the licence difference credited.
+- **Extra calls** (above the yearly pool and its grace) without more users: packs of 10,000 calls at **AED 25,000**.
 - **Setup and implementation:** from **AED 35,000**, plus **AED 11,000 to 18,000 per connected application** (database or API) for its catalogue, descriptions and permissions, plus training days at **AED 5,500** a day. Usually 25 to 40% of the licence.
 - **SMC levels:** *Standard* at 20% a year (business hours, response the next working day, all updates); *Premium* at 25% (extended hours, response within 4 hours for severe issues, a named engineer). The SMC starts after a warranty of 3 to 6 months included with the licence. No SMC, no updates.
 - **Paid by the customer:** servers, SQL Server licence, AI subscription, domain, e-mail, DNS and certificates. DNS, e-mail and certificate set-up can be sold as a service.
@@ -619,25 +619,25 @@ A **call** is one answer the platform produces with the AI, which is what costs 
 
 ### Cloud (second plan: small and mid-size organizations, trials)
 
-| Analysts | Price per analyst a month | Pooled calls a month | Example |
+| Users | Price per user a month | Pooled calls a month | Example |
 |---|---|---|---|
-| 5 to 24 (minimum 5) | AED 175 | 50 × analysts | 5 analysts: AED 875 a month, 250 calls |
-| 25 to 99 | AED 150 | 50 × analysts | 30 analysts: AED 4,500 a month, 1,500 calls |
-| 100 and more | AED 125 | 50 × analysts | 120 analysts: AED 15,000 a month, 6,000 calls |
+| 5 to 24 (minimum 5) | AED 175 | 50 × users | 5 users: AED 875 a month, 250 calls |
+| 25 to 99 | AED 150 | 50 × users | 30 users: AED 4,500 a month, 1,500 calls |
+| 100 and more | AED 125 | 50 × users | 120 users: AED 15,000 a month, 6,000 calls |
 
 - **Yearly payment:** two months free (ten months' price for twelve).
 - **Viewers:** free and unlimited.
 - **The AI, the platform's mail server and the file storage are included** (the platform's subscription). An organization that brings its own AI model or mail server (G2, G5) pays the same; the pool still counts calls.
 - **Top-up packs:** 500 calls for **AED 1,200**, priced from the measured cost per call (the platform records tokens and cost per answer) with a margin. A call costs the customer about AED 3 to 3.50 inside the pool.
 - **WhatsApp (D4):** 1,000 WhatsApp messages a month included for every organization; beyond that, Meta's and Twilio's charges are passed on at cost plus 15%.
-- **Trial:** 14 to 30 days, up to 5 analysts and 100 calls, on a demonstration organization.
+- **Trial:** 14 to 30 days, up to 5 users and 100 calls, on a demonstration organization.
 
 ### Points to price in
 
 - **AI for on-premises customers** is the largest practical cost. A model run entirely on the customer's own hardware that follows the planning rules well in Arabic needs serious GPU servers (well over AED 100,000). Most on-premises buyers in the region accept their own Azure OpenAI or Anthropic subscription in an in-country cloud region: that is the default AI option for the plan, a local model the premium option (G2).
 - **Support without access:** the owner cannot sign in to on-premises installations, so support works from the diagnostic file and shared-screen sessions, and several versions are in the field at once. Roughly half a support engineer per 5 to 10 on-premises customers; the SMC price has to cover it.
 - **The cost of a call on Cloud** has to be checked every quarter against the usage records (tokens and cost per answer) and the packs repriced when it moves.
-- **Counting is new code:** the analyst or viewer setting on each user, the shared call meter, the 80% and 100% warnings and the tier in the licence file. It belongs with the Wabi Hub (G8, release 2.6).
+- **Counting is new code:** the user or viewer setting on each account, the shared call meter, the 80% and 100% warnings and the tier in the licence file. It belongs with the Wabi Hub (G8, release 2.6).
 
 ## 11. Change log
 
@@ -653,4 +653,4 @@ A **call** is one answer the platform produces with the AI, which is what costs 
 | 2026-11-10 | Owner decision 10 (On-premises: nothing to solve; Cloud: the G6 recommendation plus the Wabi Data Gateway). New items: Wabi Data Gateway (G7), Wabi Hub (G8, proposed), ask by e-mail (D3), ask by WhatsApp (D4). Plan positioning (G1) and business model (§10) proposed. Invariants: the gateway and the hub named as the two exceptions to "no separate applications". Open decisions 24–26; releases 2.6 and 2.7. |
 | 2026-11-10 | Owner decisions 24 (plans and business model adopted; proposed prices added in §10; the Wabi Hub becomes a Must), 25 (WhatsApp: summary, personal download link, dashboards as a high-quality image; Twilio) and 26 (e-mail question address as recommended). |
 | 2026-11-10 | Owner decisions: asking by e-mail moved to version 3 (its requirements kept in §6), version 2 keeps WhatsApp only; plans sized by calls instead of users, with what counts as a call and the usual rules (yearly pool on-premises, monthly allowance on Cloud, warnings at 80% and 100%, a 10% grace, top-ups); all prices in AED. |
-| 2026-11-10 | Owner decision: pricing by **analysts with a pooled allowance** (50 calls a month per analyst, shared by the organization) and **free viewers**, chosen over calls only and over a fixed allowance per user; on-premises tiers by analysts (20, 100, 400) with the same licence prices; Cloud at AED 175 / 150 / 125 per analyst a month by volume, minimum 5. |
+| 2026-11-10 | Owner decision: pricing by **users with a pooled allowance** (50 calls a month per user, shared by the organization) and **free viewers**, chosen over calls only and over a fixed allowance for each person on their own; on-premises tiers by users (20, 100, 400) with the same licence prices; Cloud at AED 175 / 150 / 125 per user a month by volume, minimum 5. |
