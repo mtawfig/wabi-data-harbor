@@ -282,7 +282,10 @@ public sealed class AiProviderService : IAiProviderService, IAiProviderResolver
             throw new AiProviderException("ai_provider_key_missing", "No API key is configured for this provider.");
         }
 
-        return new AiProviderDescriptor(entity.ProviderId, entity.ProviderType, entity.Endpoint, entity.Model, _protector.Unprotect(entity.EncryptedApiKey), entity.MaxOutputTokens, entity.Effort, entity.InputPricePerMillion, entity.OutputPricePerMillion, entity.CachedInputPricePerMillion);
+        return new AiProviderDescriptor(entity.ProviderId, entity.ProviderType, entity.Endpoint, entity.Model, _protector.Unprotect(entity.EncryptedApiKey), entity.MaxOutputTokens, entity.Effort, entity.InputPricePerMillion, entity.OutputPricePerMillion, entity.CachedInputPricePerMillion)
+        {
+            PublicAddressesOnly = entity.Scope == AiProviderScope.Organization,
+        };
     }
 
     private void Apply(AiProviderConfiguration entity, SaveAiProviderCommand command, bool allowApproval)
@@ -293,9 +296,19 @@ public sealed class AiProviderService : IAiProviderService, IAiProviderResolver
             throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "ai_provider_invalid");
         }
 
-        if (command.Endpoint is { } endpoint && !string.IsNullOrWhiteSpace(endpoint) && (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps && !(uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)))
+        if (command.Endpoint is { } endpoint && !string.IsNullOrWhiteSpace(endpoint))
         {
-            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "ai_provider_endpoint_invalid");
+            if (!Uri.TryCreate(endpoint.Trim(), UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps && !(uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback))
+            {
+                throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "ai_provider_endpoint_invalid");
+            }
+
+            // A Platform Administrator may register a model inside the platform's own network (http on this server,
+            // a private address). An organization's provider has to be a public https address: see PublicAddressGuard.
+            if (entity.Scope == AiProviderScope.Organization && !PublicAddressGuard.IsAcceptableEndpoint(uri))
+            {
+                throw new DomainException(OrganizationOperationOutcome.ValidationFailed, PublicAddressGuard.ErrorCode);
+            }
         }
 
         entity.ProviderType = command.ProviderType;

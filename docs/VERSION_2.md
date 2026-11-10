@@ -9,11 +9,12 @@
 
 ## 1. Purpose
 
-This document lists what version 2 of Wabi Insight should contain, why, and in what order. It has three kinds of items:
+This document lists what version 2 of Wabi Insight should contain, why, and in what order. It has two kinds of items:
 
 - **Owner decisions:** work the owner moved to the next version during version 1. These are part of version 2.
-- **Carried over from the review:** defects and gaps found by the code and documents review of 2026-11-10 that were not among the eight fixed in P13.23 and P13.24.
 - **Proposed:** additions that fit the product and are suggested here. The owner accepts, changes or drops each one.
+
+**Fixes are not version 2 (owner decision, 2026-11-10).** The first version of this document also carried the 23 defects and gaps that the code and documents review of 2026-11-10 found and that were not among the eight fixed in P13.23 and P13.24. They belong to version 1 and are fixed there, in pull requests P13.25–P13.30: see [`IMPLEMENTATION_PLAN.md`, Phase 13](./IMPLEMENTATION_PLAN.md). Those pull requests keep the identifiers the items had here (A2, A3, B2, B6, B7, C2–C10, E1–E3, E7, F1–F5), so the identifiers below are not consecutive.
 
 It is a requirements document, not a design. Each accepted item gets its design (data, API, interface, tests) in the pull request that starts it, as version 1 did. The detailed design that already exists for one item, *Sign in with Microsoft*, stays in [`IMPLEMENTATION_PLAN.md`, *Version 2*](./IMPLEMENTATION_PLAN.md#version-2-planned-not-started).
 
@@ -43,7 +44,7 @@ The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and s
 
 ## 4. Scope at a glance
 
-**Source:** *Owner* = decided by the owner (date); *Review* = carried over from the review of 2026-11-10; *Proposed* = suggested in this document.
+**Source:** *Owner* = decided by the owner (date); *Proposed* = suggested in this document.
 **Priority** (a proposal for the owner): **Must** = version 2 is not version 2 without it; **Should** = important, planned; **Could** = only if time allows.
 **Size:** S = about a day, M = several days, L = a week or more (one or more pull requests).
 
@@ -52,8 +53,6 @@ The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and s
 | ID | Item | Source | Priority | Size |
 |---|---|---|---|---|
 | A1 | **API data sources:** ask questions about data that is reached through an API, not only SQL Server and Oracle databases | Owner, 2026-11-10 | Must | L |
-| A2 | Oracle proven end to end (discovery with a read-only login, read-only check, large decimals, tests against a real Oracle) | Review | Should | M |
-| A3 | Table and column names with spaces or non-Latin letters can be queried | Review | Should | S |
 | A4 | More database types: PostgreSQL, MySQL / MariaDB | Proposed | Could | M each |
 | A5 | Files as a source: an uploaded Excel or CSV file becomes a table that can be asked about | Proposed | Could | M |
 
@@ -62,27 +61,15 @@ The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and s
 | ID | Item | Source | Priority | Size |
 |---|---|---|---|---|
 | B1 | **Drill-down in charts:** click a bar or slice to open the next level (branch → tellers of that branch) | Owner, 2026-11-09 | Must | L |
-| B2 | Arabic column headers and chart legends from the catalogue's Arabic names | Review | Should | S |
 | B3 | Follow-up questions that refine the last answer ("now only for Dubai", "by month instead") | Proposed | Should | M |
 | B4 | Results larger than 1,000 rows: a full export to Excel or CSV prepared in the background | Proposed | Could | M |
 | B5 | Saved dashboards: pin panels of answers to a personal or role dashboard that refreshes | Proposed | Could | L |
-| B6 | Fixed periods are visible: an analysis that names fixed dates says so when it is scheduled as a Periodic Report | Review | Should | S |
-| B7 | Chart series add up rows that share a category (today only the first is drawn) | Review | Should | S |
 
 ### C. Identity and access
 
 | ID | Item | Source | Priority | Size |
 |---|---|---|---|---|
 | C1 | **Sign in with Microsoft** (Microsoft Entra ID), with two-step sign-in done by Microsoft | Owner, 2026-11-08 | Must | L |
-| C2 | Request limits per signed-in user, not per network address | Review | Should | S |
-| C3 | The idle sign-out really happens after 30 minutes without activity | Review | Should | S |
-| C4 | The set-up status page no longer shows the first administrator's e-mail; a locked account doesn't end a session that is already open | Review | Should | S |
-| C5 | Platform Administrators see an organization's user list, table names and audit details only with an approved grant | Review | Should | M |
-| C6 | Support grant to create a user: the new user's e-mail address (or its domain) is part of what the organization approves | Review | Should | S |
-| C7 | An alert records under whose permissions it was evaluated, so a rule's new owner doesn't see older details | Review | Should | S |
-| C8 | Organization logo: PNG and JPEG only, or a cleaned SVG served so it can't run script | Review | Should | S |
-| C9 | Data-source and AI-provider addresses: no sign-in with the server's own identity, no internal addresses for organization-managed AI providers | Review | Should | S |
-| C10 | A user can set their own interface language, and it is kept after a reload | Review | Should | S |
 
 ### D. Sharing and publishing
 
@@ -95,23 +82,9 @@ The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and s
 
 | ID | Item | Source | Priority | Size |
 |---|---|---|---|---|
-| E1 | Scheduled jobs retry after a failure; the daily digest never loses a day; schedules follow a changed organization time zone; no duplicate jobs or runs | Review | Should | M |
-| E2 | An Organization Administrator can edit and resume a Periodic Report created by someone else; a report stops when the share it was based on ends | Review | Should | S |
-| E3 | Clear error answers (400, 409) where bad input or two simultaneous edits give a server error today; every failed query is recorded | Review | Should | S |
 | E4 | E-mails survive a restart (the message is kept, encrypted, until it is sent) | Proposed | Could | M |
 | E5 | Running more than one copy of the API (shared request limits, e-mail queue, scheduler) | Proposed | Could | L |
 | E6 | Docker deployment on Azure, next to the existing Deploy (Azure) | Proposed | Could | M |
-| E7 | Other AI providers proven live (OpenAI-compatible, Gemini); a study that is cut off is reported, not printed | Review | Should | M |
-
-### F. Web app polish
-
-| ID | Item | Source | Priority | Size |
-|---|---|---|---|---|
-| F1 | Messages that are missing today: first sign-in after an expired session, failed re-run, failed load of the alerts page, "too many requests" | Review | Should | S |
-| F2 | Arabic for page controls ("Items per page"), mirrored back arrows, labels for all error codes | Review | Should | S |
-| F3 | Keyboard and screen-reader access to list rows and icon buttons | Review | Should | S |
-| F4 | One ticket per submission even when an attachment fails; the permissions editor never shows one role's grants under another | Review | Should | S |
-| F5 | Technical fields (model, tokens, cost) are no longer sent to non-administrators at all; the insights page is closed to them | Review | Should | S |
 
 ## 5. Requirements in detail
 
@@ -169,13 +142,9 @@ The scope is the one written for P10.2 in the implementation plan: an organizati
 
 A user who has just received an answer can refine it in words ("only 2025", "split by product", "as a line chart") without retyping the question. The server sends the previous plan with the new request; the model returns a changed plan, which is validated and authorized again. Each step is a new version in history.
 
-### C5. What Platform Administrators see without a grant (review)
-
-Today any Platform Administrator can open any organization's support ticket and see its users, roles, application codes and table names, and the audit page shows data-source addresses, table names and analysis titles for every organization. Specification §16 says a ticket alone grants nothing. Version 2 limits both to what an approved grant covers, and shows counts elsewhere. **This needs the owner's decision on how much the audit page may show** (§7, question 6).
-
 ### E4 and E5. E-mail durability and several API copies (proposed)
 
-Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary password is never stored. After P13.24 an e-mail lost at a restart is shown as failed and has to be sent again. E4 would keep the message encrypted in the database until it is delivered, then erase it. E5 is only needed if one server is no longer enough; it depends on E4 and moves the request limits and the scheduler's bookkeeping to the database.
+Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary password is never stored. Since P13.24 an e-mail lost at a restart is shown as failed and has to be sent again. E4 would keep the message encrypted in the database until it is delivered, then erase it. E5 is only needed if one server is no longer enough; it depends on E4 and moves the request limits and the scheduler's bookkeeping to the database.
 
 ## 6. Out of scope for version 2
 
@@ -195,28 +164,25 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 3 | Are the three sign-in methods enough for the first release (API key, user name and password, OAuth 2.0 client credentials)? | A1 |
 | 4 | Drill-down: should the user be able to pick any next level themselves, or only the levels the answer proposes? | B1 |
 | 5 | Sign in with Microsoft: keep passwords as a second option for organizations, or Microsoft only once it is switched on? | C1 |
-| 6 | Audit page for Platform Administrators: counts only, or details without source addresses and table names? | C5 |
-| 7 | When a user has two roles, their permissions are added together today (a sensitive column from one role becomes visible for the rows of the other). Keep this, or evaluate each role separately? | Permissions |
-| 8 | Sharing sends the owner's stored result to the recipient, whatever the recipient's own permissions. Keep this (the owner decides), or check the recipient's permissions too? | Sharing |
-| 9 | E-mails: accept storing the message encrypted until it is sent (E4), or keep the version 1 rule that bodies are never stored? | E4 |
-| 10 | Which of the *Could* items should move up or be dropped? | All |
+| 6 | When a user has two roles, their permissions are added together today (a sensitive column from one role becomes visible for the rows of the other). Keep this, or evaluate each role separately? | Permissions |
+| 7 | Sharing sends the owner's stored result to the recipient, whatever the recipient's own permissions. Keep this (the owner decides), or check the recipient's permissions too? | Sharing |
+| 8 | E-mails: accept storing the message encrypted until it is sent (E4), or keep the version 1 rule that bodies are never stored? | E4 |
+| 9 | Which of the *Could* items should move up or be dropped? | All |
 
 ## 8. Proposed order
 
-A proposal, in releases that can each be deployed on their own. The pull-request numbers continue the two already planned for Microsoft sign-in.
+A proposal, in releases that can each be deployed on their own. Version 2 starts after the version 1 fixes (P13.25–P13.30) are merged. The pull-request numbers continue the two already planned for Microsoft sign-in.
 
 | Release | Content | Pull requests |
 |---|---|---|
-| **2.0 — Safe base** | The carried-over review items, before new features are built on them: C2–C10, E1–E3, F1–F5, A3, B2, B6, B7 | `V2.3` access and limits (C2–C4, C8, C9) · `V2.4` support and platform visibility (C5–C7) · `V2.5` scheduler and reports (E1, E2, B6) · `V2.6` web app polish (F1–F5, C10, B2, B7) · `V2.7` errors and names (E3, A3) |
-| **2.1 — Sign in with Microsoft** | C1 | `V2.1` backend · `V2.2` interface and guides (as already planned) |
-| **2.2 — API data sources** | A1 | `V2.8` registration, catalogue and secrets · `V2.9` executor, limits and row scopes · `V2.10` interface, sample API and guides |
-| **2.3 — Drill-down** | B1, then B3 | `V2.11` plan, authorization and history · `V2.12` charts and interface · `V2.13` follow-up questions |
-| **2.4 — Publishing** | D1 | `V2.14` connections and publishing · `V2.15` interface and guides |
-| **Later** | A2 when a customer uses Oracle; E7 when an organization chooses another AI provider; the *Could* items the owner keeps (A4, A5, B4, B5, D2, E4–E6) | one or two pull requests each |
+| **2.0 — Sign in with Microsoft** | C1 | `V2.1` backend · `V2.2` interface and guides (as already planned) |
+| **2.1 — API data sources** | A1 | `V2.3` registration, catalogue and secrets · `V2.4` executor, limits and row scopes · `V2.5` interface, sample API and guides |
+| **2.2 — Drill-down** | B1, then B3 | `V2.6` plan, authorization and history · `V2.7` charts and interface · `V2.8` follow-up questions |
+| **2.3 — Publishing** | D1 | `V2.9` connections and publishing · `V2.10` interface and guides |
+| **Later** | The *Could* items the owner keeps (A4, A5, B4, B5, D2, E4–E6) | one or two pull requests each |
 
 Reasons for this order:
-- **2.0 first:** these are known gaps in what is already live; several touch sign-in and permissions, which Microsoft sign-in and API sources build on.
-- **Microsoft sign-in before API sources:** it is already designed, it is small, and it removes password handling for the first customers.
+- **Microsoft sign-in first:** it is already designed, it is small, and it removes password handling for the first customers.
 - **API sources before drill-down:** drill-down then works on both kinds of source from its first day.
 
 ## 9. How each item is accepted
@@ -234,3 +200,4 @@ As in version 1, every pull request:
 | Date | Change |
 |---|---|
 | 2026-11-10 | First version: owner decisions of 2026-11-06 (Drive and OneDrive), 2026-11-08 (Sign in with Microsoft), 2026-11-09 (drill-down) and 2026-11-10 (API data sources); items carried over from the review of 2026-11-10; proposals. |
+| 2026-11-10 | Owner decision: fixes belong to version 1. The 23 items carried over from the review were moved out, to P13.25–P13.30 in the implementation plan; the release "2.0 — Safe base" and the open decision on the audit page went with them. Version 2 keeps the four owner decisions and the proposals. |

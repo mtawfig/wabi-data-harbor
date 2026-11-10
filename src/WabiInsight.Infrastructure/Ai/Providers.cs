@@ -6,10 +6,15 @@ using WabiInsight.Core.Entities.Ai;
 
 namespace WabiInsight.Infrastructure.Ai;
 
-/// <summary>Shared HTTP plumbing: one named client, JSON bodies, uniform error codes, bounded response size.</summary>
+/// <summary>
+/// Shared HTTP plumbing: JSON bodies, uniform error codes, bounded response size. Two named clients: the general
+/// one for platform providers, and one for organization-managed providers that only connects to public addresses
+/// and never follows a redirect (<see cref="PublicAddressGuard"/>).
+/// </summary>
 public abstract class HttpAiProvider : IAiProvider
 {
     public const string HttpClientName = "WabiInsight.Ai";
+    public const string PublicOnlyHttpClientName = "WabiInsight.Ai.PublicOnly";
     private const int MaxResponseBytes = 4 * 1024 * 1024;
 
     private readonly IHttpClientFactory _factory;
@@ -23,9 +28,15 @@ public abstract class HttpAiProvider : IAiProvider
 
     public abstract Task<AiCompletion> CompleteAsync(AiProviderDescriptor descriptor, AiRequest request, CancellationToken cancellationToken = default);
 
-    protected async Task<JsonNode> PostAsync(Uri uri, IReadOnlyDictionary<string, string> headers, object body, CancellationToken cancellationToken)
+    protected async Task<JsonNode> PostAsync(AiProviderDescriptor descriptor, Uri uri, IReadOnlyDictionary<string, string> headers, object body, CancellationToken cancellationToken)
     {
-        using var client = _factory.CreateClient(HttpClientName);
+        ArgumentNullException.ThrowIfNull(descriptor);
+        if (descriptor.PublicAddressesOnly && !PublicAddressGuard.IsAcceptableEndpoint(uri))
+        {
+            throw new AiProviderException(PublicAddressGuard.ErrorCode, "The AI provider's address is not on the public internet.");
+        }
+
+        using var client = _factory.CreateClient(descriptor.PublicAddressesOnly ? PublicOnlyHttpClientName : HttpClientName);
         using var message = new HttpRequestMessage(HttpMethod.Post, uri) { Content = JsonContent.Create(body) };
         foreach (var (name, value) in headers)
         {
@@ -39,6 +50,15 @@ public abstract class HttpAiProvider : IAiProvider
         }
         catch (HttpRequestException ex)
         {
+            // The connection guard's refusal arrives wrapped by the HTTP client: keep its own code.
+            for (Exception? inner = ex.InnerException; inner is not null; inner = inner.InnerException)
+            {
+                if (inner is AiProviderException refused)
+                {
+                    throw new AiProviderException(refused.Code, refused.Message);
+                }
+            }
+
             throw new AiProviderException("ai_provider_unreachable", ex.Message);
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
@@ -133,7 +153,7 @@ public sealed class AnthropicProvider : HttpAiProvider
             output_config = outputConfig.Count == 0 ? null : outputConfig,
         };
         var headers = new Dictionary<string, string> { ["x-api-key"] = descriptor.ApiKey, ["anthropic-version"] = ApiVersion };
-        var json = await PostAsync(new Uri($"{(descriptor.Endpoint ?? DefaultEndpoint).TrimEnd('/')}/v1/messages"), headers, body, cancellationToken);
+        var json = await PostAsync(descriptor, new Uri($"{(descriptor.Endpoint ?? DefaultEndpoint).TrimEnd('/')}/v1/messages"), headers, body, cancellationToken);
 
         var stopReason = json["stop_reason"]?.GetValue<string>();
         if (stopReason == "refusal")
@@ -175,7 +195,7 @@ public sealed class OpenAiCompatibleProvider : HttpAiProvider
         }
 
         var headers = new Dictionary<string, string> { ["Authorization"] = $"Bearer {descriptor.ApiKey}" };
-        var json = await PostAsync(new Uri($"{(descriptor.Endpoint ?? DefaultEndpoint).TrimEnd('/')}/chat/completions"), headers, body, cancellationToken);
+        var json = await PostAsync(descriptor, new Uri($"{(descriptor.Endpoint ?? DefaultEndpoint).TrimEnd('/')}/chat/completions"), headers, body, cancellationToken);
         var choice = (json["choices"] as JsonArray)?.FirstOrDefault();
         var text = choice?["message"]?["content"]?.GetValue<string>() ?? string.Empty;
         var finish = choice?["finish_reason"]?.GetValue<string>();
@@ -219,7 +239,7 @@ public sealed class GeminiProvider : HttpAiProvider
             generationConfig = generation,
         };
         var headers = new Dictionary<string, string> { ["x-goog-api-key"] = descriptor.ApiKey };
-        var json = await PostAsync(new Uri($"{(descriptor.Endpoint ?? DefaultEndpoint).TrimEnd('/')}/v1beta/models/{Uri.EscapeDataString(descriptor.Model)}:generateContent"), headers, body, cancellationToken);
+        var json = await PostAsync(descriptor, new Uri($"{(descriptor.Endpoint ?? DefaultEndpoint).TrimEnd('/')}/v1beta/models/{Uri.EscapeDataString(descriptor.Model)}:generateContent"), headers, body, cancellationToken);
         var candidate = (json["candidates"] as JsonArray)?.FirstOrDefault();
         var finish = candidate?["finishReason"]?.GetValue<string>();
         if (finish is "SAFETY" or "PROHIBITED_CONTENT")

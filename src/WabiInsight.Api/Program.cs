@@ -150,8 +150,9 @@ if (webRoot is not null)
     app.UseWebAppFiles(webRoot);
 }
 
-app.UseRateLimiter();
 app.UseAuthentication();
+// After authentication: the per-user budgets are keyed by the signed-in principal, so they need it resolved first.
+app.UseRateLimiter();
 app.UseMiddleware<TenantContextMiddleware>();
 app.UseMiddleware<PasswordChangeRequiredMiddleware>();
 app.UseAuthorization();

@@ -40,7 +40,6 @@ public enum AccountDenyReason
     NotFound = 1,
     Inactive = 2,
     OrganizationSuspended = 3,
-    LockedOut = 4,
 }
 
 public sealed record ResolvedAccount(AuthenticatedAccount? Account, AccountDenyReason DenyReason);

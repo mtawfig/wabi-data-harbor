@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using WabiInsight.Core.Authentication;
-using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Tenancy;
@@ -11,16 +10,17 @@ namespace WabiInsight.Infrastructure.Authentication;
 /// <summary>
 /// Reads the stored state of an account. Runs with the platform-scope bypass because it executes before
 /// (or independently of) the request's tenant context, and returns only the fields needed for the session.
+/// A lockout is not checked here (P13.25): it answers wrong passwords at sign-in and must not end a session that
+/// is already open, or anyone who knows an e-mail address could sign its owner out with five wrong attempts.
+/// Deactivation, suspension and password changes still end sessions (status and security stamp).
 /// </summary>
 public sealed class AccountResolver : IAccountResolver
 {
     private readonly ConfigurationDbContext _context;
-    private readonly IClock _clock;
 
-    public AccountResolver(ConfigurationDbContext context, IClock clock)
+    public AccountResolver(ConfigurationDbContext context)
     {
         _context = context;
-        _clock = clock;
     }
 
     public async Task<ResolvedAccount> ResolveAsync(PrincipalType principalType, Guid principalId, CancellationToken cancellationToken = default)
@@ -46,11 +46,6 @@ public sealed class AccountResolver : IAccountResolver
         if (!admin.IsActive)
         {
             return new ResolvedAccount(null, AccountDenyReason.Inactive);
-        }
-
-        if (admin.LockoutEnd is { } end && end > _clock.UtcNow)
-        {
-            return new ResolvedAccount(null, AccountDenyReason.LockedOut);
         }
 
         return new ResolvedAccount(ToAccount(admin), AccountDenyReason.None);
@@ -81,11 +76,6 @@ public sealed class AccountResolver : IAccountResolver
         if (row.OrganizationStatus != OrganizationStatus.Active)
         {
             return new ResolvedAccount(null, AccountDenyReason.OrganizationSuspended);
-        }
-
-        if (row.User.LockoutEnd is { } end && end > _clock.UtcNow)
-        {
-            return new ResolvedAccount(null, AccountDenyReason.LockedOut);
         }
 
         var roles = await RoleCodesAsync(_context, row.User, cancellationToken);

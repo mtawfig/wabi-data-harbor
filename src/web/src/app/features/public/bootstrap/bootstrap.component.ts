@@ -29,6 +29,11 @@ export interface BootstrapStatus {
   imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, RouterLink, TranslocoModule, BrandLogoComponent, LanguageSwitcherComponent, WiDatePipe],
   templateUrl: './bootstrap.component.html',
   styleUrl: '../login/login.component.scss',
+  styles: `
+    .status { display: grid; grid-template-columns: max-content 1fr; gap: 10px 24px; align-items: center; margin: 0 0 8px; dt { color: var(--wi-slate); } dd { margin: 0; display: flex; align-items: center; } }
+    .ok { color: var(--wi-success); }
+    .success { display: flex; align-items: center; gap: 8px; }
+  `,
 })
 export class BootstrapComponent {
   private readonly http = inject(HttpClient);

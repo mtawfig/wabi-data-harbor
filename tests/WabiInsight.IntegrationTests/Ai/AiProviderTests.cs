@@ -153,6 +153,15 @@ public sealed class AiProviderTests : IDisposable
         var denied = await alice.PostJsonAsync("/api/ai-providers", new { providerType = "Gemini", name = "Own Gemini", model = "gemini", apiKey = "g-key" });
         Assert.Equal(HttpStatusCode.BadRequest, denied.StatusCode);
         Assert.Contains("ai_provider_type_not_allowed", await denied.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        // An organization's provider must be a public https address (P13.25): the API would otherwise be made to
+        // send requests into the platform's own network. A Platform Administrator may (the "Local vLLM" above).
+        foreach (var inside in new[] { "http://localhost:8000/v1", "https://localhost/v1", "https://127.0.0.1/v1", "https://10.0.0.5/v1", "https://192.168.1.20:8443/v1", "https://169.254.169.254/latest", "https://[::1]/v1", "https://intranet/v1", "https://models.internal/v1", "https://user:pass@api.mistral.ai/v1" })
+        {
+            var refusedEndpoint = await alice.PostJsonAsync("/api/ai-providers", new { providerType = "OpenAiCompatible", name = "Inside", endpoint = inside, model = "m", apiKey = "k" });
+            Assert.True(refusedEndpoint.StatusCode == HttpStatusCode.BadRequest, $"{inside}: {(int)refusedEndpoint.StatusCode}");
+            Assert.Contains("ai_provider_endpoint_not_public", await refusedEndpoint.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        }
+
         var own = await (await alice.PostJsonAsync("/api/ai-providers", new { providerType = "OpenAiCompatible", name = "ACME Mistral", endpoint = "https://api.mistral.ai/v1", model = "mistral-large-latest", apiKey = "acme-secret", effort = "low" })).ReadJsonAsync();
         var ownId = own.GetProperty("providerId").GetGuid();
         Assert.Equal("Organization", own.GetProperty("scope").GetString());

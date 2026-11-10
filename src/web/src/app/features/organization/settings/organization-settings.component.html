@@ -44,7 +44,7 @@
       } @else {
         <div class="logo-empty wi-muted"><mat-icon>image</mat-icon>{{ 'organizations.settings.logoNone' | transloco }}</div>
       }
-      <input #logoInput type="file" accept="image/png,image/jpeg,image/svg+xml" hidden (change)="uploadLogo(logoInput.files)" data-testid="org-logo-input" />
+      <input #logoInput type="file" accept="image/png,image/jpeg" hidden (change)="uploadLogo(logoInput.files)" data-testid="org-logo-input" />
       <button mat-stroked-button type="button" (click)="logoInput.click()" [disabled]="busy()"><mat-icon>upload</mat-icon>{{ 'organizations.settings.logoUpload' | transloco }}</button>
       @if (profile()?.hasLogo) { <button mat-button type="button" (click)="removeLogo()" [disabled]="busy()">{{ 'organizations.settings.logoRemove' | transloco }}</button> }
     </div>

@@ -10,6 +10,9 @@ namespace WabiInsight.Api.Security;
 /// </summary>
 public sealed class SecurityHeadersMiddleware
 {
+    /// <summary>For a stored file answered inline: no scripts, no requests, no forms, a unique origin.</summary>
+    public const string SandboxedFilePolicy = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; sandbox";
+
     private readonly RequestDelegate _next;
 
     public SecurityHeadersMiddleware(RequestDelegate next)
@@ -36,12 +39,18 @@ public sealed class SecurityHeadersMiddleware
                 headers["Cache-Control"] = "no-store";
             }
 
+            // An endpoint that set its own policy (a stored file under a sandbox) keeps it; it used to be replaced here
+            // by the weaker default for non-JSON answers.
             var contentType = response.ContentType ?? string.Empty;
-            headers["Content-Security-Policy"] = contentType.Contains("json", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(contentType)
-                ? "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
-                : contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
-                    ? Hosting.WebAppHosting.ShellContentSecurityPolicy // the web app's page, when the API serves it (Web:RootPath)
-                    : "frame-ancestors 'none'";
+            if (!headers.ContainsKey("Content-Security-Policy"))
+            {
+                headers["Content-Security-Policy"] = contentType.Contains("json", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(contentType)
+                    ? "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+                    : contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
+                        ? Hosting.WebAppHosting.ShellContentSecurityPolicy // the web app's page, when the API serves it (Web:RootPath)
+                        : "frame-ancestors 'none'";
+            }
+
             headers.Remove("Server");
             headers.Remove("X-Powered-By");
             return Task.CompletedTask;

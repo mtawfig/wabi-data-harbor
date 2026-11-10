@@ -301,7 +301,11 @@ public sealed partial class OrganizationService : IOrganizationService
             .SingleAsync(cancellationToken);
     }
 
-    private static readonly string[] LogoContentTypes = ["image/png", "image/jpeg", "image/svg+xml"];
+    /// <summary>
+    /// PNG and JPEG only (P13.25). SVG is a document that can carry script, and no text filter over it is reliable;
+    /// a logo uploaded as SVG before this rule is still served, as a download that cannot run (see the controller).
+    /// </summary>
+    private static readonly string[] LogoContentTypes = ["image/png", "image/jpeg"];
     public const long MaxLogoBytes = 1024 * 1024;
 
     public async Task SetLogoAsync(LogoUpload upload, CancellationToken cancellationToken = default)
@@ -377,7 +381,7 @@ public sealed partial class OrganizationService : IOrganizationService
         return stream is null ? null : new LogoDownload(stream, organization.LogoContentType ?? "application/octet-stream");
     }
 
-    /// <summary>Magic bytes for PNG and JPEG; an SVG must start with an XML or svg element and contain no script.</summary>
+    /// <summary>Magic bytes for PNG and JPEG: the declared type has to be what the file really is.</summary>
     private static bool LooksLikeImage(MemoryStream buffer, string contentType)
     {
         var bytes = buffer.GetBuffer();
@@ -386,16 +390,8 @@ public sealed partial class OrganizationService : IOrganizationService
         {
             "image/png" => length > 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47,
             "image/jpeg" => length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF,
-            "image/svg+xml" => IsSafeSvg(System.Text.Encoding.UTF8.GetString(bytes, 0, length)),
             _ => false,
         };
-    }
-
-    private static bool IsSafeSvg(string text)
-    {
-        var trimmed = text.TrimStart('\uFEFF', ' ', '\t', '\r', '\n');
-        var startsWell = trimmed.StartsWith("<svg", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("<?xml", StringComparison.OrdinalIgnoreCase);
-        return startsWell && trimmed.Contains("<svg", StringComparison.OrdinalIgnoreCase) && !trimmed.Contains("<script", StringComparison.OrdinalIgnoreCase) && !trimmed.Contains("javascript:", StringComparison.OrdinalIgnoreCase) && !trimmed.Contains("onload", StringComparison.OrdinalIgnoreCase) && !trimmed.Contains("<foreignObject", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<OrganizationOperationResult> UpdateCurrentAsync(UpdateOrganizationProfileCommand command, CancellationToken cancellationToken = default)

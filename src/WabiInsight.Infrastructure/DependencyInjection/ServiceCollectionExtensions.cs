@@ -194,6 +194,18 @@ public static class ServiceCollectionExtensions
             client.Timeout = TimeSpan.FromSeconds(Math.Clamp(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiOptions>>().Value.RequestTimeoutSeconds, 10, 600));
             client.DefaultRequestHeaders.UserAgent.ParseAdd("WabiInsight/1.0");
         });
+        // Organization-managed providers: every connection is checked against PublicAddressGuard, and a redirect is
+        // returned as an error instead of being followed (it could point inside the network and would carry the key).
+        services.AddHttpClient(HttpAiProvider.PublicOnlyHttpClientName, (sp, client) =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(Math.Clamp(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiOptions>>().Value.RequestTimeoutSeconds, 10, 600));
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("WabiInsight/1.0");
+        }).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            ConnectCallback = PublicAddressGuard.ConnectAsync,
+            AllowAutoRedirect = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+        });
         services.AddSingleton<AiCredentialProtector>();
         services.AddSingleton<IAiProvider, AnthropicProvider>();
         services.AddSingleton<IAiProvider, OpenAiCompatibleProvider>();

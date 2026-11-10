@@ -66,10 +66,16 @@ public sealed class BootstrapTests
         var again = await client.PostJsonAsync("/api/bootstrap/initialize", new { initializationSecret = ApiFactory.BootstrapSecret });
         Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
 
-        var after = await (await client.GetAsync("/api/bootstrap/status")).ReadJsonAsync();
-        Assert.True(after.GetProperty("bootstrapCompleted").GetBoolean());
-        Assert.Equal(ApiFactory.BootstrapEmail, after.GetProperty("bootstrapAdministratorEmail").GetString());
-        Assert.Matches(@"^\d{14}_\w+$", after.GetProperty("schemaVersion").GetString());
+        // Anonymous callers learn that set-up is done, and nothing about who the administrator is (P13.25).
+        var after = await client.GetAsync("/api/bootstrap/status");
+        var afterBody = await after.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(ApiFactory.BootstrapEmail, afterBody, StringComparison.OrdinalIgnoreCase);
+        var afterJson = await after.ReadJsonAsync();
+        Assert.True(afterJson.GetProperty("bootstrapCompleted").GetBoolean());
+        foreach (var withheld in new[] { "bootstrapAdministratorEmail", "schemaVersion", "bootstrapCompletedAt" })
+        {
+            Assert.False(afterJson.TryGetProperty(withheld, out var value) && value.ValueKind != System.Text.Json.JsonValueKind.Null, withheld);
+        }
 
         var login = await client.LoginAsync(ApiFactory.BootstrapEmail, ApiFactory.BootstrapPassword);
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
@@ -81,6 +87,12 @@ public sealed class BootstrapTests
         var change = await client.PostJsonAsync("/api/auth/change-password", new { currentPassword = ApiFactory.BootstrapPassword, newPassword = "Bootstrap#Changed#Pass#2026" });
         Assert.Equal(HttpStatusCode.OK, change.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.PostJsonAsync($"/api/platform/administrators/{Guid.NewGuid()}/reset-password", new { })).StatusCode);
+
+        // A signed-in Platform Administrator sees the full status (the platform settings page shows it).
+        var detailed = await (await client.GetAsync("/api/bootstrap/status")).ReadJsonAsync();
+        Assert.Equal(ApiFactory.BootstrapEmail, detailed.GetProperty("bootstrapAdministratorEmail").GetString());
+        Assert.Matches(@"^\d{14}_\w+$", detailed.GetProperty("schemaVersion").GetString());
+        Assert.Equal(System.Text.Json.JsonValueKind.String, detailed.GetProperty("bootstrapCompletedAt").ValueKind);
     }
 }
 

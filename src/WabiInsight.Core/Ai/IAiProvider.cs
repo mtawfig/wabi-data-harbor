@@ -27,6 +27,12 @@ public sealed record AiProviderDescriptor(Guid ProviderId, AiProviderType Provid
     /// <summary>Writing to the prompt cache (Anthropic, five-minute cache) costs 1.25 times the input price.</summary>
     public const decimal CacheWritePriceFactor = 1.25m;
 
+    /// <summary>
+    /// True for a provider an organization registered itself: its address was typed by an Organization Administrator,
+    /// so requests to it may only reach the public internet (P13.25). Platform providers are not restricted.
+    /// </summary>
+    public bool PublicAddressesOnly { get; init; }
+
     public decimal EstimateCost(AiUsage usage)
     {
         ArgumentNullException.ThrowIfNull(usage);

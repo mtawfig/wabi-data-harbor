@@ -59,7 +59,7 @@ public class Organization : AuditableEntity
     /// <summary>Provider this organization's AI requests use; null means the platform default (specification §18).</summary>
     public Guid? AiProviderConfigurationId { get; set; }
 
-    /// <summary>Storage key of the organization's logo (PNG, JPEG or SVG), stamped on report pages; null when none is uploaded.</summary>
+    /// <summary>Storage key of the organization's logo (PNG or JPEG; SVG only when uploaded before P13.25), stamped on report pages; null when none is uploaded.</summary>
     public string? LogoArtifactKey { get; set; }
 
     public string? LogoContentType { get; set; }

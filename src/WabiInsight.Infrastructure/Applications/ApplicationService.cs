@@ -223,7 +223,8 @@ public sealed partial class ApplicationService : IApplicationService
         }
         catch (ArgumentException ex)
         {
-            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, ex.Message);
+            // The adapters put the stable code first; the runtime appends " (Parameter '…')" to it.
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, ex.Message.Split(' ', 2)[0]);
         }
 
         var fingerprint = await _protector.FingerprintAsync(normalized, cancellationToken);

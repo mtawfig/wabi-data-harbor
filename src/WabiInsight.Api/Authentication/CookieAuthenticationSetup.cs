@@ -13,7 +13,9 @@ namespace WabiInsight.Api.Authentication;
 /// <summary>
 /// HttpOnly cookie sessions (specification §8): sliding idle timeout, absolute lifetime enforced via the
 /// issued-at ticket property, JSON 401/403 instead of redirects, and periodic security-stamp revalidation
-/// against the database so password changes, deactivation and suspension end sessions.
+/// against the database so password changes, deactivation and suspension end sessions. Requests to endpoints
+/// marked <see cref="BackgroundPollAttribute"/> never extend the session, so an unattended browser tab that keeps
+/// polling is signed out after the idle timeout (P13.25).
 /// </summary>
 public static class CookieAuthenticationSetup
 {
@@ -56,6 +58,15 @@ public static class CookieAuthenticationSetup
                         context.Properties!.Items[IssuedAtProperty] = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
                         return Task.CompletedTask;
                     },
+                    OnCheckSlidingExpiration = context =>
+                    {
+                        if (IsBackgroundPoll(context.HttpContext))
+                        {
+                            context.ShouldRenew = false;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnValidatePrincipal = ValidatePrincipalAsync,
                 };
             });
@@ -68,6 +79,10 @@ public static class CookieAuthenticationSetup
         IsPersistent = false,
         AllowRefresh = true,
     };
+
+    /// <summary>True when the matched endpoint is one the web app polls on a timer (routing has already run).</summary>
+    internal static bool IsBackgroundPoll(HttpContext context)
+        => context.GetEndpoint()?.Metadata.GetMetadata<BackgroundPollAttribute>() is not null;
 
     private static async Task ValidatePrincipalAsync(CookieValidatePrincipalContext context)
     {
@@ -113,7 +128,9 @@ public static class CookieAuthenticationSetup
         }
 
         context.ReplacePrincipal(WabiClaims.ToClaimsPrincipal(resolved.Account, now));
-        context.ShouldRenew = true;
+        // Re-issuing the cookie also restarts the idle timeout, so a background poll keeps the checked principal for
+        // this request only; the person's next own request stores it.
+        context.ShouldRenew = !IsBackgroundPoll(context.HttpContext);
     }
 
     private static async Task RejectAsync(CookieValidatePrincipalContext context)
