@@ -2027,6 +2027,9 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LastRunAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("LastSuccessAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("LeaseOwner")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -2063,7 +2066,8 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("IsEnabled", "NextRunAt");
 
-                    b.HasIndex("OrganizationId", "JobType", "TargetId");
+                    b.HasIndex("OrganizationId", "JobType", "TargetId")
+                        .IsUnique();
 
                     b.ToTable("ScheduledJobs", (string)null);
                 });

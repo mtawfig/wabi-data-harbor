@@ -220,7 +220,29 @@ public sealed class PeriodicReportRunner
         _email = email.Value;
     }
 
-    public async Task<SubscriptionRunResult> RunAsync(ReportSubscription subscription, bool manual, CancellationToken cancellationToken = default)
+    /// <summary>The analysis is no longer the creator's to use: its owner withdrew the share, or the share ran out.</summary>
+    public const string ShareEnded = "subscription_share_ended";
+
+    /// <summary>Failures that will not pass by trying again within the hour: the scheduler does not retry them (they still count towards pausing).</summary>
+    private static readonly HashSet<string> PermanentErrors = new(StringComparer.Ordinal)
+    {
+        ShareEnded, "subscription_analysis_missing", "subscription_analysis_has_no_plan", "subscription_no_active_recipients",
+    };
+
+    /// <summary>True when a failed run may succeed later (a source that did not answer), so it is worth a retry.</summary>
+    public static bool IsWorthRetrying(SubscriptionRunResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result.ErrorCode is null
+            ? result.Deliveries.Count > 0 && result.Deliveries.All(d => d.Status == ReportDeliveryStatus.Failed)
+            : !PermanentErrors.Contains(result.ErrorCode) && result.ErrorCode != "organization_inactive";
+    }
+
+    /// <param name="subscription">The report to run.</param>
+    /// <param name="manual">A person pressed "Run now": failures are not counted towards pausing.</param>
+    /// <param name="countFailure">False for a scheduler retry of an occurrence that already failed: one missed occurrence counts once towards pausing, however often it is retried.</param>
+    /// <param name="cancellationToken">Cancels the run.</param>
+    public async Task<SubscriptionRunResult> RunAsync(ReportSubscription subscription, bool manual, bool countFailure = true, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(subscription);
         var organizationId = subscription.OrganizationId;
@@ -265,6 +287,18 @@ public sealed class PeriodicReportRunner
             {
                 error = "subscription_analysis_has_no_plan";
             }
+            else if (history.OwnerUserId != subscription.CreatedByUserId)
+            {
+                // The report was set up on an analysis someone shared with its creator. That consent is checked at every
+                // run (P13.27): when the owner withdraws the share, or it expires, the report stops.
+                var at = _clock.UtcNow;
+                var shared = await Org(_context.AnalysisShares).AsNoTracking().AnyAsync(s => s.HistoryId == history.HistoryId && s.RecipientUserId == subscription.CreatedByUserId
+                    && s.RevokedAt == null && (s.ExpiresAt == null || s.ExpiresAt > at), cancellationToken);
+                if (!shared)
+                {
+                    error = ShareEnded;
+                }
+            }
         }
 
         var recipientIds = await Org(_context.ReportSubscriptionRecipients).AsNoTracking().Where(r => r.SubscriptionId == subscription.SubscriptionId).Select(r => r.UserId).ToListAsync(cancellationToken);
@@ -291,8 +325,9 @@ public sealed class PeriodicReportRunner
             tracked.LastRunAt = now;
             if (!manual)
             {
-                tracked.ConsecutiveFailures = failed ? tracked.ConsecutiveFailures + 1 : 0;
-                if (failed && tracked.ConsecutiveFailures >= PauseAfterFailures && tracked.IsActive)
+                tracked.ConsecutiveFailures = !failed ? 0 : countFailure ? tracked.ConsecutiveFailures + 1 : Math.Max(1, tracked.ConsecutiveFailures);
+                // A withdrawn share is the owner's decision, not a fault that may pass: the report stops at once.
+                if (failed && (error == ShareEnded || tracked.ConsecutiveFailures >= PauseAfterFailures) && tracked.IsActive)
                 {
                     await PauseAsync(tracked, error ?? deliveries.Select(d => d.ErrorCode).FirstOrDefault(c => c is not null) ?? "subscription_delivery_failed", cancellationToken);
                 }
@@ -423,6 +458,12 @@ public sealed class ReportSubscriptionJob : IScheduledJobHandler
             return;
         }
 
-        await _runner.RunAsync(subscription, manual: false, cancellationToken);
+        // A retry of an occurrence that already failed (the job's own failure count is above zero) is not counted again
+        // towards pausing: three missed occurrences pause a report, not three attempts on one morning.
+        var result = await _runner.RunAsync(subscription, manual: false, countFailure: job.ConsecutiveFailures == 0, cancellationToken);
+        if (PeriodicReportRunner.IsWorthRetrying(result))
+        {
+            throw new ScheduledJobFailedException(result.ErrorCode ?? result.Deliveries.Select(d => d.ErrorCode).FirstOrDefault(c => c is not null) ?? "subscription_delivery_failed");
+        }
     }
 }

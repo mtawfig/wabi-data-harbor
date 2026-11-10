@@ -63,7 +63,9 @@ internal sealed class ScheduledJobConfiguration : IEntityTypeConfiguration<Sched
         builder.Property(j => j.LastOutcome).HasConversion<string>().HasMaxLength(16);
         builder.Property(j => j.LastError).HasMaxLength(1000);
         builder.HasIndex(j => new { j.IsEnabled, j.NextRunAt });
-        builder.HasIndex(j => new { j.OrganizationId, j.JobType, j.TargetId });
+        // One job per (organization, type, target): two API instances provisioning at the same moment cannot both insert.
+        // SQL Server treats NULLs as equal here, so the standing jobs (no target) are unique per organization too.
+        builder.HasIndex(j => new { j.OrganizationId, j.JobType, j.TargetId }).IsUnique().HasFilter(null);
     }
 }
 

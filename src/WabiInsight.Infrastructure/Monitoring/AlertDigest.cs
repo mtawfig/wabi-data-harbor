@@ -146,12 +146,23 @@ public sealed class AlertDigestJob : IScheduledJobHandler
 
     public ScheduledJobType JobType => ScheduledJobType.AlertDigest;
 
+    public const int MaxLookBackDays = 7;
+
+    /// <summary>From the last successful digest, at most a week back; the first digest covers the last 24 hours.</summary>
+    public static DateTimeOffset DigestWindowStart(DateTimeOffset? lastSuccessAt, DateTimeOffset now)
+    {
+        var oldest = now.AddDays(-MaxLookBackDays);
+        return lastSuccessAt is { } last ? (last > oldest ? last : oldest) : now.AddHours(-24);
+    }
+
     public async Task ExecuteAsync(ScheduledJob job, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
         var organizationId = job.OrganizationId ?? throw new InvalidOperationException("Digests are per organization.");
         var now = _clock.UtcNow;
-        var since = job.LastRunAt is { } last && last > now.AddHours(-48) ? last : now.AddHours(-24);
+        // Everything since the last digest that went out (P13.27): a failed run, a retry or a server that was down for a
+        // few days no longer drops the alerts in between. A week is the furthest a digest looks back.
+        var since = DigestWindowStart(job.LastSuccessAt, now);
         var organization = await _context.Organizations.AsNoTracking().SingleAsync(o => o.OrganizationId == organizationId, cancellationToken);
         var digests = await _builder.BuildAsync(organizationId, since, null, cancellationToken);
         var link = $"{_urls.BaseUrl.TrimEnd('/')}/app/alerts";

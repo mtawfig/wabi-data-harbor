@@ -13,6 +13,8 @@ export interface SubscriptionAnalysis {
   currentVersionNumber: number;
   panelCount: number;
   updatedAt: string;
+  /** Calendar dates written into the analysis (yyyy-MM-dd). Not empty: every run covers the same period. */
+  fixedDates?: string[];
 }
 
 export interface SubscriptionRecipient {
@@ -43,6 +45,8 @@ export interface ReportSubscription {
   language: SubscriptionLanguage;
   isActive: boolean;
   pausedReason?: string;
+  /** Calendar dates written into the analysis (yyyy-MM-dd). Not empty: every run covers the same period. */
+  fixedDates?: string[];
   consecutiveFailures: number;
   lastRunAt?: string;
   nextRunAt?: string;

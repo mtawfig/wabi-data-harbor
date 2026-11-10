@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using WabiInsight.Core.Ai;
 using WabiInsight.Core.Analysis;
 using WabiInsight.Core.Audit;
 using WabiInsight.Core.Common;
@@ -46,10 +47,13 @@ public sealed class PeriodicReportService : IPeriodicReportService
 
     private bool IsManagement => _tenantContext.Principal.Roles.Contains(SystemRoles.Management);
 
-    public async Task<IReadOnlyList<SubscriptionAnalysisOption>> ListAnalysesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SubscriptionAnalysisOption>> ListAnalysesAsync(Guid? forSubscriptionId = null, CancellationToken cancellationToken = default)
     {
         RequireAuthor();
-        var histories = await EligibleHistories().OrderByDescending(h => h.UpdatedAt ?? h.CreatedAt).Take(200).ToListAsync(cancellationToken);
+        // A report is built on what its creator may use (their own analyses and the ones shared with them). An
+        // administrator who edits someone else's report sees that person's choices, not their own.
+        var creator = forSubscriptionId is { } id ? (await FindAsync(id, tracked: false, cancellationToken)).CreatedByUserId : Self;
+        var histories = await EligibleHistories(creator).OrderByDescending(h => h.UpdatedAt ?? h.CreatedAt).Take(200).ToListAsync(cancellationToken);
         var ownerIds = histories.Select(h => h.OwnerUserId).Distinct().ToList();
         var owners = await _context.OrganizationUsers.AsNoTracking().Where(u => ownerIds.Contains(u.UserId)).ToDictionaryAsync(u => u.UserId, u => u.FullName, cancellationToken);
         var applicationIds = histories.Select(h => h.ApplicationId).Distinct().ToList();
@@ -57,9 +61,21 @@ public sealed class PeriodicReportService : IPeriodicReportService
         var historyIds = histories.Select(h => h.HistoryId).ToList();
         var panels = await _context.AnalysisHistoryVersions.AsNoTracking().Where(v => historyIds.Contains(v.HistoryId) && v.Status == AnalysisHistoryStatus.Completed)
             .GroupBy(v => v.HistoryId).Select(g => new { g.Key, Panels = g.OrderByDescending(v => v.VersionNumber).Select(v => v.PanelCount).First() }).ToDictionaryAsync(g => g.Key, g => g.Panels, cancellationToken);
+        var fixedDates = await FixedDatesAsync(historyIds, cancellationToken);
         return histories.Where(h => panels.ContainsKey(h.HistoryId)).Select(h => new SubscriptionAnalysisOption(
             h.HistoryId, h.Title, applications.GetValueOrDefault(h.ApplicationId)?.ApplicationName ?? string.Empty, applications.GetValueOrDefault(h.ApplicationId)?.ApplicationNameAr ?? string.Empty,
-            owners.GetValueOrDefault(h.OwnerUserId) ?? string.Empty, h.OwnerUserId == Self, h.CurrentVersionNumber, panels[h.HistoryId], h.UpdatedAt ?? h.CreatedAt)).ToList();
+            owners.GetValueOrDefault(h.OwnerUserId) ?? string.Empty, h.OwnerUserId == creator, h.CurrentVersionNumber, panels[h.HistoryId], h.UpdatedAt ?? h.CreatedAt,
+            fixedDates.GetValueOrDefault(h.HistoryId) ?? [])).ToList();
+    }
+
+    /// <summary>Per analysis: the calendar dates written into its latest completed plan (empty when it follows the calendar).</summary>
+    private async Task<Dictionary<Guid, IReadOnlyList<string>>> FixedDatesAsync(IReadOnlyCollection<Guid> historyIds, CancellationToken cancellationToken)
+    {
+        var plans = await _context.AnalysisHistoryVersions.AsNoTracking()
+            .Where(v => historyIds.Contains(v.HistoryId) && v.Status == AnalysisHistoryStatus.Completed)
+            .Select(v => new { v.HistoryId, v.VersionNumber, v.QueryPlanJson })
+            .ToListAsync(cancellationToken);
+        return plans.GroupBy(v => v.HistoryId).ToDictionary(g => g.Key, g => PlanDates.FixedDates(g.OrderByDescending(v => v.VersionNumber).First().QueryPlanJson));
     }
 
     public async Task<IReadOnlyList<ReportSubscriptionDto>> ListAsync(CancellationToken cancellationToken = default)
@@ -106,7 +122,7 @@ public sealed class PeriodicReportService : IPeriodicReportService
         ArgumentNullException.ThrowIfNull(command);
         var organizationId = RequireAuthor();
         var subscription = await FindAsync(subscriptionId, tracked: true, cancellationToken);
-        var recipients = await ValidateAsync(command, subscriptionId, cancellationToken);
+        var recipients = await ValidateAsync(command, subscription, cancellationToken);
         Apply(subscription, command);
         if (subscription.IsActive)
         {
@@ -130,7 +146,8 @@ public sealed class PeriodicReportService : IPeriodicReportService
     {
         RequireAuthor();
         var subscription = await FindAsync(subscriptionId, tracked: true, cancellationToken);
-        if (isActive && !await EligibleHistories().AnyAsync(h => h.HistoryId == subscription.HistoryId, cancellationToken))
+        // Judged for the report's creator: an administrator can resume a report someone else set up (P13.27).
+        if (isActive && !await EligibleHistories(subscription.CreatedByUserId).AnyAsync(h => h.HistoryId == subscription.HistoryId, cancellationToken))
         {
             throw Invalid("subscription_analysis_not_available");
         }
@@ -161,7 +178,7 @@ public sealed class PeriodicReportService : IPeriodicReportService
         RequireAuthor();
         var subscription = await FindAsync(subscriptionId, tracked: false, cancellationToken);
         _audit.Append(AuditEvents.SubscriptionRunNow, "ReportSubscription", subscriptionId.ToString(), new { subscription.Name });
-        var result = await _runner.RunAsync(subscription, manual: true, cancellationToken);
+        var result = await _runner.RunAsync(subscription, manual: true, cancellationToken: cancellationToken);
         var names = await RecipientNamesAsync(result.Deliveries.Select(d => d.RecipientUserId), cancellationToken);
         var deliveries = result.Deliveries.Select(d => ToDto(d, names)).ToList();
         return new SubscriptionRunResultDto(result.RunId, deliveries.Count(d => d.Status == ReportDeliveryStatus.Delivered), deliveries.Count(d => d.Status == ReportDeliveryStatus.NoData),
@@ -208,16 +225,17 @@ public sealed class PeriodicReportService : IPeriodicReportService
         return stream is null ? null : new ArtifactDownload(stream, delivery.FileName ?? "report", delivery.ContentType ?? "application/octet-stream");
     }
 
-    private IQueryable<AnalysisHistory> EligibleHistories()
+    /// <summary>The analyses a user may build a report on: their own, and the ones shared with them (the owner's consent) while the share lasts.</summary>
+    private IQueryable<AnalysisHistory> EligibleHistories(Guid self)
     {
-        var self = Self;
         var now = _clock.UtcNow;
         return _context.AnalysisHistories.AsNoTracking().Where(h => !h.IsDeleted && (h.OwnerUserId == self
             || _context.AnalysisShares.Any(s => s.HistoryId == h.HistoryId && s.RecipientUserId == self && s.RevokedAt == null && (s.ExpiresAt == null || s.ExpiresAt > now))));
     }
 
-    private async Task<List<Guid>> ValidateAsync(SaveReportSubscriptionCommand command, Guid? subscriptionId, CancellationToken cancellationToken)
+    private async Task<List<Guid>> ValidateAsync(SaveReportSubscriptionCommand command, ReportSubscription? existing, CancellationToken cancellationToken)
     {
+        var subscriptionId = existing?.SubscriptionId;
         var name = command.Name?.Trim() ?? string.Empty;
         if (name.Length is 0 or > 200)
         {
@@ -251,8 +269,10 @@ public sealed class PeriodicReportService : IPeriodicReportService
             throw Invalid("subscription_language_invalid");
         }
 
-        // The analysis must be the author's own or shared with the author (owner consent), in this organization.
-        if (!await EligibleHistories().AnyAsync(h => h.HistoryId == command.HistoryId, cancellationToken))
+        // The analysis must be the creator's own or shared with the creator (owner consent), in this organization. For
+        // an existing report that is the person who set it up, whoever edits it now (P13.27): an administrator can
+        // change another user's schedule, recipients or format, and pick among that user's analyses, not their own.
+        if (!await EligibleHistories(existing?.CreatedByUserId ?? Self).AnyAsync(h => h.HistoryId == command.HistoryId, cancellationToken))
         {
             throw Invalid("subscription_analysis_not_available");
         }
@@ -322,6 +342,7 @@ public sealed class PeriodicReportService : IPeriodicReportService
             .GroupBy(d => new { d.SubscriptionId, d.RunId })
             .Select(g => new { g.Key.SubscriptionId, g.Key.RunId, At = g.Max(d => d.CreatedAt), Delivered = g.Count(d => d.Status == ReportDeliveryStatus.Delivered), NoData = g.Count(d => d.Status == ReportDeliveryStatus.NoData), Failed = g.Count(d => d.Status == ReportDeliveryStatus.Failed) })
             .ToListAsync(cancellationToken);
+        var fixedDates = await FixedDatesAsync(historyIds, cancellationToken);
         return subscriptions.Select(s =>
         {
             var job = jobs.FirstOrDefault(j => j.TargetId == s.SubscriptionId);
@@ -332,7 +353,7 @@ public sealed class PeriodicReportService : IPeriodicReportService
                 users.GetValueOrDefault(s.CreatedByUserId)?.FullName ?? string.Empty,
                 recipients.Where(r => r.SubscriptionId == s.SubscriptionId).Select(r => users.TryGetValue(r.UserId, out var u) ? new SubscriptionRecipientDto(u.UserId, u.FullName, u.Email, u.Status.ToString()) : new SubscriptionRecipientDto(r.UserId, string.Empty, string.Empty, "Unknown")).ToList(),
                 last is null ? null : new SubscriptionRunSummary(last.RunId, last.At, last.Delivered, last.NoData, last.Failed),
-                CanEdit(s), s.CreatedAt);
+                CanEdit(s), s.CreatedAt, fixedDates.GetValueOrDefault(s.HistoryId) ?? []);
         }).ToList();
     }
 
