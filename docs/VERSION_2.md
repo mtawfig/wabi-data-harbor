@@ -100,6 +100,8 @@ The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and s
 | G2 | **An organization's own AI model**, in its data centre, its private cloud or its own public-cloud account, so prompts and the data sent with them never go to a public AI service | Owner, 2026-11-10 | Must | M |
 | G3 | **On-premises plan:** the whole platform (web app, API, database, files and the model) inside the organization's network, working without the internet | Owner, 2026-11-10 | Must | L |
 | G4 | **Hybrid plan:** web app and API in the owner's cloud; files and the model at the organization's location; the platform database in the owner's cloud or at the organization's location | Owner, 2026-11-10 | Must | L |
+| G5 | **An organization's own e-mail server (SMTP)** in every plan, the Cloud plan included; the platform's server is used when the organization sets none | Owner, 2026-11-10 | Must | M |
+| G6 | **Reaching an organization's systems from the owner's cloud** (its business databases and APIs, and its own database, files, model and mail server): the supported ways, with a recommendation | Owner, 2026-11-10 | Must | L |
 
 ## 5. Requirements in detail
 
@@ -123,6 +125,18 @@ Only the items that need more than their line in the tables are described here.
 | Sign-in | E-mail and password; Microsoft Entra ID (C1) | Same; Active Directory through federation (C11) | E-mail and password; Microsoft Entra ID (C1); Active Directory (C11) |
 | Internet needed | Yes | Yes, between the owner's cloud and the organization | No |
 | Who installs and updates | The owner | The owner (the organization provides the network path and its own parts) | The organization, with packages and guides from the owner |
+
+**The organization's own, or the platform's default.** The plans are built from one rule, applied to each part separately: where an organization has set up its own, that one is used; where it has not, the platform's default is used.
+
+| Part | Platform default | The organization's own | Item |
+|---|---|---|---|
+| E-mail server (SMTP) | The platform's server and sender | Its server, sender address and name | G5 |
+| Files | The platform's file store | Its Azure Blob Storage, S3-compatible store | G4 |
+| AI model | The platform's subscription | Its model, public or private | G2 |
+| Sign-in | E-mail and password | Microsoft Entra ID, Active Directory | C1, C11 |
+| Platform database | The shared database | Its own database, through a dedicated installation | G4 |
+
+A Cloud-plan organization can therefore use its own e-mail server and nothing else of its own; a Hybrid-plan organization is one that keeps its files and model, and possibly its database, at its own location. What is set is shown to the Organization Administrator and to Platform Administrators (the fact, never the secret).
 
 **Requirements common to the three plans.**
 - **One product, one code base.** A plan is a way of deploying and configuring the same application, never a separate edition with its own code.
@@ -170,9 +184,46 @@ Only the items that need more than their line in the tables are described here.
 - **Platform database, two variants** (the organization chooses):
   - *In the owner's cloud:* the organization is one of the organizations of the shared installation, with its own file store and model.
   - *At the organization's location:* because an installation has exactly one configuration database (§3), this is a **dedicated installation** of the web app and API in the owner's cloud for that one organization, pointing at the database the organization hosts. A shared installation with a different database per organization is not proposed (§7, question 11).
-- **A private network path** between the owner's cloud and the organization's location carries the model calls, the file store and, in the second variant, the database: a site-to-site VPN or a private link, with the organization's firewall opened only to the owner's fixed addresses. The guide states what the organization has to provide.
+- **A private network path** (the ways and the recommendation are in G6) between the owner's cloud and the organization's location carries the model calls, the file store and, in the second variant, the database: a site-to-site VPN or a private link, with the organization's firewall opened only to the owner's fixed addresses. The guide states what the organization has to provide.
 - **What still passes through the owner's cloud** must be said plainly to the customer: in a Hybrid plan the API in the owner's cloud reads the rows that answer a question and holds them in memory to build the answer, and the browser receives them from there. Hybrid keeps data *at rest* and the *AI processing* at the organization's location; only the On-premises plan keeps everything inside the organization's network.
 - When the path is down, the organization's users get a clear message; other organizations are not affected.
+
+### G5. An organization's own e-mail server (owner decision, 2026-11-10)
+
+**Goal.** In every plan, an organization can have its e-mails (temporary passwords, shared analyses, alert digests, Periodic Reports, support notices) sent through its own SMTP server, from its own address and display name. An organization that sets none keeps the platform's server and sender, as in version 1 (`no-reply@…`, "Wabi Insight Notifications").
+
+**Requirements.**
+- The Organization Administrator enters the server, port, encryption (TLS required), user name and password, the sender address and the display name, and an optional reply-to address. The password is encrypted like every other secret and never shown again.
+- **Send a test message** before the settings take effect; they are used only after one test succeeded.
+- **Which messages.** Everything sent to that organization's users goes through its server. Messages about the platform itself (to Platform Administrators) always use the platform's server.
+- **No silent fallback (proposed, §7 question 19).** When the organization's server refuses or is down, the message is retried and then shown as failed, with the reason, to the Organization Administrator; it is not sent through the platform's server instead, because the organization chose where its mail leaves from. A system alert tells the administrators.
+- **The address is checked** like an organization's AI provider (P13.25): a public address, unless a Platform Administrator approved a private host for that organization (G6).
+- The platform's default sender keeps working for everyone else; its domain needs correct SPF, DKIM and DMARC records so its mail is not marked as spam (a deployment step, not code).
+- Usage and audit record which server sent a message (platform or organization), never the credentials.
+
+### G6. Reaching an organization's systems from the owner's cloud (owner decision, 2026-11-10)
+
+**The question.** When the web app and API run in the owner's cloud (Cloud and Hybrid plans), they have to reach things that sit in the organization's network: always the **business databases and APIs** that are asked about, and, for whatever the organization keeps as its own, its **database, files, model and mail server**. This section lists the ways to do that, from the most to the least recommended. **The owner chooses when this step is reached** (§7, question 10); more than one can be offered, and different organizations can use different ones.
+
+| # | Way | How it works | For | Against |
+|---|---|---|---|---|
+| 1 | **Outbound connector** (recommended as the standard offer) | A small program inside the organization's network opens an encrypted connection **out** to the platform and carries the requests back in. The organization opens no inbound port. Either an existing product (WireGuard or Tailscale, Cloudflare Tunnel, Azure Relay Hybrid Connections) or a connector of our own. | Nothing is exposed to the internet; passes most firewalls without a change; the organization can stop it at any moment; one way for databases, APIs, files, model and mail. | Something to install and keep running at the organization. A connector of our own would be a new program beside the three layers (§3), so an existing product is preferred first. |
+| 2 | **Site-to-site VPN** (recommended for larger organizations) | An IPsec or WireGuard tunnel between the owner's network and the organization's, limited to the needed hosts and ports. | Familiar to every network team; no application change; also the usual answer of auditors. | Set up per organization by both network teams; address ranges may overlap; the owner's side needs a VPN gateway (a cost). |
+| 3 | **Private link in the same cloud** | When the organization's systems are in the same public cloud as the platform: a private endpoint or network peering. | No internet at all; managed by the cloud. | Only when both sides are in the same cloud. |
+| 4 | **Firewall rule for the platform's fixed address** (the minimum, for a quick start) | The organization opens the database or API port **only** to the platform's fixed public address. | Nothing to install; minutes to set up; many organizations already do this for other suppliers. | The port faces the internet, even if filtered; depends on the platform's address never changing; one rule per system. |
+| 5 | **A read-only API in front of the data** | The organization publishes a read-only API (an API gateway) and the platform uses it as an API data source (A1), with a key or mutual TLS. | The database itself is never reachable; the organization decides exactly what is offered. | Work for the organization; only as rich as the API; needs A1. |
+
+**Never offered:** a database port open to the whole internet; a copy of the organization's data pushed to the owner's cloud to be asked there.
+
+**Rules for every way.**
+- The login the platform uses stays **read-only** on business data (version 1 already checks and warns), with only the objects it needs.
+- **Encryption in transit is required**: TLS on the database or API connection even inside a tunnel; the server's certificate is checked (the organization's own certificate authority is accepted when it supplies it).
+- **A private address is reachable only after approval**: a Platform Administrator approves the host and port for that organization (the rule of G2 and P13.25); no other organization can use it.
+- Way 4 additionally needs: a fixed address for the platform (stated in the contract), the database's own address filter where it has one, a strong unique password or certificate, and a review of the rule every year.
+- When the path is down, the organization's users get a clear message, the scheduler retries (P13.27), and other organizations are not affected.
+- Each organization's page shows which way it uses and when the path last worked.
+
+**Recommendation.** Offer **way 4 with its conditions** from the first Hybrid or Cloud customer, because it needs nothing new, and say plainly that it is the minimum. Offer **way 1 with an existing product** as the standard, and **way 2** when the organization's network team asks for it. Build a connector of our own only if several customers refuse both a VPN and an existing tunnel product.
 
 ### C11. Sign in with Active Directory (owner decision, 2026-11-10)
 
@@ -275,7 +326,7 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 7 | Sharing sends the owner's stored result to the recipient, whatever the recipient's own permissions. Keep this (the owner decides), or check the recipient's permissions too? | Sharing |
 | 8 | E-mails: accept storing the message encrypted until it is sent (E4), or keep the version 1 rule that bodies are never stored? | E4 |
 | 9 | Which of the *Could* items should move up or be dropped? | All |
-| 10 | Hybrid, network path: which is offered first, a site-to-site VPN, a private link in the cloud the owner uses, or an endpoint the organization publishes with mutual TLS and an address allow-list? | G2, G4 |
+| 10 | Reaching an organization's systems: which of the five ways in G6 are offered, and which first? (Recommended: the firewall rule with its conditions as the minimum, an outbound connector with an existing product as the standard, a site-to-site VPN on request.) | G2, G4, G5, G6 |
 | 11 | Hybrid with the platform database at the organization's location: a dedicated installation per organization in the owner's cloud (proposed, keeps one database per installation), or a shared installation with a separate database per organization (a change to the architecture)? | G4 |
 | 12 | Hybrid, files: which stores are supported first (Azure Blob Storage in the organization's subscription, S3-compatible storage, a network share)? | G4 |
 | 13 | On-premises licence: contract only, or a licence file the installation checks (organization, expiry, number of users)? | G3 |
@@ -284,6 +335,8 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 16 | Active Directory for Hybrid and Cloud organizations: offer federation (AD FS), or only Microsoft Entra ID for them? | C11 |
 | 17 | The organization's own model: is one named model tested and recommended by the owner for Arabic and English, or is any model that passes the fitness check accepted? | G2 |
 | 18 | Which plan does the first paying customer need? The order in §8 should follow it. | G1 |
+| 19 | An organization's own e-mail server is down: show the message as failed (proposed), or send it through the platform's server instead? | G5 |
+| 20 | May a Cloud-plan organization use its own e-mail server at no extra charge, or is it part of a paid plan? (Commercial; decides only where the setting is shown.) | G5 |
 
 ## 8. Proposed order
 
@@ -293,7 +346,7 @@ A proposal, in releases that can each be deployed on their own. Version 2 starts
 |---|---|---|
 | **2.0 — Sign-in** | C1, C11 | `V2.1` Microsoft sign-in: backend · `V2.2` Microsoft sign-in: interface and guides (as already planned) · `V2.3` Active Directory sign-in |
 | **2.1 — Own model and On-premises plan** | G1, G2, G3 | `V2.4` plans recorded; approved private model addresses; fitness check · `V2.5` on-premises package, one-step set-up, disconnected test, diagnostic file, guide |
-| **2.2 — Hybrid plan** | G4 | `V2.6` a file store per organization · `V2.7` dedicated installation with the database at the organization's location, network path and guide |
+| **2.2 — Hybrid plan** | G4, G5, G6 | `V2.6` a file store and an e-mail server per organization (G5) · `V2.7` the chosen ways to reach an organization's systems (G6), dedicated installation with the database at the organization's location, network path and guide |
 | **2.3 — API data sources** | A1 | `V2.8` registration, catalogue and secrets · `V2.9` executor, limits and row scopes · `V2.10` interface, sample API and guides |
 | **2.4 — Drill-down** | B1, then B3 | `V2.11` plan, authorization and history · `V2.12` charts and interface · `V2.13` follow-up questions |
 | **2.5 — Publishing** | D1 | `V2.14` connections and publishing · `V2.15` interface and guides |
@@ -325,3 +378,4 @@ As in version 1, every pull request:
 | 2026-11-10 | First version: owner decisions of 2026-11-06 (Drive and OneDrive), 2026-11-08 (Sign in with Microsoft), 2026-11-09 (drill-down) and 2026-11-10 (API data sources); items carried over from the review of 2026-11-10; proposals. |
 | 2026-11-10 | Owner decision: fixes belong to version 1. The 23 items carried over from the review were moved out, to P13.25–P13.30 in the implementation plan; the release "2.0 — Safe base" and the open decision on the audit page went with them. Version 2 keeps the four owner decisions and the proposals. |
 | 2026-11-10 | Owner decisions: three service plans chosen per organization, Cloud, On-premises and Hybrid (G1, G3, G4); an organization's own AI model at a private address (G2); sign-in with classic Active Directory without a password (C11). For version 1, organization-managed AI providers are switched off by configuration. Open decisions 10–18 and a new proposed order. |
+| 2026-11-10 | Owner decisions: an organization's own e-mail server in every plan, with the platform's as the default (G5); the rule "the organization's own, or the platform's default" stated for e-mail, files, model, sign-in and database (G1); the ways to reach an organization's systems from the owner's cloud, with a recommendation, for the owner to choose from at that step (G6). Open decision 10 rewritten; 19 and 20 added. |
