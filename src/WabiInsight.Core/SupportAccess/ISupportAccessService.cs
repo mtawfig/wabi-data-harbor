@@ -61,8 +61,22 @@ public interface ISupportAccessService
 {
     IReadOnlyList<SupportOperationDefinition> Catalog { get; }
 
-    /// <summary>Platform administrators only: users and roles of the ticket's organization that a proposal may target.</summary>
+    /// <summary>
+    /// Platform administrators only: what a proposal on this ticket may target. A ticket alone grants nothing
+    /// (specification §16), so without an approved grant this is only the requester and the standard roles; with one,
+    /// also what that grant names (and the object list when it covers table permissions). Never the organization's
+    /// full user list.
+    /// </summary>
     Task<SupportTargetsDto> ListTargetsAsync(Guid ticketId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Platform administrators only: the user of the ticket's organization with exactly this e-mail address, so a
+    /// proposal can name someone the ticket mentions without the user list being shown. Not found is a 404.
+    /// </summary>
+    Task<SupportTargetUser> FindTargetUserAsync(Guid ticketId, string email, CancellationToken cancellationToken = default);
+
+    /// <summary>Platform administrators only: the role of the ticket's organization with exactly this code (for the organization's own roles).</summary>
+    Task<SupportTargetRole> FindTargetRoleAsync(Guid ticketId, string roleCode, CancellationToken cancellationToken = default);
 
     /// <summary>Platform administrators only. Marks the ticket as requiring support access and notifies the organization's administrators.</summary>
     Task<SupportAccessGrantDto> ProposeAsync(Guid ticketId, ProposeGrantCommand command, CancellationToken cancellationToken = default);
@@ -114,6 +128,12 @@ public interface ISupportAccessAuthorizer
     /// denied and audited like any other out-of-scope operation. A grant that lists no role allows none.
     /// </summary>
     Task<IReadOnlyList<string>> AuthorizeRoleAssignmentAsync(SupportExecutionContext context, IReadOnlyCollection<string> roleCodes, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// For an authorized operation that creates a user: the address must be one the grant names for this operation
+    /// (P13.26). Returns it; any other address is denied and audited like any other out-of-scope operation.
+    /// </summary>
+    Task<string> AuthorizeNewUserEmailAsync(SupportExecutionContext context, string? email, CancellationToken cancellationToken = default);
 }
 
 public sealed record ExecuteOperationCommand(string Operation, string? TargetReference, System.Text.Json.JsonElement? Payload);

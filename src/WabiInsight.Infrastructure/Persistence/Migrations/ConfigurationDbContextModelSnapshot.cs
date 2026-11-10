@@ -1417,6 +1417,9 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<Guid?>("EvaluatedAsUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset>("FirstSeenAt")
                         .HasColumnType("datetimeoffset");
 

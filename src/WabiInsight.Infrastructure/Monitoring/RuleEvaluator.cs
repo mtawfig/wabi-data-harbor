@@ -106,7 +106,8 @@ public static class RuleCatalog
     /// permissions, so its matches cover the rows the owner may read. Anyone else needs, on their own account, the
     /// rule's object, every column whose values appear in a match (group-by and measure) and row scope
     /// <see cref="RowScope.All"/> on that object: a viewer limited to a department, a section or their own rows
-    /// would otherwise read aggregates about rows outside their scope.
+    /// would otherwise read aggregates about rows outside their scope. For a stored alert, <paramref name="ownerUserId"/>
+    /// is the owner the alert was evaluated as (<c>Alert.EvaluatedAsUserId</c>), which is not always the rule's owner today.
     /// </summary>
     public static bool CanSeeDetails(EffectivePermissions viewer, DataRuleDefinition rule, Guid ownerUserId)
     {

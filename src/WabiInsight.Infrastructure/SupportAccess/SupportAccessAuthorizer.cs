@@ -110,6 +110,22 @@ public sealed class SupportAccessAuthorizer : ISupportAccessAuthorizer
         return grantedCodes.Where(code => requested.Contains(code, StringComparer.OrdinalIgnoreCase)).ToList();
     }
 
+    public async Task<string> AuthorizeNewUserEmailAsync(SupportExecutionContext context, string? email, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        // Read from the grant itself, never from the request: the address(es) the organization approved for this operation.
+        var grant = await _context.SupportAccessGrants.AsPlatformScope(_tenantContext).AsNoTracking().SingleAsync(g => g.GrantId == context.GrantId && g.OrganizationId == context.OrganizationId, cancellationToken);
+        var allowed = JsonSerializer.Deserialize<List<SupportOperationEntry>>(grant.AllowedOperationsJson, SupportAccessService.JsonOptions) ?? [];
+        var entry = allowed.FirstOrDefault(a => string.Equals(a.Operation, context.Operation, StringComparison.Ordinal));
+        var granted = entry is null ? [] : SupportAccessScope.EmailsOf(entry);
+        if (!SupportAccessScope.IsEmailGranted(granted, email))
+        {
+            await DenyAsync(grant, context.Operation, context.TargetReference, "support_user_email_not_granted", cancellationToken);
+        }
+
+        return email!.Trim();
+    }
+
     private Task DenyAsync(SupportAccessGrant? grant, string operation, string? targetReference, string code, CancellationToken cancellationToken)
         => DenyAsync(grant, operation, targetReference, code, null, cancellationToken);
 

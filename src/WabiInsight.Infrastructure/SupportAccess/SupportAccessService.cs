@@ -53,38 +53,117 @@ public sealed class SupportAccessService : ISupportAccessService
         RequirePlatformAdministrator();
         var ticket = await _context.SupportTickets.AsPlatformScope(_tenantContext).AsNoTracking().SingleOrDefaultAsync(t => t.TicketId == ticketId, cancellationToken)
             ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "ticket_not_found");
+
+        // What the caller's approved, unexpired grants on this ticket name. A ticket alone grants nothing (§16).
+        var granted = await UsableGrantEntriesAsync(ticket, cancellationToken);
+        var grantedIds = granted.SelectMany(e => e.TargetReferences).Select(t => Guid.TryParse(t, out var id) ? id : Guid.Empty).Where(id => id != Guid.Empty).Distinct().ToList();
+
+        // Users: the person who asked (already named on the ticket) and whoever an approved grant names. Never the list.
         var users = await _context.OrganizationUsers.AsPlatformScope(_tenantContext).AsNoTracking()
-            .Where(u => u.OrganizationId == ticket.OrganizationId)
+            .Where(u => u.OrganizationId == ticket.OrganizationId && (u.UserId == ticket.CreatedByUserId || grantedIds.Contains(u.UserId)))
             .OrderBy(u => u.FullName)
             .Select(u => new SupportTargetUser(u.UserId, u.FullName, u.Email, u.Status == OrganizationUserStatus.Active))
             .ToListAsync(cancellationToken);
+
+        // Roles: the standard ones (protected system roles and the roles every organization receives from the
+        // platform's templates), and the roles the organization defined itself only when a grant names them.
         var roles = await _context.Roles.AsPlatformScope(_tenantContext).AsNoTracking()
-            .Where(r => r.OrganizationId == ticket.OrganizationId)
+            .Where(r => r.OrganizationId == ticket.OrganizationId && (r.IsSystem || r.TemplateVersion != null || grantedIds.Contains(r.RoleId)))
             .OrderByDescending(r => r.IsSystem).ThenBy(r => r.RoleCode)
             .Select(r => new SupportTargetRole(r.RoleId, r.RoleCode, r.NameEn, r.NameAr, r.IsSystem, r.IsActive))
             .ToListAsync(cancellationToken);
-        var applicationCodes = await _context.Applications.AsPlatformScope(_tenantContext).AsNoTracking()
-            .Where(a => a.OrganizationId == ticket.OrganizationId && a.IsApproved && a.IsActive && !a.IsBuiltIn)
-            .ToDictionaryAsync(a => a.ApplicationId, a => a.ApplicationCode, cancellationToken);
-        var applicationIds = applicationCodes.Keys.ToList();
-        var objectRows = await _context.DatabaseObjects.AsPlatformScope(_tenantContext).AsNoTracking()
-            .Where(o => o.OrganizationId == ticket.OrganizationId && o.IsApproved && o.IsPresent && applicationIds.Contains(o.ApplicationId))
-            .Select(o => new { o.ObjectId, o.ApplicationId, o.SchemaName, o.ObjectName })
-            .ToListAsync(cancellationToken);
-        var objects = objectRows
-            .Select(o => new SupportTargetObject(o.ObjectId, applicationCodes[o.ApplicationId], o.SchemaName, o.ObjectName))
-            .OrderBy(o => o.ApplicationCode, StringComparer.Ordinal).ThenBy(o => o.SchemaName, StringComparer.Ordinal).ThenBy(o => o.ObjectName, StringComparer.Ordinal)
-            .ToList();
-        _audit.Append(AuditEvents.TicketViewedByPlatform, "SupportTicket", ticket.TicketId.ToString(), new { ticket.ReferenceNumber, targets = true }, ticket.OrganizationId);
+
+        // Table names: only under a grant that covers table permissions, which is where they are needed.
+        List<SupportTargetObject> objects = [];
+        if (granted.Any(e => string.Equals(e.Operation, SupportOperations.UpdateTablePermissions, StringComparison.Ordinal)))
+        {
+            var applicationCodes = await _context.Applications.AsPlatformScope(_tenantContext).AsNoTracking()
+                .Where(a => a.OrganizationId == ticket.OrganizationId && a.IsApproved && a.IsActive && !a.IsBuiltIn)
+                .ToDictionaryAsync(a => a.ApplicationId, a => a.ApplicationCode, cancellationToken);
+            var applicationIds = applicationCodes.Keys.ToList();
+            var objectRows = await _context.DatabaseObjects.AsPlatformScope(_tenantContext).AsNoTracking()
+                .Where(o => o.OrganizationId == ticket.OrganizationId && o.IsApproved && o.IsPresent && applicationIds.Contains(o.ApplicationId))
+                .Select(o => new { o.ObjectId, o.ApplicationId, o.SchemaName, o.ObjectName })
+                .ToListAsync(cancellationToken);
+            objects = objectRows
+                .Select(o => new SupportTargetObject(o.ObjectId, applicationCodes[o.ApplicationId], o.SchemaName, o.ObjectName))
+                .OrderBy(o => o.ApplicationCode, StringComparer.Ordinal).ThenBy(o => o.SchemaName, StringComparer.Ordinal).ThenBy(o => o.ObjectName, StringComparer.Ordinal)
+                .ToList();
+        }
+
+        _audit.Append(AuditEvents.TicketViewedByPlatform, "SupportTicket", ticket.TicketId.ToString(), new { ticket.ReferenceNumber, targets = true, underGrant = granted.Count > 0 }, ticket.OrganizationId);
         await _context.SaveChangesAsync(cancellationToken);
         return new SupportTargetsDto(users, roles, objects);
+    }
+
+    public async Task<SupportTargetUser> FindTargetUserAsync(Guid ticketId, string email, CancellationToken cancellationToken = default)
+    {
+        RequirePlatformAdministrator();
+        var ticket = await OpenTicketForLookupAsync(ticketId, cancellationToken);
+        var normalized = EmailNormalizer.IsPlausible(email) ? EmailNormalizer.Normalize(email) : null;
+        var user = normalized is null
+            ? null
+            : await _context.OrganizationUsers.AsPlatformScope(_tenantContext).AsNoTracking()
+                .Where(u => u.OrganizationId == ticket.OrganizationId && u.NormalizedEmail == normalized)
+                .Select(u => new SupportTargetUser(u.UserId, u.FullName, u.Email, u.Status == OrganizationUserStatus.Active))
+                .SingleOrDefaultAsync(cancellationToken);
+        // The address is not written to the trail: found or not, only that a look-up was made on this ticket.
+        _audit.Append(AuditEvents.TicketViewedByPlatform, "SupportTicket", ticket.TicketId.ToString(), new { ticket.ReferenceNumber, lookup = "user", found = user is not null }, ticket.OrganizationId);
+        await _context.SaveChangesAsync(cancellationToken);
+        return user ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "support_target_not_found");
+    }
+
+    public async Task<SupportTargetRole> FindTargetRoleAsync(Guid ticketId, string roleCode, CancellationToken cancellationToken = default)
+    {
+        RequirePlatformAdministrator();
+        var ticket = await OpenTicketForLookupAsync(ticketId, cancellationToken);
+        var code = (roleCode ?? string.Empty).Trim();
+        var role = code.Length is 0 or > 64
+            ? null
+            : await _context.Roles.AsPlatformScope(_tenantContext).AsNoTracking()
+                .Where(r => r.OrganizationId == ticket.OrganizationId && r.RoleCode == code)
+                .Select(r => new SupportTargetRole(r.RoleId, r.RoleCode, r.NameEn, r.NameAr, r.IsSystem, r.IsActive))
+                .SingleOrDefaultAsync(cancellationToken);
+        _audit.Append(AuditEvents.TicketViewedByPlatform, "SupportTicket", ticket.TicketId.ToString(), new { ticket.ReferenceNumber, lookup = "role", found = role is not null }, ticket.OrganizationId);
+        await _context.SaveChangesAsync(cancellationToken);
+        return role ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "support_target_not_found");
+    }
+
+    /// <summary>Look-ups serve a proposal, and a closed ticket takes none.</summary>
+    private async Task<SupportTicket> OpenTicketForLookupAsync(Guid ticketId, CancellationToken cancellationToken)
+    {
+        var ticket = await _context.SupportTickets.AsPlatformScope(_tenantContext).AsNoTracking().SingleOrDefaultAsync(t => t.TicketId == ticketId, cancellationToken)
+            ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "ticket_not_found");
+        if (ticket.Status is TicketStatus.Resolved or TicketStatus.Cancelled)
+        {
+            throw new DomainException(OrganizationOperationOutcome.InvalidStatusTransition, "ticket_closed");
+        }
+
+        return ticket;
+    }
+
+    /// <summary>The operations of the calling administrator's approved, unexpired grants on this ticket.</summary>
+    private async Task<List<SupportOperationEntry>> UsableGrantEntriesAsync(SupportTicket ticket, CancellationToken cancellationToken)
+    {
+        var administratorId = _tenantContext.Principal.AdministratorId!.Value;
+        var now = _clock.UtcNow;
+        var grants = await _context.SupportAccessGrants.AsPlatformScope(_tenantContext).AsNoTracking()
+            .Where(g => g.TicketId == ticket.TicketId && g.OrganizationId == ticket.OrganizationId && g.AssignedPlatformAdministratorId == administratorId
+                && (g.Status == SupportAccessGrantStatus.Approved || g.Status == SupportAccessGrantStatus.Active))
+            .Select(g => new { g.Status, g.ExpiresAt, g.AllowedOperationsJson })
+            .ToListAsync(cancellationToken);
+        return grants
+            .Where(g => SupportAccessScope.IsUsable(g.Status, g.ExpiresAt, now))
+            .SelectMany(g => JsonSerializer.Deserialize<List<SupportOperationEntry>>(g.AllowedOperationsJson, JsonOptions) ?? [])
+            .ToList();
     }
 
     public async Task<SupportAccessGrantDto> ProposeAsync(Guid ticketId, ProposeGrantCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         RequirePlatformAdministrator();
-        var entries = command.Operations.Select(o => new SupportOperationEntry(o.Operation.Trim(), o.TargetReferences.Select(t => t.Trim()).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList())).ToList();
+        // An address is stored in one spelling, so the same address cannot be listed twice.
+        var entries = command.Operations.Select(o => new SupportOperationEntry(o.Operation.Trim(), o.TargetReferences.Select(t => t.Trim()).Where(t => t.Length > 0).Select(t => SupportAccessScope.EmailOf(t) is { } address ? SupportAccessScope.EmailReference(address) : t).Distinct(StringComparer.OrdinalIgnoreCase).ToList())).ToList();
         var errors = SupportAccessScope.ValidateProposal(entries, command.ExpiryHours).ToList();
         if (string.IsNullOrWhiteSpace(command.Reason) || command.Reason.Trim().Length > 2000)
         {
@@ -513,6 +592,8 @@ public sealed class SupportAccessService : ISupportAccessService
                 var ok = definition.TargetType switch
                 {
                     SupportTargetType.OrganizationUser => Guid.TryParse(reference, out var u) && await _context.OrganizationUsers.AsPlatformScope(_tenantContext).AnyAsync(x => x.OrganizationId == organizationId && x.UserId == u, cancellationToken),
+                    // The address of a user to create is not looked up: it only has to be an address (checked with the proposal).
+                    SupportTargetType.AssignableRole when SupportAccessScope.IsEmailReference(reference) => true,
                     SupportTargetType.Role or SupportTargetType.AssignableRole => Guid.TryParse(reference, out var r) && await _context.Roles.AsPlatformScope(_tenantContext).AnyAsync(x => x.OrganizationId == organizationId && x.RoleId == r, cancellationToken),
                     SupportTargetType.RoleOrNew => string.Equals(reference, SupportAccessScope.NewRoleReference, StringComparison.OrdinalIgnoreCase)
                         || (Guid.TryParse(reference, out var rn) && await _context.Roles.AsPlatformScope(_tenantContext).AnyAsync(x => x.OrganizationId == organizationId && x.RoleId == rn, cancellationToken)),
@@ -644,6 +725,12 @@ public sealed class SupportAccessService : ISupportAccessService
         {
             labels[r.RoleId.ToString()] = $"{r.NameEn} ({r.RoleCode})";
             labelsAr[r.RoleId.ToString()] = $"{r.NameAr} ({r.RoleCode})";
+        }
+
+        // An address of a user to create is its own label, in both languages.
+        foreach (var reference in parsed.Values.SelectMany(e => e).SelectMany(e => e.TargetReferences).Where(SupportAccessScope.IsEmailReference))
+        {
+            labels[reference] = labelsAr[reference] = SupportAccessScope.EmailOf(reference)!;
         }
 
         var principal = _tenantContext.Principal;

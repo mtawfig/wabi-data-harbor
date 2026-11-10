@@ -6,6 +6,54 @@ namespace WabiInsight.Core.SupportAccess;
 public static class SupportAccessScope
 {
     public const string NewRoleReference = "new";
+
+    /// <summary>
+    /// Prefix of a target reference that names the e-mail address of a user the operation may create (P13.26). The
+    /// organization approves the address with the grant; execution refuses any other one.
+    /// </summary>
+    public const string EmailReferencePrefix = "email:";
+    public const int MaxNewUserEmails = 20;
+
+    public static bool IsEmailReference(string? reference)
+        => reference is not null && reference.TrimStart().StartsWith(EmailReferencePrefix, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The address inside an e-mail reference, trimmed; null for any other reference.</summary>
+    public static string? EmailOf(string? reference)
+        => IsEmailReference(reference) ? reference!.TrimStart()[EmailReferencePrefix.Length..].Trim() : null;
+
+    /// <summary>The reference under which an address is stored in a grant: one spelling per address.</summary>
+    public static string EmailReference(string email)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+        return EmailReferencePrefix + email.Trim().ToLowerInvariant();
+    }
+
+    /// <summary>The addresses a grant entry names for the user(s) it may create.</summary>
+    public static IReadOnlyList<string> EmailsOf(SupportOperationEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return entry.TargetReferences.Select(EmailOf).Where(e => e is not null).Select(e => e!).ToList();
+    }
+
+    /// <summary>True for an operation that creates a user, so its grant has to name the address(es).</summary>
+    public static bool NamesNewUser(SupportOperationDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        return string.Equals(definition.Code, SupportOperations.CreateOrganizationUser, StringComparison.Ordinal);
+    }
+
+    /// <summary>True when the requested address is one of the addresses the grant names (compared as sign-in e-mails are).</summary>
+    public static bool IsEmailGranted(IEnumerable<string> grantedEmails, string? requestedEmail)
+    {
+        ArgumentNullException.ThrowIfNull(grantedEmails);
+        if (string.IsNullOrWhiteSpace(requestedEmail))
+        {
+            return false;
+        }
+
+        var wanted = Security.EmailNormalizer.Normalize(requestedEmail);
+        return grantedEmails.Any(e => string.Equals(Security.EmailNormalizer.Normalize(e), wanted, StringComparison.Ordinal));
+    }
     public const int DefaultExpiryHours = 4;
     public const int MaxExpiryHours = 72;
 
@@ -91,6 +139,24 @@ public static class SupportAccessScope
             }
 
             if (definition.TargetType == SupportTargetType.None && entry.TargetReferences.Count > 0)
+            {
+                errors.Add("support_target_not_applicable");
+            }
+
+            // The address of a user to create is part of what the organization approves (P13.26).
+            var emails = EmailsOf(entry);
+            if (NamesNewUser(definition))
+            {
+                if (emails.Count == 0)
+                {
+                    errors.Add("support_new_user_email_required");
+                }
+                else if (emails.Count > MaxNewUserEmails || emails.Any(e => !Security.EmailNormalizer.IsPlausible(e)))
+                {
+                    errors.Add("support_new_user_email_invalid");
+                }
+            }
+            else if (emails.Count > 0)
             {
                 errors.Add("support_target_not_applicable");
             }

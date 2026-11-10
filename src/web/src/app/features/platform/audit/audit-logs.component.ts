@@ -23,8 +23,9 @@ import { WiDatePipe } from '../../../shared/format/locale-pipes';
   styles: `
     .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; mat-form-field { min-width: 180px; } .search { min-width: 320px; } }
     table { width: 100%; }
-    .details { font-size: 12px; max-width: 420px; white-space: pre-wrap; word-break: break-word; direction: ltr; text-align: left; display: inline-block; }
+    .details { font-size: 12px; max-width: 420px; white-space: pre-wrap; word-break: break-word; direction: ltr; text-align: left; display: block; }
     .actor { font-size: 12px; color: var(--wi-slate); }
+    .reduced { display: block; max-width: 420px; margin-top: 4px; font-size: 12px; color: var(--wi-slate); mat-icon { font-size: 14px; width: 14px; height: 14px; vertical-align: -2px; margin-inline-end: 4px; overflow: visible; } }
   `,
 })
 export class AuditLogsComponent {

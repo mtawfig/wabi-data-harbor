@@ -91,13 +91,16 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
         }
     }
 
-    /// <summary>Payload: email, fullName, preferredLanguage, roleCodes[]. The roles are limited to the grant's role targets for this operation.</summary>
+    /// <summary>
+    /// Payload: email, fullName, preferredLanguage, roleCodes[]. The roles are limited to the grant's role targets for
+    /// this operation, and the address to one the grant names: support does not choose who gets an account.
+    /// </summary>
     private async Task<(object Result, string? DeliveredTo, object Summary)> CreateUserAsync(SupportExecutionContext context, JsonElement? payload, CancellationToken cancellationToken)
     {
         var p = Require(payload);
         // First of all: a role the organization did not approve for this grant is a denial (audited), whatever else the payload holds.
         var roles = await _authorizer.AuthorizeRoleAssignmentAsync(context, RequestedRoleCodes(p), cancellationToken);
-        var email = Text(p, "email") ?? throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "administrator_email_invalid");
+        var email = await _authorizer.AuthorizeNewUserEmailAsync(context, Text(p, "email"), cancellationToken);
         var fullName = Text(p, "fullName");
         if (string.IsNullOrWhiteSpace(fullName) || fullName.Length > 200)
         {

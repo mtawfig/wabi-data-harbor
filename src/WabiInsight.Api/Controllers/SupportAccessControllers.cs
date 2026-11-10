@@ -42,6 +42,16 @@ public sealed class PlatformSupportAccessController : ControllerBase
     public async Task<ActionResult<SupportTargetsDto>> Targets(Guid ticketId, CancellationToken cancellationToken)
         => Ok(await _grants.ListTargetsAsync(ticketId, cancellationToken));
 
+    /// <summary>The organization's user with exactly this address (the ticket names them); the user list itself is never returned.</summary>
+    [HttpGet("tickets/{ticketId:guid}/targets/user")]
+    public async Task<ActionResult<SupportTargetUser>> TargetUser(Guid ticketId, [FromQuery] string? email, CancellationToken cancellationToken)
+        => Ok(await _grants.FindTargetUserAsync(ticketId, email ?? string.Empty, cancellationToken));
+
+    /// <summary>The organization's role with exactly this code, for a role the organization defined itself.</summary>
+    [HttpGet("tickets/{ticketId:guid}/targets/role")]
+    public async Task<ActionResult<SupportTargetRole>> TargetRole(Guid ticketId, [FromQuery] string? code, CancellationToken cancellationToken)
+        => Ok(await _grants.FindTargetRoleAsync(ticketId, code ?? string.Empty, cancellationToken));
+
     [HttpGet("access-grants")]
     public async Task<ActionResult<PagedResult<SupportAccessGrantDto>>> List([FromQuery] int page = 1, [FromQuery] int pageSize = 25, [FromQuery] SupportAccessGrantStatus? status = null, [FromQuery] Guid? organizationId = null, [FromQuery] bool? pending = null, CancellationToken cancellationToken = default)
         => Ok(await _grants.ListAsync(new GrantListQuery(page, pageSize, status, organizationId, null, pending), cancellationToken));

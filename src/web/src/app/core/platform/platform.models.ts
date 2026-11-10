@@ -71,6 +71,8 @@ export interface AuditLogRow {
   detailsJson?: string;
   correlationId?: string;
   ipAddress?: string;
+  /** True when part of the details was withheld: the row belongs to an organization the reader holds no approved grant for. */
+  detailsReduced?: boolean;
 }
 
 export interface AuditQuery {

@@ -61,20 +61,17 @@ public sealed class AlertDigestBuilder
                     byUser[recipient.UserId] = entry;
                 }
 
-                var canSee = true;
-                if (data is not null)
+                EffectivePermissions? viewer = null;
+                if (data is not null && !permissions.TryGetValue(recipient.UserId, out viewer))
                 {
-                    if (!permissions.TryGetValue(recipient.UserId, out var viewer))
-                    {
-                        viewer = await _permissions.ResolveForUserAsync(organizationId, recipient.UserId, cancellationToken);
-                        permissions[recipient.UserId] = viewer;
-                    }
-
-                    canSee = RuleCatalog.CanSeeDetails(viewer, data, rule.OwnerUserId);
+                    viewer = await _permissions.ResolveForUserAsync(organizationId, recipient.UserId, cancellationToken);
+                    permissions[recipient.UserId] = viewer;
                 }
 
                 foreach (var alert in alerts.Where(a => a.RuleId == rule.RuleId))
                 {
+                    // Judged per alert against the owner the alert was evaluated as (P13.26), not the rule's current owner.
+                    var canSee = data is null || RuleCatalog.CanSeeDetails(viewer!, data, alert.EvaluatedAsUserId ?? Guid.Empty);
                     entry.Lines.Add(Line(rule, alert, canSee));
                 }
             }

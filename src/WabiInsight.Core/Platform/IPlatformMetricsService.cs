@@ -43,8 +43,12 @@ public interface IPlatformMetricsService
     Task<PlatformDashboard> GetDashboardAsync(MetricPeriod period, MetricBucket bucket, Guid? organizationId = null, CancellationToken cancellationToken = default);
 }
 
-/// <summary>One audit row as shown to platform administrators (secrets are never written to audit details).</summary>
-public sealed record AuditLogRow(Guid AuditLogId, DateTimeOffset CreatedAt, Guid? OrganizationId, PrincipalType ActorType, Guid? ActorId, string ActorDisplayName, string EventType, string? EntityType, string? EntityId, string? DetailsJson, string? CorrelationId, string? IpAddress);
+/// <summary>
+/// One audit row as shown to platform administrators (secrets are never written to audit details).
+/// <paramref name="DetailsReduced"/> is true when the row belongs to an organization the reader holds no approved
+/// support grant for, and part of its details was withheld (see <see cref="AuditDetailReducer"/>).
+/// </summary>
+public sealed record AuditLogRow(Guid AuditLogId, DateTimeOffset CreatedAt, Guid? OrganizationId, PrincipalType ActorType, Guid? ActorId, string ActorDisplayName, string EventType, string? EntityType, string? EntityId, string? DetailsJson, string? CorrelationId, string? IpAddress, bool DetailsReduced = false);
 
 public sealed record AuditLogQuery(int Page = 1, int PageSize = 50, DateTimeOffset? From = null, DateTimeOffset? To = null, string? EventType = null, Guid? OrganizationId = null, PrincipalType? ActorType = null, string? Search = null);
 

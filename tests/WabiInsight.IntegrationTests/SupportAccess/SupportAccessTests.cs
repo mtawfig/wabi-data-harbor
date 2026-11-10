@@ -2,7 +2,11 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using WabiInsight.Core.Audit;
+using WabiInsight.Core.Common;
+using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Support;
+using WabiInsight.Core.Tenancy;
 using WabiInsight.IntegrationTests.Api;
 using WabiInsight.IntegrationTests.Database;
 using WabiInsight.IntegrationTests.Email;
@@ -27,6 +31,20 @@ public sealed class SupportAccessTests : IDisposable
     {
         var client = _factory.CreateClient();
         Assert.Equal(HttpStatusCode.OK, (await client.LoginAsync(email, password)).StatusCode);
+        return client;
+    }
+
+    /// <summary>A second Platform Administrator of this test's own (others reset the seeded one's password), signed in.</summary>
+    private async Task<HttpClient> NewPlatformAdministratorAsync(HttpClient platform)
+    {
+        var email = $"other.admin.{Guid.NewGuid():N}@wabitex.test";
+        var create = await platform.PostJsonAsync("/api/platform/administrators", new { email, fullName = "Other Admin" });
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var temporary = Email.RecordingEmailSender.TemporaryPasswordOf(await _factory.Emails.WaitForAsync(email));
+        var client = _factory.CreateClient();
+        Assert.Equal(HttpStatusCode.OK, (await client.LoginAsync(email, temporary)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostJsonAsync("/api/auth/change-password", new { currentPassword = temporary, newPassword = "Other#Admin#Strong#2026" })).StatusCode);
+        await client.RefreshCsrfAsync();
         return client;
     }
 
@@ -71,17 +89,43 @@ public sealed class SupportAccessTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await platform.GetAsync("/api/platform/support/session")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = "x@org-a.test", fullName = "X" })).StatusCode);
 
+        // A ticket alone grants nothing (P13.26): before any grant the targets are the person who asked and the
+        // standard roles. Not the organization's user list, not its own roles, not its table names.
         var targets = await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync();
-        Assert.Contains(targets.GetProperty("users").EnumerateArray(), u => u.GetProperty("userId").GetGuid() == _db.Data.UserAChangerId);
-        Assert.DoesNotContain(targets.GetProperty("users").EnumerateArray(), u => u.GetProperty("userId").GetGuid() == _db.Data.UserB1Id);
+        Assert.Equal(_db.Data.UserA1Id, Assert.Single(targets.GetProperty("users").EnumerateArray()).GetProperty("userId").GetGuid());
         Assert.Contains(targets.GetProperty("roles").EnumerateArray(), r => r.GetProperty("roleCode").GetString() == "Analyst");
+        // A role the organization defined itself is not offered; it is added by its exact code when the ticket names it.
+        var ownRole = await (await alice.PostJsonAsync("/api/roles", new { roleCode = $"Own{Guid.NewGuid():N}"[..14], nameEn = "Own role", nameAr = "دور خاص", description = (string?)null })).ReadJsonAsync();
+        var ownRoleId = ownRole.GetProperty("roleId").GetGuid();
+        var offeredRoles = (await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync()).GetProperty("roles").EnumerateArray().Select(r => r.GetProperty("roleId").GetGuid()).ToList();
+        Assert.DoesNotContain(ownRoleId, offeredRoles);
+        var standard = (await (await alice.GetAsync("/api/roles")).ReadJsonAsync()).EnumerateArray().Where(r => r.GetProperty("isSystem").GetBoolean() || (r.TryGetProperty("templateVersion", out var version) && version.ValueKind == JsonValueKind.Number)).Select(r => r.GetProperty("roleId").GetGuid()).ToList();
+        Assert.Equal(standard.Order(), offeredRoles.Order());
+        Assert.Equal(ownRoleId, (await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets/role?code={Uri.EscapeDataString(ownRole.GetProperty("roleCode").GetString()!)}")).ReadJsonAsync()).GetProperty("roleId").GetGuid());
+        Assert.Empty(targets.GetProperty("objects").EnumerateArray());
         Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).StatusCode);
+
+        // Someone the ticket names is added by exact address: one user of this organization, or nothing.
+        var found = await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets/user?email={Uri.EscapeDataString(TestData.ChangerEmail.ToUpperInvariant())}");
+        Assert.Equal(HttpStatusCode.OK, found.StatusCode);
+        Assert.Equal(_db.Data.UserAChangerId, (await found.ReadJsonAsync()).GetProperty("userId").GetGuid());
+        foreach (var miss in new[] { TestData.BobEmail, "changer", "%@org-a.test", "nobody@org-a.test", "" })
+        {
+            var notFound = await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets/user?email={Uri.EscapeDataString(miss)}");
+            Assert.True(notFound.StatusCode == HttpStatusCode.NotFound, $"'{miss}': {(int)notFound.StatusCode}");
+            Assert.Contains("support_target_not_found", await notFound.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        }
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync($"/api/platform/support/tickets/{ticketId}/targets/user?email={Uri.EscapeDataString(TestData.ChangerEmail)}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets/role?code={Uri.EscapeDataString("NoSuchRole")}")).StatusCode);
+        var roleByCode = await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets/role?code=Analyst");
+        Assert.Equal("Analyst", (await roleByCode.ReadJsonAsync()).GetProperty("roleCode").GetString());
 
         var analystRoleId = targets.GetProperty("roles").EnumerateArray().Single(r => r.GetProperty("roleCode").GetString() == "Analyst").GetProperty("roleId").GetGuid();
 
         var grant = await ProposeAsync(platform, ticketId, new object[]
         {
-            new { operation = "CreateOrganizationUser", targetReferences = new[] { analystRoleId.ToString() } }, // the only role the new user may be given
+            new { operation = "CreateOrganizationUser", targetReferences = new[] { analystRoleId.ToString(), "email:Assisted@org-a.test" } }, // the only role and the only address
             new { operation = "ResetOrganizationUserPassword", targetReferences = new[] { _db.Data.UserAChangerId.ToString() } },
             new { operation = "ConfigureRole", targetReferences = new[] { "new" } },
         }, expiryHours: 2);
@@ -111,6 +155,17 @@ public sealed class SupportAccessTests : IDisposable
         var session = await (await platform.GetAsync("/api/platform/support/session")).ReadJsonAsync();
         Assert.Equal(grantId, session.GetProperty("grant").GetProperty("grantId").GetGuid());
         Assert.Equal("Active", session.GetProperty("grant").GetProperty("status").GetString());
+
+        // Under the approved grant the targets also hold what the grant names: the user to reset, still not the list.
+        var underGrant = await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync();
+        Assert.Equal(new[] { _db.Data.UserA1Id, _db.Data.UserAChangerId }.Order(), underGrant.GetProperty("users").EnumerateArray().Select(u => u.GetProperty("userId").GetGuid()).Order());
+        Assert.Empty(underGrant.GetProperty("objects").EnumerateArray()); // this grant does not cover table permissions
+
+        // An account is created only for the address the organization approved.
+        var otherAddress = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = "someone.else@org-a.test", fullName = "Someone Else", preferredLanguage = "en", roleCodes = new[] { "Analyst" } });
+        Assert.Equal(HttpStatusCode.Forbidden, otherAddress.StatusCode);
+        Assert.Contains("support_user_email_not_granted", await otherAddress.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Null(await RoleCodesOfAsync("someone.else@org-a.test"));
 
         // Permitted: create a user (temporary password emailed), reset the listed user, create a role.
         var create = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = "assisted@org-a.test", fullName = "Assisted User", preferredLanguage = "en", roleCodes = new[] { "Analyst" } });
@@ -192,26 +247,40 @@ public sealed class SupportAccessTests : IDisposable
         var analyst = targets.GetProperty("roles").EnumerateArray().Single(r => r.GetProperty("roleCode").GetString() == "Analyst");
         var analystRoleId = analyst.GetProperty("roleId").GetGuid();
 
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        var approvedEmail = $"approved.{tag}@org-a.test";
+        var malformedEmail = $"malformed.{tag}@org-a.test";
+
         // A role of another organization cannot be listed.
-        var crossOrg = await platform.PostJsonAsync($"/api/platform/support/tickets/{ticketId}/access-grants", new { operations = new[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { _db.Data.RoleAdminBId.ToString() } } }, reason = "x" });
+        var crossOrg = await platform.PostJsonAsync($"/api/platform/support/tickets/{ticketId}/access-grants", new { operations = new[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { _db.Data.RoleAdminBId.ToString(), $"email:{approvedEmail}" } } }, reason = "x" });
         Assert.Equal(HttpStatusCode.BadRequest, crossOrg.StatusCode);
         Assert.Contains("support_target_not_in_organization", await crossOrg.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 
-        // 1. A grant that lists the Analyst role: the approver sees exactly which role support may assign, in both languages.
-        var grantId = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { analystRoleId.ToString() } } })).GetProperty("grantId").GetGuid();
+        // A proposal to create a user has to say for whom (P13.26): no address, or something that is not one, is refused.
+        var noAddress = await platform.PostJsonAsync($"/api/platform/support/tickets/{ticketId}/access-grants", new { operations = new[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { analystRoleId.ToString() } } }, reason = "x" });
+        Assert.Equal(HttpStatusCode.BadRequest, noAddress.StatusCode);
+        Assert.Contains("support_new_user_email_required", await noAddress.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        var badAddress = await platform.PostJsonAsync($"/api/platform/support/tickets/{ticketId}/access-grants", new { operations = new[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { "email:not-an-address" } } }, reason = "x" });
+        Assert.Contains("support_new_user_email_invalid", await badAddress.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        var misplaced = await platform.PostJsonAsync($"/api/platform/support/tickets/{ticketId}/access-grants", new { operations = new[] { new { operation = "ConfigureRole", targetReferences = new[] { "new", "email:x@org-a.test" } } }, reason = "x" });
+        Assert.Contains("support_target_not_applicable", await misplaced.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        // 1. A grant that lists the Analyst role and the address: the approver sees exactly which role support may assign and to whom, in both languages.
+        var grantId = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { analystRoleId.ToString(), $"email: {approvedEmail.ToUpperInvariant()} ", $"email:{approvedEmail}", $"email:{malformedEmail}" } } })).GetProperty("grantId").GetGuid();
         var pending = await (await alice.GetAsync($"/api/support/access-grants/{grantId}")).ReadJsonAsync();
         var operation = pending.GetProperty("operations").EnumerateArray().Single();
         Assert.Equal("CreateOrganizationUser", operation.GetProperty("operation").GetString());
-        Assert.Equal(analystRoleId, operation.GetProperty("targetReferences").EnumerateArray().Single().GetGuid());
+        // One spelling per address: the same address typed twice is stored once.
+        Assert.Equal(new[] { analystRoleId.ToString(), $"email:{approvedEmail}", $"email:{malformedEmail}" }, operation.GetProperty("targetReferences").EnumerateArray().Select(t => t.GetString()));
+        Assert.Equal(approvedEmail, pending.GetProperty("targetLabels").GetProperty($"email:{approvedEmail}").GetString());
+        Assert.Equal(approvedEmail, pending.GetProperty("targetLabelsAr").GetProperty($"email:{approvedEmail}").GetString());
         Assert.Equal($"{analyst.GetProperty("nameEn").GetString()} (Analyst)", pending.GetProperty("targetLabels").GetProperty(analystRoleId.ToString()).GetString());
         Assert.Equal($"{analyst.GetProperty("nameAr").GetString()} (Analyst)", pending.GetProperty("targetLabelsAr").GetProperty(analystRoleId.ToString()).GetString());
         Assert.Contains("approve", pending.GetProperty("allowedActions").EnumerateArray().Select(a => a.GetString()));
         Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/support/access-grants/{grantId}/approve", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{grantId}/enter", new { })).StatusCode);
 
-        // The approved role is assigned.
-        var tag = Guid.NewGuid().ToString("N")[..8];
-        var approvedEmail = $"approved.{tag}@org-a.test";
+        // The approved role is assigned, to the approved address.
         var approved = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = approvedEmail, fullName = "Approved Analyst", roleCodes = new[] { "Analyst" } });
         Assert.True(approved.StatusCode == HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
         Assert.Equal(new[] { "Analyst" }, await RoleCodesOfAsync(approvedEmail));
@@ -227,7 +296,6 @@ public sealed class SupportAccessTests : IDisposable
         }
 
         // A payload that is not a list of role codes is not read as "no roles".
-        var malformedEmail = $"malformed.{tag}@org-a.test";
         var malformed = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = malformedEmail, fullName = "Malformed", roleCodes = "Management" });
         Assert.Equal(HttpStatusCode.BadRequest, malformed.StatusCode);
         Assert.Null(await RoleCodesOfAsync(malformedEmail));
@@ -249,15 +317,15 @@ public sealed class SupportAccessTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{grantId}/complete", new { note = "Done." })).StatusCode);
 
-        // 2. A grant without role targets (as every grant approved before this rule): a user without roles only.
-        var bareGrantId = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = Array.Empty<string>() } })).GetProperty("grantId").GetGuid();
+        // 2. A grant without role targets: a user without roles only.
+        var bareEmail = $"bare.{tag}@org-a.test";
+        var bareGrantId = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { $"email:{bareEmail}" } } })).GetProperty("grantId").GetGuid();
         Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/support/access-grants/{bareGrantId}/approve", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{bareGrantId}/enter", new { })).StatusCode);
         var withRole = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = $"withrole.{tag}@org-a.test", fullName = "With Role", roleCodes = new[] { "Analyst" } });
         Assert.Equal(HttpStatusCode.Forbidden, withRole.StatusCode);
         Assert.Contains("support_role_not_granted", await withRole.Content.ReadAsStringAsync(), StringComparison.Ordinal);
         Assert.Null(await RoleCodesOfAsync($"withrole.{tag}@org-a.test"));
-        var bareEmail = $"bare.{tag}@org-a.test";
         var bare = await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = bareEmail, fullName = "No Roles", roleCodes = Array.Empty<string>() });
         Assert.True(bare.StatusCode == HttpStatusCode.OK, await bare.Content.ReadAsStringAsync());
         Assert.Empty((await RoleCodesOfAsync(bareEmail))!);
@@ -368,13 +436,112 @@ public sealed class SupportAccessTests : IDisposable
     }
 
     [Fact]
+    public async Task AuditPage_WithholdsAnOrganizationsDetails_UnlessTheReaderHoldsAnApprovedGrantForIt()
+    {
+        using var alice = await LoginAsync(TestData.AliceEmail); // OrganizationAdmin of A
+        // An Organization Administrator of B, added for this test (the seeded user of B holds no role).
+        var bAdminEmail = $"audit.admin.{Guid.NewGuid():N}@org-b.test";
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var userId = Ids.New();
+            context.OrganizationUsers.Add(TestData.NewUser(userId, _db.Data.OrganizationBId, bAdminEmail, "B Audit Admin"));
+            context.LoginIdentities.Add(TestData.Identity(bAdminEmail, PrincipalType.OrganizationUser, userId, _db.Data.OrganizationBId, DateTimeOffset.UtcNow));
+            context.UserRoles.Add(new UserRole { OrganizationId = _db.Data.OrganizationBId, UserId = userId, RoleId = _db.Data.RoleAdminBId, AssignedAt = DateTimeOffset.UtcNow, AssignedByAdministratorId = _db.Data.AdministratorId });
+            await context.SaveChangesAsync();
+        }
+
+        using var bob = await LoginAsync(bAdminEmail);
+        await SetSecondApprovalAsync(alice, false);
+        using var platform = await LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
+        using var second = await NewPlatformAdministratorAsync(platform);
+        await platform.PostJsonAsync("/api/platform/support/session/exit", new { });
+
+        // Each organization defines a role of its own: the code is the organization's configuration.
+        var codeA = $"Pay{Guid.NewGuid():N}"[..14];
+        var codeB = $"Pay{Guid.NewGuid():N}"[..14];
+        async Task<Guid> OwnRoleAsync(HttpClient administrator, string code)
+        {
+            var created = await administrator.PostJsonAsync("/api/roles", new { roleCode = code, nameEn = "Payroll", nameAr = "رواتب", description = (string?)null });
+            Assert.True(created.IsSuccessStatusCode, $"{(int)created.StatusCode}: {await created.Content.ReadAsStringAsync()}");
+            return (await created.ReadJsonAsync()).GetProperty("roleId").GetGuid();
+        }
+
+        var roleA = await OwnRoleAsync(alice, codeA);
+        var roleB = await OwnRoleAsync(bob, codeB);
+
+        async Task<JsonElement> RowAsync(HttpClient reader, Guid organizationId, Guid roleId)
+        {
+            var page = await (await reader.GetAsync($"/api/platform/audit?organizationId={organizationId}&eventType={Uri.EscapeDataString(AuditEvents.RoleSaved)}&pageSize=200")).ReadJsonAsync();
+            return page.GetProperty("items").EnumerateArray().First(r => r.GetProperty("entityId").GetString() == roleId.ToString());
+        }
+
+        async Task<int> SearchAsync(HttpClient reader, string term) =>
+            (await (await reader.GetAsync($"/api/platform/audit?search={Uri.EscapeDataString(term)}&pageSize=50")).ReadJsonAsync()).GetProperty("totalCount").GetInt32();
+
+        void AssertReduced(JsonElement row, string code)
+        {
+            Assert.True(row.GetProperty("detailsReduced").GetBoolean());
+            var details = row.GetProperty("detailsJson").GetString()!;
+            Assert.DoesNotContain(code, details, StringComparison.Ordinal);
+            Assert.Contains("\"created\":true", details, StringComparison.Ordinal); // what happened is still told
+            Assert.Contains("\"withheld\":[\"code\"]", details, StringComparison.Ordinal);
+        }
+
+        void AssertFull(JsonElement row, string code)
+        {
+            Assert.False(row.TryGetProperty("detailsReduced", out var reduced) && reduced.GetBoolean());
+            Assert.Contains(code, row.GetProperty("detailsJson").GetString()!, StringComparison.Ordinal);
+        }
+
+        // No grant: both organizations' rows are reduced for both administrators, and the withheld text cannot be searched for.
+        AssertReduced(await RowAsync(platform, _db.Data.OrganizationAId, roleA), codeA);
+        AssertReduced(await RowAsync(platform, _db.Data.OrganizationBId, roleB), codeB);
+        AssertReduced(await RowAsync(second, _db.Data.OrganizationAId, roleA), codeA);
+        Assert.Equal(0, await SearchAsync(platform, codeA));
+        Assert.Equal(0, await SearchAsync(platform, codeB));
+        Assert.True(await SearchAsync(platform, roleA.ToString()) >= 1); // an identifier is not withheld
+
+        // A grant that is only proposed changes nothing; approved, it opens organization A's rows to its holder alone.
+        var ticketId = await CreateTicketAsync(alice, "Please review our roles");
+        var grantId = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "ConfigureRole", targetReferences = new[] { roleA.ToString() } } })).GetProperty("grantId").GetGuid();
+        AssertReduced(await RowAsync(platform, _db.Data.OrganizationAId, roleA), codeA);
+        Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/support/access-grants/{grantId}/approve", new { })).StatusCode);
+
+        AssertFull(await RowAsync(platform, _db.Data.OrganizationAId, roleA), codeA);
+        Assert.True(await SearchAsync(platform, codeA) >= 1);
+        AssertReduced(await RowAsync(platform, _db.Data.OrganizationBId, roleB), codeB); // the grant is for A only
+        Assert.Equal(0, await SearchAsync(platform, codeB));
+        AssertReduced(await RowAsync(second, _db.Data.OrganizationAId, roleA), codeA);   // and for its holder only
+        Assert.Equal(0, await SearchAsync(second, codeA));
+
+        // Free text is withheld too: the proposal's reason, read by the administrator who holds no grant. The operation
+        // code and the identifiers stay.
+        var proposals = await (await second.GetAsync($"/api/platform/audit?organizationId={_db.Data.OrganizationAId}&eventType={Uri.EscapeDataString(AuditEvents.SupportAccessProposed)}&pageSize=200")).ReadJsonAsync();
+        var proposal = proposals.GetProperty("items").EnumerateArray().First(r => r.GetProperty("entityId").GetString() == grantId.ToString());
+        Assert.True(proposal.GetProperty("detailsReduced").GetBoolean());
+        var proposalDetails = proposal.GetProperty("detailsJson").GetString()!;
+        Assert.DoesNotContain("Requested in the ticket", proposalDetails, StringComparison.Ordinal);
+        Assert.Contains("ConfigureRole", proposalDetails, StringComparison.Ordinal);
+        Assert.Contains(roleA.ToString(), proposalDetails, StringComparison.Ordinal);
+
+        // The grant ends: organization A's rows are reduced again.
+        Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/support/access-grants/{grantId}/revoke", new { note = "Done." })).StatusCode);
+        AssertReduced(await RowAsync(platform, _db.Data.OrganizationAId, roleA), codeA);
+        Assert.Equal(0, await SearchAsync(platform, codeA));
+
+        // Rows that belong to no organization (the platform's own) are never reduced.
+        var platformRows = await (await platform.GetAsync($"/api/platform/audit?eventType={Uri.EscapeDataString(AuditEvents.LoginSucceeded)}&actorType=PlatformAdministrator&pageSize=5")).ReadJsonAsync();
+        Assert.All(platformRows.GetProperty("items").EnumerateArray(), r => Assert.False(r.TryGetProperty("detailsReduced", out var reduced) && reduced.GetBoolean()));
+    }
+
+    [Fact]
     public async Task ExpiredGrants_EndTheSession_AndDenyExecution()
     {
         using var alice = await LoginAsync(TestData.AliceEmail);
         await SetSecondApprovalAsync(alice, false);
         var ticketId = await CreateTicketAsync(alice, "Expiry ticket");
         using var platform = await LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
-        var grantId = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = Array.Empty<string>() } })).GetProperty("grantId").GetGuid();
+        var grantId = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { "email:expired@org-a.test" } } })).GetProperty("grantId").GetGuid();
         Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/support/access-grants/{grantId}/approve", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{grantId}/enter", new { })).StatusCode);
 
@@ -395,8 +562,8 @@ public sealed class SupportAccessTests : IDisposable
         Assert.Contains("SupportSessionEnded", timeline);
 
         // Only one open grant per ticket; a declined proposal frees the ticket again.
-        var again = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = Array.Empty<string>() } })).GetProperty("grantId").GetGuid();
-        var duplicate = await platform.PostJsonAsync($"/api/platform/support/tickets/{ticketId}/access-grants", new { operations = new[] { new { operation = "CreateOrganizationUser", targetReferences = Array.Empty<string>() } }, reason = "dup" });
+        var again = (await ProposeAsync(platform, ticketId, new object[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { "email:expired@org-a.test" } } })).GetProperty("grantId").GetGuid();
+        var duplicate = await platform.PostJsonAsync($"/api/platform/support/tickets/{ticketId}/access-grants", new { operations = new[] { new { operation = "CreateOrganizationUser", targetReferences = new[] { "email:expired@org-a.test" } } }, reason = "dup" });
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
         var decline = await alice.PostJsonAsync($"/api/support/access-grants/{again}/decline", new { note = "Not needed." });
         Assert.Equal("Declined", (await decline.ReadJsonAsync()).GetProperty("status").GetString());

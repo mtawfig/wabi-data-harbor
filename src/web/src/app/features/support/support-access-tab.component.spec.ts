@@ -57,9 +57,9 @@ describe('SupportAccessTabComponent', () => {
     const fixture = await create('app');
     http.expectOne('/api/support/tickets/t1/access-grants').flush([
       grant({
-        operations: [{ operation: 'CreateOrganizationUser', targetReferences: ['r-analyst'] }],
-        targetLabels: { 'r-analyst': 'Analyst (Analyst)' },
-        targetLabelsAr: { 'r-analyst': 'محلّل (Analyst)' },
+        operations: [{ operation: 'CreateOrganizationUser', targetReferences: ['r-analyst', 'email:new.user@org.test'] }],
+        targetLabels: { 'r-analyst': 'Analyst (Analyst)', 'email:new.user@org.test': 'new.user@org.test' },
+        targetLabelsAr: { 'r-analyst': 'محلّل (Analyst)', 'email:new.user@org.test': 'new.user@org.test' },
         allowedActions: ['approve', 'decline'],
       }),
     ]);
@@ -70,12 +70,17 @@ describe('SupportAccessTabComponent', () => {
     expect(line()).toContain('Roles the new user may be given:');
     expect(line()).toContain('Analyst (Analyst)');
     expect(line()).not.toContain('Management');
+    // The address the account is for is part of what the approver reads, and it is not listed among the roles.
+    expect(line()).toContain('Account for:');
+    expect(element.querySelector('[data-testid="grant-new-user-email"]')?.textContent).toBe('new.user@org.test');
+    expect(line()).not.toContain('email:');
     expect(element.querySelector('[data-testid="grant-approve"]')).not.toBeNull();
 
     TestBed.inject(LanguageService).use('ar', false);
     fixture.detectChanges();
     expect(line()).toContain('الأدوار التي يمكن منحها للمستخدم الجديد:');
     expect(line()).toContain('محلّل (Analyst)');
+    expect(line()).toContain('حساب لـ:');
   });
 
   it('tells the approver when a created user can be given no role', async () => {
@@ -87,34 +92,36 @@ describe('SupportAccessTabComponent', () => {
     expect(line).toContain('No role may be given: the new user is created without roles.');
   });
 
-  it('lets support choose the roles when proposing and offers only the approved roles when running', async () => {
+  it('names the new user and the roles when proposing, and offers only the approved address and roles when running', async () => {
     const fixture = await create('platform');
-    const active = grant({ status: 'Active', sessionActive: true, operations: [{ operation: 'CreateOrganizationUser', targetReferences: ['r-analyst'] }], targetLabels: { 'r-analyst': 'Analyst (Analyst)' } });
+    const active = grant({ status: 'Active', sessionActive: true, operations: [{ operation: 'CreateOrganizationUser', targetReferences: ['r-analyst', 'email:new.user@org.test'] }], targetLabels: { 'r-analyst': 'Analyst (Analyst)' } });
     http.expectOne('/api/platform/support/tickets/t1/access-grants').flush([active]);
     http.expectOne('/api/platform/support/operations').flush(catalog);
     http.expectOne('/api/platform/support/session').flush({ sessionId: 's1', grant: active, startedAt: '2026-11-10T08:00:00Z', expiresAt: '2026-11-10T12:00:00Z', operations: active.operations });
     const component = fixture.componentInstance;
 
-    // Proposal: the role targets of the operation travel with the proposal; an empty list is allowed.
-    const row = component.rows().find((r) => r.definition.code === 'CreateOrganizationUser')!;
-    component.toggleRow(row, true);
-    component.setTargets(component.rows().find((r) => r.definition.code === 'CreateOrganizationUser')!, ['r-analyst']);
+    // Proposal: the roles and the address of the user to create travel with the proposal, for the organization to approve.
+    const createRow = () => component.rows().find((r) => r.definition.code === 'CreateOrganizationUser')!;
+    component.toggleRow(createRow(), true);
+    component.setTargets(createRow(), ['r-analyst']);
+    component.setEmails(createRow(), ' new.user@org.test ');
     component.reason.set('Requested in the ticket.');
     component.submitProposal();
     const proposal = http.expectOne({ method: 'POST', url: '/api/platform/support/tickets/t1/access-grants' });
-    expect(proposal.request.body.operations).toEqual([{ operation: 'CreateOrganizationUser', targetReferences: ['r-analyst'] }]);
+    expect(proposal.request.body.operations).toEqual([{ operation: 'CreateOrganizationUser', targetReferences: ['r-analyst', 'email:new.user@org.test'] }]);
     proposal.flush(active);
     http.expectOne('/api/platform/support/tickets/t1/access-grants').flush([active]);
     http.expectOne('/api/platform/support/session').flush({ sessionId: 's1', grant: active, startedAt: '2026-11-10T08:00:00Z', expiresAt: '2026-11-10T12:00:00Z', operations: active.operations });
 
-    // Running: no target is named, and only the approved role can be picked.
+    // Running: no target is named; only the approved address and the approved role can be picked.
     component.selectOperation('CreateOrganizationUser');
     component.ensureTargets();
     http.expectOne('/api/platform/support/tickets/t1/targets').flush(targets);
     expect(component.runTarget()).toBeNull();
     expect(component.roleOptions()).toEqual([{ code: 'Analyst', label: 'Analyst' }]);
+    expect(component.runEmails()).toEqual(['new.user@org.test']);
+    expect(component.runPayload()['email']).toBe('new.user@org.test'); // one approved address: nothing to choose
 
-    component.setField('email', 'new.user@org.test');
     component.setField('fullName', 'New User');
     component.runRoleCodes.set(['Analyst']);
     component.execute();
@@ -123,6 +130,35 @@ describe('SupportAccessTabComponent', () => {
     execute.flush({ operation: 'CreateOrganizationUser', outcome: 'Succeeded' });
     http.expectOne('/api/platform/support/tickets/t1/access-grants').flush([active]);
     http.expectOne('/api/platform/support/session').flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne('/api/platform/support/tickets/t1/targets').flush(targets); // what may be targeted follows the grant's state
+  });
+
+  it('adds a user the ticket names by exact e-mail address instead of listing the organization\'s users', async () => {
+    const fixture = await create('platform');
+    http.expectOne('/api/platform/support/tickets/t1/access-grants').flush([]);
+    http.expectOne('/api/platform/support/operations').flush(catalog);
+    http.expectOne('/api/platform/support/session').flush(null, { status: 204, statusText: 'No Content' });
+    const component = fixture.componentInstance;
+    component.startProposal();
+    // Without an approved grant the list holds only the person who opened the ticket.
+    http.expectOne('/api/platform/support/tickets/t1/targets').flush({ ...targets, users: [{ userId: 'u1', fullName: 'Alice', email: 'alice@org.test', isActive: true }] });
+    const resetRow = () => component.rows().find((r) => r.definition.code === 'ResetOrganizationUserPassword')!;
+    component.toggleRow(resetRow(), true);
+
+    component.setLookup(resetRow(), 'nobody@org.test');
+    component.lookupTarget(resetRow(), 'user');
+    http.expectOne((r) => r.url === '/api/platform/support/tickets/t1/targets/user' && r.params.get('email') === 'nobody@org.test')
+      .flush({ type: 'https://wabi-insight.dev/problems/not-found', title: 'Not found', status: 404, detail: 'support_target_not_found' }, { status: 404, statusText: 'Not Found' });
+    expect(resetRow().lookupError).toContain('No match in this organization');
+    expect(resetRow().targets).toEqual([]);
+
+    component.setLookup(resetRow(), 'sara@org.test');
+    component.lookupTarget(resetRow(), 'user');
+    http.expectOne((r) => r.url === '/api/platform/support/tickets/t1/targets/user' && r.params.get('email') === 'sara@org.test')
+      .flush({ userId: 'u2', fullName: 'Sara', email: 'sara@org.test', isActive: true });
+    expect(resetRow().targets).toEqual(['u2']);
+    expect(resetRow().lookup).toBe('');
+    expect(component.targets()?.users.map((u) => u.userId)).toEqual(['u1', 'u2']);
   });
 
   afterEach(() => {

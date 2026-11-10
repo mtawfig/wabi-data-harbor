@@ -162,6 +162,14 @@ public class Alert : AuditableEntity, ITenantOwned
     /// <summary>For access rules: the user whose behaviour the alert is about.</summary>
     public Guid? SubjectUserId { get; set; }
 
+    /// <summary>
+    /// The rule's owner at the evaluation that produced the stored values (the latest occurrence): the alert's
+    /// matches cover the rows <b>that</b> person may read (P13.26). Who may see the values is decided against this
+    /// user, not against whoever owns the rule later; null (an alert older than this field with no rule left) means
+    /// nobody sees them as "the owner".
+    /// </summary>
+    public Guid? EvaluatedAsUserId { get; set; }
+
     public string Title { get; set; } = string.Empty;
 
     /// <summary>JSON: measure, threshold, comparison and group values of the latest occurrence.</summary>
