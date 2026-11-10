@@ -16,9 +16,9 @@ using WabiInsight.Infrastructure.Persistence;
 namespace WabiInsight.Infrastructure.Monitoring;
 
 /// <summary>
-/// Builds digest lines per recipient (owner decision D4). Recipients see an alert of a data rule in full only when
-/// their own permissions cover the rule's object and the columns shown (group-by and measure); otherwise title and
-/// count only. Shared by the daily job and the "preview my digest" endpoint.
+/// Builds digest lines per recipient (owner decision D4). A recipient sees an alert of a data rule in full only when
+/// they own the rule, or their own permissions cover the rule's object and the columns shown (group-by and measure)
+/// with row scope ALL; otherwise title and count only. Shared by the daily job and the "preview my digest" endpoint.
 /// </summary>
 public sealed class AlertDigestBuilder
 {
@@ -70,7 +70,7 @@ public sealed class AlertDigestBuilder
                         permissions[recipient.UserId] = viewer;
                     }
 
-                    canSee = RuleCatalog.CanSeeDetails(viewer, data);
+                    canSee = RuleCatalog.CanSeeDetails(viewer, data, rule.OwnerUserId);
                 }
 
                 foreach (var alert in alerts.Where(a => a.RuleId == rule.RuleId))

@@ -174,7 +174,7 @@ public static class EmailTemplates
         {
             if (line.Redacted)
             {
-                return ar ? "التفاصيل مخفية: لا تملك صلاحية قراءة بيانات هذه القاعدة." : "Details hidden: you are not permitted to read this rule's data.";
+                return ar ? "التفاصيل مخفية: صلاحياتك لا تشمل كل بيانات هذه القاعدة." : "Details hidden: your permissions do not cover all of this rule's data.";
             }
 
             var parts = new List<string>();

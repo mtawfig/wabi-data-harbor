@@ -5,6 +5,7 @@ using WabiInsight.Core.Ai.Compilers;
 using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Metadata;
 using WabiInsight.Core.Entities.Monitoring;
+using WabiInsight.Core.Entities.Permissions;
 using WabiInsight.Core.Entities.Platform;
 using WabiInsight.Core.Monitoring;
 using WabiInsight.Core.Organizations;
@@ -100,8 +101,14 @@ public static class RuleCatalog
         return (new ResolvedDataRule(new RuleObjectInfo(row.ObjectId, row.ApplicationId, row.SchemaName, row.ObjectName, columns), application, mappings), null);
     }
 
-    /// <summary>True when the viewer may read the rule's object and every column whose values appear in a match (group-by and measure).</summary>
-    public static bool CanSeeDetails(EffectivePermissions viewer, DataRuleDefinition rule)
+    /// <summary>
+    /// True when the viewer may see a match's group values and measures. The rule ran under its <b>owner's</b>
+    /// permissions, so its matches cover the rows the owner may read. Anyone else needs, on their own account, the
+    /// rule's object, every column whose values appear in a match (group-by and measure) and row scope
+    /// <see cref="RowScope.All"/> on that object: a viewer limited to a department, a section or their own rows
+    /// would otherwise read aggregates about rows outside their scope.
+    /// </summary>
+    public static bool CanSeeDetails(EffectivePermissions viewer, DataRuleDefinition rule, Guid ownerUserId)
     {
         ArgumentNullException.ThrowIfNull(viewer);
         ArgumentNullException.ThrowIfNull(rule);
@@ -112,7 +119,12 @@ public static class RuleCatalog
         }
 
         var permitted = access.Columns.Select(c => c.ColumnId).ToHashSet();
-        return rule.GroupByColumnIds.All(permitted.Contains) && (rule.Measure.ColumnId is not { } m || permitted.Contains(m));
+        if (!rule.GroupByColumnIds.All(permitted.Contains) || (rule.Measure.ColumnId is { } m && !permitted.Contains(m)))
+        {
+            return false;
+        }
+
+        return viewer.UserId == ownerUserId || access.RowScopes.Contains(RowScope.All);
     }
 }
 
