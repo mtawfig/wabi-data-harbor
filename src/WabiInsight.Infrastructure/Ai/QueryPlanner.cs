@@ -67,13 +67,13 @@ public sealed class QueryPlanner : IQueryPlanner
         }
 
         var language = request.Language == "ar" ? "ar" : "en";
-        var userContent = PromptBuilder.BuildUserContent(snapshot, request.Question, language);
+        var prompt = PromptBuilder.BuildPrompt(snapshot, request.Question, language);
         var resolved = await _providers.ResolveForOrganizationAsync(organizationId, cancellationToken);
         var watch = Stopwatch.StartNew();
         AiCompletion completion;
         try
         {
-            completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(PromptBuilder.SystemPrompt, userContent, AnalysisPlanSchema.Json, AnalysisPlanSchema.Name, Math.Max(resolved.Descriptor.MaxOutputTokens, AnalysisPlanSchema.MinPlanOutputTokens), resolved.Descriptor.Effort), cancellationToken);
+            completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(PromptBuilder.SystemPrompt, prompt.Request, AnalysisPlanSchema.Json, AnalysisPlanSchema.Name, Math.Max(resolved.Descriptor.MaxOutputTokens, AnalysisPlanSchema.MinPlanOutputTokens), resolved.Descriptor.Effort, SharedContext: prompt.Catalogue), cancellationToken);
         }
         catch (AiProviderException ex)
         {
@@ -136,7 +136,7 @@ public sealed class QueryPlanner : IQueryPlanner
         }
 
         await _usage.AppendAndSaveAsync(UsageEventTypes.AiPlanGenerated, "Application", request.ApplicationId.ToString(), quantity: usage.InputTokens + usage.OutputTokens,
-            metadata: new { usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens, usage.CachedInputTokens, usage.EstimatedCost, usage.DurationMs, queries = plan.Queries.Count, objects = authorizedPlans.Sum(a => a.Objects.Count), language }, cancellationToken: cancellationToken);
+            metadata: new { usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens, usage.CachedInputTokens, cacheWriteTokens = completion.Usage.CacheWriteTokens, usage.EstimatedCost, usage.DurationMs, queries = plan.Queries.Count, objects = authorizedPlans.Sum(a => a.Objects.Count), language }, cancellationToken: cancellationToken);
         return new PlanResponse(plan, authorizedPlans, usage, HighestClassification(plan, authorizedPlans, permissions));
     }
 

@@ -115,12 +115,21 @@ public sealed class AnthropicProvider : HttpAiProvider
             outputConfig["format"] = new { type = "json_schema", schema = ParseSchema(request.JsonSchema) };
         }
 
+        // Prompt caching: the system prompt is a cache breakpoint, and so is the shared context (the planner's catalogue), which is
+        // the same for consecutive questions on an application. The rest of the user turn (question, date) follows uncached.
+        object content = string.IsNullOrEmpty(request.SharedContext)
+            ? request.UserContent
+            : new object[]
+            {
+                new { type = "text", text = request.SharedContext, cache_control = new { type = "ephemeral" } },
+                new { type = "text", text = request.UserContent },
+            };
         var body = new
         {
             model = descriptor.Model,
             max_tokens = request.MaxOutputTokens,
             system = new[] { new { type = "text", text = request.SystemPrompt, cache_control = new { type = "ephemeral" } } },
-            messages = new[] { new { role = "user", content = request.UserContent } },
+            messages = new[] { new { role = "user", content } },
             output_config = outputConfig.Count == 0 ? null : outputConfig,
         };
         var headers = new Dictionary<string, string> { ["x-api-key"] = descriptor.ApiKey, ["anthropic-version"] = ApiVersion };
@@ -134,7 +143,7 @@ public sealed class AnthropicProvider : HttpAiProvider
 
         var text = string.Concat((json["content"] as JsonArray ?? []).Where(b => b?["type"]?.GetValue<string>() == "text").Select(b => b!["text"]?.GetValue<string>() ?? string.Empty));
         var usage = json["usage"];
-        return new AiCompletion(text, new AiUsage(Count(usage?["input_tokens"]) + Count(usage?["cache_read_input_tokens"]) + Count(usage?["cache_creation_input_tokens"]), Count(usage?["output_tokens"]), Count(usage?["cache_read_input_tokens"])), json["model"]?.GetValue<string>() ?? descriptor.Model, stopReason);
+        return new AiCompletion(text, new AiUsage(Count(usage?["input_tokens"]) + Count(usage?["cache_read_input_tokens"]) + Count(usage?["cache_creation_input_tokens"]), Count(usage?["output_tokens"]), Count(usage?["cache_read_input_tokens"]), Count(usage?["cache_creation_input_tokens"])), json["model"]?.GetValue<string>() ?? descriptor.Model, stopReason);
     }
 }
 
@@ -158,7 +167,7 @@ public sealed class OpenAiCompatibleProvider : HttpAiProvider
         {
             ["model"] = descriptor.Model,
             ["max_tokens"] = request.MaxOutputTokens,
-            ["messages"] = new[] { new { role = "system", content = request.SystemPrompt }, new { role = "user", content = request.UserContent } },
+            ["messages"] = new[] { new { role = "system", content = request.SystemPrompt }, new { role = "user", content = request.FullUserContent } },
         };
         if (request.JsonSchema is not null)
         {
@@ -206,7 +215,7 @@ public sealed class GeminiProvider : HttpAiProvider
         var body = new
         {
             system_instruction = new { parts = new[] { new { text = request.SystemPrompt } } },
-            contents = new[] { new { role = "user", parts = new[] { new { text = request.UserContent } } } },
+            contents = new[] { new { role = "user", parts = new[] { new { text = request.FullUserContent } } } },
             generationConfig = generation,
         };
         var headers = new Dictionary<string, string> { ["x-goog-api-key"] = descriptor.ApiKey };

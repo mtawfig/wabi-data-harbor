@@ -119,6 +119,41 @@ public sealed class ProviderAdapterTests
     }
 
     [Fact]
+    public async Task Anthropic_CachesTheSharedContext_InItsOwnBlockBeforeTheQuestion_AndPricesCacheWrites()
+    {
+        var handler = new FakeHandler { Response = """{"model":"m","stop_reason":"end_turn","content":[{"type":"text","text":"{}"}],"usage":{"input_tokens":200,"output_tokens":100,"cache_read_input_tokens":0,"cache_creation_input_tokens":3000}}""" };
+        var completion = await new AnthropicProvider(new Factory(handler)).CompleteAsync(Descriptor(AiProviderType.Anthropic), Request with { SharedContext = "CATALOGUE\n" });
+
+        var content = JsonNode.Parse(handler.Body!)!["messages"]![0]!["content"]!.AsArray();
+        Assert.Equal(2, content.Count);
+        Assert.Equal("CATALOGUE\n", content[0]!["text"]!.GetValue<string>());
+        Assert.Equal("ephemeral", content[0]!["cache_control"]!["type"]!.GetValue<string>());
+        Assert.Equal("USER", content[1]!["text"]!.GetValue<string>());
+        Assert.Null(content[1]!["cache_control"]);
+        Assert.Equal(3200, completion.Usage.InputTokens);
+        Assert.Equal(3000, completion.Usage.CacheWriteTokens);
+        // 200 × $4 + 3000 × $4 × 1.25 (cache write) + 100 × $20 per million
+        Assert.Equal(0.0178m, Descriptor(AiProviderType.Anthropic).EstimateCost(completion.Usage));
+
+        // Without shared context the user turn stays one plain string, as before.
+        await new AnthropicProvider(new Factory(handler)).CompleteAsync(Descriptor(AiProviderType.Anthropic), Request);
+        Assert.Equal("USER", JsonNode.Parse(handler.Body!)!["messages"]![0]!["content"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task OtherProviders_ReceiveTheSharedContextJoinedToTheQuestion()
+    {
+        var shared = Request with { SharedContext = "CATALOGUE\n" };
+        var openAi = new FakeHandler { Response = """{"choices":[{"message":{"content":"{}"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1}}""" };
+        await new OpenAiCompatibleProvider(new Factory(openAi)).CompleteAsync(Descriptor(AiProviderType.OpenAiCompatible), shared);
+        Assert.Equal("CATALOGUE\nUSER", JsonNode.Parse(openAi.Body!)!["messages"]![1]!["content"]!.GetValue<string>());
+
+        var gemini = new FakeHandler { Response = """{"candidates":[{"content":{"parts":[{"text":"{}"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1}}""" };
+        await new GeminiProvider(new Factory(gemini)).CompleteAsync(Descriptor(AiProviderType.Gemini), shared);
+        Assert.Equal("CATALOGUE\nUSER", JsonNode.Parse(gemini.Body!)!["contents"]![0]!["parts"]![0]!["text"]!.GetValue<string>());
+    }
+
+    [Fact]
     public async Task Anthropic_UsesTheRequestsOwnEffort_WhenItAsksForOne()
     {
         // The interpretation asks for "low" effort; it used to inherit the provider's configured effort and spend its whole
