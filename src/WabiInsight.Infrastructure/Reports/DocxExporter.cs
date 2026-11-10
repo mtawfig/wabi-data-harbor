@@ -92,7 +92,7 @@ public sealed class DocxExporter : IAnswerExporter
                     body.Append(Paragraph($"{(rtl ? (isChart ? "شكل" : "جدول") : (isChart ? "Figure" : "Table"))} {number.ToString(culture)}.{(section.Panels.IndexOf(i) + 1).ToString(culture)} — {(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective)}", rtl, "Caption"));
                     if (isChart)
                     {
-                        body.Append(Image(main, ChartImageRenderer.RenderPng(type, panel.Result.Series), rtl));
+                        body.Append(Image(main, ChartImageRenderer.RenderImage(type, panel.Result.Series, culture: culture), rtl));
                     }
                     else
                     {
@@ -177,24 +177,38 @@ public sealed class DocxExporter : IAnswerExporter
         return table;
     }
 
+    /// <summary>The width a table may use: A4 (11906 twips) less the 1134-twip side margins, in points, less the borders.</summary>
+    private const float TableWidthPoints = 480f;
+
     private static Table RowsTable(AnalysisPanel panel, bool rtl, CultureInfo culture)
     {
         var columns = panel.Result.Columns;
-        var table = TableShell(rtl, columns.Count);
+        var headers = columns.Select(c => QuestPdfReportRenderer.Label(c.Name)).ToList();
+        var rows = panel.Result.Rows.Take(MaxTableRows)
+            .Select(r => (IReadOnlyList<string>)columns.Select((c, i) => QuestPdfReportRenderer.FormatValue(i < r.Count ? r[i] : null, c.IsNumeric, culture)).ToList())
+            .ToList();
+
+        // The same content-based column widths as the PDF, fixed in the document so every word processor keeps them.
+        var layout = QuestPdfReportRenderer.LayoutTable(headers, columns.Select(c => c.IsNumeric).ToList(), rows, TableWidthPoints);
+        var widths = layout.Widths.Select(w => (int)Math.Floor(w * 20)).ToList();
+        var font = (int)Math.Floor(layout.FontSize * 2);
+        var headerFont = (int)Math.Floor(layout.HeaderFontSize * 2);
+        var margin = (int)Math.Round(layout.PaddingX * 20);
+        var table = TableShell(rtl, widths);
         var header = new TableRow(new TableRowProperties(new TableHeader()));
-        foreach (var column in columns)
+        for (var i = 0; i < columns.Count; i++)
         {
-            header.Append(Cell(QuestPdfReportRenderer.Label(column.Name), rtl, bold: true, shade: "E8EFF8", center: false));
+            header.Append(Cell(headers[i], rtl, bold: true, shade: "E8EFF8", center: false, right: columns[i].IsNumeric && !rtl, width: widths[i], fontHalfPoints: headerFont, marginTwips: margin));
         }
 
         table.Append(header);
         var index = 0;
-        foreach (var row in panel.Result.Rows.Take(MaxTableRows))
+        foreach (var row in rows)
         {
             var tableRow = new TableRow();
             for (var i = 0; i < columns.Count; i++)
             {
-                tableRow.Append(Cell(QuestPdfReportRenderer.FormatValue(row[i], columns[i].IsNumeric, culture), rtl, bold: false, shade: index % 2 == 1 ? "FBFCFE" : null, center: false, right: columns[i].IsNumeric && !rtl));
+                tableRow.Append(Cell(row[i], rtl, bold: false, shade: index % 2 == 1 ? "FBFCFE" : null, center: false, right: columns[i].IsNumeric && !rtl, noWrap: columns[i].IsNumeric, width: widths[i], fontHalfPoints: font, marginTwips: margin));
             }
 
             index++;
@@ -204,39 +218,63 @@ public sealed class DocxExporter : IAnswerExporter
         return table;
     }
 
-    private static Table TableShell(bool rtl, int columns)
+    private static Table TableShell(bool rtl, int columns) => TableShell(rtl, Enumerable.Repeat(0, Math.Max(1, columns)).ToList());
+
+    /// <summary>A bordered table; with column widths (twips) the layout is fixed to them, otherwise it fits the page width.</summary>
+    private static Table TableShell(bool rtl, IReadOnlyList<int> widths)
     {
-        var properties = new TableProperties(
-            new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct },
-            new TableBorders(
-                new TopBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
-                new BottomBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
-                new LeftBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
-                new RightBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
-                new InsideHorizontalBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
-                new InsideVerticalBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" }),
-            new TableLook { Val = "04A0" });
+        var fixedWidths = widths.All(w => w > 0);
+        // Table properties in schema order: bidiVisual, tblW, tblBorders, tblLayout, tblLook.
+        var properties = new TableProperties();
         if (rtl)
         {
             properties.Append(new BiDiVisual());
         }
 
-        var grid = new TableGrid();
-        for (var i = 0; i < Math.Max(1, columns); i++)
+        properties.Append(fixedWidths ? new TableWidth { Width = widths.Sum().ToString(CultureInfo.InvariantCulture), Type = TableWidthUnitValues.Dxa } : new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct });
+        properties.Append(new TableBorders(
+            new TopBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
+            new BottomBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
+            new LeftBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
+            new RightBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
+            new InsideHorizontalBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" },
+            new InsideVerticalBorder { Val = BorderValues.Single, Size = 4, Color = "E2E8F0" }));
+        if (fixedWidths)
         {
-            grid.Append(new GridColumn());
+            properties.Append(new TableLayout { Type = TableLayoutValues.Fixed });
+        }
+
+        properties.Append(new TableLook { Val = "04A0" });
+        var grid = new TableGrid();
+        foreach (var width in widths)
+        {
+            grid.Append(fixedWidths ? new GridColumn { Width = width.ToString(CultureInfo.InvariantCulture) } : new GridColumn());
         }
 
         return new Table(properties, grid);
     }
 
-    private static TableCell Cell(string text, bool rtl, bool bold, string? shade, bool center, bool right = false)
+    private static TableCell Cell(string text, bool rtl, bool bold, string? shade, bool center, bool right = false, bool noWrap = false, int? width = null, int fontHalfPoints = 18, int marginTwips = 100)
     {
-        var properties = new TableCellProperties(new TableCellMargin(new TopMargin { Width = "60", Type = TableWidthUnitValues.Dxa }, new BottomMargin { Width = "60", Type = TableWidthUnitValues.Dxa }, new LeftMargin { Width = "100", Type = TableWidthUnitValues.Dxa }, new RightMargin { Width = "100", Type = TableWidthUnitValues.Dxa }));
+        // Cell properties in schema order (width, shading, no-wrap, margins). A figure never wraps.
+        var properties = new TableCellProperties();
+        if (width is { } w)
+        {
+            properties.Append(new TableCellWidth { Width = w.ToString(CultureInfo.InvariantCulture), Type = TableWidthUnitValues.Dxa });
+        }
+
         if (shade is not null)
         {
             properties.Append(new Shading { Val = ShadingPatternValues.Clear, Fill = shade });
         }
+
+        if (noWrap)
+        {
+            properties.Append(new NoWrap());
+        }
+
+        var side = marginTwips.ToString(CultureInfo.InvariantCulture);
+        properties.Append(new TableCellMargin(new TopMargin { Width = "60", Type = TableWidthUnitValues.Dxa }, new BottomMargin { Width = "60", Type = TableWidthUnitValues.Dxa }, new LeftMargin { Width = side, Type = TableWidthUnitValues.Dxa }, new RightMargin { Width = side, Type = TableWidthUnitValues.Dxa }));
 
         var paragraphProperties = new ParagraphProperties(new SpacingBetweenLines { After = "0" });
         if (rtl)
@@ -253,12 +291,14 @@ public sealed class DocxExporter : IAnswerExporter
             paragraphProperties.Append(new Justification { Val = JustificationValues.Right });
         }
 
-        var runProperties = new RunProperties(new FontSize { Val = "18" });
+        // Run properties in schema order: bold, size, right-to-left.
+        var runProperties = new RunProperties();
         if (bold)
         {
             runProperties.Append(new Bold());
         }
 
+        runProperties.Append(new FontSize { Val = fontHalfPoints.ToString(CultureInfo.InvariantCulture) });
         if (rtl)
         {
             runProperties.Append(new RightToLeftText());
@@ -268,16 +308,16 @@ public sealed class DocxExporter : IAnswerExporter
         return new TableCell(properties, new Paragraph(paragraphProperties, run));
     }
 
-    private static Paragraph Image(MainDocumentPart main, byte[] png, bool rtl)
+    private static Paragraph Image(MainDocumentPart main, ChartImage chart, bool rtl)
     {
         var part = main.AddImagePart(ImagePartType.Png);
-        using (var stream = new MemoryStream(png))
+        using (var stream = new MemoryStream(chart.Png))
         {
             part.FeedData(stream);
         }
 
         const long cx = 6_000_000L;
-        var cy = (long)(cx * (double)ChartImageRenderer.Height / ChartImageRenderer.Width);
+        var cy = (long)(cx * (double)chart.Height / chart.Width);
         var drawing = InlineImage(main.GetIdOfPart(part), "chart.png", cx, cy);
         var properties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
         if (rtl)

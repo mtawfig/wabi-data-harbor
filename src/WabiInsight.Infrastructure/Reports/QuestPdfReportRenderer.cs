@@ -133,7 +133,8 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                                         var value = panel.Result.Rows[0][numeric >= 0 ? numeric : 0];
                                         row.RelativeItem().Border(1).BorderColor(Border).Background("#F8FBFF").Padding(8).Column(kpi =>
                                         {
-                                            kpi.Item().Text(FormatValue(value, isNumeric: true, culture)).FontSize(18).SemiBold().FontColor(Blue);
+                                            // A long figure shrinks to fit its card on one line instead of breaking across lines.
+                                            kpi.Item().Height(25).ScaleToFit().Text(FormatValue(value, isNumeric: true, culture)).FontSize(18).SemiBold().FontColor(Blue);
                                             kpi.Item().Text(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective).FontSize(8.5f).FontColor(Muted);
                                         });
                                     }
@@ -150,7 +151,7 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                                     figure.Item().PaddingBottom(2).Text($"{(rtl ? (isChart ? "شكل" : "جدول") : (isChart ? "Figure" : "Table"))} {number.ToString(culture)}.{(section.Panels.IndexOf(i) + 1).ToString(culture)} — {(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective)}").FontSize(10).SemiBold().FontColor(Ocean);
                                     if (isChart)
                                     {
-                                        figure.Item().Border(1).BorderColor(Border).Padding(6).Svg(SvgChartBuilder.Build(type, panel.Result.Series, 520, type == "pie" ? 220 : 240));
+                                        figure.Item().Border(1).BorderColor(Border).Padding(6).Svg(SvgChartBuilder.Render(type, panel.Result.Series, 520, type == "pie" ? 220 : 240, culture).Svg);
                                     }
                                     else
                                     {
@@ -253,41 +254,133 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
     private static void Table(IContainer container, AnalysisPanel panel, CultureInfo culture)
     {
         var columns = panel.Result.Columns;
+        var headers = columns.Select(c => Label(c.Name)).ToList();
+        var rows = panel.Result.Rows.Take(MaxTableRows)
+            .Select(r => (IReadOnlyList<string>)columns.Select((c, i) => FormatValue(i < r.Count ? r[i] : null, c.IsNumeric, culture)).ToList())
+            .ToList();
+        var layout = LayoutTable(headers, columns.Select(c => c.IsNumeric).ToList(), rows);
         container.Border(1).BorderColor(Border).Table(table =>
         {
             table.ColumnsDefinition(definition =>
             {
-                foreach (var column in columns)
+                foreach (var width in layout.Widths)
                 {
-                    if (column.IsNumeric)
-                    {
-                        definition.RelativeColumn(0.8f);
-                    }
-                    else
-                    {
-                        definition.RelativeColumn(1.2f);
-                    }
+                    definition.RelativeColumn(width);
                 }
             });
             table.Header(header =>
             {
-                foreach (var column in columns)
+                for (var i = 0; i < columns.Count; i++)
                 {
-                    var cell = header.Cell().Background("#F8FAFC").BorderBottom(1).BorderColor(Border).Padding(5);
-                    (column.IsNumeric ? cell.AlignRight() : cell).Text(Label(column.Name)).FontSize(8.5f).SemiBold().FontColor(Muted);
+                    var cell = header.Cell().Background("#F8FAFC").BorderBottom(1).BorderColor(Border).PaddingVertical(5).PaddingHorizontal(layout.PaddingX);
+                    (columns[i].IsNumeric ? cell.AlignRight() : cell).Text(headers[i]).FontSize(layout.HeaderFontSize).SemiBold().FontColor(Muted);
                 }
             });
             var rowIndex = 0;
-            foreach (var row in panel.Result.Rows.Take(MaxTableRows))
+            foreach (var row in rows)
             {
                 var background = rowIndex++ % 2 == 1 ? "#FBFCFE" : "#FFFFFF";
                 for (var i = 0; i < columns.Count; i++)
                 {
-                    var cell = table.Cell().Background(background).BorderBottom(1).BorderColor("#F1F5F9").Padding(5);
-                    (columns[i].IsNumeric ? cell.AlignRight() : cell).Text(FormatValue(row[i], columns[i].IsNumeric, culture)).FontSize(9);
+                    var cell = table.Cell().Background(background).BorderBottom(1).BorderColor("#F1F5F9").PaddingVertical(5).PaddingHorizontal(layout.PaddingX);
+                    if (columns[i].IsNumeric)
+                    {
+                        // The column is sized for its widest number; should a figure still not fit, it shrinks rather than breaks.
+                        cell.Height(layout.FontSize * 1.45f).ScaleToFit().AlignRight().Text(row[i]).FontSize(layout.FontSize);
+                    }
+                    else
+                    {
+                        cell.Text(row[i]).FontSize(layout.FontSize);
+                    }
                 }
             }
         });
+    }
+
+    /// <summary>The width a table may use: A4 less the page margins and the table border.</summary>
+    internal const float TableWidth = 496f;
+
+    private const float TableFont = 9f;
+    private const float TableHeaderFont = 8.5f;
+    private const float MinTableFont = 6.5f;
+    private const double MaxWordWidth = 110;
+    private const double MaxTextWidth = 180;
+
+    /// <summary>Column widths, type size and cell padding of one table.</summary>
+    internal sealed record TableLayout(float FontSize, float HeaderFontSize, float PaddingX, IReadOnlyList<float> Widths);
+
+    /// <summary>
+    /// Sizes the columns from their content: a number column is never narrower than its widest figure, a header or text
+    /// column never narrower than its longest word (so neither breaks inside a figure or a word), and spare width goes to
+    /// the columns whose text would otherwise wrap. Only when the narrowest readable columns do not fit does the type
+    /// get smaller (down to 6.5 pt) with tighter padding.
+    /// </summary>
+    internal static TableLayout LayoutTable(IReadOnlyList<string> headers, IReadOnlyList<bool> numeric, IReadOnlyList<IReadOnlyList<string>> cells, float available = TableWidth)
+    {
+        ArgumentNullException.ThrowIfNull(headers);
+        ArgumentNullException.ThrowIfNull(numeric);
+        ArgumentNullException.ThrowIfNull(cells);
+        var count = headers.Count;
+        if (count == 0)
+        {
+            return new TableLayout(TableFont, TableHeaderFont, 5f, []);
+        }
+
+        var min = new double[count];
+        var natural = new double[count];
+        for (var i = 0; i < count; i++)
+        {
+            var column = i;
+            var values = cells.Select(r => column < r.Count ? r[column] : string.Empty).ToList();
+            var headerWord = TextMetrics.LongestWord(headers[i], TableHeaderFont, bold: true);
+            var headerFull = TextMetrics.Width(headers[i], TableHeaderFont, bold: true);
+            var widest = values.Select(v => TextMetrics.Width(v, TableFont)).DefaultIfEmpty(0).Max();
+            if (numeric[i])
+            {
+                min[i] = Math.Max(headerWord, widest);
+                natural[i] = Math.Max(min[i], headerFull);
+            }
+            else
+            {
+                var word = values.Select(v => TextMetrics.LongestWord(v, TableFont)).DefaultIfEmpty(0).Max();
+                min[i] = Math.Min(MaxWordWidth, Math.Max(headerWord, word));
+                natural[i] = Math.Max(min[i], Math.Min(MaxTextWidth, Math.Max(widest, headerFull)));
+            }
+
+            min[i] += 2;
+            natural[i] += 2;
+        }
+
+        var padding = 5f;
+        var font = TableFont;
+        if (min.Sum() + count * 2 * padding > available)
+        {
+            padding = 3f;
+            font = (float)Math.Clamp(TableFont * (available - count * 2 * padding) / min.Sum(), MinTableFont, TableFont);
+        }
+
+        var scale = font / TableFont;
+        var minWidths = min.Select(m => m * scale + 2 * padding).ToArray();
+        var naturalWidths = natural.Select(m => m * scale + 2 * padding).ToArray();
+        var extra = available - minWidths.Sum();
+        var widths = minWidths.ToArray();
+        if (extra > 0)
+        {
+            var wanted = naturalWidths.Select((w, i) => w - minWidths[i]).ToArray();
+            var totalWanted = wanted.Sum();
+            if (totalWanted >= extra)
+            {
+                widths = minWidths.Select((w, i) => w + extra * wanted[i] / totalWanted).ToArray();
+            }
+            else
+            {
+                var rest = extra - totalWanted;
+                var totalNatural = naturalWidths.Sum();
+                widths = naturalWidths.Select(w => w + rest * w / totalNatural).ToArray();
+            }
+        }
+
+        return new TableLayout(font, TableHeaderFont * scale, padding, widths.Select(w => (float)w).ToList());
     }
 
     internal static string FormatValue(object? value, bool isNumeric, CultureInfo culture)
