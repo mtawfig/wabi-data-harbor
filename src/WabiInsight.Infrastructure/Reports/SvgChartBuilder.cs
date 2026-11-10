@@ -4,8 +4,21 @@ using WabiInsight.Core.Ai;
 
 namespace WabiInsight.Infrastructure.Reports;
 
-/// <summary>A drawn chart and its final size: a chart grows taller when its category labels need room below the axis.</summary>
-public sealed record ChartSvg(string Svg, double Width, double Height);
+/// <summary>
+/// A drawn chart and its final size: a chart grows taller when its category labels need room below the axis.
+/// <see cref="Svg"/> is the complete drawing; <see cref="ShapesSvg"/> and <see cref="Texts"/> are the same chart split for
+/// <see cref="ChartComposer"/>, which draws the shapes as SVG and every label with the document's text engine (so Arabic
+/// is shaped and laid out right to left, which the SVG renderer cannot do).
+/// </summary>
+public sealed record ChartSvg(string Svg, double Width, double Height)
+{
+    public string ShapesSvg { get; init; } = Svg;
+
+    public IReadOnlyList<ChartText> Texts { get; init; } = [];
+}
+
+/// <summary>One label of a chart: <see cref="Y"/> is the baseline; <see cref="Anchor"/> is start, middle or end (as in SVG); a rotation in degrees turns it about the anchor point (negative is counterclockwise).</summary>
+public sealed record ChartText(string Text, double X, double Y, string Anchor, double FontSize, string Color, double Rotation = 0);
 
 /// <summary>
 /// Draws bar, line and pie charts as SVG from calculated <see cref="ResultSeries"/> for the PDF renderer.
@@ -34,22 +47,21 @@ public static class SvgChartBuilder
         ArgumentNullException.ThrowIfNull(series);
         if (series.Count == 0 || series[0].Categories.Count == 0)
         {
-            return new ChartSvg(Empty(width, height), width, height);
+            return Empty(width, height);
         }
 
         var labels = CategoryLabels(series[0].Categories, culture ?? CultureInfo.InvariantCulture);
         return type switch
         {
-            "pie" => new ChartSvg(Pie(series[0], labels, width, height), width, height),
+            "pie" => Pie(series[0], labels, width, height),
             "line" => Cartesian(series, labels, width, height, line: true),
             _ => Cartesian(series, labels, width, height, line: false),
         };
     }
 
     /// <summary>
-    /// Category labels as readers expect them: a series of first-of-month dates reads "Jan 2025" (a series of 1 January
-    /// dates reads "2025"), and every other value is shown as it is. Arabic documents get "2025-01": the chart drawing
-    /// cannot yet lay out Arabic text right to left, so month names stay out of their charts.
+    /// Category labels as readers expect them: a series of first-of-month dates reads "Jan 2025" ("يناير 2025" in Arabic
+    /// documents; a series of 1 January dates reads "2025"), and every other value is shown as it is.
     /// </summary>
     internal static IReadOnlyList<string> CategoryLabels(IReadOnlyList<string> categories, CultureInfo culture)
     {
@@ -67,15 +79,43 @@ public static class SvgChartBuilder
         }
 
         var yearly = dates.All(d => d.Month == 1) && dates.Select(d => d.Year).Distinct().Count() == dates.Count && dates.Count > 1;
-        var arabic = culture.TwoLetterISOLanguageName == "ar";
-        return dates.Select(d => yearly ? d.ToString("yyyy", CultureInfo.InvariantCulture) : d.ToString(arabic ? "yyyy-MM" : "MMM yyyy", arabic ? CultureInfo.InvariantCulture : culture)).ToList();
+        return dates.Select(d => yearly ? d.ToString("yyyy", CultureInfo.InvariantCulture) : d.ToString("MMM yyyy", culture)).ToList();
     }
 
     /// <summary>A column alias as words: "cash_in" reads "Cash in".</summary>
     internal static string SeriesLabel(string name) => QuestPdfReportRenderer.Label(name);
 
-    private static string Empty(double width, double height)
-        => $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(width)}\" height=\"{F(height)}\" viewBox=\"0 0 {F(width)} {F(height)}\"><text x=\"{F(width / 2)}\" y=\"{F(height / 2)}\" text-anchor=\"middle\" font-family=\"{FontFamily}\" font-size=\"12\" fill=\"#64748B\">No data</text></svg>";
+    private static ChartSvg Empty(double width, double height)
+    {
+        var canvas = new Canvas(width, height);
+        canvas.Text("No data", width / 2, height / 2, "middle", 12, "#64748B");
+        return canvas.Finish();
+    }
+
+    /// <summary>Collects the shapes and labels of one chart and writes both the complete SVG and the split form.</summary>
+    private sealed class Canvas(double width, double height)
+    {
+        private readonly StringBuilder _shapes = new();
+        private readonly StringBuilder _labels = new();
+        private readonly List<ChartText> _texts = [];
+
+        public void Shape(string element) => _shapes.Append(element);
+
+        public void Text(string text, double x, double y, string anchor, double fontSize, string color, double rotation = 0)
+        {
+            _texts.Add(new ChartText(text, x, y, anchor, fontSize, color, rotation));
+            var anchorAttribute = anchor == "start" ? string.Empty : $" text-anchor=\"{anchor}\"";
+            var transform = rotation == 0 ? string.Empty : $" transform=\"rotate({F(rotation)} {F(x)} {F(y)})\"";
+            _labels.Append(CultureInfo.InvariantCulture, $"<text x=\"{F(x)}\" y=\"{F(y)}\"{anchorAttribute} font-size=\"{F(fontSize)}\" fill=\"{color}\"{transform}>{Esc(text)}</text>");
+        }
+
+        public ChartSvg Finish()
+        {
+            var head = $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(width)}\" height=\"{F(height)}\" viewBox=\"0 0 {F(width)} {F(height)}\" font-family=\"{FontFamily}\">";
+            var shapes = _shapes.ToString();
+            return new ChartSvg(head + shapes + _labels + "</svg>", width, height) { ShapesSvg = head + shapes + "</svg>", Texts = _texts };
+        }
+    }
 
     private enum LabelMode
     {
@@ -164,15 +204,14 @@ public static class SvgChartBuilder
         var totalHeight = Math.Max(height, Math.Ceiling(top + plotHeight + bottom));
         double Y(double v) => top + plotHeight - (v - niceMin) / (niceMax - niceMin) * plotHeight;
 
-        var svg = new StringBuilder();
-        svg.Append(CultureInfo.InvariantCulture, $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(width)}\" height=\"{F(totalHeight)}\" viewBox=\"0 0 {F(width)} {F(totalHeight)}\" font-family=\"{FontFamily}\">");
+        var svg = new Canvas(width, totalHeight);
 
         // Grid and y labels.
         for (var v = niceMin; v <= niceMax + step / 2; v += step)
         {
             var y = Y(v);
-            svg.Append(CultureInfo.InvariantCulture, $"<line x1=\"{F(left)}\" y1=\"{F(y)}\" x2=\"{F(width - right)}\" y2=\"{F(y)}\" stroke=\"#E2E8F0\" stroke-width=\"1\"/>");
-            svg.Append(CultureInfo.InvariantCulture, $"<text x=\"{F(left - 6)}\" y=\"{F(y + 4)}\" text-anchor=\"end\" font-size=\"10\" fill=\"#64748B\">{Esc(Compact(v))}</text>");
+            svg.Shape(FormattableString.Invariant($"<line x1=\"{F(left)}\" y1=\"{F(y)}\" x2=\"{F(width - right)}\" y2=\"{F(y)}\" stroke=\"#E2E8F0\" stroke-width=\"1\"/>"));
+            svg.Text(Compact(v), left - 6, y + 4, "end", LabelFont, "#64748B");
         }
 
         var labelTop = top + plotHeight + 14;
@@ -183,25 +222,25 @@ public static class SvgChartBuilder
             {
                 case LabelMode.TwoLines:
                     var (first, second) = wrapped[i]!.Value;
-                    svg.Append(CultureInfo.InvariantCulture, $"<text x=\"{F(x)}\" y=\"{F(labelTop)}\" text-anchor=\"middle\" font-size=\"10\" fill=\"#64748B\">{Esc(first)}</text>");
+                    svg.Text(first, x, labelTop, "middle", LabelFont, "#64748B");
                     if (second.Length > 0)
                     {
-                        svg.Append(CultureInfo.InvariantCulture, $"<text x=\"{F(x)}\" y=\"{F(labelTop + 12)}\" text-anchor=\"middle\" font-size=\"10\" fill=\"#64748B\">{Esc(second)}</text>");
+                        svg.Text(second, x, labelTop + 12, "middle", LabelFont, "#64748B");
                     }
 
                     break;
                 case LabelMode.Angled:
                     var ax = x + 3;
                     var ay = top + plotHeight + 10;
-                    svg.Append(CultureInfo.InvariantCulture, $"<text x=\"{F(ax)}\" y=\"{F(ay)}\" text-anchor=\"end\" font-size=\"10\" fill=\"#64748B\" transform=\"rotate(-{F(LabelAngle)} {F(ax)} {F(ay)})\">{Esc(labels[i])}</text>");
+                    svg.Text(labels[i], ax, ay, "end", LabelFont, "#64748B", -LabelAngle);
                     break;
                 default:
-                    svg.Append(CultureInfo.InvariantCulture, $"<text x=\"{F(x)}\" y=\"{F(labelTop)}\" text-anchor=\"middle\" font-size=\"10\" fill=\"#64748B\">{Esc(labels[i])}</text>");
+                    svg.Text(labels[i], x, labelTop, "middle", LabelFont, "#64748B");
                     break;
             }
         }
 
-        svg.Append(CultureInfo.InvariantCulture, $"<line x1=\"{F(left)}\" y1=\"{F(Y(Math.Max(niceMin, 0)))}\" x2=\"{F(width - right)}\" y2=\"{F(Y(Math.Max(niceMin, 0)))}\" stroke=\"#CBD5E1\" stroke-width=\"1\"/>");
+        svg.Shape(FormattableString.Invariant($"<line x1=\"{F(left)}\" y1=\"{F(Y(Math.Max(niceMin, 0)))}\" x2=\"{F(width - right)}\" y2=\"{F(Y(Math.Max(niceMin, 0)))}\" stroke=\"#CBD5E1\" stroke-width=\"1\"/>"));
 
         if (line)
         {
@@ -209,10 +248,10 @@ public static class SvgChartBuilder
             {
                 var color = Palette[s % Palette.Length];
                 var points = string.Join(" ", series[s].Values.Select((v, i) => $"{F(left + slot * (i + 0.5))},{F(Y(v))}"));
-                svg.Append(CultureInfo.InvariantCulture, $"<polyline fill=\"none\" stroke=\"{color}\" stroke-width=\"2\" stroke-linejoin=\"round\" points=\"{points}\"/>");
+                svg.Shape(FormattableString.Invariant($"<polyline fill=\"none\" stroke=\"{color}\" stroke-width=\"2\" stroke-linejoin=\"round\" points=\"{points}\"/>"));
                 for (var i = 0; i < series[s].Values.Count; i++)
                 {
-                    svg.Append(CultureInfo.InvariantCulture, $"<circle cx=\"{F(left + slot * (i + 0.5))}\" cy=\"{F(Y(series[s].Values[i]))}\" r=\"2.5\" fill=\"{color}\"/>");
+                    svg.Shape(FormattableString.Invariant($"<circle cx=\"{F(left + slot * (i + 0.5))}\" cy=\"{F(Y(series[s].Values[i]))}\" r=\"2.5\" fill=\"{color}\"/>"));
                 }
             }
         }
@@ -229,7 +268,7 @@ public static class SvgChartBuilder
                     var x = left + slot * (i + 0.5) - groupWidth / 2 + barWidth * s;
                     var yTop = Y(Math.Max(v, 0));
                     var h = Math.Abs(Y(v) - Y(0));
-                    svg.Append(CultureInfo.InvariantCulture, $"<rect x=\"{F(x)}\" y=\"{F(yTop)}\" width=\"{F(Math.Max(1, barWidth - 2))}\" height=\"{F(h)}\" rx=\"2\" fill=\"{Palette[s % Palette.Length]}\"/>");
+                    svg.Shape(FormattableString.Invariant($"<rect x=\"{F(x)}\" y=\"{F(yTop)}\" width=\"{F(Math.Max(1, barWidth - 2))}\" height=\"{F(h)}\" rx=\"2\" fill=\"{Palette[s % Palette.Length]}\"/>"));
                 }
             }
         }
@@ -239,12 +278,11 @@ public static class SvgChartBuilder
         {
             var (text, x, row) = legend[s];
             var y = legendTop + row * LegendRow;
-            svg.Append(CultureInfo.InvariantCulture, $"<rect x=\"{F(x)}\" y=\"{F(y - 9)}\" width=\"10\" height=\"10\" rx=\"2\" fill=\"{Palette[s % Palette.Length]}\"/>");
-            svg.Append(CultureInfo.InvariantCulture, $"<text x=\"{F(x + 14)}\" y=\"{F(y)}\" font-size=\"10\" fill=\"#334155\">{Esc(text)}</text>");
+            svg.Shape(FormattableString.Invariant($"<rect x=\"{F(x)}\" y=\"{F(y - 9)}\" width=\"10\" height=\"10\" rx=\"2\" fill=\"{Palette[s % Palette.Length]}\"/>"));
+            svg.Text(text, x + 14, y, "start", LabelFont, "#334155");
         }
 
-        svg.Append("</svg>");
-        return new ChartSvg(svg.ToString(), width, totalHeight);
+        return svg.Finish();
     }
 
     /// <summary>The label split at a space into two lines that each fit <paramref name="maxWidth"/>, or null when no split fits.</summary>
@@ -269,7 +307,7 @@ public static class SvgChartBuilder
         return null;
     }
 
-    private static string Pie(ResultSeries series, IReadOnlyList<string> labels, double width, double height)
+    private static ChartSvg Pie(ResultSeries series, IReadOnlyList<string> labels, double width, double height)
     {
         var total = series.Values.Sum();
         if (total <= 0)
@@ -281,8 +319,7 @@ public static class SvgChartBuilder
         var cy = height / 2;
         var r = height / 2 - 12;
         var inner = r * 0.55;
-        var svg = new StringBuilder();
-        svg.Append(CultureInfo.InvariantCulture, $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{F(width)}\" height=\"{F(height)}\" viewBox=\"0 0 {F(width)} {F(height)}\" font-family=\"{FontFamily}\">");
+        var svg = new Canvas(width, height);
         var angle = -Math.PI / 2;
         var legendY = 18d;
         for (var i = 0; i < series.Values.Count; i++)
@@ -293,29 +330,28 @@ public static class SvgChartBuilder
             var color = Palette[i % Palette.Length];
             if (share >= 0.9999)
             {
-                svg.Append(CultureInfo.InvariantCulture, $"<circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(r)}\" fill=\"{color}\"/><circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(inner)}\" fill=\"#FFFFFF\"/>");
+                svg.Shape(FormattableString.Invariant($"<circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(r)}\" fill=\"{color}\"/><circle cx=\"{F(cx)}\" cy=\"{F(cy)}\" r=\"{F(inner)}\" fill=\"#FFFFFF\"/>"));
             }
             else if (sweep > 0)
             {
                 var large = sweep > Math.PI ? 1 : 0;
                 var path = $"M {F(cx + r * Math.Cos(angle))} {F(cy + r * Math.Sin(angle))} A {F(r)} {F(r)} 0 {large} 1 {F(cx + r * Math.Cos(end))} {F(cy + r * Math.Sin(end))} L {F(cx + inner * Math.Cos(end))} {F(cy + inner * Math.Sin(end))} A {F(inner)} {F(inner)} 0 {large} 0 {F(cx + inner * Math.Cos(angle))} {F(cy + inner * Math.Sin(angle))} Z";
-                svg.Append(CultureInfo.InvariantCulture, $"<path d=\"{path}\" fill=\"{color}\" stroke=\"#FFFFFF\" stroke-width=\"1\"/>");
+                svg.Shape(FormattableString.Invariant($"<path d=\"{path}\" fill=\"{color}\" stroke=\"#FFFFFF\" stroke-width=\"1\"/>"));
             }
 
             if (i < 12)
             {
-                svg.Append(CultureInfo.InvariantCulture, $"<rect x=\"{F(height + 8)}\" y=\"{F(legendY - 9)}\" width=\"10\" height=\"10\" rx=\"2\" fill=\"{color}\"/>");
+                svg.Shape(FormattableString.Invariant($"<rect x=\"{F(height + 8)}\" y=\"{F(legendY - 9)}\" width=\"10\" height=\"10\" rx=\"2\" fill=\"{color}\"/>"));
                 var figures = $" · {Compact(series.Values[i])} ({share.ToString("P1", CultureInfo.InvariantCulture)})";
                 var name = TextMetrics.Fit(labels[i], LabelFont, Math.Max(40, width - height - 26 - TextMetrics.Width(figures, LabelFont)));
-                svg.Append(CultureInfo.InvariantCulture, $"<text x=\"{F(height + 22)}\" y=\"{F(legendY)}\" font-size=\"10\" fill=\"#334155\">{Esc(name + figures)}</text>");
+                svg.Text(name + figures, height + 22, legendY, "start", LabelFont, "#334155");
                 legendY += 16;
             }
 
             angle = end;
         }
 
-        svg.Append("</svg>");
-        return svg.ToString();
+        return svg.Finish();
     }
 
     private static (double Min, double Max, double Step) NiceScale(double min, double max)

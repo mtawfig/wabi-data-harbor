@@ -151,7 +151,7 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                                     figure.Item().PaddingBottom(2).Text($"{(rtl ? (isChart ? "شكل" : "جدول") : (isChart ? "Figure" : "Table"))} {number.ToString(culture)}.{(section.Panels.IndexOf(i) + 1).ToString(culture)} — {(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective)}").FontSize(10).SemiBold().FontColor(Ocean);
                                     if (isChart)
                                     {
-                                        figure.Item().Border(1).BorderColor(Border).Padding(6).Svg(SvgChartBuilder.Render(type, panel.Result.Series, 520, type == "pie" ? 220 : 240, culture).Svg);
+                                        figure.Item().Border(1).BorderColor(Border).Padding(6).Element(c => ChartComposer.Draw(c, SvgChartBuilder.Render(type, panel.Result.Series, ChartWidth, type == "pie" ? 220 : 240, culture)));
                                     }
                                     else
                                     {
@@ -297,6 +297,9 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
         });
     }
 
+    /// <summary>The width of a chart inside its figure frame (A4 less the page margins, the frame border and padding), in points.</summary>
+    internal const float ChartWidth = 480f;
+
     /// <summary>The width a table may use: A4 less the page margins and the table border.</summary>
     internal const float TableWidth = 496f;
 
@@ -408,7 +411,7 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
         return words.Length == 0 ? name : char.ToUpperInvariant(words[0]) + words[1..];
     }
 
-    private static void EnsureFonts()
+    internal static void EnsureFonts()
     {
         lock (FontLock)
         {
