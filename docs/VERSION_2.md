@@ -36,7 +36,7 @@ What version 1 does not do, and version 2 addresses:
 
 The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and specification §34) hold in version 2. In particular:
 
-- **Three logical layers:** one Angular app, one ASP.NET Core API, and data and integrations. No microservices, message brokers or separate applications. API data sources are a new kind of integration in the third layer, not a new service. The service plans (G1) change **where** the layers run, not how many there are; every installation still has exactly one configuration database.
+- **Three logical layers:** one Angular app, one ASP.NET Core API, and data and integrations. No microservices, message brokers or separate applications. API data sources are a new kind of integration in the third layer, not a new service. The service plans (G1) change **where** the layers run, not how many there are; every installation still has exactly one configuration database. **Two exceptions, both outside the platform itself and decided by the owner:** the *Wabi Data Gateway* (G7), a small read-only program installed in an organization's network for the Cloud plan, and the *Wabi Hub* (G8), the owner's central portal for licences, updates and support of on-premises installations. Neither holds business logic of the platform; the web app and the API stay one application.
 - **Organization isolation:** `OrganizationId` always comes from the signed-in user; every tenant-owned query is filtered and ownership-checked; Platform Administrators never see business data.
 - **The model never writes what is executed.** In version 1 the model produces a typed plan and the server compiles it to read-only SQL. Version 2 extends the same rule to APIs: the model produces the same kind of plan, and the server turns it into requests to endpoints the organization registered. **The model never supplies a URL, a path, a header or a request body.**
 - **Permissions:** table, column and row scopes (`ALL`, `DEPARTMENT`, `SECTION`, `SELF`) apply to every data source, of any kind.
@@ -83,6 +83,7 @@ The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and s
 |---|---|---|---|---|
 | D1 | **Publish reports to Google Drive and OneDrive** | Owner, 2026-11-06 | Must | L |
 | D2 | Alerts and Periodic Reports to more channels than e-mail (Microsoft Teams, a webhook) | Proposed | Could | M |
+| D4 | **Ask by WhatsApp:** a user sends a question from their confirmed WhatsApp number and receives the answer by WhatsApp | Owner, 2026-11-10 | Should | M |
 
 ### E. Reliability and operations
 
@@ -102,6 +103,8 @@ The architectural invariants of version 1 (see [`CLAUDE.md`](../CLAUDE.md) and s
 | G4 | **Hybrid plan:** web app and API in the owner's cloud; files and the model at the organization's location; the platform database in the owner's cloud or at the organization's location | Owner, 2026-11-10 | Must | L |
 | G5 | **An organization's own e-mail server (SMTP)** in every plan, the Cloud plan included; the platform's server is used when the organization sets none | Owner, 2026-11-10 | Must | M |
 | G6 | **Reaching an organization's systems from the owner's cloud** (its business databases and APIs, and its own database, files, model and mail server): the supported ways, with a recommendation | Owner, 2026-11-10 | Must | L |
+| G7 | **Wabi Data Gateway:** a small program in the organization's network that connects out to the platform, runs the platform's checked plans read-only on the organization's own databases and returns the rows (Cloud plan) | Owner, 2026-11-10 | Must | L |
+| G8 | **Wabi Hub:** the owner's central portal for on-premises installations: licences, update packages, support tickets and health, with operational data only, never business data | Owner, 2026-11-10 (with decision 24) | Must | L |
 
 ### H. Outputs: branding, language and templates
 
@@ -146,6 +149,11 @@ Only the items that need more than their line in the tables are described here.
 | Platform database | The shared database | Its own database, through a dedicated installation | G4 |
 
 A Cloud-plan organization can therefore use its own e-mail server and nothing else of its own; a Hybrid-plan organization is one that keeps its files and model, and possibly its database, at its own location. What is set is shown to the Organization Administrator and to Platform Administrators (the fact, never the secret).
+
+**How the plans are positioned (owner decision 24).**
+- **On-premises is the lead plan** for banks, government and large companies: it answers "where does our data go?" completely, matches the data-residency rules these buyers work under, and is sold the way they buy (licence plus a yearly support contract, §10).
+- **Cloud is the second plan**, for small and mid-size organizations, trials and demonstrations: it is already built, and a new organization can start in days.
+- **Hybrid is not advertised.** It is the hardest to build and support and the weakest promise (the answers still pass through the owner's cloud); it is offered only as a custom project to a customer who insists.
 
 **Requirements common to the three plans.**
 - **One product, one code base.** A plan is a way of deploying and configuring the same application, never a separate edition with its own code.
@@ -261,7 +269,52 @@ The more a way relies on the organization's firewall opening a door (4), the qui
 - When the path is down, the organization's users get a clear message, the scheduler retries (P13.27), and other organizations are not affected.
 - Each organization's page shows which way it uses and when the path last worked.
 
+**Owner decision (2026-11-10).** *On-premises:* nothing to solve, the platform runs inside the organization's network. *Cloud (and Hybrid):* the recommendation below is accepted, **plus** the option of installing the **Wabi Data Gateway** in the organization's network (G7), which is the owner's form of way 1 and the preferred one when the organization accepts to run a small program.
+
 **Recommendation.** Offer **way 4 with its conditions** from the first Hybrid or Cloud customer, because it needs nothing new, and say plainly that it is the minimum. Offer **way 1 with an existing product** as the standard, and **way 2** when the organization's network team asks for it. Build a connector of our own only if several customers refuse both a VPN and an existing tunnel product.
+
+### G7. Wabi Data Gateway (owner decision, 2026-11-10)
+
+**Goal.** A Cloud-plan organization whose databases are in its own network lets the platform ask them without opening any port, by installing a small program of the owner's: the **Wabi Data Gateway**. It is the same idea as the data gateways of other analytics products.
+
+**Requirements.**
+- **It connects out, it never listens.** The gateway opens an encrypted connection (HTTPS or WebSocket) from the organization's network to the platform and waits for work on it. The organization opens no inbound port; its firewall needs one outbound rule to the platform's address.
+- **It receives the checked plan, never SQL.** The platform sends the validated and authorized plan (the same typed plan as today, with the row scopes already applied) and the gateway compiles it to read-only SQL with the same dialect compilers, on the organization's side. If the platform were ever compromised, nobody could send arbitrary SQL through the gateway.
+- **It runs with a read-only login** the organization creates, on the databases and objects it chooses; it refuses anything else even if asked.
+- **It returns structured rows, not plain text:** column names, types and values, so charts, totals, number and date formatting in English and Arabic, and the exports work as with a direct connection. Row, byte and time limits apply as on the platform.
+- **The organization sees everything:** every request is logged on the gateway's machine (who asked, which object, how many rows, never the values), and the organization can stop the gateway at any moment.
+- **Trust:** the gateway is registered once with a one-time code from the organization's settings page; each request is signed by the platform and checked by the gateway; the gateway's identity is a certificate that the Organization Administrator can revoke.
+- **Platforms:** a Windows service and a Linux service (and a container image), installed and updated with a short guide; it reports its version and health to the organization's settings page.
+- **Size of the change:** the gateway reuses the compilers and the executor of the API, so it is a small program built from the same code, not a second product. It is one of the two exceptions to "no separate applications" (§3).
+
+**Not in the gateway:** the model, the files, the catalogue editing, the users. It only answers questions about data.
+
+### G8. Wabi Hub (owner decision 24, 2026-11-10)
+
+**Goal.** On-premises installations are run by each organization's IT team and the owner has no account in them (G3). The owner still needs to issue licences, ship updates, receive support requests and see whether installations are healthy. The **Wabi Hub** is the owner's own central portal for that.
+
+**Requirements.**
+- **Operational data only, never business data**, sent by each installation **with the customer's consent** (a setting the customer can switch off): version, health checks, licence status, counts (users, questions, AI spend), errors without their content.
+- **Licences:** the hub issues the signed licence file (organization, expiry, number of users) that the installation checks offline (§10).
+- **Updates:** the hub publishes the release packages with their checksums and notes; an installation shows "a new version is available"; the customer's IT applies it (G3).
+- **Support:** the customer's administrators open tickets to the owner's team from inside their installation; the ticket and the conversation live in the hub, with the diagnostic file attached when the customer chooses. The support desk of version 1 is the starting point.
+- **An installation works without the hub** (offline customers); the hub is a convenience and a support channel, never a dependency for answering questions.
+
+### D4. Ask by WhatsApp (owner decision, 2026-11-10)
+
+**Goal.** A user sends a question from WhatsApp and receives the answer there, as long as their WhatsApp number is registered and confirmed.
+
+**Requirements.**
+- **Provider (owner decision 25): Twilio**, on top of Meta's WhatsApp Business Platform (Cloud API). Every provider ends at Meta's Cloud API, so availability is Meta's in all cases; Twilio adds the simplest integration (a maintained .NET library, a test sandbox, one webhook format, clear delivery statuses), a published service level and support, for a small fee per message on top of Meta's. The code talks to an interface, so moving to Meta directly later, when volumes make the fee matter, changes one adapter. It needs a verified Meta business account, a dedicated number and message templates approved by Meta. Messages arrive at an HTTPS webhook in the API and answers go out through Meta's API. The platform's number is the default; an organization can use its own (the same rule as G5).
+- **Who is asking:** the user registers their number in their profile and confirms it with a one-time code sent by WhatsApp; only confirmed numbers of active users are accepted; the administrator can switch a number off at once (numbers are recycled and phones lost); an optional PIN for sensitive applications.
+- **The answer (owner decision 25):**
+  - **a short summary** of the answer (WhatsApp allows 4,096 characters; Arabic shows correctly), in the question's language (H2);
+  - **a link to download** the study, the Excel file or the analysis. The link is personal: it opens only for that user, expires after 24 hours, and for Restricted data asks the user to sign in;
+  - **a dashboard is also sent as a large, high-quality image** (rendered at twice the screen resolution as PNG or high-quality JPEG; up to 5 MB it is sent as an image, above that as a document so WhatsApp does not compress it), with the organization's template and logo (H1, H3).
+- **Rules of WhatsApp:** free replies within 24 hours of the user's last message; after that only approved templates, which matters for alerts and Periodic Reports sent by WhatsApp.
+- **Where the data goes:** with the Cloud API, Meta's servers process the messages on the business side, and Meta no longer offers an on-premises version. D4 is therefore for the **Cloud plan and organizations that accept Meta's processing**; the settings page says so before it is switched on.
+- **Cost:** Meta charges per conversation or message by country, plus the provider's fee; shown to the organization before it is switched on.
+- **Order:** for corporate customers, Microsoft Teams (D2) keeps messages inside their own Microsoft tenant and may suit them better.
 
 ### C11. Sign in with Active Directory (owner decision, 2026-11-10)
 
@@ -409,6 +462,24 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 - A separate edition or code base per plan.
 - Supplying, hosting or tuning the organization's AI model: in the On-premises and Hybrid plans the model is the organization's (the owner documents what it must be able to do).
 - Combining data from two different sources in one query (may be reconsidered after A1).
+- Business data in the Wabi Hub (G8): installations send operational data only.
+- WhatsApp inside an organization's network: Meta offers only its Cloud API (D4).
+
+**Moved to version 3 (owner decision, 2026-11-10).** Asking by e-mail (formerly D3); version 2 keeps asking by WhatsApp (D4) only. A `VERSION_3.md` will be started from the text below when version 3 is planned.
+
+### Ask by e-mail (moved to version 3 by the owner, 2026-11-10)
+
+The requirements worked out for version 2, kept so that version 3 starts from them:
+
+**Goal.** A user sends a question by e-mail and receives the answer by reply, as long as their e-mail address is registered.
+
+**Requirements.**
+- **The question address (owner decision 26):** the organization's own address when it has its own mail server (G5, for example `ask@` its domain), otherwise the platform's question address. Either way each user also has the personal question address below. The API reads it with a background worker (IMAP or the mail provider's API) or receives it from the provider's inbound webhook: no new service.
+- **Who is asking (the critical part; an e-mail's sender is easy to fake).** A question is accepted only when the message passes the mail system's sender checks (SPF, DKIM, DMARC), the sender is an **active user** of that organization (matched to their sign-in address), and it is sent to the user's **personal question address**, a random address shown on their profile that they can renew (for example `ask+k7f3q@…`). The organization, roles and scopes come from the user record, never from the message.
+- **The question:** the subject and the first part of the body; quoted replies, signatures and attachments are ignored; the language comes from the text (H2); the application is the user's default or named in the subject (`[Finance] …`). Request limits and the AI budget apply.
+- **The answer:** a reply in the same thread with a short summary and the key figures, the PDF study or Excel attached (with the organization's template, H1 to H4), and a link to the analysis in My History. A reply in the thread is a follow-up question (B3).
+- **Safety:** the answer goes **only to the user's own registered address**, whatever is in CC; restricted data follows the e-mail sharing rules (a link that needs sign-in instead of figures); every request is audited and recorded in the access ledger like a typed question; the e-mail's text is a question only, never instructions to the platform (the model still produces a checked plan).
+- **Switched on by the Organization Administrator; each user opts in.** Works in every plan.
 
 ## 7. Open decisions for the owner
 
@@ -423,7 +494,6 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 7 | Sharing sends the owner's stored result to the recipient, whatever the recipient's own permissions. Keep this (the owner decides), or check the recipient's permissions too? | Sharing |
 | 8 | E-mails: accept storing the message encrypted until it is sent (E4), or keep the version 1 rule that bodies are never stored? | E4 |
 | 9 | Which of the *Could* items should move up or be dropped? | All |
-| 10 | Reaching an organization's systems: which of the five ways in G6 are offered, and which first? (Recommended: the firewall rule with its conditions as the minimum, an outbound connector with an existing product as the standard, a site-to-site VPN on request.) The owner asked for more explanation (2026-11-10): see *In plain words* in G6. | G2, G4, G5, G6 |
 | 11 | Hybrid with the platform database at the organization's location: a dedicated installation per organization in the owner's cloud (proposed, keeps one database per installation), or a shared installation with a separate database per organization (a change to the architecture)? | G4 |
 | 12 | Hybrid, files: which stores are supported first (Azure Blob Storage in the organization's subscription, S3-compatible storage, a network share)? | G4 |
 | 13 | On-premises licence: contract only, or a licence file the installation checks (organization, expiry, number of users)? | G3 |
@@ -432,6 +502,7 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 16 | Active Directory for Hybrid and Cloud organizations: offer federation (AD FS), or only Microsoft Entra ID for them? | C11 |
 | 17 | The organization's own model: is one named model tested and recommended by the owner for Arabic and English, or is any model that passes the fitness check accepted? | G2 |
 | 18 | Which plan does the first paying customer need? The order in §8 should follow it. | G1 |
+
 
 **Decided** (kept here for reference):
 
@@ -442,6 +513,10 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 21 | How long a waiting message may wait | Daily alerts and reports (and more frequent): 12 hours; weekly: 48 hours; less frequent than weekly: 72 hours. A temporary password: 1 hour, then sent through the platform's default server. Other one-off messages: 72 hours. Then given up, logged and reported to the administrators (G5). |
 | 22 | The "Powered by" line | As recommended: Arabic wording «مدعوم من Wabi Insight من WabiTex Solutions FZE», in outputs only, not in the application's pages (H4). |
 | 23 | Templates | As recommended: organizations choose a template per kind of output and set their colours; no editor; designs are made by the platform team, privately for an organization on request (H3). |
+| 10 | Reaching an organization's systems | On-premises: nothing to solve. Cloud and Hybrid: the recommendation of G6 (firewall rule as the minimum, outbound connector as the standard, VPN on request) plus the Wabi Data Gateway (G7) as an option. |
+| 24 | Plans and prices | Adopted: On-premises as the lead plan, Cloud second, Hybrid only as a custom project (G1); the business model in §10, with tiers sized by calls rather than users and all amounts in AED (owner, 2026-11-10). |
+| 25 | Ask by WhatsApp | The answer is a summary and a personal download link; a dashboard is also sent as a large, high-quality image. Provider: Twilio, as recommended (D4). |
+| 26 | Ask by e-mail: the question address | As recommended (the organization's address when it has its own mail server, otherwise the platform's); asking by e-mail was then moved to version 3 with this decision (§6). |
 
 ## 8. Proposed order
 
@@ -456,6 +531,8 @@ A proposal, in releases that can each be deployed on their own. Version 2 starts
 | **2.3 — API data sources** | A1 | `V2.8` registration, catalogue and secrets · `V2.9` executor, limits and row scopes · `V2.10` interface, sample API and guides |
 | **2.4 — Drill-down** | B1, then B3 | `V2.11` plan, authorization and history · `V2.12` charts and interface · `V2.13` follow-up questions |
 | **2.5 — Publishing** | D1 | `V2.14` connections and publishing · `V2.15` interface and guides |
+| **2.6 — Gateway and Hub** | G7, G8 | `V2.19` Wabi Data Gateway (outbound connection, plans compiled at the organization, structured rows, registration) · `V2.20` Wabi Hub (licences with the tier, the call meter with its warnings, update packages, support tickets, health, with consent) |
+| **2.7 — Ask by WhatsApp** | D4 | `V2.21` ask by WhatsApp: number confirmation, Twilio adapter, summary, personal download links, dashboard images |
 | **Later** | The *Could* items the owner keeps (A4, A5, B4, B5, D2, E4–E6) | one or two pull requests each |
 
 Reasons for this order:
@@ -464,6 +541,8 @@ Reasons for this order:
 - **On-premises before Hybrid:** it is the smaller step (the model address already works for a Platform Administrator, the deployment guides exist) and it is the plan that fully answers the data concern.
 - **API sources before drill-down:** drill-down then works on both kinds of source from its first day.
 - **Outputs early (2.0b):** every customer sees them in every report and e-mail, they do not depend on the plans, and H3 is easier before more kinds of output (drill-down levels, published reports) exist. Their pull-request numbers (`V2.16`–`V2.18`) follow the others so the numbers already given do not change.
+
+- **Gateway and Hub (2.6):** the gateway is needed as soon as a Cloud customer keeps its databases in its own network; the hub as soon as there are several on-premises installations to support. If the first customer needs one of them, it moves up.
 
 If the first customer needs another plan, the order changes (§7, question 18).
 
@@ -478,7 +557,68 @@ As in version 1, every pull request:
 - is verified live on the sample organizations (Gulf Aviation Services, Wabi Bank) where the feature reads data;
 - states which plans it applies to, and is checked in each of them: a feature is not done while it works only in the Cloud plan. The On-premises check runs on a server with no internet and a privately served model.
 
-## 10. Change log
+## 10. Business model (adopted, not part of the technical scope)
+
+Adopted by the owner (§7 decision 24). Plans are sized by **calls**, not by users (owner decision, 2026-11-10): an organization may give access to as many users as it wants and pays for how much it asks. All amounts are in **UAE dirhams (AED)**, excluding VAT; they are starting points to be confirmed with the first customers, not market facts.
+
+### What counts as a call
+
+A **call** is one answer the platform produces with the AI, which is what costs (in model use and in source queries) and what gives the value.
+
+| Counted as one call | Not counted |
+|---|---|
+| A question answered in the application (a new question or a follow-up) | A question refused before planning (out of scope, not permitted) or that failed |
+| A saved analysis run again | Opening history, favourites, shared analyses and received reports |
+| A Periodic Report delivery: one call per recipient (each recipient's report is produced under their permissions) | Exporting or printing an answer that exists (PDF, Word, Excel) |
+| A question asked by WhatsApp (D4) | Monitoring Rules and Alerts (they run without the AI) |
+| A Monitoring Rule drafted from a description (it uses the AI) | Administration (users, permissions, catalogue, settings) |
+
+**Best practice applied:**
+- **A yearly pool for on-premises, a monthly allowance for Cloud.** A yearly pool (12 times the monthly figure) absorbs the busy months (year-end, budget season) without overage.
+- **A usage meter** for the Organization Administrator, by month, application and user, with warnings at **80%** and **100%**.
+- **Nobody is stopped mid-task:** after 100%, a grace of 10% continues to work. On Cloud a top-up pack is then needed; on-premises the overage is reported to the Wabi Hub (G8) and settled at renewal or by moving up a tier. Periodic Reports are never cut off mid-run.
+- **Unused calls do not roll over** (Cloud: one month's carry-over at most).
+- **Counting is local and tamper-evident:** the installation counts its own calls, and the signed licence file (G8) states the tier.
+- **Typical use, for sizing:** an active business user asks 15 to 30 questions a month, a manager 5 to 10; Periodic Reports add one call per recipient per run.
+
+### On-premises (lead plan: banks, government, large companies)
+
+| Tier | Calls included | Perpetual licence | SMC per year (20%) | Or a yearly licence (support included) |
+|---|---|---|---|---|
+| **Starter** | 12,000 a year (about 1,000 a month) | AED 110,000 | AED 22,000 | AED 45,000 |
+| **Business** | 60,000 a year (about 5,000 a month) | AED 275,000 | AED 55,000 | AED 100,000 |
+| **Enterprise** | 240,000 a year (about 20,000 a month) | AED 550,000 | AED 110,000 | AED 200,000 |
+| **Group** | Unlimited, several companies of one group | from AED 900,000 | from AED 180,000 | By quotation |
+
+- **Users, applications and organizations inside one installation:** unlimited in every tier (the tier is the calls).
+- **Extra calls** (above the yearly pool and its grace): packs of 10,000 calls at **AED 25,000**, or moving up a tier with the licence difference credited.
+- **Setup and implementation:** from **AED 35,000**, plus **AED 11,000 to 18,000 per connected application** (database or API) for its catalogue, descriptions and permissions, plus training days at **AED 5,500** a day. Usually 25 to 40% of the licence.
+- **SMC levels:** *Standard* at 20% a year (business hours, response the next working day, all updates); *Premium* at 25% (extended hours, response within 4 hours for severe issues, a named engineer). The SMC starts after a warranty of 3 to 6 months included with the licence. No SMC, no updates.
+- **Paid by the customer:** servers, SQL Server licence, AI subscription, domain, e-mail, DNS and certificates. DNS, e-mail and certificate set-up can be sold as a service.
+- **First customers:** 40 to 50% off the licence for the first two or three, in exchange for a reference and a case study.
+
+### Cloud (second plan: small and mid-size organizations, trials)
+
+| Tier | Calls included a month | Price a month | Price a year (two months free) |
+|---|---|---|---|
+| **Cloud Starter** | 500 | AED 1,800 | AED 18,000 |
+| **Cloud Business** | 2,500 | AED 6,500 | AED 65,000 |
+| **Cloud Pro** | 10,000 | AED 20,000 | AED 200,000 |
+
+- **The AI, the platform's mail server and the file storage are included** (the platform's subscription). An organization that brings its own AI model or mail server (G2, G5) pays the same; the allowance still counts calls.
+- **Top-up packs:** 500 calls for **AED 1,200**, priced from the measured cost per call (the platform records tokens and cost per answer) with a margin.
+- **Users:** unlimited.
+- **WhatsApp (D4):** 1,000 WhatsApp messages a month included in every tier; beyond that, Meta's and Twilio's charges are passed on at cost plus 15%.
+- **Trial:** 14 to 30 days, 100 calls, on a demonstration organization.
+
+### Points to price in
+
+- **AI for on-premises customers** is the largest practical cost. A model run entirely on the customer's own hardware that follows the planning rules well in Arabic needs serious GPU servers (well over AED 100,000). Most on-premises buyers in the region accept their own Azure OpenAI or Anthropic subscription in an in-country cloud region: that is the default AI option for the plan, a local model the premium option (G2).
+- **Support without access:** the owner cannot sign in to on-premises installations, so support works from the diagnostic file and shared-screen sessions, and several versions are in the field at once. Roughly half a support engineer per 5 to 10 on-premises customers; the SMC price has to cover it.
+- **The cost of a call on Cloud** has to be checked every quarter against the usage records (tokens and cost per answer) and the packs repriced when it moves.
+- **Counting calls is new code:** a meter, the 80% and 100% warnings and the tier in the licence file. It belongs with the Wabi Hub (G8, release 2.6).
+
+## 11. Change log
 
 | Date | Change |
 |---|---|
@@ -489,3 +629,6 @@ As in version 1, every pull request:
 | 2026-11-10 | Owner decisions: decision 19 (an organization's mail server down: messages rescheduled, administrators notified through the platform's server) and 20 (a domain and mailbox of its own, configured by its administrator or with the platform team's help) recorded in G5; decision 10 explained in plain words in G6. New group H: the organization's logo and name on every output (H1), the output's language from the question (H2), a template gallery per kind of output (H3), the "Powered by Wabi Insight by WabiTex Solutions FZE" line (H4), each with how it will be done. Open decisions 21–23. Release 2.0b. |
 | 2026-11-10 | Owner decisions 21 (waiting time of digests and Periodic Reports by frequency: 12, 48, 72 hours), 22 (the "Powered by" line as recommended) and 23 (choose templates, no editor). Question 21 stays open for messages that do not repeat. |
 | 2026-11-10 | Owner decision 21 completed: a waiting temporary password goes through the platform's default server after one hour; other one-off messages wait 72 hours. |
+| 2026-11-10 | Owner decision 10 (On-premises: nothing to solve; Cloud: the G6 recommendation plus the Wabi Data Gateway). New items: Wabi Data Gateway (G7), Wabi Hub (G8, proposed), ask by e-mail (D3), ask by WhatsApp (D4). Plan positioning (G1) and business model (§10) proposed. Invariants: the gateway and the hub named as the two exceptions to "no separate applications". Open decisions 24–26; releases 2.6 and 2.7. |
+| 2026-11-10 | Owner decisions 24 (plans and business model adopted; proposed prices added in §10; the Wabi Hub becomes a Must), 25 (WhatsApp: summary, personal download link, dashboards as a high-quality image; Twilio) and 26 (e-mail question address as recommended). |
+| 2026-11-10 | Owner decisions: asking by e-mail moved to version 3 (its requirements kept in §6), version 2 keeps WhatsApp only; plans sized by calls instead of users, with what counts as a call and the usual rules (yearly pool on-premises, monthly allowance on Cloud, warnings at 80% and 100%, a 10% grace, top-ups); all prices in AED. |
