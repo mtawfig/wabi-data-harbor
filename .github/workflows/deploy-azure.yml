@@ -1,0 +1,392 @@
+# Manual deployment to Microsoft Azure (docs/DEPLOYMENT_AZURE.md). Never runs automatically:
+# Actions → "Deploy (Azure)" → Run workflow → tick what to deploy.
+# One Linux App Service runs the API and serves the web app (Web:RootPath), Azure SQL Database holds the configuration
+# database and a private Blob Storage container holds the files. GitHub signs in to Azure with OpenID Connect, so no
+# Azure password or key is stored in GitHub. The build is the same as for Linux and Windows (build-release.yml).
+name: Deploy (Azure)
+run-name: "Deploy to Azure${{ inputs.infrastructure && ' · resources' || '' }}${{ inputs.database && ' · database' || '' }}${{ inputs.api && ' · API' || '' }}${{ inputs.web && ' · web app' || '' }} (${{ inputs.ref || github.ref_name }}) by @${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      infrastructure:
+        description: "Azure resources: create or update the App Service, SQL database and storage (first deployment, or after the template changed)"
+        type: boolean
+        default: false
+      database:
+        description: "Database: apply migrations (point-in-time restore covers the moment before)"
+        type: boolean
+        default: false
+      api:
+        description: "API"
+        type: boolean
+        default: true
+      web:
+        description: "Web app"
+        type: boolean
+        default: true
+      first_administrator:
+        description: "Create the first Platform Administrator (first deployment only; needs the bootstrap secrets)"
+        type: boolean
+        default: false
+      run_tests:
+        description: "Run unit tests and web lint/tests before deploying"
+        type: boolean
+        default: true
+      ref:
+        description: "Optional commit SHA or tag to deploy instead of the selected branch (e.g. to roll back)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write # OpenID Connect sign-in to Azure
+
+concurrency:
+  group: deploy-azure
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    if: inputs.api || inputs.web || inputs.database || inputs.first_administrator
+    uses: ./.github/workflows/build-release.yml
+    with:
+      # The database steps run the API's own migrate/bootstrap commands, so they need the backend build too.
+      component: ${{ (inputs.api || inputs.database || inputs.first_administrator) && (inputs.web && 'frontend+backend' || 'backend') || 'frontend' }}
+      run_tests: ${{ inputs.run_tests }}
+      ref: ${{ inputs.ref }}
+
+  infrastructure:
+    name: Azure resources
+    if: inputs.infrastructure
+    runs-on: ubuntu-latest
+    environment:
+      name: production-azure
+    timeout-minutes: 30
+    env:
+      AZURE_NAME: ${{ vars.AZURE_NAME }}
+      AZURE_SQL_DATABASE: ${{ vars.AZURE_SQL_DATABASE }}
+      WI_PUBLIC_URL: ${{ vars.WI_PUBLIC_URL }}
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          sparse-checkout: deploy
+
+      - name: Resource names
+        run: bash deploy/cicd/azure/names.sh
+
+      - name: Sign in to Azure (OpenID Connect)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create or update the resources
+        env:
+          LOCATION: ${{ vars.AZURE_LOCATION }}
+          PLAN_SKU: ${{ vars.AZURE_APP_SKU || 'B1' }}
+          DATABASE_SKU: ${{ vars.AZURE_SQL_SKU || 'S0' }}
+          SQL_ADMIN_LOGIN: ${{ vars.AZURE_SQL_ADMIN_LOGIN || 'wabiadmin' }}
+          SQL_ADMIN_PASSWORD: ${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}
+        run: |
+          if [ -z "$SQL_ADMIN_PASSWORD" ]; then
+            echo "::error::Add the AZURE_SQL_ADMIN_PASSWORD secret to the production-azure environment (docs/DEPLOYMENT_AZURE.md, step 3)."
+            exit 1
+          fi
+          if [ -z "$LOCATION" ]; then
+            LOCATION="$(az group show --name "$RESOURCE_GROUP" --query location --output tsv)"
+          fi
+          az deployment group create \
+            --name "wabi-insight-$GITHUB_RUN_ID" \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file deploy/azure/main.bicep \
+            --parameters location="$LOCATION" appName="$WI_APP" planName="$WI_PLAN" planSku="$PLAN_SKU" \
+              sqlServerName="$WI_SQL_SERVER" databaseName="$WI_SQL_DATABASE" databaseSku="$DATABASE_SKU" \
+              storageAccountName="$WI_STORAGE" publicUrl="$WI_PUBLIC_URL" \
+              sqlAdminLogin="$SQL_ADMIN_LOGIN" sqlAdminPassword="$SQL_ADMIN_PASSWORD" \
+            --query properties.outputs --output json
+          {
+            echo "### Azure resources"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Resource group | \`$RESOURCE_GROUP\` ($LOCATION) |"
+            echo "| App Service | \`$WI_APP\` ($PLAN_SKU) · $WI_APP_URL |"
+            echo "| SQL database | \`$WI_SQL_SERVER\` / \`$WI_SQL_DATABASE\` ($DATABASE_SKU) |"
+            echo "| Storage | \`$WI_STORAGE\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  database:
+    name: Database
+    needs: [build, infrastructure]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && (inputs.database || inputs.first_administrator) }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production-azure
+    timeout-minutes: 20
+    env:
+      AZURE_NAME: ${{ vars.AZURE_NAME }}
+      AZURE_SQL_DATABASE: ${{ vars.AZURE_SQL_DATABASE }}
+      WI_PUBLIC_URL: ${{ vars.WI_PUBLIC_URL }}
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      RELEASE: ${{ github.workspace }}/release
+    steps:
+      - name: Download backend
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-api
+          path: release/api
+
+      - name: Download deploy scripts
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-deploy-scripts
+          path: release/scripts
+
+      - name: Resource names
+        run: bash "$RELEASE/scripts/azure/names.sh"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Sign in to Azure (OpenID Connect)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Open the SQL firewall to this runner
+        run: |
+          ip="$(curl -fsS --max-time 10 https://api.ipify.org || curl -fsS --max-time 10 https://ifconfig.me/ip)"
+          if [[ ! "$ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+            echo "::error::Could not find this runner's public IPv4 address (got '$ip')."
+            exit 1
+          fi
+          az sql server firewall-rule create --resource-group "$RESOURCE_GROUP" --server "$WI_SQL_SERVER" \
+            --name "github-runner-$GITHUB_RUN_ID" --start-ip-address "$ip" --end-ip-address "$ip" --output none
+          echo "Opened $WI_SQL_SERVER to $ip for this run."
+          echo "RESTORE_POINT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Apply migrations
+        if: inputs.database
+        working-directory: release/api
+        env:
+          SQL_ADMIN_LOGIN: ${{ vars.AZURE_SQL_ADMIN_LOGIN || 'wabiadmin' }}
+          SQL_ADMIN_PASSWORD: ${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}
+          ASPNETCORE_ENVIRONMENT: Production
+          DataProtection__KeyRingPath: ${{ runner.temp }}/unused-key-ring
+        run: |
+          export ConnectionStrings__ConfigurationDatabase="Server=tcp:$WI_SQL_SERVER.database.windows.net,1433;Initial Catalog=$WI_SQL_DATABASE;User ID=$SQL_ADMIN_LOGIN;Password=$SQL_ADMIN_PASSWORD;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
+          dotnet WabiInsight.Api.dll migrate
+
+      - name: Create the first Platform Administrator
+        if: inputs.first_administrator
+        working-directory: release/api
+        env:
+          SQL_ADMIN_LOGIN: ${{ vars.AZURE_SQL_ADMIN_LOGIN || 'wabiadmin' }}
+          SQL_ADMIN_PASSWORD: ${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}
+          ADMIN_EMAIL: ${{ vars.WI_ADMIN_EMAIL }}
+          ASPNETCORE_ENVIRONMENT: Production
+          DataProtection__KeyRingPath: ${{ runner.temp }}/unused-key-ring
+          Bootstrap__Enabled: "true"
+          Bootstrap__AdministratorPassword: ${{ secrets.WI_BOOTSTRAP_ADMIN_PASSWORD }}
+          Bootstrap__InitializationSecret: ${{ secrets.WI_BOOTSTRAP_INITIALIZATION_SECRET }}
+        run: |
+          if [ -z "$Bootstrap__AdministratorPassword" ] || [ -z "$Bootstrap__InitializationSecret" ]; then
+            echo "::error::Add the WI_BOOTSTRAP_ADMIN_PASSWORD and WI_BOOTSTRAP_INITIALIZATION_SECRET secrets to the production-azure environment (docs/DEPLOYMENT_AZURE.md, step 3)."
+            exit 1
+          fi
+          if [ -n "$ADMIN_EMAIL" ]; then
+            export Bootstrap__AdministratorEmail="$ADMIN_EMAIL"
+          fi
+          export ConnectionStrings__ConfigurationDatabase="Server=tcp:$WI_SQL_SERVER.database.windows.net,1433;Initial Catalog=$WI_SQL_DATABASE;User ID=$SQL_ADMIN_LOGIN;Password=$SQL_ADMIN_PASSWORD;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
+          dotnet WabiInsight.Api.dll bootstrap
+
+      - name: Close the SQL firewall again
+        if: always()
+        run: |
+          az sql server firewall-rule delete --resource-group "$RESOURCE_GROUP" --server "$WI_SQL_SERVER" \
+            --name "github-runner-$GITHUB_RUN_ID" --output none 2>/dev/null || true
+
+      - name: Summary
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+          MIGRATE: ${{ inputs.database }}
+          BOOTSTRAP: ${{ inputs.first_administrator }}
+        run: |
+          {
+            echo "### Database: $RESULT"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Database | \`$WI_SQL_SERVER\` / \`$WI_SQL_DATABASE\` |"
+            echo "| Migrations applied | $MIGRATE |"
+            echo "| First administrator | $BOOTSTRAP |"
+            echo "| Restore point (UTC) | ${RESTORE_POINT:-—} (Azure SQL point-in-time restore, kept 7 days) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  api:
+    name: API
+    needs: [build, infrastructure, database]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && inputs.api }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production-azure
+      url: ${{ vars.WI_PUBLIC_URL || format('https://{0}.azurewebsites.net', vars.AZURE_NAME) }}
+    timeout-minutes: 30
+    env:
+      AZURE_NAME: ${{ vars.AZURE_NAME }}
+      AZURE_SQL_DATABASE: ${{ vars.AZURE_SQL_DATABASE }}
+      WI_PUBLIC_URL: ${{ vars.WI_PUBLIC_URL }}
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      RELEASE: ${{ github.workspace }}/release
+    steps:
+      - name: Download backend
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-api
+          path: release/api
+
+      - name: Download deploy scripts
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-deploy-scripts
+          path: release/scripts
+
+      - name: Resource names
+        run: bash "$RELEASE/scripts/azure/names.sh"
+
+      - name: Sign in to Azure (OpenID Connect)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Package
+        working-directory: release/api
+        run: |
+          # The IIS web.config is not used on Linux.
+          rm -f web.config
+          zip -qr "$RUNNER_TEMP/api.zip" .
+          du -h "$RUNNER_TEMP/api.zip"
+
+      - name: Deploy to the App Service
+        run: |
+          az webapp deploy --resource-group "$RESOURCE_GROUP" --name "$WI_APP" \
+            --src-path "$RUNNER_TEMP/api.zip" --type zip --clean true --restart true --timeout 900000
+
+      - name: Wait until the API is ready
+        run: |
+          for attempt in $(seq 1 36); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$WI_APP_URL/health/ready" || true)"
+            if [ "$code" = "200" ]; then
+              echo "Ready after $attempt check(s)."
+              exit 0
+            fi
+            echo "Not ready yet (HTTP $code); waiting…"
+            sleep 10
+          done
+          echo "::error::$WI_APP_URL/health/ready did not answer 200 within 6 minutes. See the App Service's Log stream in the Azure portal."
+          exit 1
+
+      - name: Summary
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+          VERSION: ${{ needs.build.outputs.version }}
+          COMMIT: ${{ needs.build.outputs.commit }}
+        run: |
+          {
+            echo "### API: $RESULT"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| App Service | \`$WI_APP\` · $WI_APP_URL |"
+            echo "| Version | \`$VERSION\` ($COMMIT) |"
+            echo "| Started by | @$GITHUB_ACTOR |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  web:
+    name: Web app
+    needs: [build, infrastructure, api]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && inputs.web }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production-azure
+      url: ${{ vars.WI_PUBLIC_URL || format('https://{0}.azurewebsites.net', vars.AZURE_NAME) }}
+    timeout-minutes: 20
+    env:
+      AZURE_NAME: ${{ vars.AZURE_NAME }}
+      AZURE_SQL_DATABASE: ${{ vars.AZURE_SQL_DATABASE }}
+      WI_PUBLIC_URL: ${{ vars.WI_PUBLIC_URL }}
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      RELEASE: ${{ github.workspace }}/release
+    steps:
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-web
+          path: release/web
+
+      - name: Download deploy scripts
+        uses: actions/download-artifact@v4
+        with:
+          name: wabi-insight-deploy-scripts
+          path: release/scripts
+
+      - name: Resource names
+        run: bash "$RELEASE/scripts/azure/names.sh"
+
+      - name: Sign in to Azure (OpenID Connect)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Package
+        working-directory: release/web/browser
+        run: |
+          test -f index.html
+          zip -qr "$RUNNER_TEMP/web.zip" .
+          du -h "$RUNNER_TEMP/web.zip"
+
+      - name: Deploy to the App Service (/home/site/web, served by the API)
+        run: |
+          az webapp deploy --resource-group "$RESOURCE_GROUP" --name "$WI_APP" \
+            --src-path "$RUNNER_TEMP/web.zip" --type zip --target-path /home/site/web --clean true --restart false --timeout 600000
+
+      - name: Check the site
+        run: |
+          for attempt in $(seq 1 18); do
+            if curl -fsS --max-time 15 "$WI_APP_URL/" | grep -q "<app-root"; then
+              echo "The web app answers at $WI_APP_URL (check $attempt)."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$WI_APP_URL/ does not return the web app. Check that the API is deployed (it serves these files) and that Web__RootPath is /home/site/web."
+          exit 1
+
+      - name: Summary
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          {
+            echo "### Web app: $RESULT"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Address | $WI_PUBLIC_URL |"
+            echo "| Version | \`$VERSION\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,13 +1,14 @@
 # Wabi Insight — Deployment guide
 
-Wabi Insight is three deployable parts: the **Angular build** (static files), the **ASP.NET Core API** (Kestrel) and **SQL Server** (the configuration database). Everything else is configuration: SMTP, the AI provider key, artifact storage, the Data Protection key ring and, optionally, a ClamAV daemon for attachment scanning. Three validated shapes are described here: Docker Compose, a Linux host with systemd + nginx, and Windows with IIS. Pick one; the configuration keys are the same everywhere.
+Wabi Insight is three deployable parts: the **Angular build** (static files), the **ASP.NET Core API** (Kestrel) and **SQL Server** (the configuration database). Everything else is configuration: SMTP, the AI provider key, artifact storage, the Data Protection key ring and, optionally, a ClamAV daemon for attachment scanning. Three server shapes are described here: Docker Compose, a Linux host with systemd + nginx, and Windows with IIS. A fourth, Microsoft Azure (App Service + Azure SQL Database + Blob Storage, no server to maintain), has its own guide below. Pick one; the configuration keys are the same everywhere.
 
 **Step-by-step guides** (every step has a *Check*, *Do* and *Verify* command, from a fresh server to the live site, including SQL Server Express):
 
 - [Ubuntu 24.04 LTS: nginx + systemd + SQL Server Express](DEPLOYMENT_LINUX.md)
 - [Windows Server 2019: IIS + ARR + SQL Server Express](DEPLOYMENT_WINDOWS_SERVER_2019.md)
+- [Microsoft Azure: App Service + Azure SQL Database + Blob Storage, deployed from GitHub](DEPLOYMENT_AZURE.md)
 
-**CI/CD:** after the first setup, deploy from GitHub with one click (*Actions → Deploy (Linux) / Deploy (Windows)*: frontend, backend or both, optional database migration, automatic restore when the new backend isn't healthy). See [DEVOPS_LINUX.md](DEVOPS_LINUX.md) and [DEVOPS_WINDOWS.md](DEVOPS_WINDOWS.md).
+**CI/CD:** after the first setup, deploy from GitHub with one click (*Actions → Deploy (Linux) / Deploy (Windows)*: frontend, backend or both, optional database migration, automatic restore when the new backend isn't healthy). See [DEVOPS_LINUX.md](DEVOPS_LINUX.md) and [DEVOPS_WINDOWS.md](DEVOPS_WINDOWS.md). *Actions → Deploy (Azure)* creates the Azure resources and deploys the database, API and web app with checkboxes; see [DEPLOYMENT_AZURE.md](DEPLOYMENT_AZURE.md).
 
 **SQL Server Express** 2019, 2022 and 2025 are supported. The full integration suite passes on each. Express limits are 10 GB per database (50 GB on 2025), a 1,410 MB buffer pool and no SQL Server Agent (schedule backups with cron or Task Scheduler); see the guides.
 
@@ -57,7 +58,9 @@ To switch back, swap the two lines again (files created while on Azure stay in t
 
 ### Reverse proxy and client addresses
 
-The API honours `X-Forwarded-For` and `X-Forwarded-Proto` from proxies on the same machine (loopback) only, so per-client rate limits and audit IP addresses see the real visitor behind nginx or IIS + ARR, and a forged header from anyone else is ignored. If the proxy runs on another host, list its address in `ReverseProxy:KnownProxies` (e.g. `ReverseProxy__KnownProxies__0=10.0.0.5`).
+The API honours `X-Forwarded-For` and `X-Forwarded-Proto` from proxies on the same machine (loopback) only, so per-client rate limits and audit IP addresses see the real visitor behind nginx or IIS + ARR, and a forged header from anyone else is ignored. If the proxy runs on another host, list its address in `ReverseProxy:KnownProxies` (e.g. `ReverseProxy__KnownProxies__0=10.0.0.5`). On platforms whose front end has no fixed address and is the only way in (Azure App Service), `ReverseProxy:TrustAllProxies=true` trusts it; only the last `X-Forwarded-For` entry (the one the front end appended) is used. Never set it on a server that can be reached directly.
+
+Without nginx or IIS in front, the API can serve the Angular build itself: set `Web:RootPath` to the folder that holds `index.html` (the Azure deployment uses `/home/site/web`). The API then answers page addresses with the web app (the same security headers and caching as the nginx/IIS configurations), while `/api` and `/health` are unchanged. Behind nginx or IIS leave it empty.
 
 ### Security settings worth knowing (P12.1)
 

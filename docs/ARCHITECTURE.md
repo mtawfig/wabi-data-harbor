@@ -245,3 +245,7 @@ See `docs/WABI_INSIGHT_SPECIFICATION.md` §4, §10, §27 and `docs/SECURITY.md` 
 
 
 Design: [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). Inside the same API: an append-only `AnalysisAccessFacts` ledger written with every analysis, a `ScheduledJobs` table with atomic leases driven by one `BackgroundService` (like the email outbox worker), a typed monitoring-rule document validated and authorized like the query plan and compiled by the same dialect compilers for data rules, an access-rule evaluator over facts and 28-day baselines, `Alerts` with a daily digest through the `EmailMessages` outbox and immediate `Notifications` for High severity, and `ReportSubscriptions` that re-run saved analyses per recipient under that recipient's permissions and deliver PDF/XLSX through the outbox. No new process, broker or service.
+
+## Hosting on Azure (P13.18)
+
+With `Web:RootPath` set, the API also serves the Angular build (`WebAppHosting`: default and static files before rate limiting and authentication, a fallback to `index.html` for page addresses that excludes `/api`, `/health` and missing files, the shell's Content-Security-Policy from `SecurityHeadersMiddleware` for HTML responses). Azure App Service uses it so the web app and the API share one address without a separate web server; `deploy/azure/main.bicep` creates the App Service (Linux, .NET 10, Always On, health check `/health/live`), Azure SQL Database and a private Blob Storage container, and `deploy-azure.yml` deploys them from GitHub over OpenID Connect (`docs/DEPLOYMENT_AZURE.md`).

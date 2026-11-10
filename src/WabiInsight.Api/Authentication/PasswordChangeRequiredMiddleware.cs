@@ -27,8 +27,11 @@ public sealed class PasswordChangeRequiredMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Only data is gated: the web app's own files (served by the API when Web:RootPath is set) must still load so
+        // the user can reach the change-password page.
         if (context.User.Identity?.IsAuthenticated == true
             && WabiClaims.MustChangePasswordClaim(context.User)
+            && context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
             && !AllowedPaths.Contains(context.Request.Path.Value ?? string.Empty))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;

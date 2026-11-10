@@ -7,6 +7,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using WabiInsight.Api.Authentication;
 using WabiInsight.Api.Authorization;
 using WabiInsight.Api.Commands;
+using WabiInsight.Api.Hosting;
 using WabiInsight.Api.Security;
 using WabiInsight.Infrastructure.DependencyInjection;
 
@@ -54,6 +55,14 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     options.ForwardLimit = 1;
+    if (builder.Configuration.GetValue<bool>("ReverseProxy:TrustAllProxies"))
+    {
+        // Platforms whose front ends have no fixed addresses (Azure App Service): the application is reachable only
+        // through them, and with ForwardLimit 1 only the entry the front end appended (the real caller) is used.
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    }
+
     foreach (var proxy in builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [])
     {
         if (IPAddress.TryParse(proxy, out var address))
@@ -109,6 +118,24 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Optional: the Angular build served by the API itself (Web:RootPath; Azure App Service). Behind nginx or IIS it stays off.
+var webRoot = WebAppHosting.ResolveRoot(app.Configuration);
+if (webRoot is not null)
+{
+    var hostingLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("WebAppHosting");
+    if (File.Exists(Path.Combine(webRoot, "index.html")))
+    {
+        WebAppHosting.LogServing(hostingLogger, webRoot);
+    }
+    else
+    {
+        WebAppHosting.LogMissing(hostingLogger, webRoot);
+    }
+
+    app.UseWebAppFiles(webRoot);
+}
+
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<TenantContextMiddleware>();
@@ -129,6 +156,10 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 }).AllowAnonymous();
 
 app.MapControllers();
+if (webRoot is not null)
+{
+    app.MapWebAppFallback(webRoot);
+}
 
 await app.RunAsync();
 return 0;

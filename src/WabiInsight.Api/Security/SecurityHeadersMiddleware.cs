@@ -39,7 +39,9 @@ public sealed class SecurityHeadersMiddleware
             var contentType = response.ContentType ?? string.Empty;
             headers["Content-Security-Policy"] = contentType.Contains("json", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(contentType)
                 ? "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
-                : "frame-ancestors 'none'";
+                : contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
+                    ? Hosting.WebAppHosting.ShellContentSecurityPolicy // the web app's page, when the API serves it (Web:RootPath)
+                    : "frame-ancestors 'none'";
             headers.Remove("Server");
             headers.Remove("X-Powered-By");
             return Task.CompletedTask;
