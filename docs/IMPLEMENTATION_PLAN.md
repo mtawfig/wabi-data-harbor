@@ -1,6 +1,6 @@
 # Wabi Insight — Implementation Plan (Phases and Pull Requests)
 
-**Status:** Phases 1–14 merged; Phase 14 (Proactive Agent) was approved by the owner on 2026-11-07, design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P13.5 (second sample organization, Wabi Bank), P13.6 (its follow-ups), P13.7 (answer accuracy fixes found with it), P13.8 (query plans: totals, column comparisons and the asker's own codes), P13.9 (example questions per application, readable alert numbers), P13.10 (complete explanations, Arabic dates and numbers) and P13.11 (plain-language explanation of each query, compact language switch, generic Wabi Bank names) merged; P13.12 (product walkthrough video, English) merged; P13.13 (walkthrough video, Arabic) merged; P13.14 (file storage: server disk or Azure Blob Storage) merged; P13.15 (business content only for business users) merged; P13.16 (report layout: whole figures, readable chart labels, natural figure references), P13.17 (Arabic text in charts), P13.18 (Deploy (Azure)) and P13.19 (Windows VPS with Azure SQL + Blob Storage, beginner guide and CD) and P13.20 (beginner's guides for Windows Server + SQL Server Express, Ubuntu and Azure App Service) and P13.21 (prompt caching for the planner's catalogue) and P13.22 (demo organizations with their databases on the VPS in the Azure SQL setup) merged; P13.23 (deployment guide fixes from the review) merged; P13.24 (code fixes from the review) in review. Version 2 is planned in *Version 2* (Sign in with Microsoft; P0.2 merged).
+**Status:** Phases 1–14 merged; Phase 14 (Proactive Agent) was approved by the owner on 2026-11-07, design in [`PROACTIVE_AGENT.md`](./PROACTIVE_AGENT.md). P13.5 (second sample organization, Wabi Bank), P13.6 (its follow-ups), P13.7 (answer accuracy fixes found with it), P13.8 (query plans: totals, column comparisons and the asker's own codes), P13.9 (example questions per application, readable alert numbers), P13.10 (complete explanations, Arabic dates and numbers) and P13.11 (plain-language explanation of each query, compact language switch, generic Wabi Bank names) merged; P13.12 (product walkthrough video, English) merged; P13.13 (walkthrough video, Arabic) merged; P13.14 (file storage: server disk or Azure Blob Storage) merged; P13.15 (business content only for business users) merged; P13.16 (report layout: whole figures, readable chart labels, natural figure references), P13.17 (Arabic text in charts), P13.18 (Deploy (Azure)) and P13.19 (Windows VPS with Azure SQL + Blob Storage, beginner guide and CD) and P13.20 (beginner's guides for Windows Server + SQL Server Express, Ubuntu and Azure App Service) and P13.21 (prompt caching for the planner's catalogue) and P13.22 (demo organizations with their databases on the VPS in the Azure SQL setup) merged; P13.23 (deployment guide fixes from the review) merged; P13.24 (code fixes from the review) merged. Version 2 is scoped in [`VERSION_2.md`](./VERSION_2.md) (P0.3, in review); the design of Sign in with Microsoft is in *Version 2* below (P0.2 merged).
 **Specification:** [`docs/WABI_INSIGHT_SPECIFICATION.md`](./WABI_INSIGHT_SPECIFICATION.md) (v1.2; §35 added for Phase 14).
 **Review of the original prompt:** [`docs/SPEC_REVIEW.md`](./SPEC_REVIEW.md).
 
@@ -31,6 +31,7 @@
 |---|---|---|
 | P0.1 | `claude/query-harbor-plan-qjo2sh` | Revised specification, spec review, implementation plan, `CLAUDE.md`, `PROGRESS.md`. No application code. |
 | P0.2 | `wi/p00-02-v2-microsoft-sign-in` | Version 2 plan: Sign in with Microsoft (Microsoft Entra ID), in *Version 2* below. No application code. |
+| P0.3 | `wi/p00-03-version-2-scope` | Version 2 scope and requirements: [`VERSION_2.md`](./VERSION_2.md) (owner decisions, items carried over from the review, proposals, order). No application code. |
 
 ### Phase 1 — Foundation and Multi-Tenant Identity
 **Acceptance:** A Platform Administrator can be bootstrapped and sign in; the schema makes an organization user without a valid organization impossible; CI is green on both stacks.
@@ -175,6 +176,15 @@
 ## Version 2 (planned, not started)
 
 Work the owner has moved to version 2. Nothing here is built in version 1; each item starts only after the owner approves it.
+
+**The full scope of version 2 is in [`VERSION_2.md`](./VERSION_2.md):** every item with its source, priority and size, the requirements, the open decisions and the proposed order of pull requests. This section keeps the detailed design of the items that already have one.
+
+| Owner decision | Date | Where |
+|---|---|---|
+| Google Drive and OneDrive publishing | 2026-11-06 | Below; scope in Phase 10 (P10.2); `VERSION_2.md` D1 |
+| Sign in with Microsoft | 2026-11-08 | Below (full design); `VERSION_2.md` C1 |
+| Drill-down in charts | 2026-11-09 | `VERSION_2.md` B1 |
+| API data sources (not only SQL Server and Oracle databases) | 2026-11-10 | `VERSION_2.md` A1 |
 
 ### Sign in with Microsoft (Microsoft Entra ID)
 **Owner decision (2026-11-08):** planned for version 2. Version 1 keeps local e-mail and password sign-in only (specification §8).

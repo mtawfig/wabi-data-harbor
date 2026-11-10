@@ -9,6 +9,7 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 - [Product specification](docs/WABI_INSIGHT_SPECIFICATION.md)
 - [Review of the original prompt and owner decisions](docs/SPEC_REVIEW.md)
 - [Implementation plan: phases and pull requests](docs/IMPLEMENTATION_PLAN.md)
+- [Version 2: scope and requirements (planned, not built)](docs/VERSION_2.md)
 - [Progress log](docs/PROGRESS.md)
 - [Proactive agent design (Phase 14): Monitoring Rules, Alerts, Periodic Reports](docs/PROACTIVE_AGENT.md)
 - [Deployment guide (Docker, Linux, IIS, Azure)](docs/DEPLOYMENT.md) · step by step for beginners: [Windows Server 2019 + SQL Server Express](docs/DEPLOYMENT_WINDOWS_SERVER_2019.md) · [Windows Server 2019 VPS + Azure SQL + Azure Blob Storage](docs/DEPLOYMENT_WINDOWS_AZURE.md) · [Ubuntu 24.04](docs/DEPLOYMENT_LINUX.md) · [Azure App Service](docs/DEPLOYMENT_AZURE.md)
