@@ -948,6 +948,7 @@ param([string]$Keys = '__KEYS__')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+if (-not (Get-ChildItem $Keys -Force)) { exit 0 }      # nothing to copy yet: the key ring stays empty until the API first starts (step 33)
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmm')
 $zip = Join-Path $PSScriptRoot "keys-$stamp.zip"
 Compress-Archive -Path $Keys -DestinationPath $zip -Force

@@ -54,12 +54,12 @@ Server layout (set up by the deployment guide, step 5):
 
 ## 0. Prerequisites
 
-1. **The server is prepared** with [DEPLOYMENT_WINDOWS_SERVER_2019.md](DEPLOYMENT_WINDOWS_SERVER_2019.md) steps **1–12, 16, 17, 20–23 and 25**: IIS and its modules, Hosting Bundle, SQL Server Express, the database and its login, folders and pools, `appsettings.Local.json`, both IIS sites, the certificate, the firewall and the backup task. With CI/CD you **don't need** step 13 (Git, .NET SDK, Node.js), 14 (clone) or 15 (build) on the server. The first run replaces step 18 (migrations), and step 19 (first administrator) comes right after it (step 6 below). Until the first run, the health checks of steps 20 and 22 fail because `C:\wabitex-apps\wabi-insight\web\api` is still empty. That's expected.
+1. **The server is prepared** with [DEPLOYMENT_WINDOWS_SERVER_2019.md](DEPLOYMENT_WINDOWS_SERVER_2019.md) steps **1–26 and 30**: IIS and its modules, Hosting Bundle, SQL Server Express, the database and its login, folders and pools, `appsettings.Local.json`, both IIS sites, the certificate, the firewall and the backup task. That guide also covers this CI/CD setup for beginners (steps 27–33); this page is the reference behind it. With CI/CD the server needs no Git, .NET SDK or Node.js (those are only in the guide's Appendix A, *Installing without GitHub Actions*). The first run creates the schema, and the first administrator comes right after it (step 6 below). Until the first run, the health checks fail because `C:\wabitex-apps\wabi-insight\web\api` is still empty. That's expected.
 2. **The workflows are on `main`.** GitHub lists a manually started workflow only once its file is on the default branch.
 3. **Your GitHub account** has admin rights on the repository, to add a runner and an environment.
 4. **Outbound HTTPS** from the server to `github.com`, `api.github.com`, `*.actions.githubusercontent.com`, `codeload.github.com`, `objects.githubusercontent.com` and `*.blob.core.windows.net` (artifact storage).
 
-**Check** in an elevated Windows PowerShell (run the session settings and helpers from step 1 of the deployment guide first, and `$WI = Import-Clixml C:\wabitex-apps\wabi-insight\wabi-insight.vars.xml`):
+**Check** in an elevated Windows PowerShell (run the session settings and helpers from step 5 of the deployment guide first, and `$WI = Import-Clixml C:\wabitex-apps\wabi-insight\wabi-insight.vars.xml`):
 
 ```powershell
 Import-Module WebAdministration
@@ -68,7 +68,7 @@ Import-Module WebAdministration
     ApiSite         = [bool](Get-Website -Name 'WabiInsightApi' -ErrorAction SilentlyContinue)
     WebSite         = [bool](Get-Website -Name 'WabiInsight' -ErrorAction SilentlyContinue)
     LocalSettings   = Test-Path 'C:\wabitex-apps\wabi-insight\web\api\appsettings.Local.json'
-    FilesFolder     = Test-Path 'D:\wabi-insight\files'
+    FilesFolder     = Test-Path $WI.Files
     BackupTask      = [bool](Get-ScheduledTask -TaskName 'Wabi Insight backup' -ErrorAction SilentlyContinue)
     CurlExe         = [bool](Get-Command curl.exe -ErrorAction SilentlyContinue)
     GitHubReachable = (Invoke-WebRequest 'https://api.github.com' -UseBasicParsing).StatusCode -eq 200
@@ -159,7 +159,7 @@ On GitHub, **Settings → Actions → Runners** shows the runner **Idle** with t
 
 ## 4. Install the deploy script
 
-The runner runs `C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1`, never a copy from its workspace. The folder inherits the Administrators/SYSTEM-only permissions of `C:\wabitex-apps\wabi-insight` (deployment guide step 5). The script is in the repository at `deploy/cicd/windows/Deploy-WabiInsight.ps1`.
+The runner runs `C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1`, never a copy from its workspace. The folder inherits the Administrators/SYSTEM-only permissions of `C:\wabitex-apps\wabi-insight` (deployment guide step 10). The script is in the repository at `deploy/cicd/windows/Deploy-WabiInsight.ps1`.
 
 **Check:**
 
@@ -228,7 +228,7 @@ Then open `https://<your domain>` in a browser.
 
 ## 6. New server only: create the first Platform Administrator
 
-The first run created the schema. Create the administrator once, with [DEPLOYMENT_WINDOWS_SERVER_2019.md step 19](DEPLOYMENT_WINDOWS_SERVER_2019.md#19-create-the-first-platform-administrator-once). It uses the API the pipeline just installed in `C:\wabitex-apps\wabi-insight\web\api`. Then sign in and change the password ([step 24](DEPLOYMENT_WINDOWS_SERVER_2019.md#24-go-live-checks)).
+The first run created the schema. Create the administrator once, with [DEPLOYMENT_WINDOWS_SERVER_2019.md step 32](DEPLOYMENT_WINDOWS_SERVER_2019.md#32-create-the-first-platform-administrator-once). It uses the API the pipeline just installed in `C:\wabitex-apps\wabi-insight\web\api`. Then sign in and change the password ([step 33](DEPLOYMENT_WINDOWS_SERVER_2019.md#33-go-live-checks)).
 
 ## 7. Everyday deployments
 
@@ -249,7 +249,7 @@ The first run created the schema. Create the administrator once, with [DEPLOYMEN
 | A **Build** job | Tests or the build failed. Nothing reached the server. | Fix it in a pull request and run again. |
 | Deploy: *Check the server's deploy script* | Script missing. | Step 4. A **warning** that the script "differs" means the repository has a newer deploy script. Reinstall it (step 4). |
 | Deploy: backend `did not report Healthy` / `Migration failed` | The previous backend was **restored automatically** and is running. | The job log shows the startup error from the Application event log (source *IIS AspNetCore Module V2*, also in Event Viewer). Migrations already applied stay applied. Restore the backup taken just before (`D:\wabi-insight\backup`) if you must go back. |
-| Deploy: `The release is installed, but …` (site check) | The release is live, but IIS, ARR or the certificate didn't answer correctly. | Deployment guide steps 10, 21 and 22 **Verify**. |
+| Deploy: `The release is installed, but …` (site check) | The release is live, but IIS, ARR or the certificate didn't answer correctly. | Deployment guide steps 15, 25 and 26 **Verify**. |
 | Deploy: `robocopy … failed` | A file was locked (rare: the app wasn't fully stopped). | Run again. If it persists, `Restart-WebAppPool WabiInsightApi` and run again. |
 | Deploy waits forever on `Waiting for a runner` | The runner service is stopped or offline. | `Get-Service 'actions.runner.*' \| Start-Service`. |
 | `Another deployment is running` | Two runs at once. | The workflow queues runs (`concurrency`). Wait and run again. |
@@ -266,7 +266,7 @@ Remove-Item 'C:\wabitex-apps\wabi-insight\web\api\app_offline.htm'
 robocopy 'C:\wabitex-apps\wabi-insight\releases\previous-web' 'C:\wabitex-apps\wabi-insight\web\app' /MIR /NFL /NDL /NJH /NJS
 ```
 
-- **Across a migration:** the old code may not work with the new schema. Restore the database backup taken by that deployment (deployment guide step 25), then deploy the old version.
+- **Across a migration:** the old code may not work with the new schema. Restore the database backup taken by that deployment (deployment guide step 39), then deploy the old version.
 
 ## 10. Keeping it up to date
 
