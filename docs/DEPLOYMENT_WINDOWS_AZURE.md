@@ -44,8 +44,12 @@ end).
   - **Check:** tells you whether the step is already done. If it is, skip **Do**.
   - **Do:** the actions or commands.
   - **Verify:** proves the step worked. **Don't continue until it does.**
-- **Copy and paste** commands exactly. In PowerShell, paste with a **right-click**. Lines starting with `#` are comments
-  and are ignored.
+- **Copy and paste** commands exactly. In PowerShell, paste with a **right-click**, a whole block at once, then press
+  **Enter**. Lines starting with `#` are comments and are ignored.
+- **Blocks between `. {` and `}`** ask you for a password or must stop at the first error. Paste the whole block,
+  **including those two lines**: nothing runs until the closing `}`, then PowerShell asks its questions one at a time.
+  If the prompt shows `>>` after pasting, press **Enter** once more. If such a block stops with red text, nothing after
+  the error has run: fix the cause and paste the whole block again.
 - Text in `<angle brackets>` is a placeholder. Replace it with your own value, without the brackets.
 - **Never paste a password into a chat, an e-mail or GitHub.** Keep every password and key in a password manager
   (Bitwarden, 1Password, KeePass…).
@@ -241,7 +245,8 @@ Invoke-RestMethod -Uri 'https://api.ipify.org' -UseBasicParsing                 
 (Resolve-DnsName $WI.Domain -Type A | Where-Object Type -eq 'A' | Select-Object -First 1).IPAddress   # must be the same IP (step 3)
 ```
 
-If the last two lines differ, wait for DNS (step 3) before step 28 (the certificate). You can continue with the other steps meanwhile.
+If the last two lines differ, wait for DNS (step 3) before step 28 (the certificate). You can continue with the other
+steps meanwhile, but finish step 28 before the first deployment (step 33): its last check opens the site over HTTPS.
 
 ## 7. Two passwords you'll need in Azure
 
@@ -425,8 +430,8 @@ manager as *Storage connection string*.
 - **Allowed protocols:** **HTTPS only**.
 - **Generate SAS token and URL**, then copy the **Blob SAS URL**. Store it in your password manager as *Backups SAS URL*.
 
-**Verify:** the URL starts with `https://<account>.blob.core.windows.net/wabi-insight-backups?sv=` and contains
-`sp=acw`.
+**Verify:** the URL starts with `https://<account>.blob.core.windows.net/wabi-insight-backups?` and contains `sp=acw`
+and `sig=`.
 
 ## 15. Longer database backups (optional, recommended)
 
@@ -643,8 +648,10 @@ Test-NetConnection github.com -Port 443 -InformationLevel Quiet                 
 Test-NetConnection api.anthropic.com -Port 443 -InformationLevel Quiet                                # AI provider
 ```
 
-`False` on the first line means the firewall rule (step 9) or the server name in `$WI.SqlServer` is wrong. `False` on
-the others means the VPS provider blocks outgoing traffic: ask them to allow it.
+`False` on the first line means the server name in `$WI.SqlServer` is wrong, or the VPS provider blocks outgoing port
+1433. `False` on the others means the provider blocks outgoing traffic: ask them to allow it. This test can't check the
+Azure firewall rule (step 9) or the database password: those are first used by the first deployment (step 33), which
+reports *Client with IP address … is not allowed* or *Login failed* if one of them is wrong (see step 42).
 
 ---
 
@@ -714,6 +721,7 @@ It overrides `appsettings.json`, and **deployments never overwrite or delete it*
 - the **storage connection string** (step 13).
 
 ```powershell
+. {
 $sqlPassword = Read-WiSecret 'Database password for wabiinsight_app'
 $storageConnection = Read-WiSecret 'Storage connection string (key1)'
 $localSettings = [ordered]@{
@@ -731,6 +739,7 @@ $localSettings = [ordered]@{
 $localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
 $localSettings | ConvertTo-Json -Depth 5 | Set-Content -Path $localPath -Encoding UTF8
 Remove-Variable sqlPassword, storageConnection
+}
 ```
 
 **Verify:** this shows the file with the secrets hidden:
@@ -884,6 +893,7 @@ Get-Service -Name 'actions.runner.*' -ErrorAction SilentlyContinue | Select-Obje
 check the download's fingerprint:
 
 ```powershell
+. {
 $runnerDir = 'C:\actions-runner'
 New-Item -ItemType Directory -Force -Path $runnerDir | Out-Null
 icacls $runnerDir /inheritance:r /grant:r 'SYSTEM:(OI)(CI)F' 'BUILTIN\Administrators:(OI)(CI)F' | Out-Null
@@ -897,6 +907,7 @@ if ($expected) { if ($actual -ne $expected) { throw 'Runner checksum mismatch' }
 else { "SHA-256 ${actual}: compare it with the hash on GitHub's 'New self-hosted runner' page." }
 Expand-Archive $zip -DestinationPath $runnerDir -Force
 Remove-Item $zip
+}
 ```
 
 **Do, part 2:** register it:
@@ -905,6 +916,7 @@ Remove-Item $zip
 2. **[VPS PowerShell]** paste the token when asked:
 
 ```powershell
+. {
 Set-Location 'C:\actions-runner'
 $token = Read-Host 'Runner registration token'
 .\config.cmd --unattended --url "https://github.com/$($WI.Repo)" --token $token `
@@ -914,6 +926,7 @@ $service = Get-Service -Name 'actions.runner.*' | Select-Object -First 1
 sc.exe config $service.Name obj= LocalSystem | Out-Null          # deployments change protected folders
 sc.exe config $service.Name start= delayed-auto | Out-Null
 Restart-Service $service.Name
+}
 ```
 
 **Verify:**
@@ -941,6 +954,7 @@ Test-Path (Join-Path $WI.Backup 'backup.ps1'), (Join-Path $WI.Backup 'backup-tar
 **Do:** paste the **Backups SAS URL** when asked:
 
 ```powershell
+. {
 $sasUrl = Read-WiSecret 'Backups SAS URL (step 14)'
 Set-Content -Path (Join-Path $WI.Backup 'backup-target.txt') -Value $sasUrl.Trim() -Encoding ASCII
 Remove-Variable sasUrl
@@ -966,6 +980,7 @@ $action    = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoPro
 $trigger   = New-ScheduledTaskTrigger -Daily -At '02:30'
 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -TaskName 'Wabi Insight backup' -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+}
 ```
 
 The key ring is still empty at this point; it gets its first key when the API starts (step 33). Test the task after
@@ -999,6 +1014,7 @@ listed.
 **Do, part 2:** **[VPS PowerShell]** paste the token when asked:
 
 ```powershell
+. {
 $deployDir = Join-Path $WI.Root 'deploy'
 $ghToken = Read-WiSecret 'GitHub token (Contents: read)'
 Invoke-WebRequest -UseBasicParsing -OutFile (Join-Path $deployDir 'Deploy-WabiInsight.ps1') `
@@ -1007,6 +1023,7 @@ Invoke-WebRequest -UseBasicParsing -OutFile (Join-Path $deployDir 'Deploy-WabiIn
 Remove-Variable ghToken
 Unblock-File (Join-Path $deployDir 'Deploy-WabiInsight.ps1')
 & (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -ScriptVersion          # 3
+}
 ```
 
 Then delete the token: **[GitHub]** *Fine-grained tokens* → the token → **Delete**.
@@ -1044,6 +1061,7 @@ Now run the **Verify** of step 32 (key-ring backup).
 2. Run this. The bootstrap settings exist only inside this PowerShell process and are removed afterwards:
 
 ```powershell
+. {
 $adminPassword = Read-WiSecret 'First password for the Platform Administrator'
 Push-Location (Join-Path $WI.Root 'web\api')
 $env:ASPNETCORE_ENVIRONMENT = 'Production'
@@ -1057,6 +1075,7 @@ dotnet .\WabiInsight.Api.dll bootstrap
     ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 Remove-Variable adminPassword
 Pop-Location
+}
 ```
 
 **Verify:** the output includes `Bootstrap completed. AdministratorId=…`, and `Get-ChildItem Env: | Where-Object Name
@@ -1137,7 +1156,8 @@ Restart-WebAppPool 'WabiInsightApi'
 ```
 
   3. Deploy the older code version (first bullet).
-  4. Set `$WI.SqlDatabase = 'WabiInsightDB-restored'` and save your values (step 5).
+  4. Save the new name: `$WI.SqlDatabase = 'WabiInsightDB-restored'; $WI | Export-Clixml (Join-Path $WI.Root 'wabi-insight.vars.xml')`
+     (don't paste the step 5 block again: it would put the old name back).
   5. Once everything works, delete the old database in the portal. The `wabiinsight_app` user and the firewall rule come
      with the restore, so nothing else changes.
 
@@ -1148,7 +1168,7 @@ Restart-WebAppPool 'WabiInsightApi'
 | The database | **[Azure portal]** point-in-time restore (step 38), within the retention you set (step 15) |
 | Files (reports, attachments, logos) | Deleted files: **[Azure portal]** → container → **Show deleted blobs** → select → **Undelete** (within 14 days) |
 | The key ring (VPS lost or rebuilt) | **[Azure portal]** → `wabi-insight-backups/keys` → download the newest zip → on the new VPS, unpack it into `C:\wabitex-apps\wabi-insight` (it contains the `keys` folder) **before** the first start of the API |
-| The whole VPS | A new Windows Server 2019 VPS: steps 4–6 and 16–33. For step 33, restore the key ring as above first, and leave **migrate_database** off. Update the SQL firewall rule (step 9) with the new IP. |
+| The whole VPS | A new Windows Server 2019 VPS: steps 4–6 and 16–33. For step 33, restore the key ring as above first, and leave **migrate_database** off. With a new IP address, also update the SQL firewall rule (step 9), the DNS record (step 3) and the provider's port rules (step 2). |
 
 ## 40. Security checklist
 
@@ -1254,11 +1274,13 @@ helpers:
 function Invoke-WiSql {
     # Runs SQL on the local SQL Server Express (demo databases) as your Windows administrator account.
     [CmdletBinding()]
-    param([string]$Query, [string]$InputFile, [string]$Database = 'master')
+    # -Tables shows every result of a script as its own table (the sample scripts return several).
+    param([string]$Query, [string]$InputFile, [string]$Database = 'master', [switch]$Tables)
     Import-Module SqlServer -Verbose:$false
     $p = @{ ServerInstance = 'localhost,1433'; Database = $Database; TrustServerCertificate = $true; QueryTimeout = 600; DisableVariables = $true; ErrorAction = 'Stop' }
     if ($InputFile) { $p.InputFile = $InputFile } else { $p.Query = $Query }
-    Invoke-Sqlcmd @p
+    if ($Tables) { Invoke-Sqlcmd @p -OutputAs DataTables | ForEach-Object { $_ | Format-Table -AutoSize | Out-String -Width 250 } }
+    else { Invoke-Sqlcmd @p }
 }
 ```
 
@@ -1282,6 +1304,7 @@ If `MSSQL$SQLEXPRESS` is already listed, skip part 2 and do part 3 on it.
 2. Download and install:
 
    ```powershell
+   . {
    $ssei = Get-WiDownload 'https://go.microsoft.com/fwlink/?linkid=2216019' 'SQL2025-SSEI-Expr.exe'
    $media = Join-Path $WI.Root 'install\sql'
    New-Item -ItemType Directory -Force -Path $media | Out-Null
@@ -1299,6 +1322,7 @@ If `MSSQL$SQLEXPRESS` is already listed, skip part 2 and do part 3 on it.
    $p = Start-Process (Join-Path $setupDir 'setup.exe') -ArgumentList $arguments -Wait -PassThru
    "setup exit code $($p.ExitCode)"      # 0 = success, 3010 = success, restart the VPS first
    Remove-Variable sa
+   }
    ```
 
    - If no `SQLEXPR*.exe` appears in `C:\wabitex-apps\wabi-insight\install\sql`: double-click
@@ -1329,11 +1353,20 @@ Install-Module -Name SqlServer -Scope AllUsers -AllowClobber -Force
 Get-Service 'MSSQL$SQLEXPRESS' | Select-Object Status, StartType                       # Running, Automatic
 Invoke-WiSql "SELECT CAST(SERVERPROPERTY('Edition') AS nvarchar(64)) AS Edition, CAST(SERVERPROPERTY('IsIntegratedSecurityOnly') AS int) AS WindowsAuthOnly"
 # Express Edition (64-bit)   0
-Get-NetFirewallRule -Enabled True -Direction Inbound -ErrorAction SilentlyContinue | Get-NetFirewallPortFilter |
-    Where-Object LocalPort -eq '1433'                                                    # (nothing): port 1433 stays closed to the internet
+Get-NetFirewallProfile | Select-Object Name, Enabled                                   # Domain, Private, Public: all True
+Get-NetFirewallRule -Enabled True -Direction Inbound -Action Allow -ErrorAction SilentlyContinue | Get-NetFirewallPortFilter |
+    Where-Object { $_.LocalPort -contains '1433' }                                       # (nothing): no rule opens port 1433
 ```
 
-Keep 1433 **closed** in Windows Firewall and in your provider's panel (step 2): only the API, on this same VPS, uses it.
+Then prove it from outside. **On your own computer** (not the VPS), in PowerShell:
+
+```powershell
+Test-NetConnection 203.0.113.10 -Port 1433 -InformationLevel Quiet     # use your VPS IP address; must print False: the internet can't reach SQL Server
+```
+
+If it prints `True`, port 1433 is open: close it in your provider's panel (step 2) and turn Windows Firewall on
+(`Set-NetFirewallProfile -All -Enabled True`) before you continue. Only the API, on this same VPS, uses that port, and
+the demo logins have well-known sample passwords.
 
 ## 44. Create the demo databases
 
@@ -1347,6 +1380,7 @@ Invoke-WiSql "SELECT name FROM sys.databases WHERE name IN (N'FlightOperationsDB
 paste it when asked, and delete it on GitHub afterwards:
 
 ```powershell
+. {
 $samples = Join-Path $WI.Root 'install\samples'
 New-Item -ItemType Directory -Force -Path (Join-Path $samples 'wabi-bank') | Out-Null
 $sampleFiles = '01-create-flightoperationsdb.sql', '02-create-humanresourcesdb.sql', '03-create-procurementstoresdb.sql', '04-seed-wabiinsightdb.sql',
@@ -1366,6 +1400,7 @@ foreach ($f in $sampleFiles) {
     [IO.File]::WriteAllText($path, [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8), (New-Object Text.UTF8Encoding $true))
 }
 Get-ChildItem $samples -Recurse -File | Select-Object Name, Length          # 11 files, none of them 0 bytes
+}
 ```
 
 **Do, part 2:** create the eight databases and their logins (about 5 minutes; the Wabi Bank Core Banking script alone
@@ -1375,7 +1410,7 @@ takes about 2):
 $createFiles = $sampleFiles | Where-Object { $_ -match '\\?0[1-5]-create-' }
 foreach ($f in $createFiles) {
     "== $f"
-    Invoke-WiSql -InputFile (Join-Path $samples $f) | Format-Table -AutoSize | Out-String -Width 220
+    Invoke-WiSql -InputFile (Join-Path $samples $f) -Tables
 }
 ```
 
@@ -1387,16 +1422,20 @@ Each script creates its database, an owner login and a **read-only** login (`…
 # The eight databases exist (the Check query lists eight rows):
 Invoke-WiSql "SELECT name FROM sys.databases WHERE name LIKE N'%DB' AND database_id > 4 ORDER BY name"
 # Wabi Bank's cross-system check: the last line must show 0 failed checks.
-Invoke-WiSql -InputFile (Join-Path $samples 'wabi-bank\07-check-consistency.sql') | Select-Object -Last 1
+Invoke-WiSql -InputFile (Join-Path $samples 'wabi-bank\07-check-consistency.sql') -Tables | Select-Object -Last 1
 ```
 
 ## 45. Prepare the copy tools
 
 **Do:**
 
-1. **SqlPackage** (Microsoft's tool that copies a whole database into one `.bacpac` file and back): download the
-   *Windows .NET 8* zip from `https://aka.ms/sqlpackage-windows` and unpack it into
-   `C:\wabitex-apps\wabi-insight\tools\sqlpackage` (the folder must contain `SqlPackage.exe`).
+1. **SqlPackage** (Microsoft's tool that copies a whole database into one `.bacpac` file and back):
+
+   ```powershell
+   $zip = Get-WiDownload 'https://aka.ms/sqlpackage-windows' 'sqlpackage-windows.zip'
+   Expand-Archive $zip -DestinationPath (Join-Path $WI.Root 'tools\sqlpackage') -Force
+   ```
+
 2. Let the local SQL Server accept the application's database user. In Azure, `wabiinsight_app` (step 10) is a
    *contained* user that lives inside the database; the local SQL Server must allow such users to receive the copy:
 
@@ -1420,11 +1459,13 @@ an earlier attempt, remove it first: `Invoke-WiSql "DROP DATABASE [WabiInsightDB
 **Before you start:** tell your users the site will be offline for about 20 minutes, and have the **Azure SQL admin login
 and password** (step 8) ready.
 
-**Do:** paste this whole block. It stops at the first error: in that case the site stays offline on the **unchanged**
-database. Read the message, then bring the site back with
-`Remove-Item (Join-Path $WI.Root 'web\api\app_offline.htm')` before you try again.
+**Do:** paste this whole block, from `. {` to `}`. It stops at the first error: in that case the site stays offline on
+the **unchanged** database. Read the message, then bring the site back with
+`Remove-Item (Join-Path $WI.Root 'web\api\app_offline.htm')` before you try again. Continue with step 47 **only** when
+the last line printed is `Copied. Continue with step 47.`
 
 ```powershell
+. {
 $sp = Join-Path $WI.Root 'tools\sqlpackage\SqlPackage.exe'
 $work = Join-Path $WI.Backup 'demo-seed'
 New-Item -ItemType Directory -Force -Path $work | Out-Null
@@ -1446,7 +1487,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Import on the VPS failed: see the messages abo
 # 3. Add the two demo organizations, next to the demo databases.
 foreach ($f in '04-seed-wabiinsightdb.sql', 'wabi-bank\06-seed-wabiinsightdb.sql') {
     "== $f"
-    Invoke-WiSql -InputFile (Join-Path $samples $f) | Format-Table -AutoSize | Out-String -Width 220
+    Invoke-WiSql -InputFile (Join-Path $samples $f) -Tables
 }
 
 # 4. Copy the result back to Azure as a NEW database (several minutes). Your current database is not touched.
@@ -1455,6 +1496,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Export on the VPS failed: see the messages abo
 & $sp /Action:Import /SourceFile:"$work\to-azure.bacpac" /TargetConnectionString:"$($azure)Initial Catalog=WabiInsightDB-demo;" /p:DatabaseEdition=Standard /p:DatabaseServiceObjective=S0
 if ($LASTEXITCODE -ne 0) { throw 'Import into Azure failed: see the messages above.' }
 'Copied. Continue with step 47.'
+}
 ```
 
 - `$samples` comes from step 44. In a new window, set it again first:
@@ -1475,6 +1517,7 @@ The site is still offline. **Do**, in the same window (it reuses `$adminLogin` a
    wabiinsight_app* (step 7) when asked:
 
 ```powershell
+. {
 $appPassword = Read-WiSecret 'Database password for wabiinsight_app (step 7)'
 Import-Module SqlServer -Verbose:$false
 $userSql = @"
@@ -1486,17 +1529,22 @@ SELECT name, IS_ROLEMEMBER('db_owner', name) AS DbOwner FROM sys.database_princi
 Invoke-Sqlcmd -ServerInstance "tcp:$($WI.SqlServer),1433" -Database 'WabiInsightDB-demo' -Username $adminLogin -Password $adminPassword -Query $userSql -ErrorAction Stop
 Remove-Variable appPassword, adminPassword
 # wabiinsight_app   1
+}
 ```
 
 2. Point the application at it, and bring the site back:
 
 ```powershell
+. {
 $localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
-(Get-Content $localPath -Raw).Replace("Initial Catalog=$($WI.SqlDatabase);", 'Initial Catalog=WabiInsightDB-demo;') | Set-Content $localPath -Encoding UTF8
+$text = (Get-Content $localPath -Raw).Replace("Initial Catalog=$($WI.SqlDatabase);", 'Initial Catalog=WabiInsightDB-demo;')
+if ($text -notmatch 'Initial Catalog=WabiInsightDB-demo;') { throw "The database name was not found in $localPath; nothing was changed. Check 'Initial Catalog=' in that file." }
+Set-Content $localPath -Value $text -Encoding UTF8
 Restart-WebAppPool 'WabiInsightApi'
 Remove-Item (Join-Path $WI.Root 'web\api\app_offline.htm')
 $WI.SqlDatabase = 'WabiInsightDB-demo'
 $WI | Export-Clixml (Join-Path $WI.Root 'wabi-insight.vars.xml')
+}
 ```
 
 **Verify:**
@@ -1591,6 +1639,7 @@ follow Part C to create the Azure services, but **skip creating tables**: you co
      step 8 first, or import under another name and use that name:
 
 ```powershell
+. {
 $sp = 'C:\wabitex-apps\wabi-insight\tools\sqlpackage\SqlPackage.exe'
 $bacpac = Join-Path $WI.Backup 'WabiInsightDB.bacpac'
 $localPassword = Read-WiSecret 'Password of the local wabiinsightdbowner login'
@@ -1599,6 +1648,7 @@ $adminLogin = Read-Host 'Azure SQL admin login'
 $adminPassword = Read-WiSecret 'Azure SQL admin password'
 & $sp /Action:Import /SourceFile:$bacpac /TargetConnectionString:"Server=tcp:$($WI.SqlServer),1433;Initial Catalog=$($WI.SqlDatabase);User ID=$adminLogin;Password=$adminPassword;Encrypt=True;TrustServerCertificate=False;" /p:DatabaseEdition=Standard /p:DatabaseServiceObjective=S0
 Remove-Variable localPassword, adminPassword
+}
 ```
 
 2. **Create the application user** in the imported database (step 10).

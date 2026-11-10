@@ -29,7 +29,7 @@ The Linux equivalent is [DEVOPS_LINUX.md](DEVOPS_LINUX.md). Setting up the serve
 
 No server secrets live in GitHub. The server keeps its own `appsettings.Local.json`, which deployments never overwrite or delete.
 
-Server layout (set up by the deployment guide, step 5):
+Server layout (set up by the deployment guide, step 10):
 
 | Folder | Role in a deployment |
 |---|---|
@@ -106,6 +106,7 @@ Get-Service -Name 'actions.runner.*' -ErrorAction SilentlyContinue | Select-Obje
 **Do:** create the folder with Administrators/SYSTEM-only access (it will hold the runner's credentials), download the current runner and check its SHA-256:
 
 ```powershell
+. {
 $runnerDir = 'C:\actions-runner'
 New-Item -ItemType Directory -Force -Path $runnerDir | Out-Null
 icacls $runnerDir /inheritance:r /grant:r 'SYSTEM:(OI)(CI)F' 'BUILTIN\Administrators:(OI)(CI)F' | Out-Null
@@ -119,6 +120,7 @@ if ($expected) { if ($actual -ne $expected) { throw 'Runner checksum mismatch' }
 else { "SHA-256 ${actual}: compare it with the hash on GitHub's 'New self-hosted runner' page." }
 Expand-Archive $zip -DestinationPath $runnerDir -Force
 Remove-Item $zip
+}
 ```
 
 The GitHub page **Settings → Actions → Runners → New self-hosted runner → Windows / x64** shows the same download with its version and hash, if you prefer to paste those commands.
@@ -137,6 +139,7 @@ The service runs as **LocalSystem**: deployments write to `C:\wabitex-apps\wabi-
 2. On the server:
 
 ```powershell
+. {
 Set-Location 'C:\actions-runner'
 $token = Read-Host 'Runner registration token'
 .\config.cmd --unattended --url https://github.com/mtawfig/wabi-data-harbor --token $token `
@@ -146,6 +149,7 @@ $service = Get-Service -Name 'actions.runner.*' | Select-Object -First 1
 sc.exe config $service.Name obj= LocalSystem | Out-Null
 sc.exe config $service.Name start= delayed-auto | Out-Null
 Restart-Service $service.Name
+}
 ```
 
 **Verify:**
@@ -170,6 +174,7 @@ if (Test-Path 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1') { & 
 **Do:** download the script of `main` with a GitHub token (*Contents: read*). If you have a checkout of the repository, copy the file instead.
 
 ```powershell
+. {
 $deployDir = 'C:\wabitex-apps\wabi-insight\deploy'
 New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
 $ghToken = Read-Host 'GitHub token (Contents: read)' -AsSecureString
@@ -180,6 +185,7 @@ Invoke-WebRequest -UseBasicParsing -OutFile (Join-Path $deployDir 'Deploy-WabiIn
 Remove-Variable plain, ghToken
 Unblock-File (Join-Path $deployDir 'Deploy-WabiInsight.ps1')        # downloaded files are blocked by default
 Get-Content (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -TotalCount 5   # review before use
+}
 ```
 
 **Verify:**
