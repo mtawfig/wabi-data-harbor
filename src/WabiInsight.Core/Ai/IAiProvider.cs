@@ -2,10 +2,19 @@ using WabiInsight.Core.Entities.Ai;
 
 namespace WabiInsight.Core.Ai;
 
-/// <summary>One request to a model: a system prompt, one user turn and (optionally) a JSON schema the answer must satisfy.</summary>
-public sealed record AiRequest(string SystemPrompt, string UserContent, string? JsonSchema, string SchemaName, int MaxOutputTokens, string? Effort);
+/// <summary>
+/// One request to a model: a system prompt, one user turn and (optionally) a JSON schema the answer must satisfy.
+/// <see cref="SharedContext"/>, when given, is the start of the user turn that repeats from one request to the next (the planner's
+/// catalogue): it is sent before <see cref="UserContent"/>, Anthropic caches it (prompt caching), and other providers receive
+/// the two joined (<see cref="FullUserContent"/>).
+/// </summary>
+public sealed record AiRequest(string SystemPrompt, string UserContent, string? JsonSchema, string SchemaName, int MaxOutputTokens, string? Effort, string? SharedContext = null)
+{
+    public string FullUserContent => string.IsNullOrEmpty(SharedContext) ? UserContent : SharedContext + UserContent;
+}
 
-public sealed record AiUsage(long InputTokens, long OutputTokens, long CachedInputTokens)
+/// <summary>Tokens of one call. InputTokens includes the cached ones read (CachedInputTokens) and written (CacheWriteTokens).</summary>
+public sealed record AiUsage(long InputTokens, long OutputTokens, long CachedInputTokens, long CacheWriteTokens = 0)
 {
     public long TotalTokens => InputTokens + OutputTokens;
 }
@@ -15,11 +24,17 @@ public sealed record AiCompletion(string Text, AiUsage Usage, string Model, stri
 /// <summary>Everything an adapter needs to call one endpoint. The key lives in memory only for the call.</summary>
 public sealed record AiProviderDescriptor(Guid ProviderId, AiProviderType ProviderType, string? Endpoint, string Model, string ApiKey, int MaxOutputTokens, string? Effort, decimal InputPricePerMillion, decimal OutputPricePerMillion, decimal CachedInputPricePerMillion)
 {
+    /// <summary>Writing to the prompt cache (Anthropic, five-minute cache) costs 1.25 times the input price.</summary>
+    public const decimal CacheWritePriceFactor = 1.25m;
+
     public decimal EstimateCost(AiUsage usage)
     {
         ArgumentNullException.ThrowIfNull(usage);
-        var uncached = Math.Max(0, usage.InputTokens - usage.CachedInputTokens);
-        return (uncached * InputPricePerMillion + usage.CachedInputTokens * CachedInputPricePerMillion + usage.OutputTokens * OutputPricePerMillion) / 1_000_000m;
+        var uncached = Math.Max(0, usage.InputTokens - usage.CachedInputTokens - usage.CacheWriteTokens);
+        return (uncached * InputPricePerMillion
+            + usage.CacheWriteTokens * InputPricePerMillion * CacheWritePriceFactor
+            + usage.CachedInputTokens * CachedInputPricePerMillion
+            + usage.OutputTokens * OutputPricePerMillion) / 1_000_000m;
     }
 }
 
