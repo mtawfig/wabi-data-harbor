@@ -311,7 +311,47 @@ public sealed class MonitoringRulesTests : IDisposable
         Assert.Contains("Details hidden", scopedMail.TextBody, StringComparison.Ordinal);
         Assert.Contains("ACC-7", scopedMail.TextBody, StringComparison.Ordinal); // Their own rule's alert, within their department.
 
-        // 5. Organization B sees none of it.
+        // 5. The rule changes hands (P13.26). Its alerts were evaluated as the manager and cover every department; the
+        // new owner reads one department. Owning the rule now must not open what was found before they owned it.
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var evaluatedAs = await context.Alerts.IgnoreQueryFilters().Where(a => a.RuleId == wideRuleId).Select(a => a.EvaluatedAsUserId).ToListAsync();
+            Assert.Equal(2, evaluatedAs.Count);
+            Assert.All(evaluatedAs, id => Assert.Equal(managerId, id));
+        }
+
+        var handOver = await alice.PutAsJsonAsync(new Uri($"/api/monitoring/rules/{wideRuleId}", UriKind.Relative), RuleBody("Scoped: every row", scopedId, objectId, Column("AccountNumber"), Column("DeviceId"), Column("LoginAt"), recipients));
+        Assert.True(handOver.StatusCode == HttpStatusCode.OK, await handOver.Content.ReadAsStringAsync());
+        var inherited = await AlertsAsync(scoped, wideRuleId);
+        Assert.Equal(2, inherited.Count);
+        Assert.All(inherited, a =>
+        {
+            Assert.True(a.GetProperty("redacted").GetBoolean());
+            Assert.False(a.TryGetProperty("groupKey", out _));
+            Assert.False(a.TryGetProperty("summary", out _));
+        });
+        Assert.DoesNotContain("ACC-", (await (await scoped.GetAsync($"/api/monitoring/alerts/{inherited[0].GetProperty("alertId").GetGuid()}")).ReadJsonAsync()).GetRawText(), StringComparison.Ordinal);
+        var inheritedLines = (await (await scoped.GetAsync("/api/monitoring/alerts/digest-preview")).ReadJsonAsync()).GetProperty("lines").EnumerateArray().Where(l => l.GetProperty("ruleName").GetString() == "Scoped: every row").ToList();
+        Assert.All(inheritedLines, l => Assert.True(l.GetProperty("redacted").GetBoolean()));
+        // The previous owner still reads them: Management reads every row.
+        Assert.All(await AlertsAsync(manager, wideRuleId), a => Assert.False(a.GetProperty("redacted").GetBoolean()));
+
+        // The next run is the new owner's: it reads their department only. The alert it finds again now holds values
+        // from their own evaluation and opens for them; the other department's alert stays as the manager left it.
+        await RunRuleAsync(wideRuleId);
+        var afterRun = await AlertsAsync(scoped, wideRuleId);
+        var reEvaluated = Assert.Single(afterRun, a => !a.GetProperty("redacted").GetBoolean());
+        Assert.Equal("ACC-7", reEvaluated.GetProperty("groupKey").GetString());
+        Assert.Equal(2, reEvaluated.GetProperty("occurrences").GetInt32());
+        Assert.True(Assert.Single(afterRun, a => a.GetProperty("alertId").GetGuid() != reEvaluated.GetProperty("alertId").GetGuid()).GetProperty("redacted").GetBoolean());
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var byKey = await context.Alerts.IgnoreQueryFilters().Where(a => a.RuleId == wideRuleId).ToDictionaryAsync(a => a.GroupKey, a => a.EvaluatedAsUserId);
+            Assert.Equal(scopedId, byKey["ACC-7"]);
+            Assert.Equal(managerId, byKey["ACC-9"]);
+        }
+
+        // 6. Organization B sees none of it.
         var (_, bAdminEmail) = await InsertUserAsync(_db.Data.OrganizationBId, _db.Data.RoleAdminBId, "B Scope Admin");
         using var bAdmin = await LoginAsync(bAdminEmail);
         Assert.Empty(await AlertsAsync(bAdmin, wideRuleId));

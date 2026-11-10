@@ -39,11 +39,38 @@ public sealed class SupportAccessScopeTests
         Assert.Contains("support_target_required", SupportAccessScope.ValidateProposal([new(SupportOperations.ConfigureRole, [])], null));
         Assert.Contains("support_target_not_applicable", SupportAccessScope.ValidateProposal([new(SupportOperations.UpdateOrganizationSettings, ["x"])], null));
         // Roles a created user may be given are optional targets: none listed means no role may be assigned.
-        Assert.Empty(SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [Guid.NewGuid().ToString()])], null));
-        Assert.Empty(SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [])], null));
-        Assert.Contains("support_operations_duplicate", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, []), new(SupportOperations.CreateOrganizationUser, [])], null));
-        Assert.Contains("support_expiry_out_of_range", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [])], 100));
-        Assert.Empty(SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, []), new(SupportOperations.ConfigureRole, ["new"])], 8));
+        // The address of the user to create is not optional (P13.26): the organization approves who gets an account.
+        const string Address = "email:new.user@org.test";
+        Assert.Empty(SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [Guid.NewGuid().ToString(), Address])], null));
+        Assert.Empty(SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [Address])], null));
+        Assert.Contains("support_new_user_email_required", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [])], null));
+        Assert.Contains("support_new_user_email_required", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [Guid.NewGuid().ToString()])], null));
+        Assert.Contains("support_new_user_email_invalid", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, ["email:not an address"])], null));
+        Assert.Contains("support_new_user_email_invalid", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [.. Enumerable.Range(0, SupportAccessScope.MaxNewUserEmails + 1).Select(i => $"email:u{i}@org.test")])], null));
+        Assert.Contains("support_target_not_applicable", SupportAccessScope.ValidateProposal([new(SupportOperations.ConfigureRole, ["new", Address])], null));
+        Assert.Contains("support_operations_duplicate", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [Address]), new(SupportOperations.CreateOrganizationUser, [Address])], null));
+        Assert.Contains("support_expiry_out_of_range", SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [Address])], 100));
+        Assert.Empty(SupportAccessScope.ValidateProposal([new(SupportOperations.CreateOrganizationUser, [Address]), new(SupportOperations.ConfigureRole, ["new"])], 8));
+    }
+
+    [Fact]
+    public void NewUserAddresses_AreReadFromTheGrant_AndComparedAsSignInAddresses()
+    {
+        var entry = new SupportOperationEntry(SupportOperations.CreateOrganizationUser, [Guid.NewGuid().ToString(), "email:Sara@Org.Test", " EMAIL: omar@org.test "]);
+        Assert.Equal(["Sara@Org.Test", "omar@org.test"], SupportAccessScope.EmailsOf(entry));
+        Assert.Equal("email:sara@org.test", SupportAccessScope.EmailReference(" Sara@Org.Test "));
+        Assert.Null(SupportAccessScope.EmailOf(Guid.NewGuid().ToString()));
+        Assert.Null(SupportAccessScope.EmailOf("new"));
+
+        var granted = SupportAccessScope.EmailsOf(entry);
+        Assert.True(SupportAccessScope.IsEmailGranted(granted, "sara@org.test"));
+        Assert.True(SupportAccessScope.IsEmailGranted(granted, " SARA@ORG.TEST "));
+        Assert.False(SupportAccessScope.IsEmailGranted(granted, "sara@org.test.evil.example"));
+        Assert.False(SupportAccessScope.IsEmailGranted(granted, "sara+1@org.test"));
+        Assert.False(SupportAccessScope.IsEmailGranted(granted, null));
+        Assert.False(SupportAccessScope.IsEmailGranted(granted, ""));
+        // A grant that names no address allows none.
+        Assert.False(SupportAccessScope.IsEmailGranted([], "sara@org.test"));
     }
 
     [Fact]

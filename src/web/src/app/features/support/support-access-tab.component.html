@@ -25,8 +25,22 @@
                 <mat-select multiple [value]="row.targets" (valueChange)="setTargets(row, $event)" [attr.data-testid]="'targets-' + row.definition.code">
                   @for (u of targets()?.users ?? []; track u.userId) { <mat-option [value]="u.userId">{{ u.fullName }} · <span class="wi-ltr">{{ u.email }}</span></mat-option> }
                 </mat-select>
+                <mat-hint>{{ 'supportAccess.targetUsersHint' | transloco }}</mat-hint>
               </mat-form-field>
+              <div class="lookup">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                  <mat-label>{{ 'supportAccess.lookupUser' | transloco }}</mat-label>
+                  <input matInput type="email" [ngModel]="row.lookup" (ngModelChange)="setLookup(row, $event)" (keydown.enter)="lookupTarget(row, 'user'); $event.preventDefault()" [attr.data-testid]="'lookup-' + row.definition.code" />
+                  @if (row.lookupError) { <mat-hint class="lookup-error" [attr.data-testid]="'lookup-error-' + row.definition.code">{{ row.lookupError }}</mat-hint> }
+                </mat-form-field>
+                <button mat-stroked-button type="button" (click)="lookupTarget(row, 'user')" [disabled]="!row.lookup.trim()" [attr.data-testid]="'lookup-add-' + row.definition.code">{{ 'supportAccess.lookupAdd' | transloco }}</button>
+              </div>
             } @else if (row.definition.targetType === 'AssignableRole') {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                <mat-label>{{ 'supportAccess.newUserEmails' | transloco }}</mat-label>
+                <input matInput [ngModel]="row.emails" (ngModelChange)="setEmails(row, $event)" dir="ltr" [attr.data-testid]="'emails-' + row.definition.code" />
+                <mat-hint>{{ 'supportAccess.newUserEmailsHint' | transloco }}</mat-hint>
+              </mat-form-field>
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
                 <mat-label>{{ 'supportAccess.targetAssignableRoles' | transloco }}</mat-label>
                 <mat-select multiple [value]="row.targets" (valueChange)="setTargets(row, $event)" [attr.data-testid]="'targets-' + row.definition.code">
@@ -34,6 +48,14 @@
                 </mat-select>
                 <mat-hint>{{ 'supportAccess.targetAssignableRolesHint' | transloco }}</mat-hint>
               </mat-form-field>
+              <div class="lookup">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                  <mat-label>{{ 'supportAccess.lookupRole' | transloco }}</mat-label>
+                  <input matInput [ngModel]="row.lookup" (ngModelChange)="setLookup(row, $event)" (keydown.enter)="lookupTarget(row, 'role'); $event.preventDefault()" [attr.data-testid]="'lookup-' + row.definition.code" />
+                  <mat-hint [class.lookup-error]="row.lookupError" [attr.data-testid]="'lookup-hint-' + row.definition.code">{{ row.lookupError ?? ('supportAccess.targetRolesHint' | transloco) }}</mat-hint>
+                </mat-form-field>
+                <button mat-stroked-button type="button" (click)="lookupTarget(row, 'role')" [disabled]="!row.lookup.trim()" [attr.data-testid]="'lookup-add-' + row.definition.code">{{ 'supportAccess.lookupAdd' | transloco }}</button>
+              </div>
             } @else if (row.definition.targetType === 'Role' || row.definition.targetType === 'RoleOrNew') {
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
                 <mat-label>{{ 'supportAccess.targetRoles' | transloco }}</mat-label>
@@ -42,6 +64,14 @@
                   @for (r of targets()?.roles ?? []; track r.roleId) { <mat-option [value]="r.roleId">{{ language.current() === 'ar' ? r.nameAr : r.nameEn }} <span class="wi-ltr wi-muted">({{ r.roleCode }})</span></mat-option> }
                 </mat-select>
               </mat-form-field>
+              <div class="lookup">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                  <mat-label>{{ 'supportAccess.lookupRole' | transloco }}</mat-label>
+                  <input matInput [ngModel]="row.lookup" (ngModelChange)="setLookup(row, $event)" (keydown.enter)="lookupTarget(row, 'role'); $event.preventDefault()" [attr.data-testid]="'lookup-' + row.definition.code" />
+                  <mat-hint [class.lookup-error]="row.lookupError" [attr.data-testid]="'lookup-hint-' + row.definition.code">{{ row.lookupError ?? ('supportAccess.targetRolesHint' | transloco) }}</mat-hint>
+                </mat-form-field>
+                <button mat-stroked-button type="button" (click)="lookupTarget(row, 'role')" [disabled]="!row.lookup.trim()" [attr.data-testid]="'lookup-add-' + row.definition.code">{{ 'supportAccess.lookupAdd' | transloco }}</button>
+              </div>
             } @else {
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
                 <mat-label>{{ 'supportAccess.targetApplications' | transloco }}</mat-label>
@@ -84,7 +114,7 @@
       <p class="reason">{{ g.reason }}</p>
       <ul class="ops">
         @for (o of g.operations; track o.operation) {
-          <li [attr.data-testid]="'grant-op-' + o.operation"><mat-icon>check_circle</mat-icon><span><strong>{{ operationLabel(o.operation) }}</strong>@if (assignsRoles(o.operation)) { <span class="wi-muted"> · @if (o.targetReferences.length > 0) { {{ 'supportAccess.assignableRoles' | transloco }} @for (t of o.targetReferences; track t) { <span class="target">{{ targetLabel(t, g) }}</span> } } @else { {{ 'supportAccess.noAssignableRoles' | transloco }} }</span> } @else if (o.targetReferences.length > 0) { <span class="wi-muted"> · @for (t of o.targetReferences; track t) { <span class="target">{{ targetLabel(t, g) }}</span> }</span> }</span></li>
+          <li [attr.data-testid]="'grant-op-' + o.operation"><mat-icon>check_circle</mat-icon><span><strong>{{ operationLabel(o.operation) }}</strong>@if (assignsRoles(o.operation)) { <span class="wi-muted"> · @if (emailsOf(o.targetReferences).length > 0) { {{ 'supportAccess.newUserFor' | transloco }} @for (e of emailsOf(o.targetReferences); track e) { <span class="target wi-ltr" data-testid="grant-new-user-email">{{ e }}</span> } · } @if (roleReferences(o.targetReferences).length > 0) { {{ 'supportAccess.assignableRoles' | transloco }} @for (t of roleReferences(o.targetReferences); track t) { <span class="target">{{ targetLabel(t, g) }}</span> } } @else { {{ 'supportAccess.noAssignableRoles' | transloco }} }</span> } @else if (o.targetReferences.length > 0) { <span class="wi-muted"> · @for (t of o.targetReferences; track t) { <span class="target">{{ targetLabel(t, g) }}</span> }</span> }</span></li>
         }
       </ul>
       <dl class="facts">
@@ -142,7 +172,12 @@
             @switch (d.code) {
               @case ('CreateOrganizationUser') {
                 <div class="grid">
-                  <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.email' | transloco }}</mat-label><input matInput type="email" [ngModel]="runPayload()['email'] ?? ''" (ngModelChange)="setField('email', $event)" data-testid="run-email" /></mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'admin.fields.email' | transloco }}</mat-label>
+                    <mat-select [value]="runPayload()['email'] ?? ''" (valueChange)="setField('email', $event)" data-testid="run-email">
+                      @for (e of runEmails(); track e) { <mat-option [value]="e"><span class="wi-ltr">{{ e }}</span></mat-option> }
+                    </mat-select>
+                  </mat-form-field>
                   <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.fullName' | transloco }}</mat-label><input matInput [ngModel]="runPayload()['fullName'] ?? ''" (ngModelChange)="setField('fullName', $event)" data-testid="run-fullname" /></mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>{{ 'admin.fields.language' | transloco }}</mat-label>
@@ -160,7 +195,7 @@
                     </mat-form-field>
                   }
                 </div>
-                @if (runTargets().length === 0) { <p class="hint" data-testid="run-no-roles">{{ 'supportAccess.noAssignableRoles' | transloco }}</p> }
+                @if (roleReferences(runTargets()).length === 0) { <p class="hint" data-testid="run-no-roles">{{ 'supportAccess.noAssignableRoles' | transloco }}</p> }
               }
               @case ('ConfigureRole') {
                 <div class="grid">

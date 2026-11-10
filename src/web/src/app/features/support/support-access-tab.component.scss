@@ -21,3 +21,5 @@
 .runner { margin-top: 16px; padding: 16px; border-radius: var(--wi-radius); background: #f0fdf4; border: 1px solid #bbf7d0; h3 { display: flex; align-items: center; gap: 8px; margin-top: 0; } }
 .result { display: flex; align-items: center; gap: 6px; color: #166534; font-weight: 600; margin: 12px 0 0; }
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .facts { grid-template-columns: 1fr; } }
+.lookup { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; margin: 4px 0 12px; .wide { flex: 1 1 280px; margin: 0; } button { margin-top: 8px; } }
+.lookup-error { color: var(--wi-danger, #b91c1c); }

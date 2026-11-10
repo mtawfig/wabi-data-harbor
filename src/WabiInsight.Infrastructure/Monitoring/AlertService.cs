@@ -194,12 +194,26 @@ public sealed class AlertService : IAlertService
         var userIds = alerts.Where(a => a.SubjectUserId != null).Select(a => a.SubjectUserId!.Value)
             .Concat(alerts.Where(a => a.StatusChangedByUserId != null).Select(a => a.StatusChangedByUserId!.Value)).Distinct().ToList();
         var users = await _context.OrganizationUsers.AsNoTracking().Where(u => userIds.Contains(u.UserId)).ToDictionaryAsync(u => u.UserId, cancellationToken);
+        // Per alert, not per rule: an alert's values cover the rows its owner AT THAT EVALUATION could read, so a
+        // later owner of the rule is judged like any other viewer for the alerts raised before them.
         EffectivePermissions? viewer = null;
+        var definitions = new Dictionary<Guid, DataRuleDefinition?>();
         var details = new Dictionary<Guid, bool>();
-        foreach (var rule in rules.Values.Where(r => r.Kind == MonitoringRuleKind.Data))
+        foreach (var alert in alerts)
         {
+            if (!rules.TryGetValue(alert.RuleId, out var rule) || rule.Kind != MonitoringRuleKind.Data)
+            {
+                continue;
+            }
+
+            if (!definitions.TryGetValue(rule.RuleId, out var data))
+            {
+                data = RuleDefinition.Parse(rule.DefinitionJson).Data;
+                definitions[rule.RuleId] = data;
+            }
+
             viewer ??= await _permissions.ResolveForUserAsync(organizationId, Self, cancellationToken);
-            details[rule.RuleId] = RuleDefinition.Parse(rule.DefinitionJson).Data is { } data && RuleCatalog.CanSeeDetails(viewer, data, rule.OwnerUserId);
+            details[alert.AlertId] = data is not null && RuleCatalog.CanSeeDetails(viewer, data, alert.EvaluatedAsUserId ?? Guid.Empty);
         }
 
         return alerts.Select(a =>
@@ -207,7 +221,7 @@ public sealed class AlertService : IAlertService
             var rule = rules.GetValueOrDefault(a.RuleId);
             var invalid = a.GroupKey == "rule_invalid";
             // Data rules: details only for the owner or with the viewer's own permissions (row scope ALL); a deleted rule's data alert stays redacted.
-            var redacted = !invalid && (rule is null ? a.SubjectUserId is null : rule.Kind == MonitoringRuleKind.Data && !details.GetValueOrDefault(a.RuleId));
+            var redacted = !invalid && (rule is null ? a.SubjectUserId is null : rule.Kind == MonitoringRuleKind.Data && !details.GetValueOrDefault(a.AlertId));
             var subject = a.SubjectUserId is { } s && users.TryGetValue(s, out var u) ? new OrganizationUserSummary(u.UserId, u.FullName, u.Email, u.Status.ToString()) : null;
             return new AlertDto(
                 a.AlertId, a.RuleId, rule?.Name ?? string.Empty, rule?.Kind, a.Severity, a.Status,

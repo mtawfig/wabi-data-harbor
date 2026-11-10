@@ -15,7 +15,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { ROW_SCOPES } from '../../core/organizations/permissions.models';
 import { problemMessage } from '../../core/problem-message';
-import { GrantAction, ROLE_ASSIGNING_OPERATIONS, SupportAccessGrant, SupportOperationCode, SupportOperationDefinition, SupportOperationEntry, SupportTargets } from '../../core/support/support-access.models';
+import { EMAIL_REFERENCE_PREFIX, GrantAction, ROLE_ASSIGNING_OPERATIONS, SupportAccessGrant, SupportOperationCode, SupportOperationDefinition, SupportOperationEntry, SupportTargets, emailOfReference, isEmailReference } from '../../core/support/support-access.models';
 import { SupportAccessService } from '../../core/support/support-access.service';
 import { SupportArea, TicketDetail } from '../../core/support/support.models';
 import { GrantStatusComponent } from './grant-status.component';
@@ -26,7 +26,14 @@ interface ProposalRow {
   selected: boolean;
   targets: string[];
   manual: string;
+  /** Addresses of the user(s) a create-user grant is for, as typed (commas or spaces between them). */
+  emails: string;
+  /** What is typed in the "add by e-mail / by code" field, and the message when nothing matched. */
+  lookup: string;
+  lookupError: string | null;
 }
+
+const EMPTY_ROW = { selected: false, targets: [] as string[], manual: '', emails: '', lookup: '', lookupError: null as string | null };
 
 /**
  * Ticket tab 5 (specification §15.8 / §16): the platform side proposes operations with specific targets, enters support
@@ -88,6 +95,8 @@ export class SupportAccessTabComponent {
   });
   readonly runDefinition = computed(() => this.catalog().find((d) => d.code === this.runOperation()) ?? null);
   readonly runTargets = computed(() => this.runnable().find((o) => o.operation === this.runOperation())?.targetReferences ?? []);
+  /** For a create-user run: the addresses the organization approved, the only ones an account may be created for. */
+  readonly runEmails = computed(() => this.emailsOf(this.runTargets()));
   readonly canPropose = computed(() => this.isPlatform() && this.openGrant() === null && this.ticket().summary.status !== 'Resolved' && this.ticket().summary.status !== 'Cancelled');
 
   constructor() {
@@ -100,10 +109,14 @@ export class SupportAccessTabComponent {
       if (this.catalog().length === 0) {
         this.access.catalog().subscribe((c) => {
           this.catalog.set(c);
-          this.rows.set(c.map((definition) => ({ definition, selected: false, targets: [], manual: '' })));
+          this.rows.set(c.map((definition) => ({ definition, ...EMPTY_ROW })));
         });
       }
       this.access.refreshSession().subscribe();
+      // What may be targeted depends on the grant's state (approved, expired), so a loaded list is read again.
+      if (this.targets()) {
+        this.access.targets(this.ticket().summary.ticketId).subscribe((t) => this.targets.set(t));
+      }
     }
   }
 
@@ -127,17 +140,68 @@ export class SupportAccessTabComponent {
     this.rows.update((rows) => rows.map((r) => (r === row ? { ...r, manual } : r)));
   }
 
+  setEmails(row: ProposalRow, emails: string): void {
+    this.rows.update((rows) => rows.map((r) => (r === row ? { ...r, emails } : r)));
+  }
+
+  setLookup(row: ProposalRow, lookup: string): void {
+    this.rows.update((rows) => rows.map((r) => (r === row ? { ...r, lookup, lookupError: null } : r)));
+  }
+
+  /**
+   * Adds one target by its exact e-mail address (a user) or code (one of the organization's own roles). Without an
+   * approved grant the organization's lists are not shown, so support names what the ticket names.
+   */
+  lookupTarget(row: ProposalRow, kind: 'user' | 'role'): void {
+    const text = row.lookup.trim();
+    if (!text) {
+      return;
+    }
+    const code = row.definition.code;
+    const ticketId = this.ticket().summary.ticketId;
+    const done = (id: string): void =>
+      this.rows.update((rows) => rows.map((r) => (r.definition.code === code ? { ...r, targets: r.targets.includes(id) ? r.targets : [...r.targets, id], lookup: '', lookupError: null } : r)));
+    const failed = (response: HttpErrorResponse): void =>
+      this.rows.update((rows) => rows.map((r) => (r.definition.code === code ? { ...r, lookupError: problemMessage(response, this.transloco) } : r)));
+    if (kind === 'user') {
+      this.access.findTargetUser(ticketId, text).subscribe({
+        next: (user) => {
+          this.targets.update((t) => (t && !t.users.some((u) => u.userId === user.userId) ? { ...t, users: [...t.users, user] } : t));
+          done(user.userId);
+        },
+        error: failed,
+      });
+    } else {
+      this.access.findTargetRole(ticketId, text).subscribe({
+        next: (role) => {
+          this.targets.update((t) => (t && !t.roles.some((r) => r.roleId === role.roleId) ? { ...t, roles: [...t.roles, role] } : t));
+          done(role.roleId);
+        },
+        error: failed,
+      });
+    }
+  }
+
+  /** The addresses typed for a create-user grant, as target references. */
+  private emailReferences(row: ProposalRow): string[] {
+    return row.emails.split(/[\s,;]+/).map((e) => e.trim()).filter((e) => e.length > 0).map((e) => EMAIL_REFERENCE_PREFIX + e);
+  }
+
   submitProposal(): void {
     const operations: SupportOperationEntry[] = this.rows()
       .filter((r) => r.selected)
       .map((r) => ({
         operation: r.definition.code,
-        targetReferences: r.definition.targetType === 'None' ? [] : r.definition.targetType === 'Application' ? r.manual.split(/[\s,]+/).filter((x) => x.length > 0) : r.targets,
+        targetReferences:
+          r.definition.targetType === 'None' ? []
+          : r.definition.targetType === 'Application' ? r.manual.split(/[\s,]+/).filter((x) => x.length > 0)
+          : r.definition.targetType === 'AssignableRole' ? [...r.targets, ...this.emailReferences(r)]
+          : r.targets,
       }));
     this.run(this.access.propose(this.ticket().summary.ticketId, operations, this.reason(), this.expiryHours()), 'supportAccess.proposed', () => {
       this.proposing.set(false);
       this.reason.set('');
-      this.rows.update((rows) => rows.map((r) => ({ ...r, selected: false, targets: [], manual: '' })));
+      this.rows.update((rows) => rows.map((r) => ({ ...r, ...EMPTY_ROW })));
     });
   }
 
@@ -156,7 +220,9 @@ export class SupportAccessTabComponent {
   selectOperation(code: SupportOperationCode | null): void {
     this.runOperation.set(code);
     this.runTarget.set(this.runDefinition()?.requiresTarget && this.runTargets().length === 1 ? this.runTargets()[0] : null);
-    this.runPayload.set(code === 'UpdateTablePermissions' ? { granted: true, allColumns: true, rowScope: 'All' } : {});
+    // A create-user grant names the address(es); with one address there is nothing to choose.
+    const emails = code === 'CreateOrganizationUser' ? this.runEmails() : [];
+    this.runPayload.set(code === 'UpdateTablePermissions' ? { granted: true, allColumns: true, rowScope: 'All' } : emails.length === 1 ? { email: emails[0] } : {});
     this.runRoleCodes.set([]);
     this.lastResult.set(null);
     if (code === 'UpdateTablePermissions' && !this.targets()) {
@@ -219,6 +285,16 @@ export class SupportAccessTabComponent {
 
   organizationName(grant: SupportAccessGrant): string {
     return this.language.current() === 'ar' ? grant.organizationNameAr : grant.organizationName;
+  }
+
+  /** The roles among a create-user grant's targets (the others are the addresses it is for). */
+  roleReferences(references: string[]): string[] {
+    return references.filter((t) => !isEmailReference(t));
+  }
+
+  /** The e-mail addresses a create-user grant is for. */
+  emailsOf(references: string[]): string[] {
+    return references.filter(isEmailReference).map(emailOfReference);
   }
 
   /** True for an operation whose grant targets are the roles it may give (shown as such to the approver). */

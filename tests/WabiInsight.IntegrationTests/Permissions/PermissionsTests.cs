@@ -32,6 +32,20 @@ public sealed class PermissionsTests : IDisposable
         }
     }
 
+    /// <summary>A second Platform Administrator of this test's own (others reset the seeded one's password), signed in.</summary>
+    private async Task<HttpClient> NewPlatformAdministratorAsync(HttpClient platform)
+    {
+        var email = $"other.admin.{Guid.NewGuid():N}@wabitex.test";
+        var create = await platform.PostJsonAsync("/api/platform/administrators", new { email, fullName = "Other Admin" });
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var temporary = Email.RecordingEmailSender.TemporaryPasswordOf(await _factory.Emails.WaitForAsync(email));
+        var client = _factory.CreateClient();
+        Assert.Equal(HttpStatusCode.OK, (await client.LoginAsync(email, temporary)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostJsonAsync("/api/auth/change-password", new { currentPassword = temporary, newPassword = "Other#Admin#Strong#2026" })).StatusCode);
+        await client.RefreshCsrfAsync();
+        return client;
+    }
+
     private async Task<HttpClient> LoginAsync(string email, string password = TestData.UserPassword)
     {
         var client = _factory.CreateClient();
@@ -233,13 +247,31 @@ public sealed class PermissionsTests : IDisposable
         var payload = new { objectId, granted = true, allColumns = true, rowScope = "Self" };
         Assert.Equal(HttpStatusCode.Forbidden, (await platform.PostJsonAsync("/api/platform/support/session/execute", new { operation = "UpdateTablePermissions", targetReference = roleId.ToString(), payload })).StatusCode);
 
-        // Targets list the approved objects by name only (no rows, no columns).
-        var targets = await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync();
-        Assert.Contains(targets.GetProperty("objects").EnumerateArray(), o => o.GetProperty("objectId").GetGuid() == objectId && o.GetProperty("objectName").GetString() == "SupportTickets");
+        // A ticket alone grants nothing (P13.26): no table names and none of the organization's own roles before a grant.
+        var before = await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync();
+        Assert.Empty(before.GetProperty("objects").EnumerateArray());
+        Assert.DoesNotContain(before.GetProperty("roles").EnumerateArray(), r => r.GetProperty("roleId").GetGuid() == roleId);
+        // The role the ticket names is added by its exact code.
+        var named = await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets/role?code={Uri.EscapeDataString(role.GetProperty("roleCode").GetString()!)}");
+        Assert.Equal(roleId, (await named.ReadJsonAsync()).GetProperty("roleId").GetGuid());
 
         var grant = await (await platform.PostJsonAsync($"/api/platform/support/tickets/{ticketId}/access-grants", new { operations = new[] { new { operation = "UpdateTablePermissions", targetReferences = new[] { roleId.ToString() } } }, reason = "Requested in the ticket.", expiryHours = 2 })).ReadJsonAsync();
         var grantId = grant.GetProperty("grantId").GetGuid();
+        // Proposed is not approved: still nothing.
+        Assert.Empty((await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync()).GetProperty("objects").EnumerateArray());
         Assert.Equal(HttpStatusCode.OK, (await alice.PostJsonAsync($"/api/support/access-grants/{grantId}/approve", new { note = "ok" })).StatusCode);
+
+        // Under the approved grant, which covers table permissions: the approved objects by name only (no rows, no
+        // columns) and the role the grant names. Another administrator, who does not hold the grant, still gets nothing.
+        var targets = await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync();
+        Assert.Contains(targets.GetProperty("objects").EnumerateArray(), o => o.GetProperty("objectId").GetGuid() == objectId && o.GetProperty("objectName").GetString() == "SupportTickets");
+        Assert.Contains(targets.GetProperty("roles").EnumerateArray(), r => r.GetProperty("roleId").GetGuid() == roleId);
+        using (var otherAdministrator = await NewPlatformAdministratorAsync(platform))
+        {
+            var theirs = await (await otherAdministrator.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync();
+            Assert.Empty(theirs.GetProperty("objects").EnumerateArray());
+            Assert.DoesNotContain(theirs.GetProperty("roles").EnumerateArray(), r => r.GetProperty("roleId").GetGuid() == roleId);
+        }
         Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/support/access-grants/{grantId}/enter", new { })).StatusCode);
 
         // Another role of the same organization is outside the grant.
@@ -258,5 +290,8 @@ public sealed class PermissionsTests : IDisposable
 
         await platform.PostJsonAsync("/api/platform/support/session/exit", new { });
         await platform.PostJsonAsync($"/api/platform/support/access-grants/{grantId}/complete", new { });
+
+        // The grant is over: so is what it showed.
+        Assert.Empty((await (await platform.GetAsync($"/api/platform/support/tickets/{ticketId}/targets")).ReadJsonAsync()).GetProperty("objects").EnumerateArray());
     }
 }

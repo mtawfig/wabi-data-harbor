@@ -21,8 +21,19 @@ export class SupportAccessService {
     return this.http.get<SupportOperationDefinition[]>('/api/platform/support/operations');
   }
 
+  /** Without an approved grant: only the requester and the standard roles; with one, also what the grant names. */
   targets(ticketId: string): Observable<SupportTargets> {
     return this.http.get<SupportTargets>(`/api/platform/support/tickets/${ticketId}/targets`);
+  }
+
+  /** The organization's user with exactly this address (404 when there is none); the user list is never returned. */
+  findTargetUser(ticketId: string, email: string): Observable<SupportTargets['users'][number]> {
+    return this.http.get<SupportTargets['users'][number]>(`/api/platform/support/tickets/${ticketId}/targets/user`, { params: new HttpParams().set('email', email) });
+  }
+
+  /** The organization's role with exactly this code (for a role the organization defined itself). */
+  findTargetRole(ticketId: string, code: string): Observable<SupportTargets['roles'][number]> {
+    return this.http.get<SupportTargets['roles'][number]>(`/api/platform/support/tickets/${ticketId}/targets/role`, { params: new HttpParams().set('code', code) });
   }
 
   forTicket(area: SupportArea, ticketId: string): Observable<SupportAccessGrant[]> {

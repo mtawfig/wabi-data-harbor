@@ -181,6 +181,7 @@ public sealed class RuleRunner
                 open.Occurrences++;
                 open.LastSeenAt = now;
                 open.SummaryJson = summary;
+                open.EvaluatedAsUserId = rule.OwnerUserId; // the stored values are now the ones this owner may read
                 AddEvent(open, AlertEventType.Repeated, null, null, now);
                 if (renotify)
                 {
@@ -206,6 +207,7 @@ public sealed class RuleRunner
                 SubjectUserId = match.SubjectUserId,
                 Title = Truncate(match.SubjectUserId is { } s && subjectNames.TryGetValue(s, out var name) ? $"{rule.Name} — {name}" : rule.Name, 300),
                 SummaryJson = summary,
+                EvaluatedAsUserId = rule.OwnerUserId,
                 FirstSeenAt = now,
                 LastSeenAt = now,
             };

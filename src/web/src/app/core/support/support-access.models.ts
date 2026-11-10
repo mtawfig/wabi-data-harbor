@@ -7,6 +7,11 @@ export type SupportTargetType = 'None' | 'OrganizationUser' | 'Role' | 'RoleOrNe
 /** Operations whose grant targets are the roles they may assign, so a grant can say which roles those are without the catalog. */
 export const ROLE_ASSIGNING_OPERATIONS: readonly SupportOperationCode[] = ['CreateOrganizationUser'];
 
+/** A target reference that names the e-mail address of a user the grant lets support create (approved with the grant). */
+export const EMAIL_REFERENCE_PREFIX = 'email:';
+export const isEmailReference = (reference: string): boolean => reference.toLowerCase().startsWith(EMAIL_REFERENCE_PREFIX);
+export const emailOfReference = (reference: string): string => reference.slice(EMAIL_REFERENCE_PREFIX.length);
+
 export const GRANT_STATUSES: GrantStatus[] = ['Proposed', 'Approved', 'Active', 'Completed', 'Declined', 'Revoked', 'Expired'];
 
 export interface SupportOperationDefinition {
