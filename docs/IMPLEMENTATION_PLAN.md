@@ -36,6 +36,7 @@
 | P0.5 | `wi/p00-05-v2-organization-smtp-connectivity` | Version 2 scope, additions: an organization's own e-mail server in every plan; the rule "the organization's own, or the platform's default"; the ways to reach an organization's systems from the owner's cloud, with a recommendation. In [`VERSION_2.md`](./VERSION_2.md). No application code. |
 | P0.6 | `wi/p00-06-v2-outputs-branding` | Version 2 scope, additions: decisions on an organization's mail server (down, how to get one); the organization's logo and name on every output, the output's language from the question, a template gallery, the "Powered by" line. In [`VERSION_2.md`](./VERSION_2.md). No application code. |
 | P0.7 | `wi/p00-07-v2-channels-plans` | Version 2 scope, additions: decision 10; Wabi Data Gateway; Wabi Hub; ask by WhatsApp (e-mail moved to version 3); plan positioning and a business model by calls, in AED. In [`VERSION_2.md`](./VERSION_2.md). No application code. |
+| P0.8 | `wi/p00-08-v2-pricing-analysts` | Version 2 business model: paid analysts with a pooled allowance of calls, free viewers; tiers and prices in AED. In [`VERSION_2.md`](./VERSION_2.md) §10. No application code. |
 
 ### Phase 1 — Foundation and Multi-Tenant Identity
 **Acceptance:** A Platform Administrator can be bootstrapped and sign in; the schema makes an organization user without a valid organization impossible; CI is green on both stacks.
@@ -203,7 +204,7 @@ Work the owner has moved to version 2. Nothing here is built in version 1; each 
 | The organization's logo and name on every output; the output's language from the question; a template gallery per kind of output; "Powered by Wabi Insight by WabiTex Solutions FZE" on every output | 2026-11-10 | `VERSION_2.md` H1–H4 |
 | Reaching an organization's systems: nothing for On-premises; for Cloud the G6 recommendation plus a Wabi Data Gateway | 2026-11-10 | `VERSION_2.md` G6, G7 |
 | Ask by WhatsApp (asking by e-mail moved to version 3) | 2026-11-10 | `VERSION_2.md` D4, §6 |
-| Plans sized by calls, prices in AED | 2026-11-10 | `VERSION_2.md` §10 |
+| Pricing by analysts with a pooled allowance of calls, free viewers, prices in AED | 2026-11-10 | `VERSION_2.md` §10 |
 
 Fixes are not version 2 (owner decision, 2026-11-10): what the review of 2026-11-10 found is fixed in version 1, in P13.25–P13.30 (Phase 13).
 
