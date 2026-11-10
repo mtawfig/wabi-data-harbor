@@ -18,7 +18,7 @@ The result:
 
 The API has its own IIS site bound to the loopback address. The public site forwards `/api` and `/health` to it, so the browser sees a single origin and the session cookie stays first-party. Don't mount the API as an IIS sub-application named `api`: IIS would strip `/api` from every path and all API routes would return 404.
 
-The Linux equivalent is [DEPLOYMENT_LINUX.md](DEPLOYMENT_LINUX.md). A summary of all configuration keys is in [DEPLOYMENT.md](DEPLOYMENT.md).
+The Linux equivalent is [DEPLOYMENT_LINUX.md](DEPLOYMENT_LINUX.md). A summary of all configuration keys is in [DEPLOYMENT.md](DEPLOYMENT.md). To keep the database in **Azure SQL** and the files in **Azure Blob Storage** instead of SQL Server Express and the D: drive, follow [DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md) (a beginner's guide that includes CI/CD).
 
 ## SQL Server Express works
 
