@@ -107,6 +107,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<EmailDeliveryChannel>();
         services.AddScoped<IEmailOutbox, EmailOutbox>();
+        services.AddScoped<IEmailDeliveryLog, EmailDeliveryLog>();
         services.AddHostedService<EmailOutboxWorker>();
         services.AddScoped<IBootstrapService, BootstrapService>();
 

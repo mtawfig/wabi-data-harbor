@@ -41,4 +41,11 @@ public sealed class EmailOptions
 
     [Range(1, 3600)]
     public int RetryDelaySeconds { get; set; } = 30;
+
+    /// <summary>
+    /// When the API stops, how long the outbox worker keeps sending the messages it already holds before
+    /// giving up. What is still unsent after that is marked Failed at the next start.
+    /// </summary>
+    [Range(0, 300)]
+    public int ShutdownGraceSeconds { get; set; } = 20;
 }

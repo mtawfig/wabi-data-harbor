@@ -15,10 +15,12 @@ namespace WabiInsight.Infrastructure.Reports;
 /// numbered sections with KPI tables, chart images (server-rendered PNG) and row tables, and recommendations;
 /// bidirectional paragraphs and right-to-left tables for Arabic; logo and page numbers in the header and footer.
 /// Every number comes from the panel data. Business content only: no methodology, query or row-count details.
+/// A table longer than <see cref="MaxTableRows"/> rows shows its first rows and says so in one line under it.
 /// </summary>
 public sealed class DocxExporter : IAnswerExporter
 {
-    private const int MaxTableRows = 100;
+    /// <summary>A longer table shows its first rows only, with a line under it saying so.</summary>
+    internal const int MaxTableRows = 100;
     private const string LatinFont = "Inter";
     private const string ArabicFont = "IBM Plex Sans Arabic";
 
@@ -97,6 +99,10 @@ public sealed class DocxExporter : IAnswerExporter
                     else
                     {
                         body.Append(RowsTable(panel, rtl, culture));
+                        if (QuestPdfReportRenderer.ShortenedTableNote(panel.Result, MaxTableRows, rtl, culture) is { } note)
+                        {
+                            body.Append(Paragraph(note, rtl, "TableNote"));
+                        }
                     }
                 }
             }
@@ -162,18 +168,32 @@ public sealed class DocxExporter : IAnswerExporter
 
     private static Table KpiTable(List<AnalysisPanel> panels, bool rtl, CultureInfo culture)
     {
-        var table = TableShell(rtl, panels.Count);
-        var values = new TableRow();
-        var labels = new TableRow();
-        foreach (var panel in panels)
+        // As in the PDF: at most five figures side by side, the rest on further rows, so a figure keeps the room it needs.
+        var rows = QuestPdfReportRenderer.KpiRows(panels);
+        var columns = rows[0].Count;
+        var table = TableShell(rtl, columns);
+        foreach (var row in rows)
         {
-            var numeric = panel.Result.Columns.ToList().FindIndex(c => c.IsNumeric);
-            var value = QuestPdfReportRenderer.FormatValue(panel.Result.Rows[0][numeric >= 0 ? numeric : 0], true, culture);
-            values.Append(Cell(value, rtl, bold: true, shade: "F1F7FF", center: true));
-            labels.Append(Cell(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective, rtl, bold: false, shade: "F1F7FF", center: true));
+            var values = new TableRow();
+            var labels = new TableRow();
+            foreach (var panel in row)
+            {
+                var numeric = panel.Result.Columns.ToList().FindIndex(c => c.IsNumeric);
+                var value = QuestPdfReportRenderer.FormatValue(panel.Result.Rows[0][numeric >= 0 ? numeric : 0], true, culture);
+                values.Append(Cell(value, rtl, bold: true, shade: "F1F7FF", center: true));
+                labels.Append(Cell(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective, rtl, bold: false, shade: "F1F7FF", center: true));
+            }
+
+            // A shorter last row is completed with empty cells: every row of a table has the same number of cells.
+            for (var empty = row.Count; empty < columns; empty++)
+            {
+                values.Append(Cell(string.Empty, rtl, bold: false, shade: null, center: true));
+                labels.Append(Cell(string.Empty, rtl, bold: false, shade: null, center: true));
+            }
+
+            table.Append(values, labels);
         }
 
-        table.Append(values, labels);
         return table;
     }
 
@@ -437,6 +457,7 @@ public sealed class DocxExporter : IAnswerExporter
             Make("Subtitle", "Subtitle", 12, false, "64748B", 0, 60),
             Make("Muted", "Muted", 9, false, "64748B", 0, 120),
             Make("Caption", "Caption", 10, true, "0B1F3A", 160, 60),
+            Make("TableNote", "Table note", 9, false, "64748B", 60, 120),
             Make("Heading1", "heading 1", 15, true, "0B1F3A", 240, 80, 0),
             Make("Heading2", "heading 2", 12, true, "0B1F3A", 160, 40, 1));
     }
