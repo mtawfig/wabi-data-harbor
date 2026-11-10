@@ -211,7 +211,16 @@ A Cloud-plan organization can therefore use its own e-mail server and nothing el
   - once when it works again ("Your mail server is working again; the waiting messages were sent").
 
   The notice goes to every active Organization Administrator **and to the organization's contact e-mail** (organization profile), because an administrator whose mailbox is on the same broken server would not receive it; the contact address should therefore be on another domain, and the settings page says so.
-  Waiting messages have to be kept until they are sent, encrypted, and erased once delivered; that is the E4 change (§7 question 8 is answered for this case). How long a message may wait, and what happens to a **temporary password** that is waiting, are §7 question 21.
+  Waiting messages have to be kept until they are sent, encrypted, and erased once delivered; that is the E4 change (§7 question 8 is answered for this case).
+- **How long a message may wait (owner decision, 2026-11-10).** It depends on how often the content comes: a newer one soon replaces it.
+
+  | Message | Waits at most | Then |
+  |---|---|---|
+  | Daily alert digest, daily Periodic Report (and anything more frequent) | 12 hours | Given up |
+  | Weekly Periodic Report | 48 hours | Given up |
+  | Periodic Report less frequent than weekly (monthly) | 72 hours | Given up |
+
+  A message given up is erased (it is not sent later through any server), recorded as *expired* in the delivery log with the reason, and listed in the next notice to the administrators ("3 messages could not be sent and were dropped"); a Periodic Report counts it as a failed run (P13.27 pausing rules). What happens to messages that do not repeat (a temporary password, a shared analysis, account messages) is §7 question 21.
 - **Getting a mail server (owner decision, 2026-11-10).** An organization that wants its own sender needs **a domain of its own and a mailbox on it** (from any e-mail provider: Microsoft 365, Google Workspace, its hosting company, its own server), and the SMTP details of that mailbox. Its Organization Administrator then enters them on the settings page, **or asks the platform team for help** through a support ticket: the help is a support grant with a new typed operation, *configure the e-mail server*, which the organization approves like any other (specification §16), so the platform team enters the details without seeing anything else. The settings page explains the steps (domain, mailbox, SMTP details, SPF and DKIM records for that domain) in English and Arabic. Pricing of that help is commercial and not part of this document.
 - **The address is checked** like an organization's AI provider (P13.25): a public address, unless a Platform Administrator approved a private host for that organization (G6).
 - The platform's default sender keeps working for everyone else; its domain needs correct SPF, DKIM and DMARC records so its mail is not marked as spam (a deployment step, not code).
@@ -321,14 +330,15 @@ The more a way relies on the organization's firewall opening a door (4), the qui
 - **Who chooses:** the Organization Administrator sets the default template for each kind; when creating an output (exporting a study, scheduling a Periodic Report, sharing by e-mail) a user may pick another template from the gallery, unless the administrator locked the default.
 - **Every template works in both languages and directions**, and always includes H1 (logo and name) and H4 (the "Powered by" line); a template can place them but not remove them.
 - An output records the template and version it was made with; changing a template later does not change outputs already made.
-- New designs are added to the gallery by the platform team (on request, an organization's own design can be made by the platform team as a private template for that organization).
+- **Organizations choose; they do not design (owner decision 23).** An organization picks a template for each kind of output and sets its colours; there is no template editor. New designs are added to the gallery by the platform team, and on request the platform team can make an organization's own design as a private template for that organization.
 
 **How it will be done.** A `ReportTemplates` table (kind, code, names in both languages, version, design as JSON, preview images, platform-wide or private to one organization) and an organization setting per kind. The PDF, Word, Excel and e-mail renderers, which today have one design written in code, are changed to read the design from the template; the existing design becomes the first template (*Classic*), so nothing changes for an organization that chooses nothing. A *Templates* page in the organization's settings shows the gallery with previews and the colours.
 
 ### H4. "Powered by Wabi Insight by WabiTex Solutions FZE" on every output (owner decision, 2026-11-10)
 
 - Every output carries the line **Powered by Wabi Insight by WabiTex Solutions FZE**: the footer of every page of a PDF study and a Word file, the printed footer and the last line of an Excel file, the bottom of every e-mail sent to organization users, and the footer of a printed or shared dashboard.
-- In an Arabic output the line is in Arabic, with the names kept in Latin letters (proposed: «مدعوم من Wabi Insight من WabiTex Solutions FZE», §7 question 22).
+- In an Arabic output the line is in Arabic, with the names kept in Latin letters: «مدعوم من Wabi Insight من WabiTex Solutions FZE» (owner decision 22).
+- It is shown in outputs only (files, e-mails, printed and shared pages), not in the application's own pages (owner decision 22).
 - It is part of every template and cannot be removed by an organization or a template, in every plan.
 - It is small, in the template's muted colour, and links to the platform's website in e-mails and PDFs.
 
@@ -421,9 +431,7 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 | 16 | Active Directory for Hybrid and Cloud organizations: offer federation (AD FS), or only Microsoft Entra ID for them? | C11 |
 | 17 | The organization's own model: is one named model tested and recommended by the owner for Arabic and English, or is any model that passes the fitness check accepted? | G2 |
 | 18 | Which plan does the first paying customer need? The order in §8 should follow it. | G1 |
-| 21 | An organization's mail server stays down: how long may a waiting message wait before it is given up (proposed: 3 days, then shown as failed to the administrators)? And a **temporary password** that is waiting: may it go through the platform's server after one hour (proposed, so a new user is not locked out for days), or wait like the others? | G5 |
-| 22 | The Arabic wording of the "Powered by" line (proposed: «مدعوم من Wabi Insight من WabiTex Solutions FZE»), and whether it also appears in the application's own pages (proposed: only in outputs, as decided). | H4 |
-| 23 | Template gallery: may an organization only choose and set its colours (proposed), or also design its own templates in an editor? | H3 |
+| 21 | An organization's mail server stays down: what happens to a waiting message that does not repeat, such as a **temporary password**, a shared analysis or an account message? (Proposed: a temporary password waits one hour and then goes through the platform's server, so a new user is not locked out, and the administrators are told; the others wait 72 hours and are then given up.) The waiting time of digests and Periodic Reports is decided (below). | G5 |
 
 **Decided** (kept here for reference):
 
@@ -431,6 +439,9 @@ Version 1 keeps e-mails in memory until they are sent, on purpose: a temporary p
 |---|---|---|
 | 19 | An organization's own e-mail server is down | The messages are rescheduled until its server accepts them, never sent through the platform's server; the organization's administrators are notified automatically through the platform's default server (G5). |
 | 20 | How an organization gets its own e-mail server | It buys a domain, creates a mailbox on it and obtains its SMTP details; its administrator configures them, or asks the platform team for help through a support ticket (G5). |
+| 21 (part) | How long a waiting digest or Periodic Report may wait | Daily alerts and reports (and more frequent): 12 hours; weekly: 48 hours; less frequent than weekly: 72 hours. Then given up, logged and reported to the administrators (G5). |
+| 22 | The "Powered by" line | As recommended: Arabic wording «مدعوم من Wabi Insight من WabiTex Solutions FZE», in outputs only, not in the application's pages (H4). |
+| 23 | Templates | As recommended: organizations choose a template per kind of output and set their colours; no editor; designs are made by the platform team, privately for an organization on request (H3). |
 
 ## 8. Proposed order
 
@@ -476,3 +487,4 @@ As in version 1, every pull request:
 | 2026-11-10 | Owner decisions: three service plans chosen per organization, Cloud, On-premises and Hybrid (G1, G3, G4); an organization's own AI model at a private address (G2); sign-in with classic Active Directory without a password (C11). For version 1, organization-managed AI providers are switched off by configuration. Open decisions 10–18 and a new proposed order. |
 | 2026-11-10 | Owner decisions: an organization's own e-mail server in every plan, with the platform's as the default (G5); the rule "the organization's own, or the platform's default" stated for e-mail, files, model, sign-in and database (G1); the ways to reach an organization's systems from the owner's cloud, with a recommendation, for the owner to choose from at that step (G6). Open decision 10 rewritten; 19 and 20 added. |
 | 2026-11-10 | Owner decisions: decision 19 (an organization's mail server down: messages rescheduled, administrators notified through the platform's server) and 20 (a domain and mailbox of its own, configured by its administrator or with the platform team's help) recorded in G5; decision 10 explained in plain words in G6. New group H: the organization's logo and name on every output (H1), the output's language from the question (H2), a template gallery per kind of output (H3), the "Powered by Wabi Insight by WabiTex Solutions FZE" line (H4), each with how it will be done. Open decisions 21–23. Release 2.0b. |
+| 2026-11-10 | Owner decisions 21 (waiting time of digests and Periodic Reports by frequency: 12, 48, 72 hours), 22 (the "Powered by" line as recommended) and 23 (choose templates, no editor). Question 21 stays open for messages that do not repeat. |
