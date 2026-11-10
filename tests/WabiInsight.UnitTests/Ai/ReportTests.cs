@@ -197,7 +197,7 @@ public sealed class ReportTests
         Assert.Equal(["2024", "2025"], SvgChartBuilder.CategoryLabels(["2024-01-01", "2025-01-01"], CultureInfo.InvariantCulture));
         Assert.Equal(["2025-01-15", "2025-02-01"], SvgChartBuilder.CategoryLabels(["2025-01-15", "2025-02-01"], CultureInfo.InvariantCulture));
         Assert.Equal(["Deira", "Sharjah"], SvgChartBuilder.CategoryLabels(["Deira", "Sharjah"], CultureInfo.InvariantCulture));
-        Assert.Equal(["2025-01", "2025-02"], SvgChartBuilder.CategoryLabels(["2025-01-01", "2025-02-01"], CultureInfo.GetCultureInfo("ar-AE")));
+        Assert.Equal(["يناير 2025", "فبراير 2025"], SvgChartBuilder.CategoryLabels(["2025-01-01", "2025-02-01"], CultureInfo.GetCultureInfo("ar-AE")));
         Assert.Equal("1.35B", SvgChartBuilder.Compact(1_354_955_706));
     }
 
@@ -222,5 +222,39 @@ public sealed class ReportTests
         Assert.Equal("Monthly cash in shows the trend. يوضح الاتجاه الشهري.", content.Sections[0].Body);
         Assert.Equal("Branches lead.", content.Summary);
         Assert.Equal("The figures in the table below", ReportComposer.WithoutCaptionLabels("The figures in the table below"));
+    }
+
+    // P13.17: chart labels are set by the document's text engine, so Arabic is shaped and laid out right to left.
+
+    [Fact]
+    public void Charts_KeepTheirLabelsApart_FromTheShapes_ForTheTextEngine()
+    {
+        string[] branches = ["الشارقة", "ديرة (فرع دبي الرئيسي)", "Al Ain"];
+        var chart = SvgChartBuilder.Render("bar", [new ResultSeries("وصول", branches, [3, 2, 1]), new ResultSeries("مغادرة", branches, [2, 1, 1])], 480, 240);
+        Assert.DoesNotContain("<text", chart.ShapesSvg, StringComparison.Ordinal);
+        Assert.Contains("<rect", chart.ShapesSvg, StringComparison.Ordinal);
+        Assert.Contains(chart.Texts, t => t.Text == "وصول" && t.Anchor == "start");
+        Assert.Contains(chart.Texts, t => t.Text == "0" && t.Anchor == "end");
+        Assert.All(branches, b => Assert.Contains(chart.Texts, t => t.Text.StartsWith(b.Split(' ')[0], StringComparison.Ordinal)));
+        Assert.Equal(chart.Texts.Count, chart.Svg.Split("<text").Length - 1);
+
+        var angled = SvgChartBuilder.Render("bar", [new ResultSeries("n", Enumerable.Range(1, 30).Select(i => $"موظف الصراف رقم {i}").ToList(), Enumerable.Range(1, 30).Select(i => (double)i).ToList())], 480, 240);
+        Assert.Contains(angled.Texts, t => t.Rotation == -45 && t.Anchor == "end");
+
+        Assert.True(ChartComposer.IsRightToLeft("ديرة (فرع دبي الرئيسي)"));
+        Assert.True(ChartComposer.IsRightToLeft("2025 يناير"));
+        Assert.False(ChartComposer.IsRightToLeft("Deira (Dubai Main)"));
+        Assert.False(ChartComposer.IsRightToLeft("1.35B"));
+    }
+
+    [Fact]
+    public void ChartImageRenderer_DrawsArabicLabels_WithTheTextEngine()
+    {
+        string[] months = ["2025-01-01", "2025-02-01", "2025-03-01"];
+        var image = ChartImageRenderer.RenderImage("line", [new ResultSeries("الحركات", months, [1, 3, 2]), new ResultSeries("المغادرة", months, [1, 2, 2])], culture: CultureInfo.GetCultureInfo("ar-AE"));
+        Assert.Equal(0x89, image.Png[0]);
+        Assert.True(image.Png.Length > 10_000);
+        var pie = ChartImageRenderer.RenderImage("pie", [new ResultSeries("x", ["في الموعد", "متأخر"], [90, 10])]);
+        Assert.Equal(ChartImageRenderer.Height, pie.Height);
     }
 }

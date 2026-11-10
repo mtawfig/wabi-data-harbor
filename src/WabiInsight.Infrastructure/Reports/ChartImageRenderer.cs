@@ -8,7 +8,7 @@ namespace WabiInsight.Infrastructure.Reports;
 /// <summary>A chart drawn to PNG and its size in pixels at 1x (the image itself is drawn at 2x for sharpness).</summary>
 public sealed record ChartImage(byte[] Png, int Width, int Height);
 
-/// <summary>Server-side chart rasterization (specification §20): the SVG the PDF uses, drawn to PNG through QuestPDF's Skia backend for DOCX and XLSX.</summary>
+/// <summary>Server-side chart rasterization (specification §20): the chart the PDF uses (SVG shapes, labels set by the text engine), drawn to PNG through QuestPDF's Skia backend for DOCX and XLSX.</summary>
 public static class ChartImageRenderer
 {
     public const int Width = 760;
@@ -27,7 +27,7 @@ public static class ChartImageRenderer
         {
             page.Size(width, finalHeight);
             page.Margin(0);
-            page.Content().Svg(chart.Svg);
+            page.Content().Element(c => ChartComposer.Draw(c, chart));
         }));
         return new ChartImage(document.GenerateImages(new ImageGenerationSettings { ImageFormat = ImageFormat.Png, RasterDpi = 144 }).First(), width, finalHeight);
     }
