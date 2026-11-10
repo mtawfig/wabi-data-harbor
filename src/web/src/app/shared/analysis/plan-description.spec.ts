@@ -130,6 +130,35 @@ describe('describePanel', () => {
     expect(d.having).toEqual([]);
   });
 
+  it('describes dates relative to today in words, never as the placeholder, in both languages', () => {
+    const panel = (values: string[], operator: string): AnalysisPanel => ({
+      title: '',
+      result,
+      plan: {
+        title: '', objective: 'Orders', assumptions: [],
+        source: { object: 'Orders', alias: 'o' },
+        select: [{ alias: 'orders', aggregate: 'count' }],
+        filters: { conditions: [{ column: 'o.OrderDate', operator, values }] },
+      },
+    });
+    const text = (values: string[], operator: string, language: 'en' | 'ar') => describePanel(panel(values, operator), language, translator(language)).filters;
+
+    expect(text(['$month_start'], 'gte', 'en')).toBe('Order date is at least the start of this month');
+    expect(text(['$month_start-1m', '$today'], 'between', 'en')).toBe('Order date is between the start of last month and today');
+    expect(text(['$today-1d'], 'eq', 'en')).toBe('Order date is yesterday');
+    expect(text(['$today-7d'], 'gte', 'en')).toBe('Order date is at least 7 days before today');
+    expect(text(['$year_start+1m'], 'lt', 'en')).toBe('Order date is less than 1 month after the start of this year');
+    for (const values of [['$quarter_start-2q'], ['$week_start+1w'], ['$today-2d'], ['$today-5d'], ['$today-11d'], ['$today-100d']]) {
+      for (const language of ['en', 'ar'] as const) {
+        const described = text(values, 'gte', language) ?? '';
+        expect(described).not.toContain('$');
+        expect(described).not.toContain('ask.plan');
+      }
+    }
+    expect(text(['$today-2d'], 'gte', 'ar')).toContain('يومان قبل اليوم');
+    expect(text(['$month_start-1m'], 'gte', 'ar')).toContain('بداية الشهر الماضي');
+  });
+
   it('turns identifiers into words', () => {
     expect(humanize('HomeBranchCode')).toBe('Home branch code');
     expect(humanize('vw_TransactionsLive')).toBe('Transactions live');

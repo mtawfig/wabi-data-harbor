@@ -412,6 +412,7 @@
       "plan_compare_invalid": "We couldn't prepare an answer for this question. Try rephrasing it more simply.",
       "plan_compare_type_mismatch": "We couldn't prepare an answer for this question. Try rephrasing it more simply.",
       "plan_asker_value_invalid": "Try rephrasing how the question refers to your own records.",
+      "plan_relative_date_invalid": "Try rephrasing the period the question asks about, for example: this month, or from 1 to 31 March 2026.",
       "asker_value_missing": "The question refers to your own records, department or section, but your profile doesn't include them. Ask your organization administrator to complete your profile."
     },
     "kpis": "Headline numbers",
@@ -478,6 +479,53 @@
         "employee": "your employee number",
         "department": "your department",
         "section": "your section"
+      },
+      "relative": {
+        "anchor": {
+          "today": "today",
+          "week_start": "the start of this week",
+          "month_start": "the start of this month",
+          "quarter_start": "the start of this quarter",
+          "year_start": "the start of this year"
+        },
+        "previous": {
+          "today": "yesterday",
+          "week_start": "the start of last week",
+          "month_start": "the start of last month",
+          "quarter_start": "the start of last quarter",
+          "year_start": "the start of last year"
+        },
+        "next": {
+          "today": "tomorrow",
+          "week_start": "the start of next week",
+          "month_start": "the start of next month",
+          "quarter_start": "the start of next quarter",
+          "year_start": "the start of next year"
+        },
+        "before": "{{amount}} before {{anchor}}",
+        "after": "{{amount}} after {{anchor}}",
+        "unit": {
+          "d": {
+            "one": "{{count}} day",
+            "other": "{{count}} days"
+          },
+          "w": {
+            "one": "{{count}} week",
+            "other": "{{count}} weeks"
+          },
+          "m": {
+            "one": "{{count}} month",
+            "other": "{{count}} months"
+          },
+          "q": {
+            "one": "{{count}} quarter",
+            "other": "{{count}} quarters"
+          },
+          "y": {
+            "one": "{{count}} year",
+            "other": "{{count}} years"
+          }
+        }
       },
       "op": {
         "eq": "{{column}} is {{value}}",

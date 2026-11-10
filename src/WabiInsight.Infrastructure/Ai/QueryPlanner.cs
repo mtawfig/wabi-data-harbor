@@ -36,6 +36,16 @@ public sealed class QueryPlanner : IQueryPlanner
         _usage = usage;
     }
 
+    /// <summary>
+    /// Today in the organization's time zone: what "today", "this month" and the relative dates of a plan mean to the asker
+    /// (a Dubai organization is already in the next day when UTC is still in the evening).
+    /// </summary>
+    private async Task<DateOnly> TodayAsync(Guid organizationId, CancellationToken cancellationToken)
+    {
+        var timeZone = await _context.Organizations.AsNoTracking().Where(o => o.OrganizationId == organizationId).Select(o => o.TimeZone).FirstOrDefaultAsync(cancellationToken);
+        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Core.Monitoring.JobRecurrence.ResolveTimeZone(timeZone)).DateTime);
+    }
+
     public async Task<MetadataSnapshot> GetSnapshotAsync(Guid applicationId, CancellationToken cancellationToken = default)
     {
         var (snapshot, _, _) = await BuildSnapshotAsync(applicationId, cancellationToken);
@@ -67,7 +77,8 @@ public sealed class QueryPlanner : IQueryPlanner
         }
 
         var language = request.Language == "ar" ? "ar" : "en";
-        var prompt = PromptBuilder.BuildPrompt(snapshot, request.Question, language);
+        var today = await TodayAsync(organizationId, cancellationToken);
+        var prompt = PromptBuilder.BuildPrompt(snapshot, request.Question, language, today);
         var resolved = await _providers.ResolveForOrganizationAsync(organizationId, cancellationToken);
         var watch = Stopwatch.StartNew();
         AiCompletion completion;
@@ -113,7 +124,7 @@ public sealed class QueryPlanner : IQueryPlanner
         var authErrors = new List<PlanError>();
         for (var i = 0; i < plan.Queries.Count; i++)
         {
-            var (authorized, errors) = QueryPlanAuthorizer.Authorize(plan.Queries[i], request.ApplicationId, permissions, mappings);
+            var (authorized, errors) = QueryPlanAuthorizer.Authorize(plan.Queries[i], request.ApplicationId, permissions, mappings, today: today);
             authErrors.AddRange(errors.Select(e => new PlanError(e.Code, $"query {i + 1}: {e.Detail}")));
             if (authorized is null)
             {
@@ -151,11 +162,12 @@ public sealed class QueryPlanner : IQueryPlanner
         }
 
         var (snapshot, permissions, mappings) = await BuildSnapshotAsync(applicationId, cancellationToken);
+        var today = await TodayAsync(_tenantContext.RequireOrganizationId(), cancellationToken);
         var authorizedPlans = new List<AuthorizedPlan>(plan.Queries.Count);
         var errors = new List<PlanError>();
         foreach (var query in plan.Queries)
         {
-            var (authorized, queryErrors) = QueryPlanAuthorizer.Authorize(query, applicationId, permissions, mappings);
+            var (authorized, queryErrors) = QueryPlanAuthorizer.Authorize(query, applicationId, permissions, mappings, today: today);
             errors.AddRange(queryErrors);
             if (authorized is null)
             {

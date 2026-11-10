@@ -349,6 +349,13 @@ public static partial class QueryPlanValidator
                 errors.Add(new PlanError("plan_asker_value_invalid", $"{condition.Column} {op} {string.Join(", ", placeholders)}"));
             }
 
+            // A date relative to today ($today, $month_start-1m ...): one day, so comparison operators and between only.
+            var relativeDates = condition.Values?.Where(RelativeDates.IsPlaceholder).ToList() ?? [];
+            if (relativeDates.Count > 0 && (!RelativeDates.Operators.Contains(op) || relativeDates.Any(v => !RelativeDates.IsValid(v))))
+            {
+                errors.Add(new PlanError("plan_relative_date_invalid", $"{condition.Column} {op} {string.Join(", ", relativeDates)}"));
+            }
+
             var count = condition.Values?.Count ?? 0;
             var valid = op switch
             {
@@ -404,7 +411,7 @@ public static partial class QueryPlanValidator
             }
 
             var values = condition.Values ?? [];
-            if (values.Count != (op == "between" ? 2 : 1) || values.Any(v => string.IsNullOrWhiteSpace(v) || AskerValues.IsPlaceholder(v)))
+            if (values.Count != (op == "between" ? 2 : 1) || values.Any(v => string.IsNullOrWhiteSpace(v) || AskerValues.IsPlaceholder(v) || RelativeDates.IsPlaceholder(v)))
             {
                 errors.Add(new PlanError("plan_filter_values_invalid", $"{condition.Column} {op}"));
             }

@@ -20,8 +20,9 @@ public sealed record RowPredicate(string Column, string ParameterName, string Va
 public sealed record AuthorizedObject(string Alias, Guid ObjectId, string Schema, string ObjectName, IReadOnlyList<RowPredicate> RowPredicates, IReadOnlyDictionary<string, string> ColumnTypes, DisplayLabel? Label = null, IReadOnlyDictionary<string, DisplayLabel>? ColumnLabels = null);
 
 /// <summary>
-/// A plan cleared for compilation. <see cref="AskerValues"/> maps each <see cref="Ai.AskerValues"/> placeholder the plan uses to
-/// the asker's own code; the compiler binds it as a parameter (the plan itself keeps the placeholder).
+/// A plan cleared for compilation. <see cref="AskerValues"/> maps each placeholder the plan uses to its value for this run:
+/// an <see cref="Ai.AskerValues"/> placeholder to the asker's own code, a <see cref="RelativeDates"/> placeholder to its
+/// date. The compiler binds the value as a parameter (the plan itself keeps the placeholder).
 /// </summary>
 public sealed record AuthorizedPlan(QueryPlan Plan, Guid ApplicationId, IReadOnlyList<AuthorizedObject> Objects, int EffectiveLimit, IReadOnlyDictionary<string, string>? AskerValues = null);
 
@@ -37,7 +38,8 @@ public static class QueryPlanAuthorizer
         Guid applicationId,
         EffectivePermissions permissions,
         IReadOnlyDictionary<Guid, RowMappingColumns> mappings,
-        PlanLimits? limits = null)
+        PlanLimits? limits = null,
+        DateOnly? today = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(permissions);
@@ -106,7 +108,7 @@ public static class QueryPlanAuthorizer
 
         // "My department", "my section", "my records": the placeholder needs the asker's own code from their profile.
         var askerValues = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var placeholder in Placeholders(plan.Filters).Distinct(StringComparer.Ordinal))
+        foreach (var placeholder in Placeholders(plan.Filters, AskerValues.IsPlaceholder).Distinct(StringComparer.Ordinal))
         {
             var value = placeholder switch
             {
@@ -125,6 +127,20 @@ public static class QueryPlanAuthorizer
             }
         }
 
+        // "This month", "the last 30 days": resolved against today (the organization's local date) at every run.
+        var currentDay = today ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        foreach (var placeholder in Placeholders(plan.Filters, RelativeDates.IsPlaceholder).Distinct(StringComparer.Ordinal))
+        {
+            if (RelativeDates.Resolve(placeholder, currentDay) is { } date)
+            {
+                askerValues[placeholder] = date;
+            }
+            else
+            {
+                errors.Add(new PlanError("plan_relative_date_invalid", placeholder));
+            }
+        }
+
         if (errors.Count > 0)
         {
             return (null, errors);
@@ -134,19 +150,19 @@ public static class QueryPlanAuthorizer
         return (new AuthorizedPlan(plan, applicationId, refs.Select(r => objects[r.Alias].Authorized).ToList(), limit, askerValues.Count == 0 ? null : askerValues), errors);
     }
 
-    private static IEnumerable<string> Placeholders(PlanFilterGroup? group)
+    private static IEnumerable<string> Placeholders(PlanFilterGroup? group, Func<string?, bool> isPlaceholder)
     {
         if (group is null)
         {
             yield break;
         }
 
-        foreach (var value in group.Conditions.Where(c => c.CompareTo is null).SelectMany(c => c.Values).Where(AskerValues.IsPlaceholder))
+        foreach (var value in group.Conditions.Where(c => c.CompareTo is null).SelectMany(c => c.Values ?? []).Where(isPlaceholder))
         {
             yield return value;
         }
 
-        foreach (var value in group.Groups.SelectMany(Placeholders))
+        foreach (var value in group.Groups.SelectMany(g => Placeholders(g, isPlaceholder)))
         {
             yield return value;
         }

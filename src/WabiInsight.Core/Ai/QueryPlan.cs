@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace WabiInsight.Core.Ai;
 
@@ -147,8 +149,8 @@ public sealed class PlanCondition
     public string Operator { get; set; } = string.Empty;
 
     /// <summary>
-    /// Literal values, or an <see cref="AskerValues"/> placeholder the server replaces with the asker's own code after
-    /// authorization (the model never sees the codes).
+    /// Literal values, an <see cref="AskerValues"/> placeholder the server replaces with the asker's own code after
+    /// authorization (the model never sees the codes), or a <see cref="RelativeDates"/> placeholder resolved to a date at each run.
     /// </summary>
     [JsonPropertyName("values")]
     public List<string> Values { get; set; } = [];
@@ -181,6 +183,68 @@ public static class AskerValues
     public static readonly string[] Operators = ["eq", "neq", "in", "not_in"];
 
     public static bool IsPlaceholder(string? value) => value is not null && value.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase);
+}
+
+/// <summary>
+/// Filter values that stand for a date relative to today: <c>$today</c>, <c>$week_start</c> (Monday), <c>$month_start</c>,
+/// <c>$quarter_start</c> or <c>$year_start</c>, optionally followed by + or - a whole number of days (d), weeks (w),
+/// months (m), quarters (q) or years (y), for example <c>$today-7d</c> or <c>$month_start-1m</c>. The planner writes them for
+/// "this month", "the last 30 days" and similar; the authorizer resolves them to a date every time the plan runs, so a
+/// re-run, a saved analysis or a periodic report always covers the current period instead of the dates of the first ask.
+/// </summary>
+public static partial class RelativeDates
+{
+    /// <summary>Operators a relative date may be used with (it stands for one day).</summary>
+    public static readonly string[] Operators = ["eq", "neq", "gt", "gte", "lt", "lte", "between"];
+
+    private static readonly string[] Anchors = ["$today", "$week_start", "$month_start", "$quarter_start", "$year_start"];
+
+    [GeneratedRegex(@"^\$(today|week_start|month_start|quarter_start|year_start)(?:([+-])(\d{1,4})([dwmqy]))?$", RegexOptions.CultureInvariant)]
+    private static partial Regex Pattern();
+
+    public static bool IsPlaceholder(string? value) => value is not null && Anchors.Any(a => value.StartsWith(a, StringComparison.Ordinal));
+
+    public static bool IsValid(string value) => Pattern().IsMatch(value);
+
+    /// <summary>The date the placeholder stands for, as ISO 8601 (YYYY-MM-DD); null when it is not a valid placeholder.</summary>
+    public static string? Resolve(string value, DateOnly today)
+    {
+        var match = value is null ? null : Pattern().Match(value);
+        if (match is null || !match.Success)
+        {
+            return null;
+        }
+
+        var date = match.Groups[1].Value switch
+        {
+            "week_start" => today.AddDays(-(((int)today.DayOfWeek + 6) % 7)),
+            "month_start" => new DateOnly(today.Year, today.Month, 1),
+            "quarter_start" => new DateOnly(today.Year, ((today.Month - 1) / 3 * 3) + 1, 1),
+            "year_start" => new DateOnly(today.Year, 1, 1),
+            _ => today,
+        };
+        if (match.Groups[3].Success)
+        {
+            var amount = int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture) * (match.Groups[2].Value == "-" ? -1 : 1);
+            try
+            {
+                date = match.Groups[4].Value switch
+                {
+                    "d" => date.AddDays(amount),
+                    "w" => date.AddDays(amount * 7),
+                    "m" => date.AddMonths(amount),
+                    "q" => date.AddMonths(amount * 3),
+                    _ => date.AddYears(amount),
+                };
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return null;
+            }
+        }
+
+        return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    }
 }
 
 public sealed class PlanOrderItem
