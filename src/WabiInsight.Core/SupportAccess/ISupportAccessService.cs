@@ -22,6 +22,8 @@ public sealed record SupportAccessGrantDto(
     IReadOnlyList<SupportOperationEntry> Operations,
     /// <summary>Display labels for target references (user name and email, role name, "new"); identity only.</summary>
     IReadOnlyDictionary<string, string> TargetLabels,
+    /// <summary>The same labels with the Arabic role names, so the approver reads the roles in their language.</summary>
+    IReadOnlyDictionary<string, string> TargetLabelsAr,
     string Reason,
     string? DecisionNote,
     Guid RequestedByUserId,
@@ -104,6 +106,14 @@ public interface ISupportAccessAuthorizer
     Task<bool> HasActiveSessionAsync(CancellationToken cancellationToken = default);
 
     Task<SupportExecutionContext> AuthorizeAsync(string operation, string? targetReference, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// For an authorized operation whose grant targets are the roles it may assign
+    /// (<see cref="SupportTargetType.AssignableRole"/>): every requested role code must name a role of the
+    /// organization that the grant lists for this operation. Returns those roles' codes as stored; anything else is
+    /// denied and audited like any other out-of-scope operation. A grant that lists no role allows none.
+    /// </summary>
+    Task<IReadOnlyList<string>> AuthorizeRoleAssignmentAsync(SupportExecutionContext context, IReadOnlyCollection<string> roleCodes, CancellationToken cancellationToken = default);
 }
 
 public sealed record ExecuteOperationCommand(string Operation, string? TargetReference, System.Text.Json.JsonElement? Payload);

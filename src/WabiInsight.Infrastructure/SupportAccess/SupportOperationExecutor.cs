@@ -91,9 +91,12 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
         }
     }
 
+    /// <summary>Payload: email, fullName, preferredLanguage, roleCodes[]. The roles are limited to the grant's role targets for this operation.</summary>
     private async Task<(object Result, string? DeliveredTo, object Summary)> CreateUserAsync(SupportExecutionContext context, JsonElement? payload, CancellationToken cancellationToken)
     {
         var p = Require(payload);
+        // First of all: a role the organization did not approve for this grant is a denial (audited), whatever else the payload holds.
+        var roles = await _authorizer.AuthorizeRoleAssignmentAsync(context, RequestedRoleCodes(p), cancellationToken);
         var email = Text(p, "email") ?? throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "administrator_email_invalid");
         var fullName = Text(p, "fullName");
         if (string.IsNullOrWhiteSpace(fullName) || fullName.Length > 200)
@@ -102,7 +105,6 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
         }
 
         var language = Text(p, "preferredLanguage") == "ar" ? "ar" : "en";
-        var roles = p.TryGetProperty("roleCodes", out var r) && r.ValueKind == JsonValueKind.Array ? r.EnumerateArray().Select(x => x.GetString() ?? string.Empty).Where(x => x.Length > 0).ToList() : [];
         var provisioned = await _provisioning.ProvisionAsync(context.OrganizationId, email, fullName, language, roles, cancellationToken);
         return (new { userId = provisioned.UserId, email = provisioned.Email, roles }, provisioned.DeliveredTo, new { userId = provisioned.UserId, roles });
     }
@@ -285,6 +287,22 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
     {
         _context.ChangeTracker.Clear();
         await RecordAsync(context, $"Failed: {code}", null, cancellationToken);
+    }
+
+    /// <summary>The role codes a payload asks for. Anything that is not a list of codes is refused rather than read as "no roles".</summary>
+    private static List<string> RequestedRoleCodes(JsonElement payload)
+    {
+        if (!payload.TryGetProperty("roleCodes", out var value) || value.ValueKind == JsonValueKind.Null)
+        {
+            return [];
+        }
+
+        if (value.ValueKind != JsonValueKind.Array || value.EnumerateArray().Any(x => x.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(x.GetString())))
+        {
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "role_unknown");
+        }
+
+        return value.EnumerateArray().Select(x => x.GetString()!.Trim()).ToList();
     }
 
     private static JsonElement Require(JsonElement? payload)

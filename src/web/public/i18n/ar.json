@@ -769,6 +769,7 @@
       "support_operation_not_granted": "هذه العملية ليست ضمن الصلاحية المعتمدة.",
       "support_operation_not_available": "هذه العملية غير متاحة.",
       "support_target_not_granted": "لم يُعتمد هذا الهدف.",
+      "support_role_not_granted": "لم تعتمد المؤسسة هذا الدور للمستخدم الجديد. لا يمكن منح غير الأدوار المذكورة في الصلاحية.",
       "support_payload_required": "املأ حقول العملية.",
       "organization_profile_invalid": "تحقق من حقول المؤسسة.",
       "support_access_denied": "رُفض وصول الدعم.",
@@ -1413,6 +1414,10 @@
     "laterPhase": "غير قابلة للتنفيذ بعد",
     "targetUsers": "المستخدمون",
     "targetRoles": "الأدوار",
+    "targetAssignableRoles": "الأدوار التي يمكن منحها للمستخدم الجديد",
+    "targetAssignableRolesHint": "لا يمكن عند إنشاء المستخدم منح غير هذه الأدوار. اتركها فارغة لإنشاء مستخدم بلا أدوار. يرى مدير المؤسسة هذه القائمة قبل الاعتماد.",
+    "assignableRoles": "الأدوار التي يمكن منحها للمستخدم الجديد:",
+    "noAssignableRoles": "لا يمكن منح أي دور: يُنشأ المستخدم الجديد بلا أدوار.",
     "newRole": "دور جديد",
     "targetApplications": "معرّفات التطبيقات",
     "targetApplicationsHint": "معرّفات التطبيقات مفصولة بفواصل.",
@@ -1479,7 +1484,7 @@
       "UpdateOrganizationSettings": "تحديث إعدادات المؤسسة"
     },
     "operationHints": {
-      "CreateOrganizationUser": "ينشئ مستخدمًا بالأدوار المختارة؛ تُرسل كلمة المرور المؤقتة إلى ذلك المستخدم.",
+      "CreateOrganizationUser": "ينشئ مستخدمًا. الأدوار محصورة في المذكورة في الصلاحية؛ تُرسل كلمة المرور المؤقتة إلى ذلك المستخدم.",
       "ResetOrganizationUserPassword": "يرسل كلمة مرور مؤقتة جديدة إلى المستخدم (المستخدمين) المحددين.",
       "ConfigureRole": "ينشئ أو يعدّل الدور (الأدوار) المحددة: الرمز والأسماء والوصف وحالة التفعيل.",
       "UpdateTablePermissions": "يغيّر صلاحيات الجداول والأعمدة والصفوف للدور (الأدوار) المحددة على كائن واحد في كل مرة.",

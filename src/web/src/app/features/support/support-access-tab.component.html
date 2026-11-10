@@ -26,6 +26,14 @@
                   @for (u of targets()?.users ?? []; track u.userId) { <mat-option [value]="u.userId">{{ u.fullName }} · <span class="wi-ltr">{{ u.email }}</span></mat-option> }
                 </mat-select>
               </mat-form-field>
+            } @else if (row.definition.targetType === 'AssignableRole') {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                <mat-label>{{ 'supportAccess.targetAssignableRoles' | transloco }}</mat-label>
+                <mat-select multiple [value]="row.targets" (valueChange)="setTargets(row, $event)" [attr.data-testid]="'targets-' + row.definition.code">
+                  @for (r of targets()?.roles ?? []; track r.roleId) { <mat-option [value]="r.roleId">{{ language.current() === 'ar' ? r.nameAr : r.nameEn }} <span class="wi-ltr wi-muted">({{ r.roleCode }})</span></mat-option> }
+                </mat-select>
+                <mat-hint>{{ 'supportAccess.targetAssignableRolesHint' | transloco }}</mat-hint>
+              </mat-form-field>
             } @else if (row.definition.targetType === 'Role' || row.definition.targetType === 'RoleOrNew') {
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
                 <mat-label>{{ 'supportAccess.targetRoles' | transloco }}</mat-label>
@@ -76,7 +84,7 @@
       <p class="reason">{{ g.reason }}</p>
       <ul class="ops">
         @for (o of g.operations; track o.operation) {
-          <li><mat-icon>check_circle</mat-icon><span><strong>{{ operationLabel(o.operation) }}</strong>@if (o.targetReferences.length > 0) { <span class="wi-muted"> · @for (t of o.targetReferences; track t) { <span class="target">{{ targetLabel(t, g) }}</span> }</span> }</span></li>
+          <li [attr.data-testid]="'grant-op-' + o.operation"><mat-icon>check_circle</mat-icon><span><strong>{{ operationLabel(o.operation) }}</strong>@if (assignsRoles(o.operation)) { <span class="wi-muted"> · @if (o.targetReferences.length > 0) { {{ 'supportAccess.assignableRoles' | transloco }} @for (t of o.targetReferences; track t) { <span class="target">{{ targetLabel(t, g) }}</span> } } @else { {{ 'supportAccess.noAssignableRoles' | transloco }} }</span> } @else if (o.targetReferences.length > 0) { <span class="wi-muted"> · @for (t of o.targetReferences; track t) { <span class="target">{{ targetLabel(t, g) }}</span> }</span> }</span></li>
         }
       </ul>
       <dl class="facts">
@@ -123,7 +131,7 @@
             </mat-select>
           </mat-form-field>
           @if (runDefinition(); as d) {
-            @if (d.targetType !== 'None') {
+            @if (d.requiresTarget) {
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
                 <mat-label>{{ 'supportAccess.target' | transloco }}</mat-label>
                 <mat-select [value]="runTarget()" (valueChange)="runTarget.set($event)" data-testid="run-target">
@@ -143,13 +151,16 @@
                       <mat-option value="ar">{{ 'common.arabic' | transloco }}</mat-option>
                     </mat-select>
                   </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>{{ 'admin.fields.roles' | transloco }}</mat-label>
-                    <mat-select multiple [value]="runRoleCodes()" (valueChange)="runRoleCodes.set($event)">
-                      @for (r of roleOptions(); track r.code) { <mat-option [value]="r.code">{{ r.label }}</mat-option> }
-                    </mat-select>
-                  </mat-form-field>
+                  @if (roleOptions().length > 0) {
+                    <mat-form-field appearance="outline">
+                      <mat-label>{{ 'supportAccess.targetAssignableRoles' | transloco }}</mat-label>
+                      <mat-select multiple [value]="runRoleCodes()" (valueChange)="runRoleCodes.set($event)" data-testid="run-roles">
+                        @for (r of roleOptions(); track r.code) { <mat-option [value]="r.code">{{ r.label }}</mat-option> }
+                      </mat-select>
+                    </mat-form-field>
+                  }
                 </div>
+                @if (runTargets().length === 0) { <p class="hint" data-testid="run-no-roles">{{ 'supportAccess.noAssignableRoles' | transloco }}</p> }
               }
               @case ('ConfigureRole') {
                 <div class="grid">
@@ -194,7 +205,7 @@
               }
               @default {}
             }
-            <button mat-flat-button type="button" (click)="execute()" [disabled]="busy() || (d.targetType !== 'None' && !runTarget()) || (d.code === 'UpdateTablePermissions' && !runPayload()['objectId'])" data-testid="run-execute"><mat-icon>play_arrow</mat-icon>{{ 'supportAccess.run' | transloco }}</button>
+            <button mat-flat-button type="button" (click)="execute()" [disabled]="busy() || (d.requiresTarget && !runTarget()) || (d.code === 'UpdateTablePermissions' && !runPayload()['objectId'])" data-testid="run-execute"><mat-icon>play_arrow</mat-icon>{{ 'supportAccess.run' | transloco }}</button>
           }
           @if (lastResult(); as r) { <p class="result"><mat-icon>check_circle</mat-icon>{{ r }}</p> }
         </section>

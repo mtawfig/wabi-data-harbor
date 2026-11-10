@@ -769,6 +769,7 @@
       "support_operation_not_granted": "This operation is not part of the approved grant.",
       "support_operation_not_available": "This operation is not available.",
       "support_target_not_granted": "This target was not approved.",
+      "support_role_not_granted": "The organization did not approve this role for the new user. Only the roles listed in the grant can be given.",
       "support_payload_required": "Fill in the operation fields.",
       "organization_profile_invalid": "Check the organization fields.",
       "support_access_denied": "Support access denied.",
@@ -1413,6 +1414,10 @@
     "laterPhase": "not executable yet",
     "targetUsers": "Users",
     "targetRoles": "Roles",
+    "targetAssignableRoles": "Roles the new user may be given",
+    "targetAssignableRolesHint": "Only these roles can be given when the user is created. Leave empty to create a user without roles. The organization administrator sees this list before approving.",
+    "assignableRoles": "Roles the new user may be given:",
+    "noAssignableRoles": "No role may be given: the new user is created without roles.",
     "newRole": "New role",
     "targetApplications": "Application ids",
     "targetApplicationsHint": "Comma-separated application ids.",
@@ -1479,7 +1484,7 @@
       "UpdateOrganizationSettings": "Update organization settings"
     },
     "operationHints": {
-      "CreateOrganizationUser": "Creates a user with the chosen roles; the temporary password is emailed to that user.",
+      "CreateOrganizationUser": "Creates a user. The roles are limited to the ones listed in the grant; the temporary password is emailed to that user.",
       "ResetOrganizationUserPassword": "Emails a new temporary password to the selected user(s).",
       "ConfigureRole": "Creates or edits the selected role(s): code, names, description, active flag.",
       "UpdateTablePermissions": "Changes table, column and row permissions of the selected role(s) on one object at a time.",
