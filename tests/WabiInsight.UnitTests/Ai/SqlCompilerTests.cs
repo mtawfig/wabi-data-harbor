@@ -156,6 +156,87 @@ public sealed class SqlCompilerTests
     }
 
     [Fact]
+    public void SqlServer_AveragesWholeNumberColumnsAsFloat_AndTotalsThemAsBigint_SoResultsAreNotCutOrOverflowed()
+    {
+        // T-SQL: AVG over int 2, 3, 3 is 2, and SUM over int overflows above 2,147,483,647.
+        const string plan = """
+            {"objective":"x","source":{"schema":"dbo","object":"Orders","alias":"o"},"joins":[],
+             "select":[{"alias":"avgCustomer","column":"o.CustomerId","aggregate":"avg","dateTrunc":null},{"alias":"sumCustomer","column":"o.CustomerId","aggregate":"sum","dateTrunc":null},
+                       {"alias":"avgAmount","column":"o.Amount","aggregate":"avg","dateTrunc":null},{"alias":"sumAmount","column":"o.Amount","aggregate":"sum","dateTrunc":null},{"alias":"maxCustomer","column":"o.CustomerId","aggregate":"max","dateTrunc":null}],
+             "filters":null,"groupBy":[],"having":[{"column":"avgCustomer","operator":"gt","values":["2.5"],"compareTo":null}],"orderBy":[],"limit":null,"visualization":null,"assumptions":[]}
+            """;
+        var sqlServer = new SqlServerCompiler().Compile(Plan(plan)).Sql;
+        Assert.StartsWith("SELECT TOP (101) AVG(CAST([o].[CustomerId] AS FLOAT)) AS [avgCustomer], SUM(CAST([o].[CustomerId] AS BIGINT)) AS [sumCustomer], AVG([o].[Amount]) AS [avgAmount], SUM([o].[Amount]) AS [sumAmount], MAX([o].[CustomerId]) AS [maxCustomer] FROM", sqlServer, StringComparison.Ordinal);
+        Assert.EndsWith("HAVING AVG(CAST([o].[CustomerId] AS FLOAT)) > @p0", sqlServer, StringComparison.Ordinal);
+
+        // Oracle NUMBER arithmetic keeps the decimals: no cast.
+        Assert.Contains("AVG(\"o\".\"CustomerId\") AS \"avgCustomer\", SUM(\"o\".\"CustomerId\") AS \"sumCustomer\"", new OracleCompiler().Compile(Plan(plan)).Sql, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("eq", "([o].[OrderDate] >= @p0 AND [o].[OrderDate] < @p1)")]
+    [InlineData("neq", "([o].[OrderDate] < @p0 OR [o].[OrderDate] >= @p1)")]
+    [InlineData("lte", "[o].[OrderDate] < @p0")]
+    [InlineData("gt", "[o].[OrderDate] >= @p0")]
+    [InlineData("gte", "[o].[OrderDate] >= @p0")]
+    [InlineData("lt", "[o].[OrderDate] < @p0")]
+    public void DateOnlyValues_OnColumnsThatStoreATime_CoverTheWholeDay(string op, string expected)
+    {
+        // "Up to 31 December" must include 31 December 10:00: a plain <= would stop at midnight.
+        var compiled = new SqlServerCompiler().Compile(Plan(Dated("o.OrderDate", op, "2025-12-31")));
+        Assert.EndsWith("WHERE " + expected, compiled.Sql, StringComparison.Ordinal);
+        var next = new DateTime(2026, 1, 1);
+        var day = new DateTime(2025, 12, 31);
+        Assert.Equal(op switch { "eq" or "neq" => [day, next], "lte" or "gt" => [next], _ => new object[] { day } }, compiled.Parameters.Select(p => p.Value!).ToArray());
+    }
+
+    [Fact]
+    public void DateOnlyValues_InBetweenAndIn_CoverWholeDays_AndValuesWithATimeOrDateColumnsStayExact()
+    {
+        var between = new SqlServerCompiler().Compile(Plan(Dated("o.OrderDate", "between", "2025-12-01", "2025-12-31")));
+        Assert.EndsWith("WHERE ([o].[OrderDate] >= @p0 AND [o].[OrderDate] < @p1)", between.Sql, StringComparison.Ordinal);
+        Assert.Equal([new DateTime(2025, 12, 1), new DateTime(2026, 1, 1)], between.Parameters.Select(p => p.Value!).ToArray());
+
+        var days = new SqlServerCompiler().Compile(Plan(Dated("o.OrderDate", "in", "2025-12-24", "2025-12-25")));
+        Assert.EndsWith("WHERE (([o].[OrderDate] >= @p0 AND [o].[OrderDate] < @p1) OR ([o].[OrderDate] >= @p2 AND [o].[OrderDate] < @p3))", days.Sql, StringComparison.Ordinal);
+        Assert.StartsWith("NOT ((", new SqlServerCompiler().Compile(Plan(Dated("o.OrderDate", "not_in", "2025-12-24"))).Sql.Split("WHERE ")[1], StringComparison.Ordinal);
+
+        // A value with a time is a moment, not a day.
+        var moment = new SqlServerCompiler().Compile(Plan(Dated("o.OrderDate", "lte", "2025-12-31T18:00:00")));
+        Assert.EndsWith("WHERE [o].[OrderDate] <= @p0", moment.Sql, StringComparison.Ordinal);
+        Assert.Equal(new DateTime(2025, 12, 31, 18, 0, 0), moment.Parameters[0].Value);
+
+        // A SQL Server date column has no time: the comparison stays as written. An Oracle DATE stores a time.
+        var dateColumns = new Dictionary<string, string>(OrderColumns, StringComparer.OrdinalIgnoreCase) { ["OrderDate"] = "date" };
+        var onDateColumn = Plan(Dated("o.OrderDate", "lte", "2025-12-31")) with { Objects = [new AuthorizedObject("o", Guid.NewGuid(), "dbo", "Orders", [], dateColumns)] };
+        Assert.EndsWith("WHERE [o].[OrderDate] <= @p0", new SqlServerCompiler().Compile(onDateColumn).Sql, StringComparison.Ordinal);
+        Assert.Contains("WHERE \"o\".\"OrderDate\" < :p0", new OracleCompiler().Compile(onDateColumn).Sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RelativeDates_AreBoundToTheDateOfTheRun_AndRejectedOnColumnsThatAreNotDates()
+    {
+        // "This month": the stored plan keeps the placeholders, so every run covers the month it runs in.
+        var json = Dated("o.OrderDate", "gte", "$month_start").Replace("\"groups\":[]", "\"groups\":[{\"logic\":\"and\",\"conditions\":[{\"column\":\"o.OrderDate\",\"operator\":\"lte\",\"values\":[\"$today\"],\"compareTo\":null}],\"groups\":[]}]", StringComparison.Ordinal);
+        var plan = Plan(json) with { AskerValues = new Dictionary<string, string> { ["$month_start"] = "2026-11-01", ["$today"] = "2026-11-10" } };
+        var compiled = new SqlServerCompiler().Compile(plan);
+        Assert.EndsWith("WHERE [o].[OrderDate] >= @p0 AND ([o].[OrderDate] < @p1)", compiled.Sql, StringComparison.Ordinal);
+        Assert.Equal([new DateTime(2026, 11, 1), new DateTime(2026, 11, 11)], compiled.Parameters.Select(p => p.Value!).ToArray());
+        Assert.Equal("$month_start", plan.Plan.Filters!.Conditions[0].Values[0]);
+
+        Assert.Equal("asker_value_missing", Assert.Throws<DomainException>(() => new SqlServerCompiler().Compile(Plan(json))).Message);
+        var onText = Plan(Dated("o.Status", "eq", "$today")) with { AskerValues = new Dictionary<string, string> { ["$today"] = "2026-11-10" } };
+        Assert.Equal("plan_filter_value_type_mismatch", Assert.Throws<DomainException>(() => new SqlServerCompiler().Compile(onText)).Message);
+    }
+
+    private static string Dated(string column, string op, params string[] values) => $$"""
+        {"objective":"x","source":{"schema":"dbo","object":"Orders","alias":"o"},"joins":[],
+         "select":[{"alias":"orders","column":null,"aggregate":"count","dateTrunc":null}],
+         "filters":{"logic":"and","conditions":[{"column":"{{column}}","operator":"{{op}}","values":[{{string.Join(",", values.Select(v => "\"" + v + "\""))}}],"compareTo":null}],"groups":[]},
+         "groupBy":[],"having":[],"orderBy":[],"limit":null,"visualization":null,"assumptions":[]}
+        """;
+
+    [Fact]
     public void Compile_RejectsIdentifiersOutsideTheAuthorizedShape_AndTypeMismatches()
     {
         var unknown = Aggregated.Replace("\"c.Name\"", "\"c.Secret\"", StringComparison.Ordinal);

@@ -23,6 +23,15 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
 
     protected abstract string ApplyLimit(string selectWithoutLimit, int limit, bool hasOrderBy);
 
+    /// <summary>
+    /// The operand of SUM or AVG over a non-boolean column. Dialects whose integer arithmetic would give a wrong answer
+    /// (an average cut to a whole number, a total that overflows) cast it here.
+    /// </summary>
+    protected virtual string AggregateOperand(string aggregate, string column, string dataType) => column;
+
+    /// <summary>True when a column of this date type also stores a time of day (so "on that day" is a range, not an equality).</summary>
+    protected virtual bool HasTimeOfDay(string dataType) => !string.Equals(dataType, "date", StringComparison.OrdinalIgnoreCase);
+
     public CompiledQuery Compile(AuthorizedPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -52,10 +61,18 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
         string Numeric(string reference, string target)
             => BooleanTypes.Contains(ColumnType(reference).ToLowerInvariant()) ? $"CAST({Column(reference)} AS {target})" : Column(reference);
 
-        // An asker placeholder becomes the asker's own code (resolved by the authorizer); anything else is a literal.
+        // SUM and AVG: bit columns as above; other columns as the dialect needs (whole-number columns in SQL Server).
+        string Operand(string reference, string aggregate, string booleanTarget)
+        {
+            var type = ColumnType(reference).ToLowerInvariant();
+            return BooleanTypes.Contains(type) ? $"CAST({Column(reference)} AS {booleanTarget})" : AggregateOperand(aggregate, Column(reference), type);
+        }
+
+        // A placeholder becomes its value for this run (resolved by the authorizer): the asker's own code, or the date a
+        // relative date stands for today. Anything else is a literal.
         string Value(string value)
         {
-            if (!AskerValues.IsPlaceholder(value))
+            if (!AskerValues.IsPlaceholder(value) && !RelativeDates.IsPlaceholder(value))
             {
                 return value;
             }
@@ -79,8 +96,8 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
                 {
                     "count" => item.Column is null ? "COUNT(*)" : $"COUNT({Column(item.Column)})",
                     "count_distinct" => $"COUNT(DISTINCT {Column(item.Column!)})",
-                    "sum" => $"SUM({Numeric(item.Column!, "INT")})",
-                    "avg" => $"AVG({Numeric(item.Column!, "FLOAT")})",
+                    "sum" => $"SUM({Operand(item.Column!, "sum", "INT")})",
+                    "avg" => $"AVG({Operand(item.Column!, "avg", "FLOAT")})",
                     "min" => $"MIN({Numeric(item.Column!, "INT")})",
                     "max" => $"MAX({Numeric(item.Column!, "INT")})",
                     _ => throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "plan_aggregate_invalid"),
@@ -259,18 +276,38 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
     private string Condition(PlanCondition condition, string column, string dataType, Func<string, string> value, CompileContext context)
     {
         var op = condition.Operator.ToLowerInvariant();
+        var isDate = Family(dataType) == "date";
+        if (!isDate && condition.Values.Any(RelativeDates.IsPlaceholder))
+        {
+            // "$month_start" against a text or number column would silently compare with a date written as text.
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "plan_filter_value_type_mismatch");
+        }
+
         object? Typed(string v) => Convert(value(v), dataType);
+        string P(string v) => context.Add(Typed(v));
+
+        // A value given as a date only (no time) means that whole day. On a column that also stores a time of day, "equal to",
+        // "up to" and "after" that day are therefore ranges ending before the next day starts: a plain comparison would stop at
+        // midnight and drop the rest of the day.
+        var wholeDays = isDate && HasTimeOfDay(dataType);
+        bool WholeDay(string v) => wholeDays && NextDay(value(v)) is not null;
+        string After(string v) => context.Add(Convert(NextDay(value(v))!, dataType));
+        string On(string v) => WholeDay(v) ? $"({column} >= {P(v)} AND {column} < {After(v)})" : $"{column} = {P(v)}";
+
         return op switch
         {
-            "eq" => $"{column} = {context.Add(Typed(condition.Values[0]))}",
-            "neq" => $"{column} <> {context.Add(Typed(condition.Values[0]))}",
-            "gt" => $"{column} > {context.Add(Typed(condition.Values[0]))}",
-            "gte" => $"{column} >= {context.Add(Typed(condition.Values[0]))}",
-            "lt" => $"{column} < {context.Add(Typed(condition.Values[0]))}",
-            "lte" => $"{column} <= {context.Add(Typed(condition.Values[0]))}",
-            "in" => $"{column} IN ({string.Join(", ", condition.Values.Select(v => context.Add(Typed(v))))})",
-            "not_in" => $"{column} NOT IN ({string.Join(", ", condition.Values.Select(v => context.Add(Typed(v))))})",
-            "between" => $"{column} BETWEEN {context.Add(Typed(condition.Values[0]))} AND {context.Add(Typed(condition.Values[1]))}",
+            "eq" => On(condition.Values[0]),
+            "neq" => WholeDay(condition.Values[0]) ? $"({column} < {P(condition.Values[0])} OR {column} >= {After(condition.Values[0])})" : $"{column} <> {P(condition.Values[0])}",
+            "gt" => WholeDay(condition.Values[0]) ? $"{column} >= {After(condition.Values[0])}" : $"{column} > {P(condition.Values[0])}",
+            "gte" => $"{column} >= {P(condition.Values[0])}",
+            "lt" => $"{column} < {P(condition.Values[0])}",
+            "lte" => WholeDay(condition.Values[0]) ? $"{column} < {After(condition.Values[0])}" : $"{column} <= {P(condition.Values[0])}",
+            "in" when condition.Values.Any(WholeDay) => $"({string.Join(" OR ", condition.Values.Select(On))})",
+            "not_in" when condition.Values.Any(WholeDay) => $"NOT ({string.Join(" OR ", condition.Values.Select(On))})",
+            "in" => $"{column} IN ({string.Join(", ", condition.Values.Select(P))})",
+            "not_in" => $"{column} NOT IN ({string.Join(", ", condition.Values.Select(P))})",
+            "between" when WholeDay(condition.Values[1]) => $"({column} >= {P(condition.Values[0])} AND {column} < {After(condition.Values[1])})",
+            "between" => $"{column} BETWEEN {P(condition.Values[0])} AND {P(condition.Values[1])}",
             "contains" => $"{column} LIKE {context.Add("%" + Escape(condition.Values[0]) + "%")} {EscapeClause}",
             "starts_with" => $"{column} LIKE {context.Add(Escape(condition.Values[0]) + "%")} {EscapeClause}",
             "is_null" => $"{column} IS NULL",
@@ -278,6 +315,12 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
             _ => throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "plan_operator_invalid"),
         };
     }
+
+    /// <summary>The day after a value written as a date only (YYYY-MM-DD); null when the value carries a time or is not a date.</summary>
+    private static string? NextDay(string value)
+        => value.Length == 10 && DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) && day < DateOnly.MaxValue
+            ? day.AddDays(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            : null;
 
     protected virtual string EscapeClause => "ESCAPE '\\'";
 
@@ -372,6 +415,15 @@ public sealed class SqlServerCompiler : SqlCompilerBase
 
     protected override string Quote(string identifier) => $"[{identifier.Replace("]", "]]", StringComparison.Ordinal)}]";
 
+    // T-SQL keeps the operand's type: AVG over a whole-number column is cut to a whole number (2, 3, 3 gives 2), and SUM over
+    // int overflows above 2,147,483,647. Average as float and total as bigint instead.
+    protected override string AggregateOperand(string aggregate, string column, string dataType) => (aggregate, dataType) switch
+    {
+        ("avg", "int" or "bigint" or "smallint" or "tinyint") => $"CAST({column} AS FLOAT)",
+        ("sum", "int" or "smallint" or "tinyint") => $"CAST({column} AS BIGINT)",
+        _ => column,
+    };
+
     protected override string DateTrunc(string unit, string column) => unit switch
     {
         "day" => $"CAST({column} AS date)",
@@ -393,6 +445,9 @@ public sealed class OracleCompiler : SqlCompilerBase
     protected override string ParameterPrefix => ":";
 
     protected override string Quote(string identifier) => $"\"{identifier.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+
+    // An Oracle DATE stores a time of day too.
+    protected override bool HasTimeOfDay(string dataType) => true;
 
     protected override string DateTrunc(string unit, string column) => unit switch
     {

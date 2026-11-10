@@ -15,7 +15,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { ROW_SCOPES } from '../../core/organizations/permissions.models';
 import { problemMessage } from '../../core/problem-message';
-import { GrantAction, SupportAccessGrant, SupportOperationCode, SupportOperationDefinition, SupportOperationEntry, SupportTargets } from '../../core/support/support-access.models';
+import { GrantAction, ROLE_ASSIGNING_OPERATIONS, SupportAccessGrant, SupportOperationCode, SupportOperationDefinition, SupportOperationEntry, SupportTargets } from '../../core/support/support-access.models';
 import { SupportAccessService } from '../../core/support/support-access.service';
 import { SupportArea, TicketDetail } from '../../core/support/support.models';
 import { GrantStatusComponent } from './grant-status.component';
@@ -155,7 +155,7 @@ export class SupportAccessTabComponent {
 
   selectOperation(code: SupportOperationCode | null): void {
     this.runOperation.set(code);
-    this.runTarget.set(this.runTargets().length === 1 ? this.runTargets()[0] : null);
+    this.runTarget.set(this.runDefinition()?.requiresTarget && this.runTargets().length === 1 ? this.runTargets()[0] : null);
     this.runPayload.set(code === 'UpdateTablePermissions' ? { granted: true, allColumns: true, rowScope: 'All' } : {});
     this.runRoleCodes.set([]);
     this.lastResult.set(null);
@@ -179,7 +179,7 @@ export class SupportAccessTabComponent {
     }
     this.busy.set(true);
     this.error.set(null);
-    this.access.execute(code, this.runDefinition()?.targetType === 'None' ? null : this.runTarget(), payload).subscribe({
+    this.access.execute(code, this.runDefinition()?.requiresTarget ? this.runTarget() : null, payload).subscribe({
       next: (r) => {
         this.lastResult.set(r.deliveredTo ? this.transloco.translate('supportAccess.executedDelivered', { email: r.deliveredTo }) : this.transloco.translate('supportAccess.executed'));
         this.snack.open(this.transloco.translate('supportAccess.executed'), undefined, { duration: 4000 });
@@ -197,7 +197,7 @@ export class SupportAccessTabComponent {
     if (reference.toLowerCase() === 'new') {
       return this.transloco.translate('supportAccess.newRole');
     }
-    const fromGrant = grant?.targetLabels?.[reference];
+    const fromGrant = (this.language.current() === 'ar' ? grant?.targetLabelsAr?.[reference] : undefined) ?? grant?.targetLabels?.[reference];
     if (fromGrant && fromGrant.toLowerCase() !== reference.toLowerCase()) {
       return fromGrant;
     }
@@ -221,8 +221,17 @@ export class SupportAccessTabComponent {
     return this.language.current() === 'ar' ? grant.organizationNameAr : grant.organizationName;
   }
 
+  /** True for an operation whose grant targets are the roles it may give (shown as such to the approver). */
+  assignsRoles(operation: SupportOperationCode): boolean {
+    return ROLE_ASSIGNING_OPERATIONS.includes(operation);
+  }
+
+  /** Roles the running operation may give: only the ones the organization approved on this grant. */
   roleOptions(): { code: string; label: string }[] {
-    return (this.targets()?.roles ?? []).filter((r) => r.isActive).map((r) => ({ code: r.roleCode, label: this.language.current() === 'ar' ? r.nameAr : r.nameEn }));
+    const granted = new Set(this.runTargets().map((t) => t.toLowerCase()));
+    return (this.targets()?.roles ?? [])
+      .filter((r) => r.isActive && granted.has(r.roleId.toLowerCase()))
+      .map((r) => ({ code: r.roleCode, label: this.language.current() === 'ar' ? r.nameAr : r.nameEn }));
   }
 
   ensureTargets(): void {

@@ -513,7 +513,7 @@ public sealed class SupportAccessService : ISupportAccessService
                 var ok = definition.TargetType switch
                 {
                     SupportTargetType.OrganizationUser => Guid.TryParse(reference, out var u) && await _context.OrganizationUsers.AsPlatformScope(_tenantContext).AnyAsync(x => x.OrganizationId == organizationId && x.UserId == u, cancellationToken),
-                    SupportTargetType.Role => Guid.TryParse(reference, out var r) && await _context.Roles.AsPlatformScope(_tenantContext).AnyAsync(x => x.OrganizationId == organizationId && x.RoleId == r, cancellationToken),
+                    SupportTargetType.Role or SupportTargetType.AssignableRole => Guid.TryParse(reference, out var r) && await _context.Roles.AsPlatformScope(_tenantContext).AnyAsync(x => x.OrganizationId == organizationId && x.RoleId == r, cancellationToken),
                     SupportTargetType.RoleOrNew => string.Equals(reference, SupportAccessScope.NewRoleReference, StringComparison.OrdinalIgnoreCase)
                         || (Guid.TryParse(reference, out var rn) && await _context.Roles.AsPlatformScope(_tenantContext).AnyAsync(x => x.OrganizationId == organizationId && x.RoleId == rn, cancellationToken)),
                     SupportTargetType.Application => Guid.TryParse(reference, out var a) && await _context.Applications.AsPlatformScope(_tenantContext).AnyAsync(x => x.OrganizationId == organizationId && x.ApplicationId == a, cancellationToken),
@@ -632,16 +632,18 @@ public sealed class SupportAccessService : ISupportAccessService
         var targetIds = parsed.Values.SelectMany(e => e).SelectMany(e => e.TargetReferences).Select(t => Guid.TryParse(t, out var id) ? id : (Guid?)null).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
         var targetUsers = await users.AsNoTracking().Where(u => targetIds.Contains(u.UserId)).Select(u => new { u.UserId, u.FullName, u.Email }).ToListAsync(cancellationToken);
         var roles = _tenantContext.IsPlatformAdministrator ? _context.Roles.AsPlatformScope(_tenantContext) : _context.Roles;
-        var targetRoles = await roles.AsNoTracking().Where(r => targetIds.Contains(r.RoleId)).Select(r => new { r.RoleId, r.NameEn, r.RoleCode }).ToListAsync(cancellationToken);
+        var targetRoles = await roles.AsNoTracking().Where(r => targetIds.Contains(r.RoleId)).Select(r => new { r.RoleId, r.NameEn, r.NameAr, r.RoleCode }).ToListAsync(cancellationToken);
         var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [SupportAccessScope.NewRoleReference] = SupportAccessScope.NewRoleReference };
+        var labelsAr = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [SupportAccessScope.NewRoleReference] = SupportAccessScope.NewRoleReference };
         foreach (var u in targetUsers)
         {
-            labels[u.UserId.ToString()] = $"{u.FullName} ({u.Email})";
+            labels[u.UserId.ToString()] = labelsAr[u.UserId.ToString()] = $"{u.FullName} ({u.Email})";
         }
 
         foreach (var r in targetRoles)
         {
             labels[r.RoleId.ToString()] = $"{r.NameEn} ({r.RoleCode})";
+            labelsAr[r.RoleId.ToString()] = $"{r.NameAr} ({r.RoleCode})";
         }
 
         var principal = _tenantContext.Principal;
@@ -650,7 +652,9 @@ public sealed class SupportAccessService : ISupportAccessService
             var ticket = ticketMap[g.TicketId];
             var organization = organizationMap[g.OrganizationId];
             var operations = parsed[g.GrantId];
-            var grantLabels = operations.SelectMany(o => o.TargetReferences).Distinct(StringComparer.OrdinalIgnoreCase).ToDictionary(t => t, t => labels.GetValueOrDefault(t, t), StringComparer.OrdinalIgnoreCase);
+            var references = operations.SelectMany(o => o.TargetReferences).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var grantLabels = references.ToDictionary(t => t, t => labels.GetValueOrDefault(t, t), StringComparer.OrdinalIgnoreCase);
+            var grantLabelsAr = references.ToDictionary(t => t, t => labelsAr.GetValueOrDefault(t, t), StringComparer.OrdinalIgnoreCase);
             var active = sessions.Any(s => s.GrantId == g.GrantId && s.Active) && g.Status == SupportAccessGrantStatus.Active;
             var executed = sessions.Where(s => s.GrantId == g.GrantId).Sum(s => s.OperationsExecuted);
             var usable = SupportAccessScope.IsUsable(g.Status, g.ExpiresAt, now);
@@ -675,7 +679,7 @@ public sealed class SupportAccessService : ISupportAccessService
 
             return new SupportAccessGrantDto(
                 g.GrantId, g.TicketId, ticket.ReferenceNumber, ticket.Subject, g.OrganizationId, organization.OrganizationName, organization.OrganizationNameAr,
-                g.Status, operations, grantLabels, g.Reason, g.DecisionNote,
+                g.Status, operations, grantLabels, grantLabelsAr, g.Reason, g.DecisionNote,
                 g.RequestedByUserId, userMap.GetValueOrDefault(g.RequestedByUserId, string.Empty),
                 g.ProposedByAdministratorId, adminMap.GetValueOrDefault(g.ProposedByAdministratorId, string.Empty),
                 g.ApprovedByOrganizationAdminUserId, g.ApprovedByOrganizationAdminUserId is { } a ? userMap.GetValueOrDefault(a) : null,

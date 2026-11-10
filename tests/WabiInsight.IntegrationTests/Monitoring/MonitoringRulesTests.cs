@@ -168,6 +168,158 @@ public sealed class MonitoringRulesTests : IDisposable
     }
 
     [Fact]
+    public async Task DataRuleDetails_NeedRowScopeAll_UnlessTheViewerOwnsTheRule()
+    {
+        using var alice = await LoginAsync(TestData.AliceEmail);
+        var operations = $"O{Guid.NewGuid():N}"[..8];
+        var finance = $"F{Guid.NewGuid():N}"[..8];
+        await CreateScopedSignInTableAsync(operations, finance);
+        var (_, objectId, columns) = await PrepareApplicationAsync(alice, "rulescope", "MonitorScopedSignIns");
+        Guid Column(string name) => columns.Single(c => c.GetProperty("columnName").GetString() == name).GetProperty("columnId").GetGuid();
+        foreach (var (name, role) in new[] { ("AccountNumber", "AccountIdentifier"), ("DeviceId", "DeviceIdentifier"), ("LoginAt", "Timestamp") })
+        {
+            var put = await alice.PutAsJsonAsync($"/api/metadata/columns/{Column(name)}", new { displayNameEn = name, displayNameAr = (string?)null, businessDescription = (string?)null, classification = "Confidential", isApproved = true, semanticRole = role });
+            Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        }
+
+        // Two custom roles on the same object and columns: one limited to the user's department, one reading every row.
+        async Task<string> RoleAsync(string prefix, string scope)
+        {
+            var role = await (await alice.PostJsonAsync("/api/roles", new { roleCode = $"{prefix}{Guid.NewGuid():N}"[..12], nameEn = prefix, nameAr = prefix, description = prefix })).ReadJsonAsync();
+            var roleId = role.GetProperty("roleId").GetGuid();
+            Assert.Equal(HttpStatusCode.OK, (await alice.PutAsJsonAsync(new Uri($"/api/permissions/roles/{roleId}/objects/{objectId}", UriKind.Relative), new { granted = true, allColumns = true, rowScope = scope })).StatusCode);
+            return role.GetProperty("roleCode").GetString()!;
+        }
+
+        Assert.Equal(HttpStatusCode.OK, (await alice.PutAsJsonAsync(new Uri($"/api/permissions/objects/{objectId}/row-mapping", UriKind.Relative), new { departmentColumnId = Column("DepartmentCode") })).StatusCode);
+        var departmentRole = await RoleAsync("Dept", "Department");
+        var allRowsRole = await RoleAsync("Wide", "All");
+        var department = await (await alice.PostJsonAsync("/api/departments", new { departmentCode = operations, departmentNameEn = "Operations", departmentNameAr = "العمليات" })).ReadJsonAsync();
+        var departmentId = department.GetProperty("departmentId").GetGuid();
+
+        var roles = (await (await alice.GetAsync("/api/roles")).ReadJsonAsync()).EnumerateArray().ToList();
+        Guid RoleId(string code) => roles.Single(r => r.GetProperty("roleCode").GetString() == code).GetProperty("roleId").GetGuid();
+        async Task<(Guid UserId, string Email)> UserAsync(string fullName, Guid? userDepartment, params string[] roleCodes)
+        {
+            var (userId, email) = await InsertUserAsync(_db.Data.OrganizationAId, null, fullName);
+            var update = await alice.PutAsJsonAsync(new Uri($"/api/users/{userId}", UriKind.Relative), new { fullName, employeeNumber = (string?)null, departmentId = userDepartment, preferredLanguage = "en", roleCodes });
+            Assert.True(update.StatusCode == HttpStatusCode.OK, await update.Content.ReadAsStringAsync());
+            return (userId, email);
+        }
+
+        var (managerId, managerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, RoleId("Management"), "Scope Manager");
+        var (scopedId, scopedEmail) = await UserAsync("Operations Officer", departmentId, departmentRole);
+        var (wideId, wideEmail) = await UserAsync("Group Auditor", null, allRowsRole);
+        var (scopedAdminId, scopedAdminEmail) = await UserAsync("Operations Administrator", departmentId, SystemRoles.OrganizationAdmin, departmentRole);
+        // The database is shared with the other test classes: this second Organization Administrator of A is demoted again when
+        // the test ends (pass or fail), so tests that count A's administrators are not affected by the order the classes run in.
+        await using var demote = new Deferred(() => alice.PutAsJsonAsync(new Uri($"/api/users/{scopedAdminId}", UriKind.Relative), new { fullName = "Operations Administrator", employeeNumber = (string?)null, departmentId, preferredLanguage = "en", roleCodes = new[] { departmentRole } }));
+        using var manager = await LoginAsync(managerEmail);
+        using var scoped = await LoginAsync(scopedEmail);
+        using var wide = await LoginAsync(wideEmail);
+        using var scopedAdmin = await LoginAsync(scopedAdminEmail);
+
+        // The department user holds the object and every column of the rule, with row scope DEPARTMENT only.
+        var scopedAccess = (await (await scoped.GetAsync("/api/permissions/me")).ReadJsonAsync()).GetProperty("objects").EnumerateArray().Single(o => o.GetProperty("objectId").GetGuid() == objectId);
+        Assert.Equal("Department", scopedAccess.GetProperty("rowScopes").EnumerateArray().Single().GetString());
+        Assert.True(scopedAccess.GetProperty("yieldsRows").GetBoolean());
+
+        // 1. A rule that runs as the manager (every row), sent to the department user and to the all-rows user.
+        object[] recipients = [new { userId = scopedId, roleId = (Guid?)null }, new { userId = wideId, roleId = (Guid?)null }];
+        var created = await alice.PostJsonAsync("/api/monitoring/rules", RuleBody("Scoped: every row", managerId, objectId, Column("AccountNumber"), Column("DeviceId"), Column("LoginAt"), recipients));
+        Assert.True(created.StatusCode == HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var wideRuleId = (await created.ReadJsonAsync()).GetProperty("ruleId").GetGuid();
+
+        // Test run: the owner sees the matches of both departments; an administrator whose own access is DEPARTMENT sees the count only.
+        var ownerTest = await (await manager.PostAsync($"/api/monitoring/rules/{wideRuleId}/test", null)).ReadJsonAsync();
+        Assert.False(ownerTest.GetProperty("redacted").GetBoolean());
+        Assert.Equal(new[] { "ACC-7", "ACC-9" }, ownerTest.GetProperty("matches").EnumerateArray().Select(m => m.GetProperty("groupKey").GetString()).Order());
+        var scopedAdminTest = await (await scopedAdmin.PostAsync($"/api/monitoring/rules/{wideRuleId}/test", null)).ReadJsonAsync();
+        Assert.True(scopedAdminTest.GetProperty("redacted").GetBoolean());
+        Assert.Equal(2, scopedAdminTest.GetProperty("matchCount").GetInt32());
+        Assert.Empty(scopedAdminTest.GetProperty("matches").EnumerateArray());
+
+        await RunRuleAsync(wideRuleId);
+
+        // 2. Alert centre: full details for the owner and for the recipient with row scope ALL.
+        async Task<List<JsonElement>> AlertsAsync(HttpClient client, Guid ruleId) =>
+            (await (await client.GetAsync($"/api/monitoring/alerts?ruleId={ruleId}&pageSize=100")).ReadJsonAsync()).GetProperty("items").EnumerateArray().ToList();
+        foreach (var client in new[] { manager, wide })
+        {
+            var full = await AlertsAsync(client, wideRuleId);
+            Assert.Equal(new[] { "ACC-7", "ACC-9" }, full.Select(a => a.GetProperty("groupKey").GetString()).Order());
+            Assert.All(full, a => Assert.False(a.GetProperty("redacted").GetBoolean()));
+            Assert.Equal(3, full.Single(a => a.GetProperty("groupKey").GetString() == "ACC-9").GetProperty("summary").GetProperty("measure").GetDecimal());
+        }
+
+        // The DEPARTMENT viewers get the redacted form for every alert of that rule: titles only, also on the detail endpoint.
+        foreach (var client in new[] { scoped, scopedAdmin })
+        {
+            var hidden = await AlertsAsync(client, wideRuleId);
+            Assert.Equal(2, hidden.Count);
+            Assert.All(hidden, a =>
+            {
+                Assert.True(a.GetProperty("redacted").GetBoolean());
+                Assert.False(a.TryGetProperty("groupKey", out _));
+                Assert.False(a.TryGetProperty("summary", out _));
+                Assert.Equal("Scoped: every row", a.GetProperty("title").GetString());
+            });
+            var detail = await (await client.GetAsync($"/api/monitoring/alerts/{hidden[0].GetProperty("alertId").GetGuid()}")).ReadJsonAsync();
+            Assert.DoesNotContain("ACC-", detail.GetRawText(), StringComparison.Ordinal);
+        }
+
+        // 3. A rule that runs as the department user reads their department only; its owner keeps the details.
+        object[] ownRecipients = [new { userId = wideId, roleId = (Guid?)null }];
+        var ownCreated = await alice.PostJsonAsync("/api/monitoring/rules", RuleBody("Scoped: own department", scopedId, objectId, Column("AccountNumber"), Column("DeviceId"), Column("LoginAt"), ownRecipients));
+        Assert.True(ownCreated.StatusCode == HttpStatusCode.Created, await ownCreated.Content.ReadAsStringAsync());
+        var ownRuleId = (await ownCreated.ReadJsonAsync()).GetProperty("ruleId").GetGuid();
+        await RunRuleAsync(ownRuleId);
+        foreach (var client in new[] { scoped, wide })
+        {
+            var own = Assert.Single(await AlertsAsync(client, ownRuleId));
+            Assert.False(own.GetProperty("redacted").GetBoolean());
+            Assert.Equal("ACC-7", own.GetProperty("groupKey").GetString());
+            Assert.Equal(2, own.GetProperty("summary").GetProperty("measure").GetDecimal());
+        }
+
+        // An administrator with DEPARTMENT access is not the owner: redacted, even though these rows are in their department.
+        Assert.True(Assert.Single(await AlertsAsync(scopedAdmin, ownRuleId)).GetProperty("redacted").GetBoolean());
+
+        // 4. Digest: the preview and the email follow the same rule per recipient.
+        var preview = (await (await scoped.GetAsync("/api/monitoring/alerts/digest-preview")).ReadJsonAsync()).GetProperty("lines").EnumerateArray().ToList();
+        var hiddenLines = preview.Where(l => l.GetProperty("ruleName").GetString() == "Scoped: every row").ToList();
+        Assert.Equal(2, hiddenLines.Count);
+        Assert.All(hiddenLines, l =>
+        {
+            Assert.True(l.GetProperty("redacted").GetBoolean());
+            Assert.False(l.TryGetProperty("groupKey", out _));
+            Assert.False(l.TryGetProperty("measure", out _));
+        });
+        var ownLine = Assert.Single(preview, l => l.GetProperty("ruleName").GetString() == "Scoped: own department");
+        Assert.False(ownLine.GetProperty("redacted").GetBoolean());
+        Assert.Equal("ACC-7", ownLine.GetProperty("groupKey").GetString());
+
+        await RunDigestAsync(_db.Data.OrganizationAId);
+        var managerMail = await _factory.Emails.WaitForAsync(managerEmail, m => m.Subject.Contains("digest", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("ACC-9", managerMail.TextBody, StringComparison.Ordinal);
+        Assert.Contains("ACC-7", managerMail.TextBody, StringComparison.Ordinal);
+        var wideMail = await _factory.Emails.WaitForAsync(wideEmail, m => m.Subject.Contains("digest", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("ACC-9", wideMail.TextBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("Details hidden", wideMail.TextBody, StringComparison.Ordinal);
+        var scopedMail = await _factory.Emails.WaitForAsync(scopedEmail, m => m.Subject.Contains("digest", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("ACC-9", scopedMail.TextBody, StringComparison.Ordinal);
+        Assert.Contains("Details hidden", scopedMail.TextBody, StringComparison.Ordinal);
+        Assert.Contains("ACC-7", scopedMail.TextBody, StringComparison.Ordinal); // Their own rule's alert, within their department.
+
+        // 5. Organization B sees none of it.
+        var (_, bAdminEmail) = await InsertUserAsync(_db.Data.OrganizationBId, _db.Data.RoleAdminBId, "B Scope Admin");
+        using var bAdmin = await LoginAsync(bAdminEmail);
+        Assert.Empty(await AlertsAsync(bAdmin, wideRuleId));
+        Assert.Empty(await AlertsAsync(bAdmin, ownRuleId));
+        Assert.Equal(HttpStatusCode.NotFound, (await bAdmin.PostAsync($"/api/monitoring/rules/{wideRuleId}/test", null)).StatusCode);
+    }
+
+    [Fact]
     public async Task AccessRule_FlagsTheUser_StatusChangesNeedNotes_AndSuspensionIsAHumanAuditedAction()
     {
         using var alice = await LoginAsync(TestData.AliceEmail);
@@ -341,6 +493,28 @@ public sealed class MonitoringRulesTests : IDisposable
         await command.ExecuteNonQueryAsync();
     }
 
+    /// <summary>Sign-ins tagged with a department code: ACC-9 (three devices) belongs to finance, ACC-7 (two) and ACC-5 (one) to operations.</summary>
+    private async Task CreateScopedSignInTableAsync(string operations, string finance)
+    {
+        var local = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, JobRecurrence.ResolveTimeZone("Asia/Dubai")).DateTime;
+        await using var connection = new SqlConnection(_db.ConnectionString);
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            IF OBJECT_ID(N'dbo.MonitorScopedSignIns') IS NULL
+                CREATE TABLE dbo.MonitorScopedSignIns (SignInId int IDENTITY PRIMARY KEY, AccountNumber nvarchar(20) NOT NULL, DeviceId nvarchar(40) NOT NULL, LoginAt datetime2 NOT NULL, DepartmentCode nvarchar(20) NOT NULL);
+            DELETE FROM dbo.MonitorScopedSignIns;
+            INSERT INTO dbo.MonitorScopedSignIns (AccountNumber, DeviceId, LoginAt, DepartmentCode) VALUES
+                (N'ACC-9', N'DEV-A', DATEADD(hour, -1, @now), @finance), (N'ACC-9', N'DEV-B', DATEADD(hour, -2, @now), @finance), (N'ACC-9', N'DEV-C', DATEADD(hour, -3, @now), @finance),
+                (N'ACC-7', N'DEV-D', DATEADD(hour, -1, @now), @operations), (N'ACC-7', N'DEV-E', DATEADD(hour, -2, @now), @operations),
+                (N'ACC-5', N'DEV-F', DATEADD(hour, -1, @now), @operations);
+            """;
+        command.Parameters.AddWithValue("@now", local);
+        command.Parameters.AddWithValue("@operations", operations);
+        command.Parameters.AddWithValue("@finance", finance);
+        await command.ExecuteNonQueryAsync();
+    }
+
     private async Task<HttpClient> LoginAsync(string email, string password = TestData.UserPassword)
     {
         var client = _factory.CreateClient();
@@ -377,5 +551,11 @@ public sealed class MonitoringRulesTests : IDisposable
 
         await context.SaveChangesAsync();
         return (userId, email);
+    }
+
+    /// <summary>Runs an asynchronous clean-up when the test leaves scope.</summary>
+    private sealed class Deferred(Func<Task> cleanup) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync() => await cleanup();
     }
 }

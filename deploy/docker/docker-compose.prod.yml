@@ -19,6 +19,8 @@ services:
       context: ../..
       dockerfile: src/WabiInsight.Api/Dockerfile
     image: wabi-insight-api:latest
+    # The API keeps sending the e-mails it already holds for Email:ShutdownGraceSeconds (20) before it stops.
+    stop_grace_period: 30s
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__ConfigurationDatabase: ${WI_DB_CONNECTION}

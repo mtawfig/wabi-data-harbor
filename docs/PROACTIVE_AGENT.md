@@ -100,7 +100,7 @@ Permissions (D6): the Organization Administrator creates, edits, pauses and dele
 | Other organization users | — | Receive alerts only when named as recipients by the administrator (for example a Cyber Security role) | Receive |
 | Platform Administrator | Never sees rules, alerts or subscriptions of an organization; Platform Insights gets counts only (rules active, alerts per severity, deliveries) | — | — |
 
-Rules evaluate under their **owner's** permissions and never widen them; recipients see details only for objects they may read. Everything is tenant-filtered and ownership-checked (architectural invariants unchanged).
+Rules evaluate under their **owner's** permissions and never widen them; recipients see details only for objects they may read in full (the object, its columns and every row; a recipient limited to their department, section or own records sees the title only, unless they own the rule). Everything is tenant-filtered and ownership-checked (architectural invariants unchanged).
 
 ## 8. Natural-language rule authoring
 

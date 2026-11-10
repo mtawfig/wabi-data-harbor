@@ -89,12 +89,46 @@ public sealed class QueryPlanValidatorTests
         plan.Having = [new PlanCondition { Column = "total", Operator = "gt", Values = ["1000"] }];
         plan.Filters!.Conditions.Add(new PlanCondition { Column = "o.ShippedDate", Operator = "gt", CompareTo = "o.DueDate" });
         plan.Filters.Conditions.Add(new PlanCondition { Column = "c.DeptCode", Operator = "eq", Values = [AskerValues.Department] });
+        plan.Filters.Conditions.Add(new PlanCondition { Column = "o.OrderDate", Operator = "between", Values = ["$month_start-1m", "$today"] });
+        plan.Filters.Conditions.Add(new PlanCondition { Column = "o.OrderDate", Operator = "gte", Values = ["$year_start"] });
         Assert.Empty(QueryPlanValidator.Validate(plan));
 
         // The compared column is a referenced column, so the authorizer checks it like any other.
         Assert.Contains("o.DueDate", QueryPlanValidator.ReferencedColumns(plan).Select(c => c.ToString()));
         Assert.Contains("\"having\"", AnalysisPlanSchema.Json, StringComparison.Ordinal);
         Assert.Contains("\"compareTo\"", QueryPlanSchema.Defs, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("$today", "2026-11-10")]            // a Tuesday
+    [InlineData("$today-1d", "2026-11-09")]
+    [InlineData("$today+3w", "2026-12-01")]
+    [InlineData("$week_start", "2026-11-09")]       // Monday
+    [InlineData("$week_start-1w", "2026-11-02")]
+    [InlineData("$month_start", "2026-11-01")]
+    [InlineData("$month_start-1m", "2026-10-01")]
+    [InlineData("$month_start+1m", "2026-12-01")]
+    [InlineData("$quarter_start", "2026-10-01")]
+    [InlineData("$quarter_start-1q", "2026-07-01")]
+    [InlineData("$year_start", "2026-01-01")]
+    [InlineData("$year_start-1y", "2025-01-01")]
+    [InlineData("$today-1m", "2026-10-10")]
+    public void RelativeDates_ResolveAgainstToday(string placeholder, string expected)
+    {
+        Assert.True(RelativeDates.IsPlaceholder(placeholder));
+        Assert.True(RelativeDates.IsValid(placeholder));
+        Assert.Equal(expected, RelativeDates.Resolve(placeholder, new DateOnly(2026, 11, 10)));
+    }
+
+    [Fact]
+    public void RelativeDates_OnASunday_StartTheWeekOnTheMondayBefore_AndRejectAnythingElse()
+    {
+        Assert.Equal("2026-11-09", RelativeDates.Resolve("$week_start", new DateOnly(2026, 11, 15)));
+        Assert.Null(RelativeDates.Resolve("$today-7x", new DateOnly(2026, 11, 10)));
+        Assert.Null(RelativeDates.Resolve("$TODAY", new DateOnly(2026, 11, 10)));
+        Assert.Null(RelativeDates.Resolve("$year_start-99999y", new DateOnly(2026, 11, 10)));
+        Assert.False(RelativeDates.IsPlaceholder("$100"));
+        Assert.False(RelativeDates.IsPlaceholder(AskerValues.Department));
     }
 
     [Theory]
@@ -108,6 +142,10 @@ public sealed class QueryPlanValidatorTests
     [InlineData("filters", "o.OrderDate", "gt", null, "x.DueDate", "plan_column_invalid")]
     [InlineData("filters", "o.DeptCode", "contains", "$asker.department", null, "plan_asker_value_invalid")]
     [InlineData("filters", "o.DeptCode", "eq", "$asker.manager", null, "plan_asker_value_invalid")]
+    [InlineData("filters", "o.OrderDate", "contains", "$today", null, "plan_relative_date_invalid")]   // one day: comparisons only
+    [InlineData("filters", "o.OrderDate", "gte", "$today-7x", null, "plan_relative_date_invalid")]    // unknown unit
+    [InlineData("filters", "o.OrderDate", "gte", "$month_start-", null, "plan_relative_date_invalid")]
+    [InlineData("having", "total", "gt", "$today", null, "plan_filter_values_invalid")]
     public void Validate_RejectsMalformedHaving_Comparisons_AndPlaceholders(string where, string column, string op, string? value, string? compareTo, string code)
     {
         var plan = Plan(Good);

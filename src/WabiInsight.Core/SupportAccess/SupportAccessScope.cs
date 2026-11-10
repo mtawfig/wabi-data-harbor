@@ -35,8 +35,9 @@ public static class SupportAccessScope
             return "support_operation_not_available";
         }
 
-        if (definition.TargetType == SupportTargetType.None)
+        if (!definition.RequiresTarget)
         {
+            // Nothing to name per call. Roles an operation may assign are checked separately (RolesOutsideGrant).
             return null;
         }
 
@@ -46,6 +47,19 @@ public static class SupportAccessScope
         }
 
         return entry.TargetReferences.Any(t => string.Equals(t, targetReference.Trim(), StringComparison.OrdinalIgnoreCase)) ? null : "support_target_not_granted";
+    }
+
+    /// <summary>
+    /// For an operation whose targets are the roles it may assign (<see cref="SupportTargetType.AssignableRole"/>):
+    /// the requested role codes that are not among the granted roles. Empty means every requested role was approved;
+    /// a grant that lists no role approves none.
+    /// </summary>
+    public static IReadOnlyList<string> RolesOutsideGrant(IEnumerable<string> grantedRoleCodes, IEnumerable<string> requestedRoleCodes)
+    {
+        ArgumentNullException.ThrowIfNull(grantedRoleCodes);
+        ArgumentNullException.ThrowIfNull(requestedRoleCodes);
+        var granted = grantedRoleCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return requestedRoleCodes.Where(code => !granted.Contains(code)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     /// <summary>Validates a proposal: known operations, targets where required, no duplicates.</summary>
@@ -71,7 +85,7 @@ public static class SupportAccessScope
                 continue;
             }
 
-            if (definition.TargetType != SupportTargetType.None && entry.TargetReferences.Count == 0)
+            if (definition.RequiresTarget && entry.TargetReferences.Count == 0)
             {
                 errors.Add("support_target_required");
             }

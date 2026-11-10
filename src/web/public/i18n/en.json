@@ -412,6 +412,7 @@
       "plan_compare_invalid": "We couldn't prepare an answer for this question. Try rephrasing it more simply.",
       "plan_compare_type_mismatch": "We couldn't prepare an answer for this question. Try rephrasing it more simply.",
       "plan_asker_value_invalid": "Try rephrasing how the question refers to your own records.",
+      "plan_relative_date_invalid": "Try rephrasing the period the question asks about, for example: this month, or from 1 to 31 March 2026.",
       "asker_value_missing": "The question refers to your own records, department or section, but your profile doesn't include them. Ask your organization administrator to complete your profile."
     },
     "kpis": "Headline numbers",
@@ -478,6 +479,53 @@
         "employee": "your employee number",
         "department": "your department",
         "section": "your section"
+      },
+      "relative": {
+        "anchor": {
+          "today": "today",
+          "week_start": "the start of this week",
+          "month_start": "the start of this month",
+          "quarter_start": "the start of this quarter",
+          "year_start": "the start of this year"
+        },
+        "previous": {
+          "today": "yesterday",
+          "week_start": "the start of last week",
+          "month_start": "the start of last month",
+          "quarter_start": "the start of last quarter",
+          "year_start": "the start of last year"
+        },
+        "next": {
+          "today": "tomorrow",
+          "week_start": "the start of next week",
+          "month_start": "the start of next month",
+          "quarter_start": "the start of next quarter",
+          "year_start": "the start of next year"
+        },
+        "before": "{{amount}} before {{anchor}}",
+        "after": "{{amount}} after {{anchor}}",
+        "unit": {
+          "d": {
+            "one": "{{count}} day",
+            "other": "{{count}} days"
+          },
+          "w": {
+            "one": "{{count}} week",
+            "other": "{{count}} weeks"
+          },
+          "m": {
+            "one": "{{count}} month",
+            "other": "{{count}} months"
+          },
+          "q": {
+            "one": "{{count}} quarter",
+            "other": "{{count}} quarters"
+          },
+          "y": {
+            "one": "{{count}} year",
+            "other": "{{count}} years"
+          }
+        }
       },
       "op": {
         "eq": "{{column}} is {{value}}",
@@ -769,6 +817,7 @@
       "support_operation_not_granted": "This operation is not part of the approved grant.",
       "support_operation_not_available": "This operation is not available.",
       "support_target_not_granted": "This target was not approved.",
+      "support_role_not_granted": "The organization did not approve this role for the new user. Only the roles listed in the grant can be given.",
       "support_payload_required": "Fill in the operation fields.",
       "organization_profile_invalid": "Check the organization fields.",
       "support_access_denied": "Support access denied.",
@@ -1413,6 +1462,10 @@
     "laterPhase": "not executable yet",
     "targetUsers": "Users",
     "targetRoles": "Roles",
+    "targetAssignableRoles": "Roles the new user may be given",
+    "targetAssignableRolesHint": "Only these roles can be given when the user is created. Leave empty to create a user without roles. The organization administrator sees this list before approving.",
+    "assignableRoles": "Roles the new user may be given:",
+    "noAssignableRoles": "No role may be given: the new user is created without roles.",
     "newRole": "New role",
     "targetApplications": "Application ids",
     "targetApplicationsHint": "Comma-separated application ids.",
@@ -1479,7 +1532,7 @@
       "UpdateOrganizationSettings": "Update organization settings"
     },
     "operationHints": {
-      "CreateOrganizationUser": "Creates a user with the chosen roles; the temporary password is emailed to that user.",
+      "CreateOrganizationUser": "Creates a user. The roles are limited to the ones listed in the grant; the temporary password is emailed to that user.",
       "ResetOrganizationUserPassword": "Emails a new temporary password to the selected user(s).",
       "ConfigureRole": "Creates or edits the selected role(s): code, names, description, active flag.",
       "UpdateTablePermissions": "Changes table, column and row permissions of the selected role(s) on one object at a time.",
@@ -2045,7 +2098,7 @@
       "rule": "Rule",
       "deletedRule": "Deleted rule",
       "rulePaused": "The rule was paused: {{reason}} Fix it and resume the rule.",
-      "redacted": "You receive this alert, but you are not permitted to read the rule's data, so only the title and counts are shown.",
+      "redacted": "You receive this alert, but your permissions do not cover all the data this rule reads, so only the title and counts are shown.",
       "groupKey": "Group",
       "firstSeen": "First seen",
       "lastSeen": "Last seen",
@@ -2106,7 +2159,7 @@
       "testNow": "Test now",
       "testResult": "Test result",
       "testSummary": "{{matches}} match(es)",
-      "testRedacted": "You are not permitted to read this rule's data, so only the number of matches is shown.",
+      "testRedacted": "Your permissions do not cover all the data this rule reads, so only the number of matches is shown.",
       "wholeObject": "Whole object",
       "lastRun": "Last run",
       "openAlerts": "Open alerts",

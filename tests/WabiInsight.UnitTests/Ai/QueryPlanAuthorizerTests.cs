@@ -96,6 +96,27 @@ public sealed class QueryPlanAuthorizerTests
     }
 
     [Fact]
+    public void Authorize_ResolvesRelativeDates_AgainstTheDayOfTheRun_SoAStoredPlanFollowsTheCalendar()
+    {
+        var plan = Plan();
+        plan.Filters = new PlanFilterGroup { Conditions = [new PlanCondition { Column = "o.DeptCode", Operator = "gte", Values = ["$month_start"] }, new PlanCondition { Column = "o.DeptCode", Operator = "lte", Values = ["$today"] }] };
+
+        var (november, errors) = QueryPlanAuthorizer.Authorize(plan, App, Permissions([RowScope.All]), Mappings, today: new DateOnly(2026, 11, 10));
+        Assert.Empty(errors);
+        Assert.Equal(new Dictionary<string, string> { ["$month_start"] = "2026-11-01", ["$today"] = "2026-11-10" }, november!.AskerValues);
+
+        // The same stored plan, run by a periodic report a month later.
+        var (december, _) = QueryPlanAuthorizer.Authorize(plan, App, Permissions([RowScope.All]), Mappings, today: new DateOnly(2026, 12, 15));
+        Assert.Equal(new Dictionary<string, string> { ["$month_start"] = "2026-12-01", ["$today"] = "2026-12-15" }, december!.AskerValues);
+        Assert.Equal("$month_start", plan.Filters.Conditions[0].Values[0]);
+
+        plan.Filters.Conditions.Add(new PlanCondition { Column = "o.DeptCode", Operator = "gte", Values = ["$today-7x"] });
+        var (invalid, invalidErrors) = QueryPlanAuthorizer.Authorize(plan, App, Permissions([RowScope.All]), Mappings, today: new DateOnly(2026, 11, 10));
+        Assert.Null(invalid);
+        Assert.Contains(invalidErrors, e => e.Code == "plan_relative_date_invalid");
+    }
+
+    [Fact]
     public void Authorize_ChecksTheComparedColumnLikeAnyOtherReference()
     {
         var plan = Plan();

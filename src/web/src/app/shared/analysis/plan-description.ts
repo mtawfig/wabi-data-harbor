@@ -26,6 +26,10 @@ const ASKER: Record<string, string> = {
   '$asker.department': 'ask.plan.asker.department',
   '$asker.section': 'ask.plan.asker.section',
 };
+/** A date relative to today, written by the planner and resolved by the server at each run: `$month_start-1m`. */
+const RELATIVE_DATE = /^\$(today|week_start|month_start|quarter_start|year_start)(?:([+-])(\d{1,4})([dwmqy]))?$/;
+/** The unit each anchor moves by: one step back from the start of this month is "the start of last month". */
+const ANCHOR_UNIT: Record<string, string> = { today: 'd', week_start: 'w', month_start: 'm', quarter_start: 'q', year_start: 'y' };
 const UNITS = ['day', 'week', 'month', 'quarter', 'year'];
 const AGGREGATES = ['count', 'count_distinct', 'sum', 'avg', 'min', 'max'];
 const OPERATORS = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'between', 'contains', 'starts_with', 'is_null', 'not_null'];
@@ -84,10 +88,32 @@ export function describePanel(panel: AnalysisPanel, language: string, t: Transla
     return s ? item(s) : isolate(humanize(name));
   };
 
+  /** "$month_start-1m" → "the start of last month"; "$today-7d" → "7 days before today". Never the placeholder itself. */
+  const relativeDate = (anchor: string, sign: string | undefined, amount: string | undefined, unit: string | undefined): string => {
+    const count = Number(amount ?? 0);
+    if (!sign || !unit || count === 0) {
+      return t(`ask.plan.relative.anchor.${anchor}`);
+    }
+    const direction = sign === '-' ? 'before' : 'after';
+    if (count === 1 && unit === ANCHOR_UNIT[anchor]) {
+      return t(`ask.plan.relative.${direction === 'before' ? 'previous' : 'next'}.${anchor}`);
+    }
+    // Plural forms differ by language (Arabic has one, two, few and many); a missing form falls back to "other".
+    const category = new Intl.PluralRules(language === 'ar' ? 'ar' : 'en').select(count);
+    const params = { count: formatNumberValue(count, '1.0-0', language, false) };
+    const key = `ask.plan.relative.unit.${unit}.${category}`;
+    const span = t(key, params);
+    return t(`ask.plan.relative.${direction}`, { amount: span === key ? t(`ask.plan.relative.unit.${unit}.other`, params) : span, anchor: t(`ask.plan.relative.anchor.${anchor}`) });
+  };
+
   const value = (raw: string): string => {
     const asker = ASKER[raw.trim().toLowerCase()];
     if (asker) {
       return t(asker);
+    }
+    const relative = RELATIVE_DATE.exec(raw.trim());
+    if (relative) {
+      return relativeDate(relative[1], relative[2], relative[3], relative[4]);
     }
     if (/^(true|false)$/i.test(raw.trim())) {
       return t(raw.trim().toLowerCase() === 'true' ? 'ask.plan.yes' : 'ask.plan.no');

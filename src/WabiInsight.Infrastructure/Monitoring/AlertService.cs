@@ -15,7 +15,8 @@ namespace WabiInsight.Infrastructure.Monitoring;
 /// <summary>
 /// The alert centre (specification §35.2). An alert is visible to Organization Administrators, its rule's owner and
 /// author, and the rule's recipients (users or role members). Data-rule details (group values, measures) are shown
-/// only when the viewer's own permissions cover the rule's object and columns. Every status change is a human
+/// only to the rule's owner (whose permissions the rule ran under) and to viewers whose own permissions cover the
+/// rule's object and columns with row scope ALL; everyone else gets the redacted form. Every status change is a human
 /// action recorded as an <see cref="AlertEvent"/> and an audit entry; suspension (D2) goes through the user service.
 /// </summary>
 public sealed class AlertService : IAlertService
@@ -198,14 +199,14 @@ public sealed class AlertService : IAlertService
         foreach (var rule in rules.Values.Where(r => r.Kind == MonitoringRuleKind.Data))
         {
             viewer ??= await _permissions.ResolveForUserAsync(organizationId, Self, cancellationToken);
-            details[rule.RuleId] = RuleDefinition.Parse(rule.DefinitionJson).Data is { } data && RuleCatalog.CanSeeDetails(viewer, data);
+            details[rule.RuleId] = RuleDefinition.Parse(rule.DefinitionJson).Data is { } data && RuleCatalog.CanSeeDetails(viewer, data, rule.OwnerUserId);
         }
 
         return alerts.Select(a =>
         {
             var rule = rules.GetValueOrDefault(a.RuleId);
             var invalid = a.GroupKey == "rule_invalid";
-            // Data rules: details only with the viewer's own permissions; a deleted rule's data alert stays redacted.
+            // Data rules: details only for the owner or with the viewer's own permissions (row scope ALL); a deleted rule's data alert stays redacted.
             var redacted = !invalid && (rule is null ? a.SubjectUserId is null : rule.Kind == MonitoringRuleKind.Data && !details.GetValueOrDefault(a.RuleId));
             var subject = a.SubjectUserId is { } s && users.TryGetValue(s, out var u) ? new OrganizationUserSummary(u.UserId, u.FullName, u.Email, u.Status.ToString()) : null;
             return new AlertDto(

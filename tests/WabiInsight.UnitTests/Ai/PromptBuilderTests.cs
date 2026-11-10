@@ -52,6 +52,16 @@ public sealed class PromptBuilderTests
     }
 
     [Fact]
+    public void BuildPrompt_GivesTheOrganizationsLocalDate_AndTheRulesAskForRelativeDates()
+    {
+        var prompt = PromptBuilder.BuildPrompt(Snapshot, "Sales this month", "en", new DateOnly(2026, 11, 11));
+        Assert.EndsWith("Today is 2026-11-11. Produce the plan JSON now.", prompt.Request, StringComparison.Ordinal);
+        Assert.DoesNotContain("Today is", prompt.Catalogue, StringComparison.Ordinal);
+        Assert.Contains("$month_start", PromptBuilder.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("\"This month\" is gte $month_start and lt $month_start+1m", PromptBuilder.SystemPrompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildPrompt_PutsTheCatalogueFirst_AndKeepsItIdenticalAcrossQuestionsAndLanguages()
     {
         var english = PromptBuilder.BuildPrompt(Snapshot, "Total sales per month", "en");

@@ -12,7 +12,9 @@ namespace WabiInsight.Infrastructure.Reports;
 /// Renders a report to PDF with QuestPDF (specification §20, review C1): A4, the organization's logo on the
 /// top-left of every page, page numbers, executive summary, sections with charts (SVG drawn from the panel
 /// series) and tables (panel rows) and recommendations. Business content only: no methodology, query or row-count
-/// details (they stay in the server's query log). EN left-to-right with Inter, AR right-to-left with IBM Plex Sans Arabic.
+/// details (they stay in the server's query log). A table longer than <see cref="MaxTableRows"/> rows shows its first
+/// rows and says so in one line under it; every headline figure of a section is drawn.
+/// EN left-to-right with Inter, AR right-to-left with IBM Plex Sans Arabic.
 /// </summary>
 public sealed class QuestPdfReportRenderer : IReportRenderer
 {
@@ -22,7 +24,11 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
     private const string Blue = "#087DF2";
     private const string Muted = "#64748B";
     private const string Border = "#E2E8F0";
-    private const int MaxTableRows = 60;
+    /// <summary>A longer table shows its first rows only, with a line under it saying so (<see cref="ShortenedTableNote"/>).</summary>
+    internal const int MaxTableRows = 60;
+
+    /// <summary>Headline figures sit side by side, at most this many in a row; further figures wrap onto more rows.</summary>
+    internal const int MaxKpisPerRow = 5;
     private static readonly object FontLock = new();
     private static bool _fontsRegistered;
 
@@ -31,9 +37,13 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
         EnsureFonts();
     }
 
-    public byte[] RenderPdf(ReportRenderRequest request)
+    public byte[] RenderPdf(ReportRenderRequest request) => Compose(request).GeneratePdf();
+
+    /// <summary>The laid-out document, before it is written as a PDF.</summary>
+    internal static Document Compose(ReportRenderRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        EnsureFonts();
         var rtl = request.Language == "ar";
         var font = rtl ? ArabicFont : LatinFont;
         var culture = rtl ? CultureInfo.GetCultureInfo("ar-AE") : CultureInfo.InvariantCulture;
@@ -121,12 +131,15 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                             sec.Item().PaddingTop(6).PaddingBottom(2).Text($"{number.ToString(culture)}. {StripNumbering(section.Title)}").FontSize(15).SemiBold().FontColor(Ocean);
                             Paragraphs(sec, section.Body);
                             var kpis = section.Panels.Where(i => request.Panels[i].Plan.Visualization?.Type == "kpi" && request.Panels[i].Result.Rows.Count > 0).ToList();
-                            if (kpis.Count > 0)
+                            // Every headline figure is drawn: more than one row's worth wraps onto further rows of cards of the same width.
+                            var kpiRows = KpiRows(kpis);
+                            for (var rowIndex = 0; rowIndex < kpiRows.Count; rowIndex++)
                             {
-                                sec.Item().PaddingTop(4).Row(row =>
+                                var kpiRow = kpiRows[rowIndex];
+                                sec.Item().PaddingTop(rowIndex == 0 ? 4 : 8).Row(row =>
                                 {
                                     row.Spacing(8);
-                                    foreach (var i in kpis.Take(5))
+                                    foreach (var i in kpiRow)
                                     {
                                         var panel = request.Panels[i];
                                         var numeric = panel.Result.Columns.ToList().FindIndex(c => c.IsNumeric);
@@ -137,6 +150,12 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                                             kpi.Item().Height(25).ScaleToFit().Text(FormatValue(value, isNumeric: true, culture)).FontSize(18).SemiBold().FontColor(Blue);
                                             kpi.Item().Text(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective).FontSize(8.5f).FontColor(Muted);
                                         });
+                                    }
+
+                                    // A shorter last row keeps the card width of the rows above it.
+                                    for (var empty = kpiRow.Count; empty < kpiRows[0].Count; empty++)
+                                    {
+                                        row.RelativeItem();
                                     }
                                 });
                             }
@@ -156,6 +175,10 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                                     else
                                     {
                                         figure.Item().Element(c => Table(c, panel, culture));
+                                        if (ShortenedTableNote(panel.Result, MaxTableRows, rtl, culture) is { } note)
+                                        {
+                                            figure.Item().PaddingTop(3).Text(note).FontSize(8.5f).FontColor(Muted);
+                                        }
                                     }
 
                                 });
@@ -189,7 +212,7 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                 page.Footer().Element(footer => Footer(footer, generatedOn, rtl));
             });
         });
-        return document.GeneratePdf();
+        return document;
     }
 
     private static void Header(IContainer container, ReportRenderRequest request, string title, bool rtl)
@@ -295,6 +318,52 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                 }
             }
         });
+    }
+
+    /// <summary>
+    /// The line under a table that shows only its first rows, in the reader's words and the document's language; null
+    /// when the table shows everything it was given. A reader must never take the first rows for the whole list. When
+    /// the result itself stopped at its size limit, more exists than was counted, and the sentence says "more than".
+    /// </summary>
+    internal static string? ShortenedTableNote(AnalysisResult result, int maxRows, bool rtl, CultureInfo culture)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        var available = result.Rows.Count;
+        if (available <= maxRows)
+        {
+            return null;
+        }
+
+        var shown = maxRows.ToString("#,0", culture);
+        var total = Math.Max(available, result.RowCount).ToString("#,0", culture);
+        var inExcel = available.ToString("#,0", culture);
+        if (result.Truncated)
+        {
+            return rtl
+                ? $"يعرض هذا الجدول أول {shown} من أصل أكثر من {total}. ملف Excel يتضمن أول {inExcel}."
+                : $"Showing the first {shown} of more than {total}. The Excel export has the first {inExcel}.";
+        }
+
+        return rtl
+            ? $"يعرض هذا الجدول أول {shown} من أصل {total}. القائمة الكاملة متوفرة في ملف Excel."
+            : $"Showing the first {shown} of {total}. The Excel export has the full list.";
+    }
+
+    /// <summary>
+    /// Splits the headline figures of a section into rows of at most <see cref="MaxKpisPerRow"/>, as evenly as possible
+    /// (seven become four and three), so every figure is drawn and no row holds a lone card under a full one.
+    /// </summary>
+    internal static IReadOnlyList<IReadOnlyList<T>> KpiRows<T>(IReadOnlyList<T> kpis)
+    {
+        ArgumentNullException.ThrowIfNull(kpis);
+        if (kpis.Count == 0)
+        {
+            return [];
+        }
+
+        var rows = (kpis.Count + MaxKpisPerRow - 1) / MaxKpisPerRow;
+        var perRow = (kpis.Count + rows - 1) / rows;
+        return kpis.Chunk(perRow).Select(chunk => (IReadOnlyList<T>)chunk).ToList();
     }
 
     /// <summary>The width of a chart inside its figure frame (A4 less the page margins, the frame border and padding), in points.</summary>
