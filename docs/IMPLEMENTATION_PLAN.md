@@ -34,6 +34,7 @@
 | P0.3 | `wi/p00-03-version-2-scope` | Version 2 scope and requirements: [`VERSION_2.md`](./VERSION_2.md) (owner decisions, items carried over from the review, proposals, order). No application code. |
 | P0.4 | `wi/p00-04-v2-deployment-plans` | Version 2 scope, additions: three service plans per organization (Cloud, On-premises, Hybrid), an organization's own AI model at a private address, sign-in with classic Active Directory. In [`VERSION_2.md`](./VERSION_2.md). No application code. |
 | P0.5 | `wi/p00-05-v2-organization-smtp-connectivity` | Version 2 scope, additions: an organization's own e-mail server in every plan; the rule "the organization's own, or the platform's default"; the ways to reach an organization's systems from the owner's cloud, with a recommendation. In [`VERSION_2.md`](./VERSION_2.md). No application code. |
+| P0.6 | `wi/p00-06-v2-outputs-branding` | Version 2 scope, additions: decisions on an organization's mail server (down, how to get one); the organization's logo and name on every output, the output's language from the question, a template gallery, the "Powered by" line. In [`VERSION_2.md`](./VERSION_2.md). No application code. |
 
 ### Phase 1 — Foundation and Multi-Tenant Identity
 **Acceptance:** A Platform Administrator can be bootstrapped and sign in; the schema makes an organization user without a valid organization impossible; CI is green on both stacks.
@@ -198,6 +199,7 @@ Work the owner has moved to version 2. Nothing here is built in version 1; each 
 | Sign in with classic Active Directory, without a password on domain computers | 2026-11-10 | `VERSION_2.md` C11 |
 | An organization's own e-mail server (SMTP) in every plan; the platform's when none is set | 2026-11-10 | `VERSION_2.md` G5 |
 | Reaching an organization's systems from the owner's cloud: options and recommendation, chosen when the step is reached | 2026-11-10 | `VERSION_2.md` G6 |
+| The organization's logo and name on every output; the output's language from the question; a template gallery per kind of output; "Powered by Wabi Insight by WabiTex Solutions FZE" on every output | 2026-11-10 | `VERSION_2.md` H1–H4 |
 
 Fixes are not version 2 (owner decision, 2026-11-10): what the review of 2026-11-10 found is fixed in version 1, in P13.25–P13.30 (Phase 13).
 
