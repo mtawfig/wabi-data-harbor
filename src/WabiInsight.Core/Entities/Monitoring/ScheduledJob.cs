@@ -79,6 +79,12 @@ public class ScheduledJob
 
     public DateTimeOffset? LastRunAt { get; set; }
 
+    /// <summary>
+    /// When the job last finished without an error (P13.27). A job that works on "everything since last time" (the
+    /// alert digest) counts from here, so a failed run or a retry never skips a period.
+    /// </summary>
+    public DateTimeOffset? LastSuccessAt { get; set; }
+
     public JobOutcome? LastOutcome { get; set; }
 
     public string? LastError { get; set; }

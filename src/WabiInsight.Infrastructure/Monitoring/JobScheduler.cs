@@ -25,6 +25,27 @@ public interface IScheduledJobHandler
 }
 
 /// <summary>
+/// Thrown by a handler whose work failed for a reason that may pass (a source that did not answer), after it has
+/// recorded the failure in its own log. The scheduler counts the run as failed and retries it (P13.27).
+/// </summary>
+public sealed class ScheduledJobFailedException : Exception
+{
+    public ScheduledJobFailedException(string code)
+        : base(code)
+    {
+    }
+
+    public ScheduledJobFailedException()
+    {
+    }
+
+    public ScheduledJobFailedException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
+/// <summary>
 /// The scheduling core (specification §35.4), separated from the hosted service so tests can drive it: provisions
 /// the standing per-organization jobs, takes due jobs with an atomic lease (one instance wins, the others see
 /// zero rows affected) and runs each in its own scope under the platform scheduler principal.
@@ -98,11 +119,25 @@ public sealed partial class ScheduledJobRunner
 
         if (_context.ChangeTracker.HasChanges())
         {
-            await _context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException ex) when (IsDuplicateJob(ex))
+            {
+                // Another instance created the same job in the same moment: the unique index kept one. Nothing is lost;
+                // this pass is dropped and the next tick sees the other instance's rows.
+                _context.ChangeTracker.Clear();
+                return 0;
+            }
         }
 
         return created;
     }
+
+    /// <summary>SQL Server 2601 / 2627: a second row for the same (organization, job type, target).</summary>
+    private static bool IsDuplicateJob(DbUpdateException exception)
+        => exception.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 };
 
     private async Task<int> SyncRuleJobsAsync(Dictionary<Guid, string> timeZones, DateTimeOffset now, CancellationToken cancellationToken)
     {
@@ -113,8 +148,9 @@ public sealed partial class ScheduledJobRunner
         var created = 0;
         foreach (var rule in rules.Where(r => r.IsActive && timeZones.ContainsKey(r.OrganizationId)))
         {
-            if (jobs.Any(j => j.TargetId == rule.RuleId && j.OrganizationId == rule.OrganizationId))
+            if (jobs.FirstOrDefault(j => j.TargetId == rule.RuleId && j.OrganizationId == rule.OrganizationId) is { } existing)
             {
+                FollowTimeZone(existing, timeZones[rule.OrganizationId], now);
                 continue;
             }
 
@@ -143,8 +179,9 @@ public sealed partial class ScheduledJobRunner
         var created = 0;
         foreach (var subscription in subscriptions.Where(s => s.IsActive && timeZones.ContainsKey(s.OrganizationId)))
         {
-            if (jobs.Any(j => j.TargetId == subscription.SubscriptionId && j.OrganizationId == subscription.OrganizationId))
+            if (jobs.FirstOrDefault(j => j.TargetId == subscription.SubscriptionId && j.OrganizationId == subscription.OrganizationId) is { } existing)
             {
+                FollowTimeZone(existing, timeZones[subscription.OrganizationId], now);
                 continue;
             }
 
@@ -162,6 +199,25 @@ public sealed partial class ScheduledJobRunner
         }
 
         return created;
+    }
+
+    /// <summary>
+    /// An organization changed its time zone: its rule and report jobs keep their local time ("every day at 08:00")
+    /// and move to the new zone, like the standing jobs do (P13.27). A retry that is already waiting is left alone.
+    /// </summary>
+    private static void FollowTimeZone(ScheduledJob job, string timeZone, DateTimeOffset now)
+    {
+        if (string.Equals(job.TimeZone, timeZone, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        job.TimeZone = timeZone;
+        job.UpdatedAt = now;
+        if (job.RecurrenceKind != JobRecurrenceKind.Interval)
+        {
+            job.NextRunAt = JobRecurrence.NextRun(job, now);
+        }
     }
 
     /// <summary>Runs every due job this instance manages to lease. Returns how many ran here.</summary>
@@ -208,6 +264,10 @@ public sealed partial class ScheduledJobRunner
         await _context.Entry(job).ReloadAsync(cancellationToken);
         var watch = Stopwatch.StartNew();
         string? error = null;
+        // A run that outlasts its lease would be started a second time by another instance (or the next tick): the
+        // lease is extended while the handler works, and stops being extended the moment it returns or the process dies.
+        using var renewal = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var renewing = RenewLeaseAsync(jobId, owner, renewal.Token);
         try
         {
             await using var scope = _scopes.CreateAsyncScope();
@@ -225,6 +285,11 @@ public sealed partial class ScheduledJobRunner
             error = ex.Message.Length <= 1000 ? ex.Message : ex.Message[..1000];
             LogJobFailed(_logger, ex, job.JobType, job.JobId, job.OrganizationId);
         }
+        finally
+        {
+            await renewal.CancelAsync();
+            await renewing;
+        }
 
         var finished = _clock.UtcNow;
         job.LastRunAt = finished;
@@ -232,7 +297,17 @@ public sealed partial class ScheduledJobRunner
         job.LastOutcome = error is null ? JobOutcome.Succeeded : JobOutcome.Failed;
         job.LastError = error;
         job.ConsecutiveFailures = error is null ? 0 : job.ConsecutiveFailures + 1;
-        job.NextRunAt = JobRecurrence.NextRun(job, finished);
+        if (error is null)
+        {
+            job.LastSuccessAt = finished;
+            job.NextRunAt = JobRecurrence.NextRun(job, finished);
+        }
+        else
+        {
+            // Retried soon (5, 15, 60 minutes), then back to the regular schedule: a daily job no longer waits a day.
+            job.NextRunAt = JobRecurrence.NextRunAfterFailure(job, finished, job.ConsecutiveFailures);
+        }
+
         job.LeaseOwner = null;
         job.LeaseUntil = null;
         job.UpdatedAt = finished;
@@ -245,8 +320,38 @@ public sealed partial class ScheduledJobRunner
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        _ = owner;
     }
+
+    /// <summary>Extends the lease at a third of its length while the job runs. Uses its own scope: the handler owns this one's context.</summary>
+    private async Task RenewLeaseAsync(Guid jobId, string owner, CancellationToken cancellationToken)
+    {
+        var lease = TimeSpan.FromMinutes(Math.Clamp(_options.LeaseMinutes, 1, 120));
+        try
+        {
+            using var timer = new PeriodicTimer(lease / 3);
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await using var scope = _scopes.CreateAsyncScope();
+                scope.ServiceProvider.GetRequiredService<ITenantContextInitializer>().Initialize(SchedulerPrincipal);
+                var until = _clock.UtcNow.Add(lease);
+                await scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>().ScheduledJobs
+                    .Where(j => j.JobId == jobId && j.LeaseOwner == owner)
+                    .ExecuteUpdateAsync(s => s.SetProperty(j => j.LeaseUntil, until), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The run finished.
+        }
+        catch (Exception ex)
+        {
+            // Renewal is a safeguard; a failure here must not fail the job. The lease then simply ends at its original time.
+            LogLeaseRenewalFailed(_logger, ex, jobId);
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The lease of scheduled job {JobId} could not be extended.")]
+    private static partial void LogLeaseRenewalFailed(ILogger logger, Exception exception, Guid jobId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Scheduled job {JobType} {JobId} (organization {OrganizationId}) failed.")]
     private static partial void LogJobFailed(ILogger logger, Exception exception, ScheduledJobType jobType, Guid jobId, Guid? organizationId);

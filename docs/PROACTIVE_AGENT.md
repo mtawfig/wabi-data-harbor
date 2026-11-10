@@ -108,7 +108,7 @@ A new structured output schema `wabi_monitoring_rule` lets a user describe a rul
 
 ## 9. Scheduler
 
-One `BackgroundService` in the API (like `EmailOutboxWorker`), ticking every minute: it takes due rows from `ScheduledJobs` (`JobId`, `JobType`, `OrganizationId`, `TargetId`, `NextRunAt`, `LeaseOwner`, `LeaseUntil`, `LastRunAt`, `LastOutcome`) with an atomic lease, so several API instances never run the same job twice. Missed runs (the API was down) run once on start, not once per missed slot. Organization time zone and the UTC `datetime2` convention apply. Rule evaluations of kind *access* on *every operation* are not scheduled: they run inline when a fact is written, with the cooldown preventing floods.
+One `BackgroundService` in the API (like `EmailOutboxWorker`), ticking every minute: it takes due rows from `ScheduledJobs` (`JobId`, `JobType`, `OrganizationId`, `TargetId`, `NextRunAt`, `LeaseOwner`, `LeaseUntil`, `LastRunAt`, `LastOutcome`) with an atomic lease, so several API instances never run the same job twice. Missed runs (the API was down) run once on start, not once per missed slot. A failed run is retried after 5, 15 and 60 minutes and then waits for its regular schedule; the lease is extended while a job runs; one job exists per organization, type and target (unique index); `LastSuccessAt` records the last run without an error and is what the daily digest counts from (P13.27). Organization time zone and the UTC `datetime2` convention apply. Rule evaluations of kind *access* on *every operation* are not scheduled: they run inline when a fact is written, with the cooldown preventing floods.
 
 ## 10. Data model additions (one SQL Server database)
 

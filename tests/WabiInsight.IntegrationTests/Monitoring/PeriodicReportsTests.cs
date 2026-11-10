@@ -214,6 +214,164 @@ public sealed class PeriodicReportsTests : IDisposable
         }
     }
 
+    private const string TicketsSinceFixedDatePlan = """
+        {"objective":"Tickets by impact since January","source":{"schema":"dbo","object":"SupportTickets","alias":"t"},"joins":[],
+         "select":[{"alias":"impact","column":"t.Impact","aggregate":null,"dateTrunc":null},{"alias":"tickets","column":null,"aggregate":"count","dateTrunc":null}],
+         "filters":{"logic":"and","conditions":[{"column":"t.CreatedAt","operator":"gte","values":["2026-01-01"],"compareTo":null}],"groups":[]},
+         "groupBy":["impact"],"orderBy":[{"alias":"tickets","direction":"desc"}],"limit":null,"visualization":{"type":"bar","x":"impact","y":["tickets"]},"assumptions":[]}
+        """;
+
+    private const string TicketsThisYearPlan = """
+        {"objective":"Tickets by impact this year","source":{"schema":"dbo","object":"SupportTickets","alias":"t"},"joins":[],
+         "select":[{"alias":"impact","column":"t.Impact","aggregate":null,"dateTrunc":null},{"alias":"tickets","column":null,"aggregate":"count","dateTrunc":null}],
+         "filters":{"logic":"and","conditions":[{"column":"t.CreatedAt","operator":"gte","values":["$year_start"],"compareTo":null}],"groups":[]},
+         "groupBy":["impact"],"orderBy":[{"alias":"tickets","direction":"desc"}],"limit":null,"visualization":{"type":"bar","x":"impact","y":["tickets"]},"assumptions":[]}
+        """;
+
+    [Fact]
+    public async Task AnAdministratorManagesAnothersReport_AnEndedShareStopsOne_FixedDatesAreFlagged_AndJobsFollowTheTimeZone()
+    {
+        FakeAiProvider.Script = null;
+        string? originalTimeZone = null;
+        try
+        {
+            using var alice = await LoginAsync(TestData.AliceEmail); // Organization Administrator of A
+            var (applicationId, _, _) = await PrepareApplicationAsync(alice, "reports-own");
+            Assert.Equal(HttpStatusCode.Created, (await alice.PostJsonAsync("/api/support/tickets", new { ticketType = "Request", impact = "High", subject = "Report seed", description = "Seed ticket.", requiresSupportAccess = false })).StatusCode);
+            var roles = (await (await alice.GetAsync("/api/roles")).ReadJsonAsync()).EnumerateArray().ToList();
+            var managementId = roles.Single(r => r.GetProperty("roleCode").GetString() == "Management").GetProperty("roleId").GetGuid();
+            var (ownerId, ownerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId, "Owning Manager");
+            var (borrowerId, borrowerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId, "Borrowing Manager");
+            using var owner = await LoginAsync(ownerEmail);
+            using var borrower = await LoginAsync(borrowerEmail);
+
+            async Task<Guid> AskAsync(HttpClient client, string plan, string question)
+            {
+                FakeAiProvider.Script = request => request.SchemaName == "wabi_interpretation" ? """{"narrative":"n","highlights":[]}""" : plan;
+                var ask = await client.PostJsonAsync("/api/ai/ask", new { applicationId, question, language = "en" });
+                Assert.True(ask.StatusCode == HttpStatusCode.OK, await ask.Content.ReadAsStringAsync());
+                FakeAiProvider.Script = null;
+                return (await ask.ReadJsonAsync()).GetProperty("historyId").GetGuid();
+            }
+
+            var fixedHistory = await AskAsync(owner, TicketsSinceFixedDatePlan, "Tickets by impact since 1 January 2026");
+            var relativeHistory = await AskAsync(owner, TicketsThisYearPlan, "Tickets by impact this year");
+            var borrowersOwn = await AskAsync(borrower, TicketsByImpactPlan, "Tickets by impact");
+
+            // 1. Fixed dates are flagged where a report is set up, and on the report; an analysis that follows the calendar is not.
+            var ownerAnalyses = (await (await owner.GetAsync("/api/subscriptions/analyses")).ReadJsonAsync()).EnumerateArray().ToList();
+            Assert.Equal(new[] { "2026-01-01" }, ownerAnalyses.Single(a => a.GetProperty("historyId").GetGuid() == fixedHistory).GetProperty("fixedDates").EnumerateArray().Select(d => d.GetString()));
+            Assert.Empty(ownerAnalyses.Single(a => a.GetProperty("historyId").GetGuid() == relativeHistory).GetProperty("fixedDates").EnumerateArray());
+            var created = await owner.PostJsonAsync("/api/subscriptions", Body("Owner daily since January", fixedHistory, [], "Daily"));
+            Assert.True(created.StatusCode == HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+            var ownSubscription = await created.ReadJsonAsync();
+            var ownSubscriptionId = ownSubscription.GetProperty("subscriptionId").GetGuid();
+            Assert.Equal("2026-01-01", Assert.Single(ownSubscription.GetProperty("fixedDates").EnumerateArray()).GetString());
+
+            // 2. The administrator manages a report someone else set up, on an analysis that is not shared with the administrator.
+            var aliceOwn = (await (await alice.GetAsync("/api/subscriptions/analyses")).ReadJsonAsync()).EnumerateArray().Select(a => a.GetProperty("historyId").GetGuid()).ToList();
+            Assert.DoesNotContain(fixedHistory, aliceOwn);
+            var creatorsChoices = (await (await alice.GetAsync($"/api/subscriptions/analyses?subscriptionId={ownSubscriptionId}")).ReadJsonAsync()).EnumerateArray().ToList();
+            Assert.True(creatorsChoices.Single(a => a.GetProperty("historyId").GetGuid() == fixedHistory).GetProperty("isOwn").GetBoolean()); // the creator's own
+            Assert.Contains(creatorsChoices, a => a.GetProperty("historyId").GetGuid() == relativeHistory);
+            Assert.DoesNotContain(creatorsChoices, a => a.GetProperty("historyId").GetGuid() == borrowersOwn);
+
+            var edited = await alice.PutAsJsonAsync(new Uri($"/api/subscriptions/{ownSubscriptionId}", UriKind.Relative), Body("Owner daily (edited by admin)", fixedHistory, [ownerId, borrowerId], "Daily"));
+            Assert.True(edited.StatusCode == HttpStatusCode.OK, await edited.Content.ReadAsStringAsync());
+            var afterEdit = await edited.ReadJsonAsync();
+            Assert.Equal("Owner daily (edited by admin)", afterEdit.GetProperty("name").GetString());
+            Assert.Equal(2, afterEdit.GetProperty("recipients").GetArrayLength());
+            Assert.Equal(ownerId, afterEdit.GetProperty("createdByUserId").GetGuid()); // still the creator's report
+            Assert.Equal(HttpStatusCode.OK, (await alice.PostAsync($"/api/subscriptions/{ownSubscriptionId}/pause", null)).StatusCode);
+            var resumed = await alice.PostAsync($"/api/subscriptions/{ownSubscriptionId}/resume", null);
+            Assert.True(resumed.StatusCode == HttpStatusCode.OK, await resumed.Content.ReadAsStringAsync());
+            Assert.True((await resumed.ReadJsonAsync()).GetProperty("isActive").GetBoolean());
+            // The analysis stays one the creator may use: another user's analysis cannot be put under their report.
+            var swapped = await alice.PutAsJsonAsync(new Uri($"/api/subscriptions/{ownSubscriptionId}", UriKind.Relative), Body("Owner daily (edited by admin)", borrowersOwn, [ownerId], "Daily"));
+            Assert.Equal(HttpStatusCode.BadRequest, swapped.StatusCode);
+            Assert.Equal("subscription_analysis_not_available", (await swapped.ReadJsonAsync()).GetProperty("detail").GetString());
+            // Switching to another analysis of the creator's is fine.
+            Assert.Equal(HttpStatusCode.OK, (await alice.PutAsJsonAsync(new Uri($"/api/subscriptions/{ownSubscriptionId}", UriKind.Relative), Body("Owner daily (edited by admin)", relativeHistory, [ownerId], "Daily"))).StatusCode);
+            Assert.Empty((await (await alice.GetAsync($"/api/subscriptions/{ownSubscriptionId}")).ReadJsonAsync()).GetProperty("fixedDates").EnumerateArray());
+
+            // 3. A report built on a shared analysis stops when the share ends; the creator's own report keeps running.
+            Assert.Equal(HttpStatusCode.OK, (await owner.PostJsonAsync($"/api/history/{fixedHistory}/shares", new { recipientUserIds = new[] { borrowerId } })).StatusCode);
+            var borrowed = await borrower.PostJsonAsync("/api/subscriptions", Body("Borrowed daily", fixedHistory, [], "Daily"));
+            Assert.True(borrowed.StatusCode == HttpStatusCode.Created, await borrowed.Content.ReadAsStringAsync());
+            var borrowedId = (await borrowed.ReadJsonAsync()).GetProperty("subscriptionId").GetGuid();
+            await RunScheduledAsync(borrowedId);
+            Assert.Equal(1, (await (await borrower.GetAsync($"/api/subscriptions/{borrowedId}/deliveries")).ReadJsonAsync()).GetProperty("totalCount").GetInt32());
+
+            var shares = await (await owner.GetAsync($"/api/history/{fixedHistory}/shares")).ReadJsonAsync();
+            var shareId = shares.EnumerateArray().Single(x => x.GetProperty("recipientUserId").GetGuid() == borrowerId).GetProperty("shareId").GetGuid();
+            Assert.True((await owner.DeleteAsync(new Uri($"/api/history/{fixedHistory}/shares/{shareId}", UriKind.Relative))).IsSuccessStatusCode);
+
+            await RunScheduledAsync(borrowedId);
+            var stopped = await (await borrower.GetAsync($"/api/subscriptions/{borrowedId}")).ReadJsonAsync();
+            Assert.False(stopped.GetProperty("isActive").GetBoolean());                                   // at once, not after three runs
+            Assert.Equal("subscription_share_ended", stopped.GetProperty("pausedReason").GetString());
+            Assert.False(stopped.TryGetProperty("nextRunAt", out _));
+            Assert.Equal(1, (await (await borrower.GetAsync($"/api/subscriptions/{borrowedId}/deliveries")).ReadJsonAsync()).GetProperty("totalCount").GetInt32()); // nothing new was sent
+            var notifications = (await (await borrower.GetAsync("/api/notifications?unreadOnly=true")).ReadJsonAsync()).GetProperty("items").EnumerateArray();
+            Assert.Contains(notifications, n => n.GetProperty("notificationType").GetString() == "Reports.SubscriptionPaused" && n.GetProperty("entityId").GetString() == borrowedId.ToString());
+            // It cannot be resumed while the share is gone, by its creator or by the administrator.
+            Assert.Equal(HttpStatusCode.BadRequest, (await borrower.PostAsync($"/api/subscriptions/{borrowedId}/resume", null)).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await alice.PostAsync($"/api/subscriptions/{borrowedId}/resume", null)).StatusCode);
+            await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+            {
+                var job = await context.ScheduledJobs.AsNoTracking().SingleAsync(j => j.JobType == ScheduledJobType.ReportSubscription && j.TargetId == borrowedId);
+                Assert.False(job.IsEnabled);
+                Assert.Equal(JobOutcome.Succeeded, job.LastOutcome); // a withdrawn share is not a fault to retry
+            }
+
+            await RunScheduledAsync(ownSubscriptionId);
+            Assert.True((await (await owner.GetAsync($"/api/subscriptions/{ownSubscriptionId}")).ReadJsonAsync()).GetProperty("isActive").GetBoolean());
+
+            // 4. The organization moves to another time zone: its report jobs keep their local time (07:00) there.
+            await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+            {
+                var organization = await context.Organizations.SingleAsync(o => o.OrganizationId == _db.Data.OrganizationAId);
+                originalTimeZone = organization.TimeZone;
+                organization.TimeZone = "Asia/Tokyo";
+                await context.SaveChangesAsync();
+            }
+
+            await EnsureJobsAsync();
+            await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+            {
+                var job = await context.ScheduledJobs.AsNoTracking().SingleAsync(j => j.JobType == ScheduledJobType.ReportSubscription && j.TargetId == ownSubscriptionId);
+                Assert.Equal("Asia/Tokyo", job.TimeZone);
+                var local = TimeZoneInfo.ConvertTime(job.NextRunAt, TimeZoneInfo.FindSystemTimeZoneById("Asia/Tokyo"));
+                Assert.Equal(new TimeOnly(7, 0), TimeOnly.FromDateTime(local.DateTime));
+                Assert.True(job.NextRunAt > DateTimeOffset.UtcNow);
+                // Organization B is untouched.
+                Assert.DoesNotContain(await context.ScheduledJobs.AsNoTracking().Where(j => j.OrganizationId == _db.Data.OrganizationBId).Select(j => j.TimeZone).ToListAsync(), zone => zone == "Asia/Tokyo");
+            }
+        }
+        finally
+        {
+            FakeAiProvider.Script = null;
+            if (originalTimeZone is not null)
+            {
+                await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+                {
+                    var organization = await context.Organizations.SingleAsync(o => o.OrganizationId == _db.Data.OrganizationAId);
+                    organization.TimeZone = originalTimeZone;
+                    await context.SaveChangesAsync();
+                }
+
+                await EnsureJobsAsync();
+            }
+        }
+    }
+
+    private async Task EnsureJobsAsync()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<ITenantContextInitializer>().Initialize(ScheduledJobRunner.SchedulerPrincipal);
+        await scope.ServiceProvider.GetRequiredService<ScheduledJobRunner>().EnsureStandingJobsAsync();
+    }
+
     private static object Body(string name, Guid historyId, Guid[] recipients, string recurrence = "Weekly") => new
     {
         name,

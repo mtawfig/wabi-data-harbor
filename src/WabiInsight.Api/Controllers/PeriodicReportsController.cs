@@ -27,8 +27,8 @@ public sealed class PeriodicReportsController : ControllerBase
         => Ok(await _reports.ListAsync(cancellationToken));
 
     [HttpGet("analyses")]
-    public async Task<ActionResult<IReadOnlyList<SubscriptionAnalysisOption>>> Analyses(CancellationToken cancellationToken)
-        => Ok(await _reports.ListAnalysesAsync(cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<SubscriptionAnalysisOption>>> Analyses([FromQuery] Guid? subscriptionId, CancellationToken cancellationToken)
+        => Ok(await _reports.ListAnalysesAsync(subscriptionId, cancellationToken));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ReportSubscriptionDto>> Get(Guid id, CancellationToken cancellationToken)

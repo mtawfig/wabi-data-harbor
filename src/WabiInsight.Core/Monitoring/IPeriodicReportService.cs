@@ -6,7 +6,8 @@ using WabiInsight.Core.Organizations;
 namespace WabiInsight.Core.Monitoring;
 
 /// <summary>A saved analysis the caller may schedule: their own, or one shared with them.</summary>
-public sealed record SubscriptionAnalysisOption(Guid HistoryId, string Title, string ApplicationName, string ApplicationNameAr, string OwnerName, bool IsOwn, int CurrentVersionNumber, int PanelCount, DateTimeOffset UpdatedAt);
+/// <param name="FixedDates">Calendar dates written into the analysis (yyyy-MM-dd). Not empty: every run covers the same period.</param>
+public sealed record SubscriptionAnalysisOption(Guid HistoryId, string Title, string ApplicationName, string ApplicationNameAr, string OwnerName, bool IsOwn, int CurrentVersionNumber, int PanelCount, DateTimeOffset UpdatedAt, IReadOnlyList<string> FixedDates);
 
 public sealed record SubscriptionRecipientDto(Guid UserId, string FullName, string Email, string Status);
 
@@ -33,7 +34,9 @@ public sealed record ReportSubscriptionDto(
     IReadOnlyList<SubscriptionRecipientDto> Recipients,
     SubscriptionRunSummary? LastRun,
     bool CanEdit,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    /// <summary>Calendar dates written into the analysis (yyyy-MM-dd). Not empty: every run covers the same period.</summary>
+    IReadOnlyList<string> FixedDates);
 
 public sealed record SaveReportSubscriptionCommand(
     string Name,
@@ -73,7 +76,9 @@ public sealed record ReceivedReportDto(Guid DeliveryId, Guid SubscriptionId, str
 /// </summary>
 public interface IPeriodicReportService
 {
-    Task<IReadOnlyList<SubscriptionAnalysisOption>> ListAnalysesAsync(CancellationToken cancellationToken = default);
+    /// <param name="forSubscriptionId">When editing a report: the analyses its <b>creator</b> may use (an administrator editing someone else's report keeps that person's choice).</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    Task<IReadOnlyList<SubscriptionAnalysisOption>> ListAnalysesAsync(Guid? forSubscriptionId = null, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ReportSubscriptionDto>> ListAsync(CancellationToken cancellationToken = default);
 

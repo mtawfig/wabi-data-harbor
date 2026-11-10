@@ -14,8 +14,9 @@ export class PeriodicReportsService {
     return this.http.get<ReportSubscription[]>(this.base);
   }
 
-  analyses(): Observable<SubscriptionAnalysis[]> {
-    return this.http.get<SubscriptionAnalysis[]>(`${this.base}/analyses`);
+  /** The analyses a report can be built on. With a subscription id: the ones its creator may use (an administrator editing someone else's report). */
+  analyses(subscriptionId?: string): Observable<SubscriptionAnalysis[]> {
+    return this.http.get<SubscriptionAnalysis[]>(`${this.base}/analyses`, subscriptionId ? { params: { subscriptionId } } : {});
   }
 
   create(request: SaveReportSubscription): Observable<ReportSubscription> {

@@ -275,6 +275,12 @@ public sealed class MonitoringRuleJob : IScheduledJobHandler
             return; // The standing-job sync disables the job on its next pass.
         }
 
-        await _runner.RunAsync(rule, RuleRunMode.Scheduled, cancellationToken);
+        var output = await _runner.RunAsync(rule, RuleRunMode.Scheduled, cancellationToken);
+        // The evaluation is recorded either way. A failure that may pass (the source did not answer) is retried by the
+        // scheduler; an invalid rule was paused above and is not.
+        if (output.Result.Outcome == RuleEvaluationOutcome.Failed && !output.Result.Invalid)
+        {
+            throw new ScheduledJobFailedException(output.Result.ErrorCode ?? "rule_evaluation_failed");
+        }
     }
 }
