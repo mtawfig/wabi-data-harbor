@@ -601,7 +601,7 @@ use its pencil icon and paste a new value.
 ```
  You: GitHub → Actions → Deploy (Azure) → Run workflow → tick the boxes
    ▼
- Build          (GitHub's computers) the version → the API and/or the web app, with tests unless you untick them
+ Build            on GitHub's computers: the API and/or the web app, tested unless you untick Run tests
    ▼
  Azure resources  sign in (OpenID Connect) → create or update everything from deploy/azure/main.bicep,
                   including the App Service's settings
@@ -783,8 +783,7 @@ Azure SQL backs up the database automatically. By default you can restore it to 
    point-in-time window.
 4. **Apply**.
 
-The template doesn't manage these settings, so later runs keep them. The run summary still says *kept 7 days*: that's
-fixed text, and your retention is what you set here.
+The template doesn't manage these settings, so later runs keep them.
 
 **Verify:** the list shows the new retention for `WabiInsightDB`.
 
@@ -814,8 +813,8 @@ tab when you're done.
 
 **Verify:** your password manager has one note per file listed by `ls`, with the same names.
 
-**To put the key ring back** (after the App Service was recreated, step 28): run the first run's **Azure resources**
-job, then do this in [Cloud Shell] **before** you deploy the API. For each saved key, type the `cat` line with the
+**To put the key ring back** (after the App Service was recreated, step 28): run the workflow with **only Azure
+resources** ticked, then do this in [Cloud Shell] **before** you deploy the API. For each saved key, type the `cat` line with the
 note's name instead of `key-<id>.xml`, press **Enter**, paste the note's text, press **Enter**, then **Ctrl+D**:
 
 ```bash
@@ -869,10 +868,10 @@ Secured**? Then skip to step 24.
    - On **Cloudflare**, set the CNAME to **DNS only** (grey cloud) so Azure can check it and issue the certificate.
 4. Wait a few minutes. **[Cloud Shell]** check that the records are visible (replace the domain):
 
-```bash
-dig +short CNAME insight.example.com          # <AZURE_NAME>.azurewebsites.net.
-dig +short TXT asuid.insight.example.com      # "the verification ID"
-```
+   ```bash
+   dig +short CNAME insight.example.com          # <AZURE_NAME>.azurewebsites.net.
+   dig +short TXT asuid.insight.example.com      # "the verification ID"
+   ```
 
 5. **[Azure portal]** back in the pane: **Validate**. Both lines get a green tick. Then **Add**.
 6. Azure adds the domain and creates the certificate. That takes a few minutes.
@@ -932,7 +931,7 @@ E-mailed links (temporary passwords, notifications, shared reports) use the appl
 | Every 3 months | Copy new key-ring files | Step 22: compare `ls` with your password manager and copy the new `key-<id>.xml` files. |
 | Monthly | Azure costs | **[Azure portal]** search **Budgets** (Cost Management) → **+ Add** → a monthly amount and an e-mail alert at, for example, 80 %. |
 | Monthly | No leftover firewall openings | **SQL servers → `<AZURE_NAME>-sql` → Security → Networking**: only *AllowAllWindowsAzureIps* (and your own IP while you use the query editor). Delete any old `github-runner-…` rule. |
-| When someone leaves | Who can deploy and who can sign in to Azure | **[GitHub] Settings → Collaborators and teams**, and **[Azure portal] Subscriptions → Access control (IAM)**: remove them. |
+| When someone leaves | Who can deploy and who can sign in to Azure | **[GitHub] Settings → Collaborators** (or *Collaborators and teams*), and **[Azure portal] Subscriptions → Access control (IAM)**: remove them. |
 | When you want to change the SQL password | Rotate `AZURE_SQL_ADMIN_PASSWORD` | Step 14 for a new value → update the secret (step 15) → run with **only Azure resources** ticked. The template sets the new password on the server and in the App Service settings, and the App Service restarts. |
 
 ## 27. Rolling back
@@ -971,7 +970,7 @@ run of an older version, about 10 minutes (untick **Run tests** to save a few).
 | The whole `wabi-insight-files` container | Storage account → **Containers** → **Show deleted containers** → select → **Undelete** (within 14 days). |
 | The App Service (deleted) | Run with **only Azure resources** ticked (it recreates it), put the key ring back (step 22), then run **API** and **Web app**. The database and the files are separate and unaffected. |
 | The key ring | Your copies from step 22, put back as step 22 describes, **before** the API runs again. |
-| The whole resource group (deleted) | Everything in it is gone, including the role from step 13. Steps 10 and 13 again, then the first run **without** *Create the first Platform Administrator* if you can restore the database: only **long-term retention** backups (step 21) outlive a deleted server. Then the key ring (step 22). Files are lost. **Don't delete the resource group.** |
+| The whole resource group (deleted) | Everything in it is gone: the services, the files, the database with its point-in-time backups, and the role from step 13. Only **long-term retention** backups (step 21), if you set them up, outlive a deleted server; Azure's documentation on long-term backup retention explains how to restore one. Then steps 10 and 13 again, a first run, and the key ring (step 22). **Never delete the resource group.** |
 
 ## 29. Security checklist
 
@@ -1091,10 +1090,10 @@ this appendix doesn't cover it.
    - **Verify:** the **Azure resources** job is green; the Build job is skipped.
 2. **Delete the new, empty database**, so that yours can take its name. [Cloud Shell], with step 8's values:
 
-```bash
-az sql db delete --resource-group "$RG" --server "$SQL_SERVER" --name "$SQL_DATABASE" --yes
-az sql db list --resource-group "$RG" --server "$SQL_SERVER" --query "[].name" --output tsv   # no WabiInsightDB (master is the server's own)
-```
+   ```bash
+   az sql db delete --resource-group "$RG" --server "$SQL_SERVER" --name "$SQL_DATABASE" --yes
+   az sql db list --resource-group "$RG" --server "$SQL_SERVER" --query "[].name" --output tsv   # no WabiInsightDB (master is the server's own)
+   ```
 
 3. **Stop the old site**, so nothing changes during the move. [Old server]:
    - Linux: `systemctl stop wabi-insight-api`
@@ -1102,54 +1101,58 @@ az sql db list --resource-group "$RG" --server "$SQL_SERVER" --query "[].name" -
 4. **Let the old server reach Azure SQL for the move.** [Cloud Shell] — replace the address with the old server's
    public IP address:
 
-```bash
-OLD_IP="203.0.113.10"     # CHANGE: the old server's public IP address
-az sql server firewall-rule create --resource-group "$RG" --server "$SQL_SERVER" --name old-server \
-  --start-ip-address "$OLD_IP" --end-ip-address "$OLD_IP" --output table
-```
+   ```bash
+   OLD_IP="203.0.113.10"     # CHANGE: the old server's public IP address
+   az sql server firewall-rule create --resource-group "$RG" --server "$SQL_SERVER" --name old-server \
+     --start-ip-address "$OLD_IP" --end-ip-address "$OLD_IP" --output table
+   ```
 
 5. **Copy the database.** [Old server]. The import asks for the **Azure SQL admin password** (step 14) and uses
    `<AZURE_NAME>-sql` and the size `S0` (use your `AZURE_SQL_SKU` if you set one; `Basic` needs `DatabaseEdition=Basic`).
    - **Linux** (as root; the server has the .NET SDK from its setup). It exports with the connection string in
      `/etc/wabi-insight/api.env`, then imports into Azure:
 
-```bash
-dotnet tool install --global microsoft.sqlpackage
-export PATH="$PATH:$HOME/.dotnet/tools"
-AZURE_NAME="wabi-insight-acme"     # CHANGE: your deployment name (step 7)
-LOCAL_DB="$(grep '^ConnectionStrings__ConfigurationDatabase=' /etc/wabi-insight/api.env | cut -d= -f2-)"
-sqlpackage /Action:Export /SourceConnectionString:"$LOCAL_DB" /TargetFile:/root/WabiInsightDB.bacpac
-read -rsp 'Azure SQL admin password: ' AZ_SQL_PASSWORD; echo
-sqlpackage /Action:Import /SourceFile:/root/WabiInsightDB.bacpac \
-  /TargetConnectionString:"Server=tcp:$AZURE_NAME-sql.database.windows.net,1433;Initial Catalog=WabiInsightDB;User ID=wabiadmin;Password=$AZ_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=False;" \
-  /p:DatabaseEdition=Standard /p:DatabaseServiceObjective=S0
-unset AZ_SQL_PASSWORD LOCAL_DB
-```
+     ```bash
+     dotnet tool install --global microsoft.sqlpackage
+     export PATH="$PATH:$HOME/.dotnet/tools"
+     export DOTNET_ROLL_FORWARD=Major   # lets the tool run on the server's newer .NET
+     AZURE_NAME="wabi-insight-acme"     # CHANGE: your deployment name (step 7)
+     LOCAL_DB="$(grep '^ConnectionStrings__ConfigurationDatabase=' /etc/wabi-insight/api.env | cut -d= -f2-)"
+     sqlpackage /Action:Export /SourceConnectionString:"$LOCAL_DB" /TargetFile:/root/WabiInsightDB.bacpac
+     read -rsp 'Azure SQL admin password: ' AZ_SQL_PASSWORD; echo
+     sqlpackage /Action:Import /SourceFile:/root/WabiInsightDB.bacpac \
+       /TargetConnectionString:"Server=tcp:$AZURE_NAME-sql.database.windows.net,1433;Initial Catalog=WabiInsightDB;User ID=wabiadmin;Password=$AZ_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=False;" \
+       /p:DatabaseEdition=Standard /p:DatabaseServiceObjective=S0
+     unset AZ_SQL_PASSWORD LOCAL_DB
+     ```
+
+     If the export says the connection string is empty, your `api.env` has no `ConnectionStrings__…` line: the
+     server uses the connection string in `appsettings.json`. Use that one for `LOCAL_DB`.
 
    - **Windows:** install SqlPackage as in the Windows Azure guide's appendix (download the *Windows .NET 8* zip from
      `https://aka.ms/sqlpackage-windows` and unpack it to `C:\wabitex-apps\wabi-insight\tools\sqlpackage`). Then, in
      PowerShell as administrator:
 
-```powershell
-$WI = Import-Clixml C:\wabitex-apps\wabi-insight\wabi-insight.vars.xml
-$azureName = 'wabi-insight-acme'                                        # CHANGE: your deployment name (step 7)
-$sp = 'C:\wabitex-apps\wabi-insight\tools\sqlpackage\SqlPackage.exe'
-$bacpac = Join-Path $WI.Backup 'WabiInsightDB.bacpac'
-$localDb = (Get-Content (Join-Path $WI.Root 'web\api\appsettings.Local.json') -Raw | ConvertFrom-Json).ConnectionStrings.ConfigurationDatabase
-& $sp /Action:Export /SourceConnectionString:"$localDb" /TargetFile:$bacpac
-$secure = Read-Host 'Azure SQL admin password' -AsSecureString
-$azPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
-& $sp /Action:Import /SourceFile:$bacpac /TargetConnectionString:"Server=tcp:$azureName-sql.database.windows.net,1433;Initial Catalog=WabiInsightDB;User ID=wabiadmin;Password=$azPassword;Encrypt=True;TrustServerCertificate=False;" /p:DatabaseEdition=Standard /p:DatabaseServiceObjective=S0
-Remove-Variable azPassword, secure, localDb
-```
+     ```powershell
+     $WI = Import-Clixml C:\wabitex-apps\wabi-insight\wabi-insight.vars.xml
+     $azureName = 'wabi-insight-acme'                                        # CHANGE: your deployment name (step 7)
+     $sp = 'C:\wabitex-apps\wabi-insight\tools\sqlpackage\SqlPackage.exe'
+     $bacpac = Join-Path $WI.Backup 'WabiInsightDB.bacpac'
+     $localDb = (Get-Content (Join-Path $WI.Root 'web\api\appsettings.Local.json') -Raw | ConvertFrom-Json).ConnectionStrings.ConfigurationDatabase
+     & $sp /Action:Export /SourceConnectionString:"$localDb" /TargetFile:$bacpac
+     $secure = Read-Host 'Azure SQL admin password' -AsSecureString
+     $azPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
+     & $sp /Action:Import /SourceFile:$bacpac /TargetConnectionString:"Server=tcp:$azureName-sql.database.windows.net,1433;Initial Catalog=WabiInsightDB;User ID=wabiadmin;Password=$azPassword;Encrypt=True;TrustServerCertificate=False;" /p:DatabaseEdition=Standard /p:DatabaseServiceObjective=S0
+     Remove-Variable azPassword, secure, localDb
+     ```
 
    - **Verify:** the import ends with a success message, and **[Azure portal] → SQL databases** lists
      `WabiInsightDB` as **Online**.
 6. **Close the firewall again.** [Cloud Shell]:
 
-```bash
-az sql server firewall-rule delete --resource-group "$RG" --server "$SQL_SERVER" --name old-server
-```
+   ```bash
+   az sql server firewall-rule delete --resource-group "$RG" --server "$SQL_SERVER" --name old-server
+   ```
 
 7. **Copy the key ring.** Without it, the stored connection strings and provider keys can't be decrypted.
    - [Old server] put the key files (not their folder) in one zip file:
@@ -1161,12 +1164,12 @@ az sql server firewall-rule delete --resource-group "$RG" --server "$SQL_SERVER"
      on the server itself). It's a secret: delete every copy when you're done.
    - [Cloud Shell] toolbar → **Manage files → Upload** → `wabi-keys.zip`. It lands in your home folder. Then:
 
-```bash
-python3 -m zipfile -l ~/wabi-keys.zip      # key-<id>.xml files, with no folder in front
-az webapp deploy --resource-group "$RG" --name "$AZURE_NAME" --src-path ~/wabi-keys.zip --type zip \
-  --target-path /home/data/wabi-insight/keys --clean false --restart false
-rm ~/wabi-keys.zip
-```
+     ```bash
+     python3 -m zipfile -l ~/wabi-keys.zip      # key-<id>.xml files, with no folder in front
+     az webapp deploy --resource-group "$RG" --name "$AZURE_NAME" --src-path ~/wabi-keys.zip --type zip \
+       --target-path /home/data/wabi-insight/keys --clean false --restart false
+     rm ~/wabi-keys.zip
+     ```
 
 8. **Deploy the application.** [GitHub] **Run workflow**, branch `main`: tick **Database**, **API**, **Web app** and
    **Run tests**. Leave **Azure resources** and **Create the first Platform Administrator** off.
@@ -1181,28 +1184,28 @@ rm ~/wabi-keys.zip
    - **Linux** (as root). It runs the command the way the Linux guide runs `migrate`, with the server's own settings
      from `/etc/wabi-insight/api.env` (including `Storage__RootPath`), plus the two Azure values for this one run:
 
-```bash
-read -rsp 'Storage connection string: ' WI_BLOB; echo
-systemd-run --wait --pipe --quiet --uid=wabi-insight --gid=wabi-insight \
-  --property=EnvironmentFile=/etc/wabi-insight/api.env --setenv=ASPNETCORE_ENVIRONMENT=Production \
-  --setenv=Storage__Provider=AzureBlob --setenv=Storage__AzureBlob__ConnectionString="$WI_BLOB" \
-  --working-directory=/opt/wabi-insight/api /usr/bin/dotnet WabiInsight.Api.dll storage-copy
-unset WI_BLOB
-```
+     ```bash
+     read -rsp 'Storage connection string: ' WI_BLOB; echo
+     systemd-run --wait --pipe --quiet --uid=wabi-insight --gid=wabi-insight \
+       --property=EnvironmentFile=/etc/wabi-insight/api.env --setenv=ASPNETCORE_ENVIRONMENT=Production \
+       --setenv=Storage__Provider=AzureBlob --setenv=Storage__AzureBlob__ConnectionString="$WI_BLOB" \
+       --working-directory=/opt/wabi-insight/api /usr/bin/dotnet WabiInsight.Api.dll storage-copy
+     unset WI_BLOB
+     ```
 
    - **Windows** (PowerShell as administrator; `Storage:RootPath` comes from `appsettings.Local.json`):
 
-```powershell
-Push-Location C:\wabitex-apps\wabi-insight\web\api
-$env:ASPNETCORE_ENVIRONMENT = 'Production'
-$env:Storage__Provider = 'AzureBlob'
-$secure = Read-Host 'Storage connection string' -AsSecureString
-$env:Storage__AzureBlob__ConnectionString = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
-dotnet .\WabiInsight.Api.dll storage-copy
-Remove-Item Env:Storage__Provider, Env:Storage__AzureBlob__ConnectionString
-Remove-Variable secure
-Pop-Location
-```
+     ```powershell
+     Push-Location C:\wabitex-apps\wabi-insight\web\api
+     $env:ASPNETCORE_ENVIRONMENT = 'Production'
+     $env:Storage__Provider = 'AzureBlob'
+     $secure = Read-Host 'Storage connection string' -AsSecureString
+     $env:Storage__AzureBlob__ConnectionString = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
+     dotnet .\WabiInsight.Api.dll storage-copy
+     Remove-Item Env:Storage__Provider, Env:Storage__AzureBlob__ConnectionString
+     Remove-Variable secure
+     Pop-Location
+     ```
 
    - **Verify:** it ends with `Storage copy finished: … copied, … already in the container, 0 failed.` Run it again:
      everything is now *already in the container*.

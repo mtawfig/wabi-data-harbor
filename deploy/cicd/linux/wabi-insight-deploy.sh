@@ -63,7 +63,7 @@ step() { echo; echo "==> $*"; }
 
 [ "$(id -u)" -eq 0 ] || { echo "Run as root (sudo)." >&2; exit 1; }
 for tool in rsync curl flock systemctl systemd-run; do
-    command -v "$tool" >/dev/null 2>&1 || { echo "::error::'$tool' is not installed (docs/DEPLOYMENT_LINUX.md step 2: apt-get install -y rsync curl)." >&2; exit 1; }
+    command -v "$tool" >/dev/null 2>&1 || { echo "::error::'$tool' is not installed (docs/DEPLOYMENT_LINUX.md step 11: apt-get install -y rsync curl)." >&2; exit 1; }
 done
 case "$component" in backend|frontend|frontend+backend) ;; *) echo "--component must be backend, frontend or frontend+backend" >&2; exit 2 ;; esac
 case "$migrate" in yes|no) ;; *) echo "--migrate must be yes or no" >&2; exit 2 ;; esac
@@ -79,8 +79,8 @@ if [ "$migrate" = yes ] && [ "$deploy_backend" = no ]; then
 fi
 if [ "$deploy_backend" = yes ]; then
     [ -n "$api_src" ] && [ -f "$api_src/WabiInsight.Api.dll" ] || fail "--api-dir must point at the published API (WabiInsight.Api.dll not found in '$api_src')."
-    [ -f "$ENV_FILE" ] || fail "$ENV_FILE is missing: complete docs/DEPLOYMENT_LINUX.md step 13 first."
-    systemctl cat "$SERVICE" >/dev/null 2>&1 || fail "systemd unit $SERVICE is not installed: complete docs/DEPLOYMENT_LINUX.md step 16 first."
+    [ -f "$ENV_FILE" ] || fail "$ENV_FILE is missing: complete docs/DEPLOYMENT_LINUX.md step 24 first."
+    systemctl cat "$SERVICE" >/dev/null 2>&1 || fail "systemd unit $SERVICE is not installed: complete docs/DEPLOYMENT_LINUX.md step 25 first."
 fi
 if [ "$deploy_frontend" = yes ]; then
     [ -n "$web_src" ] && [ -f "$web_src/index.html" ] || fail "--web-dir must point at the Angular build (index.html not found in '$web_src')."
@@ -158,7 +158,7 @@ EOF
             step "Database: backup before migration ($BACKUP_SCRIPT)"
             "$BACKUP_SCRIPT" || { restore_backend; fail "Backup failed; nothing was migrated."; }
         else
-            echo "::warning::$BACKUP_SCRIPT not found: migrating without a fresh backup (docs/DEPLOYMENT_LINUX.md step 21)."
+            echo "::warning::$BACKUP_SCRIPT not found: migrating without a fresh backup (docs/DEPLOYMENT_LINUX.md step 26)."
         fi
         step "Database: applying migrations"
         if ! systemd-run --wait --pipe --quiet --collect --uid="$SERVICE_USER" --gid="$SERVICE_USER" \

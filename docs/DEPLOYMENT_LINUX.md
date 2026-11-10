@@ -224,7 +224,7 @@ DNS changes can take from a few minutes to a few hours to work everywhere.
 - **Windows:** click **Start**, type `Terminal` (Windows 11) or `PowerShell` (Windows 10), and open it.
 - **Mac:** press `Cmd + Space`, type `Terminal`, press **Enter**.
 
-Type `ssh -V` and press **Enter**. It prints a version such as `OpenSSH_9.x`. On Windows, if it says *'ssh' is not
+Type `ssh -V` and press **Enter**. It prints a version that starts with `OpenSSH`. On Windows, if it says *'ssh' is not
 recognized*: open **Settings**, search for **Optional features**, add **OpenSSH Client**, then open a new terminal.
 
 **Check:** do you already have a key? Windows (PowerShell):
@@ -292,7 +292,8 @@ whoami              # root
 lsb_release -ds     # Ubuntu 24.04.x LTS
 ```
 
-To leave, type `exit` until the terminal says *Connection … closed*. Keep this window open for now.
+**Stay connected:** you continue in this window in step 6, and keep it open until step 8 is done. (Later, to
+disconnect, type `exit` until the terminal says *Connection … closed*.)
 
 ## 6. Create your own administrator user
 
@@ -690,8 +691,9 @@ MSSQL_PID=Express MSSQL_SA_PASSWORD="$SA_PASSWORD" ACCEPT_EULA=Y /opt/mssql/bin/
 systemctl enable --now mssql-server
 ```
 
-If you prefer to choose the password yourself: at least 12 characters with upper case, lower case, a digit and a symbol;
-don't use `"`, `'`, `\` or `$`.
+To choose the password yourself instead, replace the first two lines with
+`read -rsp 'New sa password: ' SA_PASSWORD; echo`. Use at least 12 characters with upper case, lower case, a digit and a
+symbol, and don't use `"`, `'`, `\` or `$`.
 
 **Verify:**
 
@@ -1375,6 +1377,7 @@ ss -ltnp | grep '127.0.0.1:5080'                               # dotnet listenin
 curl -s http://127.0.0.1:5080/health/ready; echo               # {"status":"Healthy",…"configuration-database"…"Healthy"…}
 curl -s "https://$WI_DOMAIN/health/ready"; echo                # "status":"Healthy", through nginx
 curl -s -o /dev/null -w '%{http_code} %{content_type}\n' "https://$WI_DOMAIN/login"    # 200 text/html
+curl -sI "https://$WI_DOMAIN/login" | grep -ciE '^(content-security-policy|x-frame-options|strict-transport-security):'   # 3: the page has its security headers
 ls /opt/wabi-insight/api/appsettings*.json                     # only appsettings.json
 stat -c '%U:%G %a' /opt/wabi-insight/api/appsettings.json      # root:wabi-insight 640
 journalctl -u wabi-insight-api -n 30 --no-pager                # no errors; "Now listening on: http://127.0.0.1:5080"
@@ -1529,12 +1532,12 @@ uses the configuration login.
 
 **Check:** `grep -c '^Insights__ConnectionString' /etc/wabi-insight/api.env` (0 means not configured).
 
-**Do:** the script from the repository (step 23) creates the login `wabi_insight_insights`. Its database name is
-corrected to `WabiInsightDB` on the way, and the generated password is saved only in `api.env`:
+**Do:** the script from the repository (step 23) creates the login `wabi_insight_insights`. The generated password is
+saved only in `api.env`:
 
 ```bash
 WI_INSIGHTS_PASSWORD="$(wi_secret)"
-(umask 077 && sed -e 's/USE \[WabiInsight\];/USE [WabiInsightDB];/' -e "s/<replace-with-strong-secret>/${WI_INSIGHTS_PASSWORD}/" \
+(umask 077 && sed -e "s/<replace-with-strong-secret>/${WI_INSIGHTS_PASSWORD}/" \
   /root/wabi-insight-setup/scripts/sql/create-insights-login.sql > /root/insights-login.sql)
 sqlsa -i /root/insights-login.sql; shred -u /root/insights-login.sql
 echo "Insights__ConnectionString=Server=127.0.0.1,1433;Database=WabiInsightDB;User Id=wabi_insight_insights;Password=${WI_INSIGHTS_PASSWORD};Encrypt=True;TrustServerCertificate=True;" >> /etc/wabi-insight/api.env
@@ -1703,7 +1706,7 @@ sqlsa -Q "ALTER DATABASE [WabiInsightDB] SET MULTI_USER;"
 
 | Lost | Restore from |
 |---|---|
-| The database (damaged, or a bad change) | The newest `WabiInsightDB-*.bak`: step 43, *Database back to before a migration*, items 2 and 4 |
+| The database (damaged, or a bad change) | The newest `WabiInsightDB-*.bak`: step 43, *Database back to before a migration*, item 2; then `systemctl start wabi-insight-api` and item 4 |
 | Files (reports, attachments, logos) | The newest `files-*.tar.gz`, with the API stopped: `tar -xzf "<file>" -C /var/lib wabi-insight/artifacts`, then start the API |
 | The key ring | The `files-*.tar.gz` of the **same night** as the database backup: `tar -xzf "<file>" -C /var/lib wabi-insight/keys` with the API stopped |
 | The whole server | A new Ubuntu 24.04 server and your off-server copies (step 42): see below |
@@ -1777,10 +1780,10 @@ tar -xzf "$FILES" -C /var/lib && chown -R wabi-insight:wabi-insight /var/lib/wab
 | Deploy waits forever on *Waiting for a runner* | The runner service is stopped | `cd /opt/actions-runner && ./svc.sh status`, then `./svc.sh start` |
 | Deploy: *… is not installed. See docs/DEVOPS_LINUX.md step 4* or *may not run … with sudo* | Deploy script or sudo rule missing | Step 34 |
 | Deploy warns the script *differs from deploy/cicd/linux/wabi-insight-deploy.sh* | The repository has a newer deploy script | Step 23, then step 34 **Do** |
-| Deploy: *'rsync' is not installed (docs/DEPLOYMENT_LINUX.md step 2 …)* | A base package is missing (old step 2 is step 11 here) | Step 11 |
-| Deploy: */etc/wabi-insight/api.env is missing: complete docs/DEPLOYMENT_LINUX.md step 13 first* | The settings file is missing (old step 13 is step 24 here) | Step 24 |
-| Deploy: *systemd unit wabi-insight-api is not installed: complete … step 16 first* | The service isn't installed (old step 16 is step 25 here) | Step 25 |
-| Deploy warns *… not found: migrating without a fresh backup (… step 21)* | The backup script is missing (old step 21 is step 26 here) | Step 26 |
+| Deploy: *'rsync' is not installed (docs/DEPLOYMENT_LINUX.md step 11 …)* | A base package is missing | Step 11 |
+| Deploy: */etc/wabi-insight/api.env is missing: complete docs/DEPLOYMENT_LINUX.md step 24 first* | The settings file is missing | Step 24 |
+| Deploy: *systemd unit wabi-insight-api is not installed: complete … step 25 first* | The service isn't installed | Step 25 |
+| Deploy warns *… not found: migrating without a fresh backup (… step 26)* | The backup script is missing | Step 26 |
 | Deploy: *did not report Healthy* or *Migration failed* | The new backend didn't start. The previous backend was **restored automatically** and is running. | Read the job log (it prints the last 40 log lines) and `journalctl -u wabi-insight-api -n 100 --no-pager`. Migrations already applied stay applied; restore the backup taken just before (step 43) if you must go back. |
 | Deploy: *The release is installed, but https://… answered '…'* | The release is live, but nginx or the certificate didn't answer correctly | `nginx -t`, `systemctl status nginx`, `certbot certificates` |
 | Deploy: *Another deployment is running.* | Two runs at once | Wait for the other run, then run again |
@@ -1884,6 +1887,7 @@ chown -R root:root /var/www/wabi-insight && chmod -R a+rX /var/www/wabi-insight
 ```bash
 ls /opt/wabi-insight/api/appsettings*.json                         # only appsettings.json
 stat -c '%U:%G %a' /opt/wabi-insight/api/appsettings.json         # root:wabi-insight 640
+ls /var/www/wabi-insight/index.html /var/www/wabi-insight/brand >/dev/null && echo web-files-ok   # web-files-ok
 grep -o '<base href="[^"]*"' /var/www/wabi-insight/index.html     # <base href="/"
 ```
 
@@ -1898,7 +1902,7 @@ sqlapp -h -1 -W -Q "SET NOCOUNT ON; IF OBJECT_ID(N'dbo.__EFMigrationsHistory') I
 **Do:**
 
 ```bash
-wi_api migrate
+wi_api migrate                         # Applying N migration(s): … / Migrations applied.
 systemctl start wabi-insight-api
 ```
 
