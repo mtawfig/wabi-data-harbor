@@ -1,3 +1,5 @@
+using WabiInsight.Core.Entities.Email;
+
 namespace WabiInsight.Core.Email;
 
 /// <summary>A message ready to send. Bodies may contain one-time credentials and are never persisted.</summary>
@@ -34,6 +36,13 @@ public static class EmailTemplateCodes
     public const string PeriodicReport = "Reports.Periodic";
 }
 
+/// <summary>Stable reason codes written to <c>EmailMessages.LastError</c> when no delivery error text exists.</summary>
+public static class EmailFailureReasons
+{
+    /// <summary>The API stopped or restarted while the message was still waiting; its content was held in memory only and is gone.</summary>
+    public const string ProcessRestartedBeforeDelivery = "process_restarted_before_delivery";
+}
+
 /// <summary>
 /// Queues a message for background delivery. The outbox row stores recipient, subject, template and
 /// status only; the body stays in memory until sent so temporary passwords never reach the database.
@@ -41,4 +50,18 @@ public static class EmailTemplateCodes
 public interface IEmailOutbox
 {
     Task<Guid> EnqueueAsync(EmailMessage message, string templateCode, Guid? organizationId = null, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Writes delivery outcomes to the outbox rows (metadata only; never a body).</summary>
+public interface IEmailDeliveryLog
+{
+    /// <summary>Records the state of one message after a delivery attempt.</summary>
+    Task RecordAsync(Guid emailMessageId, int attempts, EmailDeliveryStatus status, string? lastError, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Marks rows still Queued and created before <paramref name="queuedBefore"/> as Failed with
+    /// <see cref="EmailFailureReasons.ProcessRestartedBeforeDelivery"/>: the process that held their content is gone,
+    /// so they can never be sent. Returns how many rows were marked.
+    /// </summary>
+    Task<int> FailAbandonedAsync(DateTimeOffset queuedBefore, CancellationToken cancellationToken = default);
 }

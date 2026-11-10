@@ -4,11 +4,13 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using WabiInsight.Api.Authentication;
 using WabiInsight.Api.Authorization;
 using WabiInsight.Api.Commands;
 using WabiInsight.Api.Hosting;
 using WabiInsight.Api.Security;
+using WabiInsight.Core.Email;
 using WabiInsight.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -73,6 +75,18 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 builder.Services.AddWabiInsightInfrastructure(builder.Configuration);
+
+// On shutdown the host has to wait at least as long as the e-mail worker keeps sending (Email:ShutdownGraceSeconds),
+// plus a few seconds to record the last outcome; the host default is 30 seconds.
+builder.Services.AddOptions<HostOptions>().Configure<IOptions<EmailOptions>>((host, email) =>
+{
+    var needed = TimeSpan.FromSeconds(email.Value.ShutdownGraceSeconds + 10);
+    if (host.ShutdownTimeout < needed)
+    {
+        host.ShutdownTimeout = needed;
+    }
+});
+
 builder.Services.AddWabiAuthentication();
 builder.Services.AddWabiAuthorization();
 builder.Services.AddWabiRateLimiting();

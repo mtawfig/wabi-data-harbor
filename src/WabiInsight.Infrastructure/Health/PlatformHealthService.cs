@@ -81,14 +81,25 @@ public sealed class EmailOutboxHealthCheck : IHealthCheck
         var now = _clock.UtcNow;
         var stale = await _context.EmailMessages.AsNoTracking().LongCountAsync(e => e.Status == EmailDeliveryStatus.Queued && e.CreatedAt < now.AddMinutes(-10), cancellationToken);
         var failedLastDay = await _context.EmailMessages.AsNoTracking().LongCountAsync(e => e.Status == EmailDeliveryStatus.Failed && e.CreatedAt >= now.AddDays(-1), cancellationToken);
-        var data = new Dictionary<string, object> { ["staleQueued"] = stale, ["failedLast24h"] = failedLastDay };
+        // Part of failedLast24h: messages the API was still holding when it stopped or restarted (marked by the outbox worker at start-up).
+        var notSentBeforeRestart = failedLastDay == 0
+            ? 0
+            : await _context.EmailMessages.AsNoTracking().LongCountAsync(e => e.Status == EmailDeliveryStatus.Failed && e.CreatedAt >= now.AddDays(-1) && e.LastError == EmailFailureReasons.ProcessRestartedBeforeDelivery, cancellationToken);
+        var data = new Dictionary<string, object> { ["staleQueued"] = stale, ["failedLast24h"] = failedLastDay, ["notSentBeforeRestartLast24h"] = notSentBeforeRestart };
         if (stale > 0)
         {
             return HealthCheckResult.Degraded($"{stale} email(s) queued for more than 10 minutes.", data: data);
         }
 
-        return failedLastDay > 0
-            ? HealthCheckResult.Degraded($"{failedLastDay} email delivery failure(s) in the last 24 hours.", data: data)
-            : HealthCheckResult.Healthy("Outbox is draining normally.", data);
+        if (failedLastDay == 0)
+        {
+            return HealthCheckResult.Healthy("Outbox is draining normally.", data);
+        }
+
+        return HealthCheckResult.Degraded(
+            notSentBeforeRestart > 0
+                ? $"{failedLastDay} email delivery failure(s) in the last 24 hours; {notSentBeforeRestart} of them were not sent because the service restarted and have to be sent again."
+                : $"{failedLastDay} email delivery failure(s) in the last 24 hours.",
+            data: data);
     }
 }
