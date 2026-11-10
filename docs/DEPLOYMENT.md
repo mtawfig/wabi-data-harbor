@@ -2,12 +2,12 @@
 
 Wabi Insight is three deployable parts: the **Angular build** (static files), the **ASP.NET Core API** (Kestrel) and **SQL Server** (the configuration database). Everything else is configuration: SMTP, the AI provider key, artifact storage, the Data Protection key ring and, optionally, a ClamAV daemon for attachment scanning. Three server shapes are described here: Docker Compose, a Linux host with systemd + nginx, and Windows with IIS. A fourth, Microsoft Azure (App Service + Azure SQL Database + Blob Storage, no server to maintain), has its own guide below. Pick one; the configuration keys are the same everywhere.
 
-**Step-by-step guides** (every step has a *Check*, *Do* and *Verify* command, from a fresh server to the live site, including SQL Server Express):
+**Step-by-step guides**, written for beginners: each one goes from a fresh server (or a new Azure subscription) to the live site, deployment **and** CI/CD, with a glossary, an information sheet, and a *Check*, *Do* and *Verify* for every step:
 
-- [Ubuntu 24.04 LTS: nginx + systemd + SQL Server Express](DEPLOYMENT_LINUX.md)
-- [Windows Server 2019: IIS + ARR + SQL Server Express](DEPLOYMENT_WINDOWS_SERVER_2019.md)
-- [Windows Server 2019 VPS: IIS + ARR, with Azure SQL Database and Azure Blob Storage, plus CI/CD (written for beginners)](DEPLOYMENT_WINDOWS_AZURE.md)
-- [Microsoft Azure: App Service + Azure SQL Database + Blob Storage, deployed from GitHub](DEPLOYMENT_AZURE.md)
+- [Ubuntu 24.04 LTS: nginx + systemd + SQL Server Express, deployed from GitHub (Deploy (Linux))](DEPLOYMENT_LINUX.md)
+- [Windows Server 2019: IIS + ARR + SQL Server Express, deployed from GitHub (Deploy (Windows))](DEPLOYMENT_WINDOWS_SERVER_2019.md)
+- [Windows Server 2019 VPS: IIS + ARR, with Azure SQL Database and Azure Blob Storage (Deploy (Windows))](DEPLOYMENT_WINDOWS_AZURE.md)
+- [Microsoft Azure: App Service + Azure SQL Database + Blob Storage, no server to maintain (Deploy (Azure))](DEPLOYMENT_AZURE.md)
 
 **CI/CD:** after the first setup, deploy from GitHub with one click (*Actions → Deploy (Linux) / Deploy (Windows)*: frontend, backend or both, optional database migration, automatic restore when the new backend isn't healthy). See [DEVOPS_LINUX.md](DEVOPS_LINUX.md) and [DEVOPS_WINDOWS.md](DEVOPS_WINDOWS.md). *Actions → Deploy (Azure)* creates the Azure resources and deploys the database, API and web app with checkboxes; see [DEPLOYMENT_AZURE.md](DEPLOYMENT_AZURE.md).
 

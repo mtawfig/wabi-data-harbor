@@ -1,5 +1,5 @@
 # /etc/systemd/system/wabi-insight-api.service — Kestrel behind nginx on a Linux host.
-# Secrets live in /etc/wabi-insight/api.env (chmod 600, owner wabi-insight), see docs/DEPLOYMENT.md.
+# Secrets live in /etc/wabi-insight/api.env (chmod 600, owner root: systemd reads it before starting the service as wabi-insight), see docs/DEPLOYMENT_LINUX.md.
 [Unit]
 Description=Wabi Insight API
 After=network.target

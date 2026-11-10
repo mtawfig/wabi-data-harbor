@@ -94,7 +94,7 @@ jobs:
           SQL_ADMIN_PASSWORD: ${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}
         run: |
           if [ -z "$SQL_ADMIN_PASSWORD" ]; then
-            echo "::error::Add the AZURE_SQL_ADMIN_PASSWORD secret to the production-azure environment (docs/DEPLOYMENT_AZURE.md, step 3)."
+            echo "::error::Add the AZURE_SQL_ADMIN_PASSWORD secret to the production-azure environment (docs/DEPLOYMENT_AZURE.md, step 15)."
             exit 1
           fi
           if [ -z "$LOCATION" ]; then
@@ -199,7 +199,7 @@ jobs:
           Bootstrap__InitializationSecret: ${{ secrets.WI_BOOTSTRAP_INITIALIZATION_SECRET }}
         run: |
           if [ -z "$Bootstrap__AdministratorPassword" ] || [ -z "$Bootstrap__InitializationSecret" ]; then
-            echo "::error::Add the WI_BOOTSTRAP_ADMIN_PASSWORD and WI_BOOTSTRAP_INITIALIZATION_SECRET secrets to the production-azure environment (docs/DEPLOYMENT_AZURE.md, step 3)."
+            echo "::error::Add the WI_BOOTSTRAP_ADMIN_PASSWORD and WI_BOOTSTRAP_INITIALIZATION_SECRET secrets to the production-azure environment (docs/DEPLOYMENT_AZURE.md, step 15)."
             exit 1
           fi
           if [ -n "$ADMIN_EMAIL" ]; then
@@ -229,7 +229,7 @@ jobs:
             echo "| Database | \`$WI_SQL_SERVER\` / \`$WI_SQL_DATABASE\` |"
             echo "| Migrations applied | $MIGRATE |"
             echo "| First administrator | $BOOTSTRAP |"
-            echo "| Restore point (UTC) | ${RESTORE_POINT:-—} (Azure SQL point-in-time restore, kept 7 days) |"
+            echo "| Restore point (UTC) | ${RESTORE_POINT:-—} (Azure SQL point-in-time restore, within the retention period: 7 days by default) |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   api:
@@ -294,7 +294,7 @@ jobs:
             echo "Not ready yet (HTTP $code); waiting…"
             sleep 10
           done
-          echo "::error::$WI_APP_URL/health/ready did not answer 200 within 6 minutes. See the App Service's Log stream in the Azure portal."
+          echo "::error::$WI_APP_URL/health/ready did not answer 200 within 6 minutes. See the App Service's Log stream in the Azure portal (docs/DEPLOYMENT_AZURE.md, step 31)."
           exit 1
 
       - name: Summary
@@ -373,7 +373,7 @@ jobs:
             fi
             sleep 10
           done
-          echo "::error::$WI_APP_URL/ does not return the web app. Check that the API is deployed (it serves these files) and that Web__RootPath is /home/site/web."
+          echo "::error::$WI_APP_URL/ does not return the web app. Check that the API is deployed (it serves these files) and that Web__RootPath is /home/site/web (docs/DEPLOYMENT_AZURE.md, step 31)."
           exit 1
 
       - name: Summary

@@ -6,7 +6,7 @@ set -euo pipefail
 
 name="${AZURE_NAME:-}"
 if [[ ! "$name" =~ ^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$ ]]; then
-  echo "::error::Set the AZURE_NAME variable of the production-azure environment: 2-40 lowercase letters, digits and hyphens, for example wabi-insight-prod (docs/DEPLOYMENT_AZURE.md, step 3)."
+  echo "::error::Set the AZURE_NAME variable of the production-azure environment: 2-40 lowercase letters, digits and hyphens, for example wabi-insight-prod (docs/DEPLOYMENT_AZURE.md, steps 7 and 15)."
   exit 1
 fi
 

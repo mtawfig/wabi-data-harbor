@@ -1,4 +1,4 @@
-# Reusable build used by the manual deployment workflows (deploy-linux.yml, deploy-windows.yml).
+# Reusable build used by the manual deployment workflows (deploy-linux.yml, deploy-windows.yml, deploy-azure.yml).
 # Builds the selected components on GitHub-hosted runners and uploads them as workflow artifacts:
 #   wabi-insight-api  — `dotnet publish` output (framework-dependent, runs on Linux and Windows) + IIS web.config
 #   wabi-insight-web  — browser/ (Angular production build) + iis/web.config (used on Windows only)

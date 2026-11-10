@@ -41,7 +41,7 @@ No server secrets live in GitHub. The server keeps its own configuration (`/etc/
 
 ## 0. Prerequisites
 
-1. **The server is prepared** with [DEPLOYMENT_LINUX.md](DEPLOYMENT_LINUX.md) steps **1–8, 10, 13, 16, 17, 21**: packages, firewall, SQL Server Express, the database and its login, .NET, the service account and folders, `api.env`, the systemd unit, nginx + certificate, and the backup script. With CI/CD you **don't need** step 9 (Node.js), 11 (git clone) or 12 (build) on the server. For step 8, the ASP.NET Core runtime is enough: `apt-get install -y aspnetcore-runtime-10.0`. Step 14 (migrations) is done by the first run, and step 15 (first administrator) comes right after it (step 6 below).
+1. **The server is prepared** with [DEPLOYMENT_LINUX.md](DEPLOYMENT_LINUX.md) steps **1–29**: packages, firewall, SQL Server Express, the database and its login, the ASP.NET Core runtime, the service account and folders, the server files from GitHub, `api.env`, the systemd unit, the backup script, nginx + certificate. That guide also covers this CI/CD setup for beginners (steps 30–37); this page is the reference behind it. With CI/CD the server needs no Node.js, git clone or build (those are only in the guide's appendix, *Installing without GitHub Actions*). The first run creates the schema, and the first administrator comes right after it (step 6 below).
 2. **The workflows are on `main`.** GitHub lists a manually started workflow only once its file is on the default branch.
 3. **Your GitHub account** has admin rights on the repository, to add a runner and an environment.
 4. **Outbound HTTPS** from the server to `github.com`, `api.github.com`, `*.actions.githubusercontent.com`, `codeload.github.com`, `objects.githubusercontent.com` and `*.blob.core.windows.net` (artifact storage).
@@ -213,7 +213,7 @@ Then open `https://<your domain>` in a browser.
 
 ## 6. New server only: create the first Platform Administrator
 
-The first run created the schema. Create the administrator once, with [DEPLOYMENT_LINUX.md step 15](DEPLOYMENT_LINUX.md#15-create-the-first-platform-administrator-once). It uses the API the pipeline just installed in `/opt/wabi-insight/api`. Then sign in and change the password ([step 18](DEPLOYMENT_LINUX.md#18-go-live-checks)).
+The first run created the schema. Create the administrator once, with [DEPLOYMENT_LINUX.md step 36](DEPLOYMENT_LINUX.md#36-create-the-first-platform-administrator-once). It uses the API the pipeline just installed in `/opt/wabi-insight/api`. Then sign in and change the password ([step 37](DEPLOYMENT_LINUX.md#37-go-live-checks)).
 
 **Check:** `0` means not done yet: `SQLCMDPASSWORD=… sqlcmd -S 127.0.0.1,1433 -U wabiinsightdbowner -d WabiInsightDB -C -h -1 -Q "SELECT COUNT(*) FROM dbo.Administrators"`.
 
@@ -255,7 +255,7 @@ rsync -a --delete --exclude appsettings.Local.json /opt/wabi-insight/releases/pr
 rsync -a --delete /opt/wabi-insight/releases/previous-web/ /var/www/wabi-insight/
 ```
 
-- **Across a migration:** the old code may not work with the new schema. Restore the database backup taken by that deployment (`RESTORE DATABASE … WITH REPLACE`, guide step 21), then deploy the old version.
+- **Across a migration:** the old code may not work with the new schema. Restore the database backup taken by that deployment (`RESTORE DATABASE … WITH REPLACE`, guide step 43), then deploy the old version.
 
 ## 10. Keeping it up to date
 

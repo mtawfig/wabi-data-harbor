@@ -18,7 +18,7 @@
     the backups, so before migrations the script records the point-in-time restore point (deploy log and run summary);
     the "Wabi Insight backup" task, when present, still runs first (on that setup it copies the key ring to Azure).
 
-    Layout (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 5): <Root>\web\api (API site), <Root>\web\app (frontend site),
+    Layout (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 10): <Root>\web\api (API site), <Root>\web\app (frontend site),
     <Root>\releases, <Root>\logs. Generated and uploaded files live outside Root (D:\wabi-insight\files, Storage:RootPath)
     and are never touched by a deployment.
 
@@ -145,8 +145,8 @@ if ($Migrate -eq 'yes' -and -not $deployBackend) {
 }
 if ($deployBackend) {
     if (-not $ApiDir -or -not (Test-Path (Join-Path $ApiDir 'WabiInsight.Api.dll'))) { Stop-Deploy "-ApiDir must point at the published API (WabiInsight.Api.dll not found in '$ApiDir')." }
-    if (-not (Test-Path $dotnet)) { Stop-Deploy "$dotnet not found: install the ASP.NET Core Hosting Bundle (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 8, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 21)." }
-    if (-not (Test-Path (Join-Path $apiTarget 'appsettings.Local.json'))) { Stop-Deploy "$apiTarget\appsettings.Local.json is missing: create it first (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 17, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 26)." }
+    if (-not (Test-Path $dotnet)) { Stop-Deploy "$dotnet not found: install the ASP.NET Core Hosting Bundle (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 13, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 21)." }
+    if (-not (Test-Path (Join-Path $apiTarget 'appsettings.Local.json'))) { Stop-Deploy "$apiTarget\appsettings.Local.json is missing: create it first (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 24, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 26)." }
 }
 if ($deployFrontend) {
     if (-not $WebDir -or -not (Test-Path (Join-Path $WebDir 'browser\index.html'))) { Stop-Deploy "-WebDir must contain browser\index.html (the Angular build) and iis\web.config." }
@@ -213,7 +213,7 @@ try {
             } elseif ($azureSql) {
                 Write-Output "::warning::Scheduled task '$BackupTaskName' not found: the key ring was not copied before the migration (docs/DEPLOYMENT_WINDOWS_AZURE.md step 32). The database itself is covered by the restore point above."
             } else {
-                Write-Output "::warning::Scheduled task '$BackupTaskName' not found: migrating without a fresh backup (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 25)."
+                Write-Output "::warning::Scheduled task '$BackupTaskName' not found: migrating without a fresh backup (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 30)."
             }
             Write-Step 'Database: applying migrations'
             Push-Location $apiTarget
