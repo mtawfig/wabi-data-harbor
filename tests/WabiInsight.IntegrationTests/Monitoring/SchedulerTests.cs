@@ -42,6 +42,7 @@ public sealed class SchedulerTests : IDisposable
         services.AddScoped<IUsageEventWriter, UsageEventWriter>();
         services.AddScoped<IScheduledJobHandler, AccessBaselineJob>();
         services.AddScoped<IScheduledJobHandler, RetentionPurgeJob>();
+        services.AddScoped<IScheduledJobHandler, FlakyDigestHandler>();
         services.AddSingleton<Core.Storage.IArtifactStorage, NoFilesStorage>();
         services.AddScoped(sp => new ScheduledJobRunner(sp.GetRequiredService<ConfigurationDbContext>(), sp.GetRequiredService<ITenantContext>(), sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<IClock>(), sp.GetRequiredService<IOptions<MonitoringOptions>>(), NullLogger<ScheduledJobRunner>.Instance));
         _services = services.BuildServiceProvider();
@@ -216,6 +217,199 @@ public sealed class SchedulerTests : IDisposable
         await using var context = _db.CreateContext(TestData.SystemPrincipal);
         var job = await context.ScheduledJobs.SingleAsync(j => j.JobId == jobId);
         Assert.True(job.LastOutcome == JobOutcome.Succeeded, job.LastError);
+    }
+
+    [Fact]
+    public async Task AFailedRun_IsRetriedSoon_ThenBackOnSchedule_AndOnlySuccessMovesTheSuccessMark()
+    {
+        var jobId = await MakeDueAsync(_db.Data.OrganizationBId, ScheduledJobType.AlertDigest);
+        DateTimeOffset? successBefore;
+        await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+        {
+            successBefore = (await context.ScheduledJobs.AsNoTracking().SingleAsync(j => j.JobId == jobId)).LastSuccessAt;
+        }
+
+        async Task<ScheduledJob> RunAsync(bool fail)
+        {
+            FlakyDigestHandler.Fail = fail;
+            await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+            {
+                var due = await context.ScheduledJobs.SingleAsync(j => j.JobId == jobId);
+                due.NextRunAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+                await context.SaveChangesAsync();
+            }
+
+            await using (var scope = SchedulerScope())
+            {
+                Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<ScheduledJobRunner>().RunDueJobsAsync("retry-test"));
+            }
+
+            await using var read = _db.CreateContext(TestData.SystemPrincipal);
+            return await read.ScheduledJobs.AsNoTracking().SingleAsync(j => j.JobId == jobId);
+        }
+
+        try
+        {
+            // Three failures in a row: retried after 5, 15 and 60 minutes, each time counted, the success mark untouched.
+            foreach (var (attempt, minutes) in new[] { (1, 5), (2, 15), (3, 60) })
+            {
+                var failed = await RunAsync(fail: true);
+                Assert.Equal(JobOutcome.Failed, failed.LastOutcome);
+                Assert.Equal(attempt, failed.ConsecutiveFailures);
+                Assert.Equal(FlakyDigestHandler.Error, failed.LastError);
+                Assert.Equal(successBefore, failed.LastSuccessAt);
+                Assert.Null(failed.LeaseOwner);
+                var regular = JobRecurrence.NextRun(failed, failed.LastRunAt!.Value);
+                var retry = failed.LastRunAt.Value.AddMinutes(minutes);
+                Assert.Equal(retry < regular ? retry : regular, failed.NextRunAt); // never later than the regular run
+            }
+
+            // A fourth failure in a row waits for the regular schedule: a source that stays down is not hammered.
+            var fourth = await RunAsync(fail: true);
+            Assert.Equal(4, fourth.ConsecutiveFailures);
+            Assert.Equal(JobRecurrence.NextRun(fourth, fourth.LastRunAt!.Value), fourth.NextRunAt);
+            Assert.Equal(successBefore, fourth.LastSuccessAt);
+
+            // Success: the count is cleared, the mark moves, the regular schedule resumes.
+            var succeeded = await RunAsync(fail: false);
+            Assert.Equal(JobOutcome.Succeeded, succeeded.LastOutcome);
+            Assert.Equal(0, succeeded.ConsecutiveFailures);
+            Assert.Null(succeeded.LastError);
+            Assert.Equal(succeeded.LastRunAt, succeeded.LastSuccessAt);
+            Assert.Equal(JobRecurrence.NextRun(succeeded, succeeded.LastRunAt!.Value), succeeded.NextRunAt);
+            Assert.Equal(successBefore, FlakyDigestHandler.SeenSuccessMarks[0]); // what the digest would have counted from, on every attempt
+            Assert.All(FlakyDigestHandler.SeenSuccessMarks, mark => Assert.Equal(successBefore, mark));
+        }
+        finally
+        {
+            FlakyDigestHandler.Fail = false;
+            FlakyDigestHandler.SeenSuccessMarks.Clear();
+        }
+    }
+
+    [Fact]
+    public async Task OneJobPerOrganizationTypeAndTarget_EvenWhenTwoInstancesProvisionAtOnce()
+    {
+        await using (var scope = SchedulerScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ScheduledJobRunner>().EnsureStandingJobsAsync();
+        }
+
+        // The database refuses a second job for the same organization, type and target (none, for a standing job).
+        await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+        {
+            context.ScheduledJobs.Add(new ScheduledJob { JobId = Ids.New(), JobType = ScheduledJobType.RetentionPurge, OrganizationId = _db.Data.OrganizationBId, TimeZone = "UTC", NextRunAt = DateTimeOffset.UtcNow.AddDays(1), CreatedAt = DateTimeOffset.UtcNow });
+            await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+        }
+
+        // Two instances start together and both find the job missing: one row results, and neither tick fails.
+        await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+        {
+            await context.ScheduledJobs.Where(j => j.OrganizationId == _db.Data.OrganizationBId && j.JobType == ScheduledJobType.RetentionPurge).ExecuteDeleteAsync();
+        }
+
+        await using (var scope1 = SchedulerScope())
+        await using (var scope2 = SchedulerScope())
+        {
+            await Task.WhenAll(
+                scope1.ServiceProvider.GetRequiredService<ScheduledJobRunner>().EnsureStandingJobsAsync(),
+                scope2.ServiceProvider.GetRequiredService<ScheduledJobRunner>().EnsureStandingJobsAsync());
+        }
+
+        await using (var scope = SchedulerScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ScheduledJobRunner>().EnsureStandingJobsAsync(); // the tick after, whoever lost the race
+        }
+
+        await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+        {
+            Assert.Single(await context.ScheduledJobs.AsNoTracking().Where(j => j.OrganizationId == _db.Data.OrganizationBId && j.JobType == ScheduledJobType.RetentionPurge).ToListAsync());
+            Assert.Single(await context.ScheduledJobs.AsNoTracking().Where(j => j.OrganizationId == _db.Data.OrganizationAId && j.JobType == ScheduledJobType.RetentionPurge).ToListAsync());
+        }
+    }
+
+    [Fact]
+    public async Task ARunLongerThanItsLease_KeepsTheLease_SoNoSecondInstanceStartsIt()
+    {
+        var jobId = await MakeDueAsync(_db.Data.OrganizationAId, ScheduledJobType.AlertDigest);
+        _options.LeaseMinutes = 1; // renewed every 20 seconds
+        FlakyDigestHandler.Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            await using var scope = SchedulerScope();
+            var running = scope.ServiceProvider.GetRequiredService<ScheduledJobRunner>().RunDueJobsAsync("long-run");
+            DateTimeOffset firstLease;
+            await using (var context = _db.CreateContext(TestData.SystemPrincipal))
+            {
+                ScheduledJob? leased = null;
+                for (var i = 0; i < 100 && leased?.LeaseUntil is null; i++)
+                {
+                    await Task.Delay(100);
+                    leased = await context.ScheduledJobs.AsNoTracking().SingleAsync(j => j.JobId == jobId);
+                }
+
+                firstLease = leased!.LeaseUntil!.Value;
+                Assert.Equal("long-run", leased.LeaseOwner);
+            }
+
+            // While it runs, the lease moves forward; a second instance finds nothing to take.
+            DateTimeOffset renewed = firstLease;
+            for (var i = 0; i < 300 && renewed == firstLease; i++)
+            {
+                await Task.Delay(100);
+                await using var context = _db.CreateContext(TestData.SystemPrincipal);
+                renewed = (await context.ScheduledJobs.AsNoTracking().SingleAsync(j => j.JobId == jobId)).LeaseUntil ?? firstLease;
+            }
+
+            Assert.True(renewed > firstLease, "the lease was extended while the job was still running");
+            await using (var other = SchedulerScope())
+            {
+                Assert.Equal(0, await other.ServiceProvider.GetRequiredService<ScheduledJobRunner>().RunDueJobsAsync("second-instance"));
+            }
+
+            FlakyDigestHandler.Hold.SetResult();
+            Assert.Equal(1, await running);
+            await using var after = _db.CreateContext(TestData.SystemPrincipal);
+            var done = await after.ScheduledJobs.AsNoTracking().SingleAsync(j => j.JobId == jobId);
+            Assert.Equal(JobOutcome.Succeeded, done.LastOutcome);
+            Assert.Null(done.LeaseOwner);
+            Assert.Null(done.LeaseUntil);
+        }
+        finally
+        {
+            FlakyDigestHandler.Hold?.TrySetResult();
+            FlakyDigestHandler.Hold = null;
+            FlakyDigestHandler.SeenSuccessMarks.Clear();
+            _options.LeaseMinutes = 10;
+        }
+    }
+
+    /// <summary>Stands in for the digest job (not registered in this class): fails or waits on demand, and notes the success mark it was given.</summary>
+    private sealed class FlakyDigestHandler : IScheduledJobHandler
+    {
+        public const string Error = "source_unavailable";
+
+        public static bool Fail { get; set; }
+
+        public static TaskCompletionSource? Hold { get; set; }
+
+        public static List<DateTimeOffset?> SeenSuccessMarks { get; } = [];
+
+        public ScheduledJobType JobType => ScheduledJobType.AlertDigest;
+
+        public async Task ExecuteAsync(ScheduledJob job, CancellationToken cancellationToken)
+        {
+            SeenSuccessMarks.Add(job.LastSuccessAt);
+            if (Hold is { } hold)
+            {
+                await hold.Task.WaitAsync(cancellationToken);
+            }
+
+            if (Fail)
+            {
+                throw new ScheduledJobFailedException(Error);
+            }
+        }
     }
 
     private async Task<Guid> MakeDueAsync(Guid organizationId, ScheduledJobType type)

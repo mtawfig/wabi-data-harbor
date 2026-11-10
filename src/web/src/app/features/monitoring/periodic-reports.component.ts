@@ -63,6 +63,9 @@ export class PeriodicReportsComponent {
   readonly isAdmin = this.auth.isOrganizationAdmin;
   readonly days = [1, 2, 3, 4, 5, 6, 7];
   readonly subscriptions = signal<ReportSubscription[]>([]);
+  /** The signed-in user's own choices (for a new report). */
+  readonly ownAnalyses = signal<SubscriptionAnalysis[]>([]);
+  /** The choices offered in the open form: the user's own, or the creator's when editing someone else's report. */
   readonly analyses = signal<SubscriptionAnalysis[]>([]);
   readonly users = signal<OrganizationUser[]>([]);
   readonly form = signal<SubscriptionForm | null>(null);
@@ -75,7 +78,10 @@ export class PeriodicReportsComponent {
 
   constructor() {
     this.load();
-    this.reports.analyses().subscribe((a) => this.analyses.set(a));
+    this.reports.analyses().subscribe((a) => {
+      this.ownAnalyses.set(a);
+      this.analyses.set(a);
+    });
     if (this.isAdmin()) {
       this.admin.listUsers(1, 200, undefined, 'Active').subscribe((p) => this.users.set(p.items));
     }
@@ -96,6 +102,7 @@ export class PeriodicReportsComponent {
     this.error.set(null);
     this.run.set(null);
     this.log.set(null);
+    this.analyses.set(this.ownAnalyses());
     const first = this.analyses()[0];
     this.form.set({
       subscriptionId: null,
@@ -129,6 +136,16 @@ export class PeriodicReportsComponent {
       isActive: s.isActive,
       recipientUserIds: s.recipients.map((r) => r.userId),
     });
+    // The analysis has to be one the report's creator may use, so the choices are theirs.
+    this.reports.analyses(s.subscriptionId).subscribe((a) => this.analyses.set(a));
+  }
+
+  /**
+   * The dates of an analysis that names fixed dates, for the warning. Each one is wrapped in left-to-right isolates,
+   * or an Arabic sentence would show 2026-01-01 as 01-01-2026.
+   */
+  datesText(dates: string[] | undefined): string {
+    return (dates ?? []).map((d) => `\u2066${d}\u2069`).join(this.language.current() === 'ar' ? '، ' : ', ');
   }
 
   patch(changes: Partial<SubscriptionForm>): void {

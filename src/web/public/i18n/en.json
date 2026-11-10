@@ -2383,6 +2383,8 @@
     "noAnalyses": "Save an analysis first (Ask Wabi Insight), or ask a colleague to share one with you.",
     "analysis": "Saved analysis",
     "analysisHint": "Your own analyses and those shared with you. Each run refreshes the figures with the latest data; the written explanation is not included.",
+    "fixedDates": "This analysis uses fixed dates ({{dates}}), so every run will cover the same period. To follow the calendar, ask the question again with a period such as \"last month\" or \"this year\", and schedule that analysis.",
+    "fixedDatesShort": "Fixed period: every run covers the same dates",
     "name": "Name",
     "delivery": "Delivery",
     "format": "File",
@@ -2424,6 +2426,7 @@
     "empty": "No periodic reports yet.",
     "errors": {
       "subscription_analysis_missing": "The analysis was deleted or is no longer available.",
+      "subscription_share_ended": "The analysis is no longer shared with the person who set up this report, so the report was stopped.",
       "subscription_analysis_has_no_plan": "The analysis has no completed version to re-run.",
       "subscription_no_active_recipients": "None of the recipients is active.",
       "subscription_application_unavailable": "The application is not approved or inactive.",

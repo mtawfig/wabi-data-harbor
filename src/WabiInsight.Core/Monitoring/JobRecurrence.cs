@@ -77,6 +77,27 @@ public static class JobRecurrence
         return after.AddDays(1);
     }
 
+    /// <summary>Minutes to wait before the first, second and third retry of a failed run.</summary>
+    public static readonly IReadOnlyList<int> RetryDelaysMinutes = [5, 15, 60];
+
+    /// <summary>
+    /// When a job that just failed runs again (P13.27). The first failures in a row are retried after a short, growing
+    /// delay, never later than the regular next run; after that the job waits for its regular schedule, so a source
+    /// that stays down is not hammered. <paramref name="consecutiveFailures"/> includes the failure that just happened.
+    /// </summary>
+    public static DateTimeOffset NextRunAfterFailure(ScheduledJob job, DateTimeOffset finished, int consecutiveFailures)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+        var regular = NextRun(job, finished);
+        if (consecutiveFailures < 1 || consecutiveFailures > RetryDelaysMinutes.Count)
+        {
+            return regular;
+        }
+
+        var retry = finished.AddMinutes(RetryDelaysMinutes[consecutiveFailures - 1]);
+        return retry < regular ? retry : regular;
+    }
+
     /// <summary>1 = Monday … 7 = Sunday, matching the platform's calendar convention.</summary>
     public static int IsoDayOfWeek(DateOnly date) => date.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)date.DayOfWeek;
 
