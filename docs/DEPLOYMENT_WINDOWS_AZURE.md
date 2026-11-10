@@ -7,7 +7,9 @@ at `https://<your domain>`, with:
 - the **database** in **Azure SQL Database** (Microsoft runs it, with backups included);
 - the **generated and uploaded files** (reports, exports, attachments, logos) in **Azure Blob Storage**;
 - **one-click deployments** from GitHub (**Actions → Deploy (Windows)**). GitHub builds the code, and a small agent on
-  your VPS installs it.
+  your VPS installs it;
+- optionally, the two **demo organizations** (Gulf Aviation Services and Wabi Bank), whose business databases stay on
+  your VPS in a free SQL Server Express ([Part H](#part-h--optional-the-demo-organizations-with-their-databases-on-the-vps)).
 
 ```
  Users' browsers
@@ -1072,7 +1074,8 @@ Pop-Location
 6. Sign in as that organization administrator in a private window, change the password, and upload an **organization
    logo** (**Settings**). **[Azure portal]** → storage account → **Containers → wabi-insight-files**: a folder
    `organization-logos` appears. This proves the files go to Azure.
-7. Register an application (your organization's database, read-only) and ask a question on **Ask Wabi Insight**.
+7. Register an application (your organization's database, read-only) and ask a question on **Ask Wabi Insight**. For
+   the demo organizations and their databases, see Part H (steps 43–48).
 
 ---
 
@@ -1168,6 +1171,8 @@ Restart-WebAppPool 'WabiInsightApi'
     clicks **Run workflow**.
   - Never use the self-hosted runner for pull-request workflows; CI runs on GitHub's own computers.
 - **Updates:** keep Windows and the Hosting Bundle updated (step 37).
+- **Demo databases (Part H):** port 1433 stays closed in Windows Firewall and the provider's panel; the applications
+  use the read-only `…_reader` logins; change the sample passwords (step 48).
 
 ## 41. Costs (approximate, per month)
 
@@ -1179,6 +1184,7 @@ Restart-WebAppPool 'WabiInsightApi'
 | Data leaving Azure (file downloads to the VPS) | First 100 GB/month free | usually USD 0 |
 | GitHub Actions | about 10 build minutes per deployment | covered by the included minutes |
 | Your VPS | Unchanged | — |
+| SQL Server Express for the demo databases (Part H, optional) | Free edition, about 1.5 GB RAM and 3 GB disk on the VPS | USD 0 |
 
 ## 42. Troubleshooting
 
@@ -1198,6 +1204,377 @@ Restart-WebAppPool 'WabiInsightApi'
 | The deploy job warns the script *differs* | The repository has a newer deploy script | Step 33, parts 1 and 2 |
 | Key-ring backup task result is not 0 | The SAS link expired or is wrong | Step 14 again, and the first three lines of step 32 **Do** |
 | E-mails don't arrive | SMTP settings or outgoing port | **Platform → System Health** and **E-mail** pages; check the SMTP port is allowed out (step 2) |
+
+# Part H — Optional: the demo organizations, with their databases on the VPS
+
+Wabi Insight comes with two fictional demo organizations, each with its own business databases:
+
+| Organization | Databases | Sign-in users |
+|---|---|---|
+| **Gulf Aviation Services** (`GAS`): flights, HR/payroll, procurement | `FlightOperationsDB`, `HumanResourcesDB`, `ProcurementStoresDB` | 4: [`scripts/sql/samples/README.md`](../scripts/sql/samples/README.md) |
+| **Wabi Bank** (`WBK`): personnel, core banking, finance, digital banking, IT help desk | `WabiBankPersonnelDB`, `WabiBankCoreBankingDB`, `WabiBankFinanceDB`, `WabiBankDigitalDB`, `WabiBankITDB` | 8: [`scripts/sql/samples/wabi-bank/README.md`](../scripts/sql/samples/wabi-bank/README.md) |
+
+In this setup:
+- the **demo business databases** live in a free **SQL Server Express on your VPS**. Their data never goes to Azure;
+- the **demo organizations** (their users, roles, applications, catalogue and permissions) go into the application
+  database in **Azure SQL**, next to your real organizations.
+
+```
+ Your VPS ─────────────────────────────────────────────────────────────┐
+ │ IIS → the API ── asks questions on ──► SQL Server Express (localhost,1433, not reachable from outside)
+ │                                          the 8 demo business databases, read through read-only logins
+ └────────┬───────────────────────────────────────────────────────────┘
+          │ users, roles, applications, catalogue, history (as before)
+          ▼
+   Azure SQL Database (the application database)
+```
+
+**Why the extra copy steps (45–47).** The scripts that add the demo organizations (`04-seed-…` and
+`wabi-bank/06-seed-…`) read the demo databases while they write the application database, so all of them must be on the
+**same** SQL Server. Azure SQL can't read databases on your VPS. So, once, during a short maintenance window:
+
+1. the application database is copied from Azure to the VPS;
+2. the two scripts run there, next to the demo databases;
+3. the result goes back to Azure as a **new** database, `WabiInsightDB-demo`, and the application switches to it.
+
+Your existing database isn't changed. If anything fails before the switch, the site simply continues on it.
+
+**When:** any time after the first deployment (step 33) and the first Platform Administrator (step 34). The site is
+offline for about 10–20 minutes during steps 46–47. **Cost:** none (SQL Server Express is free). The VPS needs about
+**1.5 GB more RAM** and **3 GB more disk**.
+
+## 43. SQL Server Express on the VPS (for the demo databases only)
+
+Run in **[VPS PowerShell]** with the session settings, `$WI` and the helpers from step 5.
+
+**Do, part 1:** add the SQL helper to your session. **Paste it into every new window for Part H**, next to the step 5
+helpers:
+
+```powershell
+function Invoke-WiSql {
+    # Runs SQL on the local SQL Server Express (demo databases) as your Windows administrator account.
+    [CmdletBinding()]
+    param([string]$Query, [string]$InputFile, [string]$Database = 'master')
+    Import-Module SqlServer -Verbose:$false
+    $p = @{ ServerInstance = 'localhost,1433'; Database = $Database; TrustServerCertificate = $true; QueryTimeout = 600; DisableVariables = $true; ErrorAction = 'Stop' }
+    if ($InputFile) { $p.InputFile = $InputFile } else { $p.Query = $Query }
+    Invoke-Sqlcmd @p
+}
+```
+
+**Check:**
+
+```powershell
+Get-Service -Name 'MSSQL$*' -ErrorAction SilentlyContinue | Select-Object Name, Status, StartType
+```
+
+If `MSSQL$SQLEXPRESS` is already listed, skip part 2 and do part 3 on it.
+
+**Do, part 2:** download and install SQL Server 2025 Express (5–15 minutes; it shows nothing until it ends).
+
+1. Generate the `sa` password and **store it in your password manager** (it's the emergency administrator of this local
+   SQL Server; your Windows administrator account is its everyday administrator):
+
+   ```powershell
+   "sa password for the VPS SQL Server Express: $(New-WiSecret)"
+   ```
+
+2. Download and install:
+
+   ```powershell
+   $ssei = Get-WiDownload 'https://go.microsoft.com/fwlink/?linkid=2216019' 'SQL2025-SSEI-Expr.exe'
+   $media = Join-Path $WI.Root 'install\sql'
+   New-Item -ItemType Directory -Force -Path $media | Out-Null
+   Start-Process $ssei -ArgumentList '/ACTION=Download', "/MEDIAPATH=$media", '/MEDIATYPE=Core', '/QUIET' -Wait
+   $sa = Read-WiSecret 'sa password'
+   $package = (Get-ChildItem $media -Filter 'SQLEXPR*.exe' | Select-Object -First 1).FullName
+   $setupDir = Join-Path $media 'setup'
+   Start-Process $package -ArgumentList '/q', "/x:`"$setupDir`"" -Wait
+   $arguments = @(
+       '/Q', '/ACTION=Install', '/IACCEPTSQLSERVERLICENSETERMS', '/FEATURES=SQLEngine',
+       '/INSTANCENAME=SQLEXPRESS', '/SQLSVCACCOUNT="NT Service\MSSQL$SQLEXPRESS"', '/SQLSVCSTARTUPTYPE=Automatic',
+       '/SQLSYSADMINACCOUNTS="BUILTIN\Administrators"', '/SECURITYMODE=SQL', "/SAPWD=`"$sa`"",
+       '/TCPENABLED=1', '/NPENABLED=0', '/BROWSERSVCSTARTUPTYPE=Disabled', '/UPDATEENABLED=False'
+   )
+   $p = Start-Process (Join-Path $setupDir 'setup.exe') -ArgumentList $arguments -Wait -PassThru
+   "setup exit code $($p.ExitCode)"      # 0 = success, 3010 = success, restart the VPS first
+   Remove-Variable sa
+   ```
+
+   - If no `SQLEXPR*.exe` appears in `C:\wabitex-apps\wabi-insight\install\sql`: double-click
+     `install\SQL2025-SSEI-Expr.exe`, choose **Download Media → Express Core**, save it to that folder, and run the
+     block again from `$sa = …`.
+   - **Exit code 3010:** restart the VPS, reconnect, and paste the session settings, `$WI` and the helpers again.
+   - **Any other code:** read `C:\Program Files\Microsoft SQL Server\*\Setup Bootstrap\Log\Summary.txt`.
+
+**Do, part 3:** a fixed port 1433, mixed-mode sign-in (the demo applications sign in with SQL logins), and the
+PowerShell `SqlServer` module:
+
+```powershell
+$instanceId = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').SQLEXPRESS
+$sqlKey = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$instanceId\MSSQLServer"
+Set-ItemProperty $sqlKey -Name LoginMode -Value 2
+Set-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp" -Name Enabled -Value 1
+Set-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp\IPAll" -Name TcpDynamicPorts -Value ''
+Set-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp\IPAll" -Name TcpPort -Value '1433'
+Restart-Service 'MSSQL$SQLEXPRESS' -Force
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force | Out-Null
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+Install-Module -Name SqlServer -Scope AllUsers -AllowClobber -Force
+```
+
+**Verify:**
+
+```powershell
+Get-Service 'MSSQL$SQLEXPRESS' | Select-Object Status, StartType                       # Running, Automatic
+Invoke-WiSql "SELECT CAST(SERVERPROPERTY('Edition') AS nvarchar(64)) AS Edition, CAST(SERVERPROPERTY('IsIntegratedSecurityOnly') AS int) AS WindowsAuthOnly"
+# Express Edition (64-bit)   0
+Get-NetFirewallRule -Enabled True -Direction Inbound -ErrorAction SilentlyContinue | Get-NetFirewallPortFilter |
+    Where-Object LocalPort -eq '1433'                                                    # (nothing): port 1433 stays closed to the internet
+```
+
+Keep 1433 **closed** in Windows Firewall and in your provider's panel (step 2): only the API, on this same VPS, uses it.
+
+## 44. Create the demo databases
+
+**Check:**
+
+```powershell
+Invoke-WiSql "SELECT name FROM sys.databases WHERE name IN (N'FlightOperationsDB', N'HumanResourcesDB', N'ProcurementStoresDB', N'WabiBankPersonnelDB', N'WabiBankCoreBankingDB', N'WabiBankFinanceDB', N'WabiBankDigitalDB', N'WabiBankITDB')"
+```
+
+**Do, part 1:** download the scripts. Create a GitHub token exactly as in step 33, part 1 (Contents: read-only, 7 days),
+paste it when asked, and delete it on GitHub afterwards:
+
+```powershell
+$samples = Join-Path $WI.Root 'install\samples'
+New-Item -ItemType Directory -Force -Path (Join-Path $samples 'wabi-bank') | Out-Null
+$sampleFiles = '01-create-flightoperationsdb.sql', '02-create-humanresourcesdb.sql', '03-create-procurementstoresdb.sql', '04-seed-wabiinsightdb.sql',
+               'wabi-bank\01-create-wabibankpersonneldb.sql', 'wabi-bank\02-create-wabibankcorebankingdb.sql', 'wabi-bank\03-create-wabibankfinancedb.sql',
+               'wabi-bank\04-create-wabibankdigitaldb.sql', 'wabi-bank\05-create-wabibankitdb.sql', 'wabi-bank\06-seed-wabiinsightdb.sql', 'wabi-bank\07-check-consistency.sql'
+$ghToken = Read-WiSecret 'GitHub token (Contents: read)'
+foreach ($f in $sampleFiles) {
+    $repoPath = 'scripts/sql/samples/' + $f.Replace('\', '/')
+    Invoke-WebRequest -UseBasicParsing -OutFile (Join-Path $samples $f) `
+        -Uri "https://api.github.com/repos/$($WI.Repo)/contents/$($repoPath)?ref=main" `
+        -Headers @{ Authorization = "Bearer $ghToken"; Accept = 'application/vnd.github.raw'; 'User-Agent' = 'wabi-insight-setup' }
+}
+Remove-Variable ghToken
+# Save as UTF-8 with a byte-order mark, so the Arabic names are read correctly.
+foreach ($f in $sampleFiles) {
+    $path = Join-Path $samples $f
+    [IO.File]::WriteAllText($path, [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8), (New-Object Text.UTF8Encoding $true))
+}
+Get-ChildItem $samples -Recurse -File | Select-Object Name, Length          # 11 files, none of them 0 bytes
+```
+
+**Do, part 2:** create the eight databases and their logins (about 5 minutes; the Wabi Bank Core Banking script alone
+takes about 2):
+
+```powershell
+$createFiles = $sampleFiles | Where-Object { $_ -match '\\?0[1-5]-create-' }
+foreach ($f in $createFiles) {
+    "== $f"
+    Invoke-WiSql -InputFile (Join-Path $samples $f) | Format-Table -AutoSize | Out-String -Width 220
+}
+```
+
+Each script creates its database, an owner login and a **read-only** login (`…_reader`), and loads the data.
+
+**Verify:**
+
+```powershell
+# The eight databases exist (the Check query lists eight rows):
+Invoke-WiSql "SELECT name FROM sys.databases WHERE name LIKE N'%DB' AND database_id > 4 ORDER BY name"
+# Wabi Bank's cross-system check: the last line must show 0 failed checks.
+Invoke-WiSql -InputFile (Join-Path $samples 'wabi-bank\07-check-consistency.sql') | Select-Object -Last 1
+```
+
+## 45. Prepare the copy tools
+
+**Do:**
+
+1. **SqlPackage** (Microsoft's tool that copies a whole database into one `.bacpac` file and back): download the
+   *Windows .NET 8* zip from `https://aka.ms/sqlpackage-windows` and unpack it into
+   `C:\wabitex-apps\wabi-insight\tools\sqlpackage` (the folder must contain `SqlPackage.exe`).
+2. Let the local SQL Server accept the application's database user. In Azure, `wabiinsight_app` (step 10) is a
+   *contained* user that lives inside the database; the local SQL Server must allow such users to receive the copy:
+
+```powershell
+Invoke-WiSql "EXEC sp_configure 'contained database authentication', 1; RECONFIGURE;"
+```
+
+**Verify:**
+
+```powershell
+Test-Path (Join-Path $WI.Root 'tools\sqlpackage\SqlPackage.exe')                                                       # True
+Invoke-WiSql "SELECT value_in_use FROM sys.configurations WHERE name = 'contained database authentication'"            # 1
+Invoke-WiSql "SELECT name FROM sys.databases WHERE name = N'WabiInsightDB'"                                              # (nothing)
+```
+
+The last line must be empty: the local copy is created under that name in step 46. If a `WabiInsightDB` is listed from
+an earlier attempt, remove it first: `Invoke-WiSql "DROP DATABASE [WabiInsightDB]"`.
+
+## 46. Add the demo organizations to the application database (maintenance window)
+
+**Before you start:** tell your users the site will be offline for about 20 minutes, and have the **Azure SQL admin login
+and password** (step 8) ready.
+
+**Do:** paste this whole block. It stops at the first error: in that case the site stays offline on the **unchanged**
+database. Read the message, then bring the site back with
+`Remove-Item (Join-Path $WI.Root 'web\api\app_offline.htm')` before you try again.
+
+```powershell
+$sp = Join-Path $WI.Root 'tools\sqlpackage\SqlPackage.exe'
+$work = Join-Path $WI.Backup 'demo-seed'
+New-Item -ItemType Directory -Force -Path $work | Out-Null
+$adminLogin = Read-Host 'Azure SQL admin login (step 8)'
+$adminPassword = Read-WiSecret 'Azure SQL admin password (step 8)'
+$azure = "Server=tcp:$($WI.SqlServer),1433;User ID=$adminLogin;Password=$adminPassword;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
+$local = 'Server=localhost,1433;Integrated Security=True;Encrypt=True;TrustServerCertificate=True;'
+
+# 1. The site goes offline, so nothing changes in the database while it is copied.
+Set-Content (Join-Path $WI.Root 'web\api\app_offline.htm') 'Wabi Insight is being updated. Please try again in a few minutes.'
+Start-Sleep -Seconds 5
+
+# 2. Copy the application database from Azure to the VPS (several minutes).
+& $sp /Action:Export /SourceConnectionString:"$($azure)Initial Catalog=$($WI.SqlDatabase);" /TargetFile:"$work\from-azure.bacpac"
+if ($LASTEXITCODE -ne 0) { throw 'Export from Azure failed: see the messages above.' }
+& $sp /Action:Import /SourceFile:"$work\from-azure.bacpac" /TargetConnectionString:"$($local)Initial Catalog=WabiInsightDB;"
+if ($LASTEXITCODE -ne 0) { throw 'Import on the VPS failed: see the messages above.' }
+
+# 3. Add the two demo organizations, next to the demo databases.
+foreach ($f in '04-seed-wabiinsightdb.sql', 'wabi-bank\06-seed-wabiinsightdb.sql') {
+    "== $f"
+    Invoke-WiSql -InputFile (Join-Path $samples $f) | Format-Table -AutoSize | Out-String -Width 220
+}
+
+# 4. Copy the result back to Azure as a NEW database (several minutes). Your current database is not touched.
+& $sp /Action:Export /SourceConnectionString:"$($local)Initial Catalog=WabiInsightDB;" /TargetFile:"$work\to-azure.bacpac"
+if ($LASTEXITCODE -ne 0) { throw 'Export on the VPS failed: see the messages above.' }
+& $sp /Action:Import /SourceFile:"$work\to-azure.bacpac" /TargetConnectionString:"$($azure)Initial Catalog=WabiInsightDB-demo;" /p:DatabaseEdition=Standard /p:DatabaseServiceObjective=S0
+if ($LASTEXITCODE -ne 0) { throw 'Import into Azure failed: see the messages above.' }
+'Copied. Continue with step 47.'
+```
+
+- `$samples` comes from step 44. In a new window, set it again first:
+  `$samples = Join-Path $WI.Root 'install\samples'`.
+- If you chose another database size than S0 in step 8, change `S0` in the last import line (and `Standard` to `Basic`
+  for Basic).
+- The two seed scripts end by listing the users and the applications they created, and print *read-only connection
+  strings*: ignore their `Server=` part, step 48 gives the one to use.
+
+**Verify** ([Azure portal] → **SQL databases**): `WabiInsightDB-demo` is listed next to `WabiInsightDB`, status
+**Online**.
+
+## 47. Switch the application to the new database
+
+The site is still offline. **Do**, in the same window (it reuses `$adminLogin` and `$adminPassword`):
+
+1. Make sure the application's database user can sign in to the new database. Paste the *database password for
+   wabiinsight_app* (step 7) when asked:
+
+```powershell
+$appPassword = Read-WiSecret 'Database password for wabiinsight_app (step 7)'
+Import-Module SqlServer -Verbose:$false
+$userSql = @"
+IF DATABASE_PRINCIPAL_ID(N'wabiinsight_app') IS NULL CREATE USER [wabiinsight_app] WITH PASSWORD = '$appPassword';
+ELSE ALTER USER [wabiinsight_app] WITH PASSWORD = '$appPassword';
+ALTER ROLE db_owner ADD MEMBER [wabiinsight_app];
+SELECT name, IS_ROLEMEMBER('db_owner', name) AS DbOwner FROM sys.database_principals WHERE name = 'wabiinsight_app';
+"@
+Invoke-Sqlcmd -ServerInstance "tcp:$($WI.SqlServer),1433" -Database 'WabiInsightDB-demo' -Username $adminLogin -Password $adminPassword -Query $userSql -ErrorAction Stop
+Remove-Variable appPassword, adminPassword
+# wabiinsight_app   1
+```
+
+2. Point the application at it, and bring the site back:
+
+```powershell
+$localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
+(Get-Content $localPath -Raw).Replace("Initial Catalog=$($WI.SqlDatabase);", 'Initial Catalog=WabiInsightDB-demo;') | Set-Content $localPath -Encoding UTF8
+Restart-WebAppPool 'WabiInsightApi'
+Remove-Item (Join-Path $WI.Root 'web\api\app_offline.htm')
+$WI.SqlDatabase = 'WabiInsightDB-demo'
+$WI | Export-Clixml (Join-Path $WI.Root 'wabi-insight.vars.xml')
+```
+
+**Verify:**
+
+```powershell
+(Invoke-WebRequest "https://$($WI.Domain)/health/ready" -UseBasicParsing).Content          # "status":"Healthy"
+```
+
+Then **[Browser]** sign in as your Platform Administrator: **Platform → Organizations** lists your organizations **and**
+*Gulf Aviation Services* and *Wabi Bank*.
+
+**Afterwards (once everything works, for example the next day):**
+- **[Azure portal]** → **SQL databases → WabiInsightDB** (the old one) → **Delete**. Azure keeps its backups for its
+  retention period (**SQL servers → your server → Deleted databases**).
+- If you set longer backups in step 15, set them again on `WabiInsightDB-demo` (they belong to each database).
+- Remove the local working copy and the copy files, which contain your users' data:
+
+```powershell
+Invoke-WiSql "ALTER DATABASE [WabiInsightDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [WabiInsightDB];"
+Remove-Item (Join-Path $WI.Backup 'demo-seed') -Recurse -Force
+```
+
+From now on, wherever this guide says `WabiInsightDB` in the Azure portal (for example the roll-back in step 38), use
+`WabiInsightDB-demo`.
+
+## 48. Connect the demo applications and try them
+
+The applications' connection strings are encrypted with the API's key ring, so they can't be set by a script: each
+organization's administrator enters them once in the app.
+
+**[Browser] Do**, for each organization:
+
+1. Sign in as its administrator with the initial password `Wabi#Sample#2026`, and change the password when asked:
+   - Gulf Aviation Services: `faisal.alshamsi@gulfaviation.example`;
+   - Wabi Bank: `w1001@wabibank.example`.
+2. **Organization Administration → Applications**. For each application:
+   - **Replace connection** with the line below for its database, and the reader password from the README table
+     ([Gulf Aviation](../scripts/sql/samples/README.md), [Wabi Bank](../scripts/sql/samples/wabi-bank/README.md));
+   - **Test connection**: it must report *read-only verified*;
+   - **Approve for querying**.
+
+```
+Server=localhost,1433;Database=<database>;User Id=<reader login>;Password=<reader password>;Encrypt=True;TrustServerCertificate=True;
+```
+
+| Organization | Application database | Reader login |
+|---|---|---|
+| Gulf Aviation Services | `FlightOperationsDB` | `flightops_reader` |
+| Gulf Aviation Services | `HumanResourcesDB` | `hr_reader` |
+| Gulf Aviation Services | `ProcurementStoresDB` | `procurement_reader` |
+| Wabi Bank | `WabiBankPersonnelDB` | `wbpersonnel_reader` |
+| Wabi Bank | `WabiBankCoreBankingDB` | `wbcore_reader` |
+| Wabi Bank | `WabiBankFinanceDB` | `wbfinance_reader` |
+| Wabi Bank | `WabiBankDigitalDB` | `wbdigital_reader` |
+| Wabi Bank | `WabiBankITDB` | `wbit_reader` |
+
+`localhost` is right: the API runs on this VPS, next to SQL Server Express.
+
+**Verify:** sign in as a Management user (`khalid.alsuwaidi@gulfaviation.example` or `w1002@wabibank.example`, initial
+password as above), and ask on **Ask Wabi Insight**, for example *"Total deposits by branch"* on Core Banking. The
+READMEs list more questions for each user.
+
+**Then:**
+- **Change the sample passwords** before anyone else uses the server: the users' (each changes it at first sign-in) and
+  the SQL logins' (`Invoke-WiSql "ALTER LOGIN [<login>] WITH PASSWORD = '<new password>'"`). After changing a reader
+  password, **Replace connection** again for that application.
+- **Backups:** the demo databases are **not** in any backup. That's fine for demo data: step 44 rebuilds them. If you
+  change them yourself, back them up like any SQL Server Express database.
+
+| What you see | Likely cause | Fix |
+|---|---|---|
+| SqlPackage: *Client with IP address … is not allowed* | The `vps` firewall rule (step 9) is missing or the IP changed | Step 9, then step 46 again |
+| SqlPackage import on the VPS: *contained database authentication* | Step 45, part 2 not done | Step 45, then step 46 again |
+| SqlPackage import on the VPS: *database already exists* | A copy from an earlier attempt | `Invoke-WiSql "DROP DATABASE [WabiInsightDB]"`, then step 46 again |
+| SqlPackage import into Azure: *database already exists* | `WabiInsightDB-demo` from an earlier attempt | Delete it in the portal (it isn't in use yet), then step 46 again |
+| Seed script: *is not migrated to the current version* | The copied database is older than the code | Run **Deploy (Windows)** with `migrate_database` on, then step 46 again |
+| *Test connection* fails with *Login failed* | Wrong reader password, or mixed-mode sign-in is off | Check the README password; step 43, part 3 |
+| *Test connection* can't reach the server | SQL Server Express is stopped | `Start-Service 'MSSQL$SQLEXPRESS'` |
 
 ---
 

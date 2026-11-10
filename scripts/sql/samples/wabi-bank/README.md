@@ -95,6 +95,9 @@ $SQL -i 06-seed-wabiinsightdb.sql
 
 3. Sign in as Clara Ashby (W1001) and, under **Organization Administration → Applications**, for each of *Personnel and Attendance*, *Core Banking*, *Finance*, *Digital Banking* and *IT Help Desk*: **Replace connection** with the read-only connection string 06 prints (use the server address the API reaches), **Test connection** (must report *read-only verified*), then **Approve**. Connection strings are encrypted with the deployment's Data Protection key ring, so SQL cannot write them.
 
+
+> **Application database in Azure SQL** (`docs/DEPLOYMENT_WINDOWS_AZURE.md`): the seed script reads the sample databases, so it can't run against Azure SQL. Keep the sample databases in a SQL Server Express on the VPS and follow Part H of that guide (steps 43–48): it copies the application database to the VPS, runs the seed there and copies the result back.
+
 ## Users
 
 | Employee | Name | Position | Wabi Insight roles | What they see |
