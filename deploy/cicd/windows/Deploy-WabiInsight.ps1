@@ -8,10 +8,15 @@
     runner's workspace, is what runs.
 
     Backend:  stage -> keep the running release as "previous-api" -> app_offline.htm -> copy -> [backup + migrate] ->
-              remove app_offline.htm -> wait for /health/ready. If migration or the health check fails, the previous
-              binaries are restored (database changes made by a migration are not rolled back; restore the backup).
+              remove app_offline.htm -> wait for /health/ready -> [storage-check when files are in Azure Blob Storage].
+              If migration or the health check fails, the previous binaries are restored (database changes made by a
+              migration are not rolled back; restore the backup).
     Frontend: stage -> keep the live files as "previous-web" -> copy (index.html last) -> check the site over HTTPS.
     appsettings.Local.json (server settings) is never overwritten or deleted.
+
+    Azure SQL Database (the connection string names *.database.windows.net, docs/DEPLOYMENT_WINDOWS_AZURE.md): Azure keeps
+    the backups, so before migrations the script records the point-in-time restore point (deploy log and run summary);
+    the "Wabi Insight backup" task, when present, still runs first (on that setup it copies the key ring to Azure).
 
     Layout (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 5): <Root>\web\api (API site), <Root>\web\app (frontend site),
     <Root>\releases, <Root>\logs. Generated and uploaded files live outside Root (D:\wabi-insight\files, Storage:RootPath)
@@ -38,7 +43,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$DeployScriptVersion = 2
+$DeployScriptVersion = 3
 if ($ScriptVersion) { $DeployScriptVersion; return }
 if (-not $Component) { throw "-Component is required: backend, frontend or frontend+backend." }
 
@@ -72,6 +77,24 @@ function Invoke-Robocopy([string]$From, [string]$To, [string[]]$Options) {
     $output = Invoke-Native { robocopy.exe $From $To @Options /R:3 /W:2 /NP /NFL /NDL /NJH /NJS }
     if ($LASTEXITCODE -ge 8) { $output | Write-Output; Stop-Deploy "robocopy $From -> $To failed with exit code $LASTEXITCODE." }
     $global:LASTEXITCODE = 0
+}
+function Read-SettingsFile([string]$Path) {
+    # appsettings.json may contain full-line // comments (owner decision G); Windows PowerShell's JSON reader rejects them.
+    if (-not (Test-Path $Path)) { return $null }
+    $text = (Get-Content $Path | Where-Object { $_ -notmatch '^\s*//' }) -join "`n"
+    try { return ($text | ConvertFrom-Json) } catch { return $null }
+}
+function Get-ServerSetting([scriptblock]$Pick) {
+    # The installed API's settings: appsettings.Local.json (this server) first, then appsettings.json.
+    foreach ($name in 'appsettings.Local.json', 'appsettings.json') {
+        $settings = Read-SettingsFile (Join-Path $apiTarget $name)
+        if ($null -ne $settings) {
+            $value = $null
+            try { $value = & $Pick $settings } catch { $value = $null }
+            if ($value) { return [string]$value }
+        }
+    }
+    return $null
 }
 function Test-ApiHealthy {
     for ($i = 1; $i -le $HealthAttempts; $i++) {
@@ -122,8 +145,8 @@ if ($Migrate -eq 'yes' -and -not $deployBackend) {
 }
 if ($deployBackend) {
     if (-not $ApiDir -or -not (Test-Path (Join-Path $ApiDir 'WabiInsight.Api.dll'))) { Stop-Deploy "-ApiDir must point at the published API (WabiInsight.Api.dll not found in '$ApiDir')." }
-    if (-not (Test-Path $dotnet)) { Stop-Deploy "$dotnet not found: install the ASP.NET Core Hosting Bundle (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 8)." }
-    if (-not (Test-Path (Join-Path $apiTarget 'appsettings.Local.json'))) { Stop-Deploy "$apiTarget\appsettings.Local.json is missing: complete docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 17 first." }
+    if (-not (Test-Path $dotnet)) { Stop-Deploy "$dotnet not found: install the ASP.NET Core Hosting Bundle (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 8, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 21)." }
+    if (-not (Test-Path (Join-Path $apiTarget 'appsettings.Local.json'))) { Stop-Deploy "$apiTarget\appsettings.Local.json is missing: create it first (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 17, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 26)." }
 }
 if ($deployFrontend) {
     if (-not $WebDir -or -not (Test-Path (Join-Path $WebDir 'browser\index.html'))) { Stop-Deploy "-WebDir must contain browser\index.html (the Angular build) and iis\web.config." }
@@ -168,6 +191,16 @@ try {
         Invoke-Robocopy $stageApi $apiTarget @('/MIR', '/XF', 'appsettings.Local.json', 'app_offline.htm')
 
         if ($Migrate -eq 'yes') {
+            $connection = Get-ServerSetting { param($s) $s.ConnectionStrings.ConfigurationDatabase }
+            $azureSql = $connection -match '\.database\.windows\.net'
+            if ($azureSql) {
+                # Azure SQL keeps automatic backups: record the moment to restore to if this migration must be undone.
+                $restorePoint = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                Write-Step "Database: Azure SQL Database, point-in-time restore point $restorePoint (UTC)"
+                Write-Output 'To undo this migration: Azure portal -> SQL database -> Restore -> point in time = this moment (docs/DEPLOYMENT_WINDOWS_AZURE.md step 38).'
+                Write-DeployLog "azure-sql restore-point=$restorePoint"
+                if ($env:GITHUB_STEP_SUMMARY) { Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "Azure SQL point-in-time restore point before the migration: **$restorePoint** (UTC)`n" -Encoding UTF8 }
+            }
             $task = Get-ScheduledTask -TaskName $BackupTaskName -ErrorAction SilentlyContinue
             if ($task) {
                 Write-Step "Database: backup before migration (scheduled task '$BackupTaskName')"
@@ -177,6 +210,8 @@ try {
                 while ((Get-ScheduledTask -TaskName $BackupTaskName).State -eq 'Running' -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 3 }
                 $result = (Get-ScheduledTaskInfo -TaskName $BackupTaskName).LastTaskResult
                 if ($result -ne 0) { Restore-Backend; Stop-Deploy "Backup task finished with result $result; nothing was migrated." }
+            } elseif ($azureSql) {
+                Write-Output "::warning::Scheduled task '$BackupTaskName' not found: the key ring was not copied before the migration (docs/DEPLOYMENT_WINDOWS_AZURE.md step 32). The database itself is covered by the restore point above."
             } else {
                 Write-Output "::warning::Scheduled task '$BackupTaskName' not found: migrating without a fresh backup (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 25)."
             }
@@ -203,6 +238,20 @@ try {
         }
         $healthJson = (Invoke-WebRequest -Uri $ApiHealthUrl -UseBasicParsing -TimeoutSec 10).Content
         Write-Output ('Backend is healthy: ' + $healthJson.Substring(0, [Math]::Min(200, $healthJson.Length)))
+
+        $storageProvider = Get-ServerSetting { param($s) $s.Storage.Provider }
+        if ($storageProvider -eq 'AzureBlob') {
+            # Files live in Azure Blob Storage: prove the installed API can write, read and delete there.
+            Write-Step 'Storage: checking the Azure Blob Storage container (storage-check)'
+            Push-Location $apiTarget
+            try {
+                $env:ASPNETCORE_ENVIRONMENT = 'Production'
+                Invoke-Native { & $dotnet (Join-Path $apiTarget 'WabiInsight.Api.dll') storage-check }
+                $storageExit = $LASTEXITCODE
+            } finally { Pop-Location }
+            $global:LASTEXITCODE = 0
+            if ($storageExit -ne 0) { Stop-Deploy 'Storage check failed: the new backend is running, but it cannot use the Azure Blob Storage container. Check Storage:AzureBlob (connection string, container name) in appsettings.Local.json (docs/DEPLOYMENT_WINDOWS_AZURE.md steps 12, 13 and 26).' }
+        }
     }
 
     if ($deployFrontend) {

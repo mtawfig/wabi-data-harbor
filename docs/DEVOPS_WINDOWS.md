@@ -2,7 +2,7 @@
 
 This guide connects your Windows Server 2019 (IIS) machine to GitHub so that you deploy Wabi Insight from the **Actions** tab with one click. Nothing deploys automatically. Every step has a **Check** (already done?), a **Do** and a **Verify** command, like the deployment guide.
 
-The Linux equivalent is [DEVOPS_LINUX.md](DEVOPS_LINUX.md). Setting up the server itself is [DEPLOYMENT_WINDOWS_SERVER_2019.md](DEPLOYMENT_WINDOWS_SERVER_2019.md).
+The Linux equivalent is [DEVOPS_LINUX.md](DEVOPS_LINUX.md). Setting up the server itself is [DEPLOYMENT_WINDOWS_SERVER_2019.md](DEPLOYMENT_WINDOWS_SERVER_2019.md). With the database in **Azure SQL** and the files in **Azure Blob Storage**, follow [DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md) instead: it covers the server and this CI/CD setup in one beginner's guide, with the same workflow and deploy script (which then records the Azure SQL restore point before migrations and checks the blob container after each backend deployment).
 
 ## How it works
 
@@ -164,7 +164,7 @@ The runner runs `C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1`, ne
 **Check:**
 
 ```powershell
-if (Test-Path 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1') { & 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion } else { 'not installed' }   # 2 = current version installed
+if (Test-Path 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1') { & 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion } else { 'not installed' }   # 3 = current version installed
 ```
 
 **Do:** download the script of `main` with a GitHub token (*Contents: read*). If you have a checkout of the repository, copy the file instead.
@@ -185,7 +185,7 @@ Get-Content (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -TotalCount 5   # re
 **Verify:**
 
 ```powershell
-& 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion          # 2
+& 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion          # 3
 icacls 'C:\wabitex-apps\wabi-insight\deploy'                                            # SYSTEM and Administrators only
 Get-ExecutionPolicy -Scope LocalMachine                                   # RemoteSigned (default) or stricter-but-allowing local scripts
 ```

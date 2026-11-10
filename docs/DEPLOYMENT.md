@@ -6,6 +6,7 @@ Wabi Insight is three deployable parts: the **Angular build** (static files), th
 
 - [Ubuntu 24.04 LTS: nginx + systemd + SQL Server Express](DEPLOYMENT_LINUX.md)
 - [Windows Server 2019: IIS + ARR + SQL Server Express](DEPLOYMENT_WINDOWS_SERVER_2019.md)
+- [Windows Server 2019 VPS: IIS + ARR, with Azure SQL Database and Azure Blob Storage, plus CI/CD (written for beginners)](DEPLOYMENT_WINDOWS_AZURE.md)
 - [Microsoft Azure: App Service + Azure SQL Database + Blob Storage, deployed from GitHub](DEPLOYMENT_AZURE.md)
 
 **CI/CD:** after the first setup, deploy from GitHub with one click (*Actions → Deploy (Linux) / Deploy (Windows)*: frontend, backend or both, optional database migration, automatic restore when the new backend isn't healthy). See [DEVOPS_LINUX.md](DEVOPS_LINUX.md) and [DEVOPS_WINDOWS.md](DEVOPS_WINDOWS.md). *Actions → Deploy (Azure)* creates the Azure resources and deploys the database, API and web app with checkboxes; see [DEPLOYMENT_AZURE.md](DEPLOYMENT_AZURE.md).
