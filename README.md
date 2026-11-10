@@ -11,14 +11,15 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 - [Implementation plan: phases and pull requests](docs/IMPLEMENTATION_PLAN.md)
 - [Progress log](docs/PROGRESS.md)
 - [Proactive agent design (Phase 14): Monitoring Rules, Alerts, Periodic Reports](docs/PROACTIVE_AGENT.md)
-- [Deployment guide (Docker, Linux, IIS)](docs/DEPLOYMENT.md) · step by step: [Windows Server 2019](docs/DEPLOYMENT_WINDOWS_SERVER_2019.md) · [Ubuntu 24.04](docs/DEPLOYMENT_LINUX.md)
-- CI/CD (deploy from GitHub Actions with one click): [Windows](docs/DEVOPS_WINDOWS.md) · [Linux](docs/DEVOPS_LINUX.md)
+- [Deployment guide (Docker, Linux, IIS, Azure)](docs/DEPLOYMENT.md) · step by step for beginners: [Windows Server 2019 + SQL Server Express](docs/DEPLOYMENT_WINDOWS_SERVER_2019.md) · [Windows Server 2019 VPS + Azure SQL + Azure Blob Storage](docs/DEPLOYMENT_WINDOWS_AZURE.md) · [Ubuntu 24.04](docs/DEPLOYMENT_LINUX.md) · [Azure App Service](docs/DEPLOYMENT_AZURE.md)
+- CI/CD (deploy from GitHub Actions with one click: Deploy (Windows), Deploy (Linux), Deploy (Azure)): [Windows](docs/DEVOPS_WINDOWS.md) · [Linux](docs/DEVOPS_LINUX.md) · [Azure](docs/DEPLOYMENT_AZURE.md)
+- Build, test and run commands for developers: [CLAUDE.md, *Essential commands*](CLAUDE.md#essential-commands)
 - [Security](docs/SECURITY.md) · [Architecture](docs/ARCHITECTURE.md) · [Design system](docs/DESIGN_SYSTEM.md) · [Screens](docs/SCREENSHOTS.md) · [Performance](docs/PERFORMANCE.md)
 - [Guide for Claude Code sessions](CLAUDE.md)
 
 ## Local configuration
 
-`appsettings.json` carries the configuration-database connection string and the SMTP settings (owner decision for this private repository; the SMTP password is a placeholder). To override anything per machine (a local SQL Server, the File email sink, bootstrap values), copy `src/WabiInsight.Api/appsettings.Local.example.json` to `appsettings.Local.json` (git-ignored). Apply migrations to the configured database with `dotnet run --project src/WabiInsight.Api -- migrate` before the first run.
+`appsettings.json` carries the configuration-database connection string and the SMTP settings (owner decision for this private repository). To override anything per machine (a local SQL Server, the File email sink, bootstrap values), copy `src/WabiInsight.Api/appsettings.Local.example.json` to `appsettings.Local.json` (git-ignored). Apply migrations to the configured database with `dotnet run --project src/WabiInsight.Api -- migrate` before the first run.
 
 Sample data: `scripts/sql/samples` creates three realistic source databases (flight operations, HR/payroll/attendance, procurement/stores) and seeds a ready-to-use organization with an administrator, a management user and two role-scoped users into `WabiInsightDB`; see its [README](scripts/sql/samples/README.md). A second sample organization, the fictional **Wabi Bank** (Personnel, Core Banking, Finance, Digital Banking and IT Help Desk databases, eight role-scoped users, Monitoring Rules on planted findings), is in [`scripts/sql/samples/wabi-bank`](scripts/sql/samples/wabi-bank/README.md).
 

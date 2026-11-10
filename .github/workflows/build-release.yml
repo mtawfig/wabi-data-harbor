@@ -47,9 +47,22 @@ jobs:
       build_api: ${{ steps.components.outputs.build_api }}
       build_web: ${{ steps.components.outputs.build_web }}
     steps:
+      # actions/checkout accepts a branch, a tag or a full commit SHA only. The deploy logs and folder names show the
+      # 12-character short SHA, so resolve whatever was typed to the full SHA first (roll-backs use the short one).
+      - id: ref
+        if: inputs.ref != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ inputs.ref }}
+        run: |
+          if ! sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$REF" --jq .sha); then
+            echo "::error::'$REF' is not a commit, tag or branch of this repository."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ steps.ref.outputs.sha }}
       - id: version
         run: |
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
