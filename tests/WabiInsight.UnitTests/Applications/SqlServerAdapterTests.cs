@@ -30,6 +30,44 @@ public sealed class SqlServerAdapterTests
         Assert.StartsWith(code, ex.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    // The server's own identity: its Windows account or its Azure managed identity.
+    [InlineData("Server=db1;Database=Sales;Integrated Security=True", "connection_string_server_identity_not_allowed")]
+    [InlineData("Server=db1;Database=Sales;Trusted_Connection=yes", "connection_string_server_identity_not_allowed")]
+    [InlineData("Server=db1;Database=Sales;Integrated Security=SSPI;User Id=reader;Password=p", "connection_string_server_identity_not_allowed")]
+    [InlineData("Server=db1.database.windows.net;Database=Sales;Authentication=Active Directory Managed Identity", "connection_string_server_identity_not_allowed")]
+    [InlineData("Server=db1.database.windows.net;Database=Sales;Authentication=Active Directory Default", "connection_string_server_identity_not_allowed")]
+    [InlineData("Server=db1.database.windows.net;Database=Sales;Authentication=Active Directory Integrated", "connection_string_server_identity_not_allowed")]
+    // No login at all.
+    [InlineData("Server=db1;Database=Sales", "connection_string_user_required")]
+    // Options that make the database server open a file or start an instance.
+    [InlineData("Server=db1;Database=Sales;User Id=reader;Password=p;AttachDbFilename=C:\\data\\x.mdf", "connection_string_option_not_allowed")]
+    [InlineData("Server=db1;Database=Sales;User Id=reader;Password=p;User Instance=True", "connection_string_option_not_allowed")]
+    public void Normalize_RefusesTheServersOwnIdentity_AndFileOptions(string input, string code)
+    {
+        var ex = Assert.Throws<ArgumentException>(() => _adapter.Normalize(input));
+        Assert.StartsWith(code, ex.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Server=db1;Database=Sales;User Id=reader;Password=p")]
+    [InlineData("Server=db1.database.windows.net;Database=Sales;User Id=reader@contoso.com;Password=p;Authentication=Active Directory Password")]
+    [InlineData("Server=db1.database.windows.net;Database=Sales;User Id=11111111-1111-1111-1111-111111111111;Password=secret;Authentication=Active Directory Service Principal")]
+    public void Normalize_AcceptsCredentialsWrittenInTheString(string input)
+    {
+        Assert.Contains("Application Intent=ReadOnly", _adapter.Normalize(input), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Data Source=ora1:1521/ORCL;User Id=/", "connection_string_server_identity_not_allowed")]
+    [InlineData("Data Source=ora1:1521/ORCL", "connection_string_user_required")]
+    public void Oracle_Normalize_RefusesOperatingSystemAuthentication(string input, string code)
+    {
+        var ex = Assert.Throws<ArgumentException>(() => new OracleAdapter().Normalize(input));
+        Assert.StartsWith(code, ex.Message, StringComparison.Ordinal);
+        Assert.Contains("ora1", new OracleAdapter().Normalize("Data Source=ora1:1521/ORCL;User Id=reader;Password=p"), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Test_ReturnsFailure_WithoutThrowing_ForUnreachableServer()
     {

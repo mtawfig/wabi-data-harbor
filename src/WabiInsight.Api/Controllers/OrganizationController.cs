@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WabiInsight.Api.Authorization;
 using WabiInsight.Api.Contracts;
+using WabiInsight.Api.Security;
 using WabiInsight.Core.Organizations;
 
 namespace WabiInsight.Api.Controllers;
@@ -42,7 +43,11 @@ public sealed class OrganizationController : ControllerBase
         return Ok(await _organizations.GetCurrentAsync(cancellationToken));
     }
 
-    /// <summary>The organization's logo as uploaded (PNG, JPEG or SVG); 404 when none.</summary>
+    /// <summary>
+    /// The organization's logo as uploaded; 404 when none. Uploads are PNG or JPEG. A logo stored as SVG before that
+    /// rule is still answered, but as an attachment under a sandbox policy: an image element shows it, and a browser
+    /// that opens the address directly downloads it instead of running it in this site's origin.
+    /// </summary>
     [HttpGet("logo")]
     public async Task<IActionResult> Logo(CancellationToken cancellationToken)
     {
@@ -52,12 +57,17 @@ public sealed class OrganizationController : ControllerBase
             return NotFound();
         }
 
-        Response.Headers.Append("X-Content-Type-Options", "nosniff");
-        Response.Headers.Append("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+        var raster = logo.ContentType is "image/png" or "image/jpeg";
+        Response.Headers.ContentSecurityPolicy = SecurityHeadersMiddleware.SandboxedFilePolicy;
+        if (!raster)
+        {
+            Response.Headers.ContentDisposition = "attachment; filename=\"logo\"";
+        }
+
         return File(logo.Content, logo.ContentType);
     }
 
-    /// <summary>Replaces the logo stamped on report pages (PNG, JPEG or SVG, at most 1 MB).</summary>
+    /// <summary>Replaces the logo stamped on report pages (PNG or JPEG, at most 1 MB).</summary>
     [HttpPut("logo")]
     [Authorize(Policy = Policies.OrganizationAdmin)]
     [RequestSizeLimit(2 * 1024 * 1024)]

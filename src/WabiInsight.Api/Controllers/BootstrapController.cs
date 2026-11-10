@@ -4,12 +4,15 @@ using Microsoft.AspNetCore.RateLimiting;
 using WabiInsight.Api.Contracts;
 using WabiInsight.Api.Security;
 using WabiInsight.Core.Bootstrap;
+using WabiInsight.Core.Tenancy;
 
 namespace WabiInsight.Api.Controllers;
 
 /// <summary>
-/// Protected first-administrator initialization (specification §7). Status is public but reveals only
-/// whether bootstrap completed; initialization requires the deployment secret and works once.
+/// Protected first-administrator initialization (specification §7). Status is public but tells an anonymous
+/// caller only what the set-up page needs (completed, enabled, migrations pending); the administrator's e-mail,
+/// the date and the schema version go to signed-in Platform Administrators only (P13.25). Initialization requires
+/// the deployment secret and works once.
 /// </summary>
 [ApiController]
 [Route("api/bootstrap")]
@@ -17,10 +20,12 @@ namespace WabiInsight.Api.Controllers;
 public sealed class BootstrapController : ControllerBase
 {
     private readonly IBootstrapService _bootstrap;
+    private readonly ITenantContext _tenantContext;
 
-    public BootstrapController(IBootstrapService bootstrap)
+    public BootstrapController(IBootstrapService bootstrap, ITenantContext tenantContext)
     {
         _bootstrap = bootstrap;
+        _tenantContext = tenantContext;
     }
 
     [HttpGet("status")]
@@ -28,7 +33,16 @@ public sealed class BootstrapController : ControllerBase
     public async Task<ActionResult<BootstrapStatusResponse>> Status(CancellationToken cancellationToken)
     {
         var s = await _bootstrap.GetStatusAsync(cancellationToken);
-        return Ok(new BootstrapStatusResponse(s.BootstrapCompleted, s.BootstrapCompletedAt, s.BootstrapAdministratorEmail, s.SchemaVersion, s.PendingMigrations, s.BootstrapEnabled));
+        // Anonymous by design (the set-up page runs before anyone can sign in), so the first administrator's address
+        // is not handed to whoever asks: it is half of a sign-in and the target of lockout attempts.
+        var detailed = _tenantContext.IsPlatformAdministrator;
+        return Ok(new BootstrapStatusResponse(
+            s.BootstrapCompleted,
+            detailed ? s.BootstrapCompletedAt : null,
+            detailed ? s.BootstrapAdministratorEmail : null,
+            detailed ? s.SchemaVersion : null,
+            s.PendingMigrations,
+            s.BootstrapEnabled));
     }
 
     [HttpPost("initialize")]

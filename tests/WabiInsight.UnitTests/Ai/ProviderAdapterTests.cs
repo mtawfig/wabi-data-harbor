@@ -35,6 +35,127 @@ public sealed class ProviderAdapterTests
 
     private static AiProviderDescriptor Descriptor(AiProviderType type, string? endpoint = null) => new(Guid.NewGuid(), type, endpoint, "model-x", "sk-secret-key-1234", 2048, "medium", 4m, 20m, 0.2m);
 
+    [Theory]
+    [InlineData("8.8.8.8", true)]
+    [InlineData("203.0.113.9", true)]
+    [InlineData("2606:4700:4700::1111", true)]
+    [InlineData("127.0.0.1", false)]
+    [InlineData("0.0.0.0", false)]
+    [InlineData("10.1.2.3", false)]
+    [InlineData("172.16.0.1", false)]
+    [InlineData("172.31.255.254", false)]
+    [InlineData("172.32.0.1", true)]
+    [InlineData("192.168.1.1", false)]
+    [InlineData("169.254.169.254", false)]      // cloud metadata service
+    [InlineData("100.64.0.1", false)]           // shared address space
+    [InlineData("100.128.0.1", true)]
+    [InlineData("224.0.0.1", false)]
+    [InlineData("255.255.255.255", false)]
+    [InlineData("::1", false)]
+    [InlineData("::", false)]
+    [InlineData("fe80::1", false)]
+    [InlineData("fd00::1", false)]
+    [InlineData("::ffff:10.0.0.1", false)]      // IPv4 written as IPv6
+    [InlineData("::ffff:8.8.8.8", true)]
+    [InlineData("64:ff9b::a00:1", false)]       // NAT64 form of 10.0.0.1
+    public void PublicAddressGuard_TellsPublicAddressesFromInternalOnes(string address, bool expected)
+    {
+        Assert.Equal(expected, PublicAddressGuard.IsPublic(IPAddress.Parse(address)));
+    }
+
+    [Theory]
+    [InlineData("https://api.mistral.ai/v1", true)]
+    [InlineData("https://203.0.113.9/v1", true)]
+    [InlineData("http://api.mistral.ai/v1", false)]         // not https
+    [InlineData("http://localhost:8000/v1", false)]
+    [InlineData("https://localhost/v1", false)]
+    [InlineData("https://127.0.0.1/v1", false)]
+    [InlineData("https://[::1]/v1", false)]
+    [InlineData("https://10.0.0.5/v1", false)]
+    [InlineData("https://169.254.169.254/latest/meta-data", false)]
+    [InlineData("https://intranet/v1", false)]              // a single-label name only resolves inside a network
+    [InlineData("https://models.internal/v1", false)]
+    [InlineData("https://printer.local/v1", false)]
+    [InlineData("https://user:pass@api.mistral.ai/v1", false)]
+    public void PublicAddressGuard_JudgesTheSavedAddress(string endpoint, bool expected)
+    {
+        Assert.Equal(expected, PublicAddressGuard.IsAcceptableEndpoint(new Uri(endpoint)));
+    }
+
+    [Fact]
+    public async Task OrganizationProvider_IsNeverCalledAtAnInternalAddress_AndUsesTheGuardedClient()
+    {
+        var handler = new FakeHandler { Response = """{"model":"m","choices":[{"message":{"content":"OK"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1}}""" };
+        var names = new List<string>();
+        var provider = new OpenAiCompatibleProvider(new NamingFactory(handler, names));
+
+        // A row saved before the rule existed (or edited in the database) is refused when it is used, before any request.
+        var inside = Descriptor(AiProviderType.OpenAiCompatible, "http://localhost:8000/v1") with { PublicAddressesOnly = true };
+        var refused = await Assert.ThrowsAsync<AiProviderException>(() => provider.CompleteAsync(inside, Request));
+        Assert.Equal(PublicAddressGuard.ErrorCode, refused.Code);
+        Assert.Null(handler.Request);
+
+        // A public address goes out through the client whose connections are checked; a platform provider through the general one.
+        await provider.CompleteAsync(Descriptor(AiProviderType.OpenAiCompatible, "https://api.mistral.ai/v1") with { PublicAddressesOnly = true }, Request);
+        await provider.CompleteAsync(Descriptor(AiProviderType.OpenAiCompatible, "http://localhost:8000/v1"), Request);
+        Assert.Equal([HttpAiProvider.PublicOnlyHttpClientName, HttpAiProvider.HttpClientName], names);
+    }
+
+    [Fact]
+    public async Task GuardedConnection_RefusesAnInternalAddress_AndTheRefusalKeepsItsCode()
+    {
+        // The connection callback itself: the name resolves to this machine, so no connection is opened.
+        using var guarded = new SocketsHttpHandler { ConnectCallback = PublicAddressGuard.ConnectAsync, AllowAutoRedirect = false };
+        using var client = new HttpClient(guarded) { Timeout = TimeSpan.FromSeconds(20) };
+        var blocked = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync(new Uri("https://localhost:9/")));
+        Assert.Equal(PublicAddressGuard.ErrorCode, Refusal(blocked)?.Code);
+
+        // Through a provider, the wrapped refusal is reported with its own code, not as "unreachable".
+        var provider = new OpenAiCompatibleProvider(new Factory(new ThrowingHandler(blocked)));
+        var refused = await Assert.ThrowsAsync<AiProviderException>(() => provider.CompleteAsync(Descriptor(AiProviderType.OpenAiCompatible, "https://api.mistral.ai/v1") with { PublicAddressesOnly = true }, Request));
+        Assert.Equal(PublicAddressGuard.ErrorCode, refused.Code);
+    }
+
+    private static AiProviderException? Refusal(Exception exception)
+    {
+        for (var inner = exception.InnerException; inner is not null; inner = inner.InnerException)
+        {
+            if (inner is AiProviderException refusal)
+            {
+                return refusal;
+            }
+        }
+
+        return null;
+    }
+
+    private sealed class ThrowingHandler : HttpMessageHandler
+    {
+        private readonly Exception _exception;
+
+        public ThrowingHandler(Exception exception) => _exception = exception;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromException<HttpResponseMessage>(_exception);
+    }
+
+    private sealed class NamingFactory : IHttpClientFactory
+    {
+        private readonly HttpMessageHandler _handler;
+        private readonly List<string> _names;
+
+        public NamingFactory(HttpMessageHandler handler, List<string> names)
+        {
+            _handler = handler;
+            _names = names;
+        }
+
+        public HttpClient CreateClient(string name)
+        {
+            _names.Add(name);
+            return new HttpClient(_handler, disposeHandler: false);
+        }
+    }
+
     [Fact]
     public async Task Anthropic_SendsStructuredOutputAndCachedSystemPrompt_AndReadsUsage()
     {

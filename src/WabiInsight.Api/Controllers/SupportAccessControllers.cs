@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WabiInsight.Api.Authentication;
 using WabiInsight.Api.Authorization;
 using WabiInsight.Api.Contracts;
 using WabiInsight.Core.Entities.Support;
@@ -60,6 +61,7 @@ public sealed class PlatformSupportAccessController : ControllerBase
         => Ok(await _grants.RevokeAsync(id, new GrantDecisionCommand(request.Note), cancellationToken));
 
     [HttpGet("session")]
+    [BackgroundPoll]
     public async Task<ActionResult<SupportSessionDto?>> Session(CancellationToken cancellationToken)
     {
         var session = await _grants.CurrentSessionAsync(cancellationToken);

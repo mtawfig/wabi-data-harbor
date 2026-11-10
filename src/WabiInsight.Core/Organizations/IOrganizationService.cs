@@ -117,7 +117,7 @@ public interface IOrganizationService
     /// <summary>The signed-in organization user's own organization (tenant context only).</summary>
     Task<OrganizationProfile> GetCurrentAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Organization Administrators: replaces the logo used on report pages (PNG, JPEG or SVG, at most 1 MB).</summary>
+    /// <summary>Organization Administrators: replaces the logo used on report pages (PNG or JPEG, at most 1 MB).</summary>
     Task SetLogoAsync(LogoUpload upload, CancellationToken cancellationToken = default);
 
     Task RemoveLogoAsync(CancellationToken cancellationToken = default);

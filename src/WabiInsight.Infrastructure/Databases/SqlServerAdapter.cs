@@ -10,6 +10,9 @@ namespace WabiInsight.Infrastructure.Databases;
 /// <summary>SQL Server source adapter: catalog views only (sys.*), read-only intent, short timeouts, never business rows.</summary>
 public sealed class SqlServerAdapter : IDatabaseAdapter
 {
+    /// <summary>Sign-in methods whose user name and password (or application secret) are written in the connection string itself.</summary>
+    private static readonly HashSet<string> OwnCredentialMethods = new(StringComparer.Ordinal) { "NotSpecified", "SqlPassword", "ActiveDirectoryPassword", "ActiveDirectoryServicePrincipal" };
+
     public DatabaseType DatabaseType => DatabaseType.SqlServer;
 
     public string Normalize(string connectionString)
@@ -32,6 +35,25 @@ public sealed class SqlServerAdapter : IDatabaseAdapter
         if (string.IsNullOrWhiteSpace(builder.InitialCatalog))
         {
             throw new ArgumentException("connection_string_database_required", nameof(connectionString));
+        }
+
+        // The source is opened with credentials the organization typed, never with the identity of the server Wabi
+        // Insight runs on (its Windows service account or its Azure managed identity): that identity belongs to the
+        // platform and may reach databases no organization was ever given (P13.25).
+        if (builder.IntegratedSecurity || !OwnCredentialMethods.Contains(builder.Authentication.ToString()))
+        {
+            throw new ArgumentException("connection_string_server_identity_not_allowed", nameof(connectionString));
+        }
+
+        if (string.IsNullOrWhiteSpace(builder.UserID))
+        {
+            throw new ArgumentException("connection_string_user_required", nameof(connectionString));
+        }
+
+        // Options that make the database server open a file or start a private instance have no place in a source.
+        if (!string.IsNullOrEmpty(builder.AttachDBFilename) || builder.UserInstance)
+        {
+            throw new ArgumentException("connection_string_option_not_allowed", nameof(connectionString));
         }
 
         builder.ConnectTimeout = Math.Clamp(builder.ConnectTimeout is 0 or 15 ? 10 : builder.ConnectTimeout, 3, 30);

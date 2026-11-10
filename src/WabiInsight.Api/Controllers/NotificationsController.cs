@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WabiInsight.Api.Authentication;
 using WabiInsight.Core.Notifications;
 using WabiInsight.Core.Organizations;
 
@@ -23,6 +24,7 @@ public sealed class NotificationsController : ControllerBase
         => Ok(await _notifications.ListAsync(unreadOnly, page, pageSize, cancellationToken));
 
     [HttpGet("unread-count")]
+    [BackgroundPoll]
     public async Task<ActionResult<object>> UnreadCount(CancellationToken cancellationToken)
         => Ok(new { count = await _notifications.UnreadCountAsync(cancellationToken) });
 

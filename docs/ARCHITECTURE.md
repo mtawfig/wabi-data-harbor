@@ -181,7 +181,7 @@ CLI commands handled before the pipeline starts: `migrate` (apply migrations), `
 | `POST /api/auth/logout` | Ends the session (audited). |
 | `GET /api/auth/me` | Current session: principal type, organization, roles, must-change-password flag. |
 | `POST /api/auth/change-password` | Changes the password, rotates the security stamp, clears must-change-password. |
-| `GET /api/bootstrap/status` | Bootstrap completion state (anonymous, non-sensitive). |
+| `GET /api/bootstrap/status` | Bootstrap completion state (anonymous: completed, enabled, migrations pending; date, administrator e-mail and schema version for signed-in Platform Administrators only). |
 | `POST /api/bootstrap/initialize` | One-time first-administrator creation with the initialization secret. Rate-limited. |
 | `GET /api/platform/administrators` | Platform administrators only: list administrators (no hashes or stamps). |
 | `POST /api/platform/administrators` | Platform administrators only: create an administrator; the temporary password is emailed. |

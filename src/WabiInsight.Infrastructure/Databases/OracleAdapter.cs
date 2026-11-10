@@ -33,6 +33,13 @@ public sealed class OracleAdapter : IDatabaseAdapter
             throw new ArgumentException("connection_string_user_required", nameof(connectionString));
         }
 
+        // "User Id=/" is operating-system authentication: the database would see the account Wabi Insight runs under,
+        // not a login the organization typed (P13.25).
+        if (builder.UserID.Trim() == "/")
+        {
+            throw new ArgumentException("connection_string_server_identity_not_allowed", nameof(connectionString));
+        }
+
         builder.ConnectionTimeout = Math.Clamp(builder.ConnectionTimeout is 0 or 15 ? 10 : builder.ConnectionTimeout, 3, 30);
         builder.Pooling = true;
         return builder.ConnectionString;
