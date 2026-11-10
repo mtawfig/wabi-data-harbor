@@ -33,6 +33,7 @@
 | P0.2 | `wi/p00-02-v2-microsoft-sign-in` | Version 2 plan: Sign in with Microsoft (Microsoft Entra ID), in *Version 2* below. No application code. |
 | P0.3 | `wi/p00-03-version-2-scope` | Version 2 scope and requirements: [`VERSION_2.md`](./VERSION_2.md) (owner decisions, items carried over from the review, proposals, order). No application code. |
 | P0.4 | `wi/p00-04-v2-deployment-plans` | Version 2 scope, additions: three service plans per organization (Cloud, On-premises, Hybrid), an organization's own AI model at a private address, sign-in with classic Active Directory. In [`VERSION_2.md`](./VERSION_2.md). No application code. |
+| P0.5 | `wi/p00-05-v2-organization-smtp-connectivity` | Version 2 scope, additions: an organization's own e-mail server in every plan; the rule "the organization's own, or the platform's default"; the ways to reach an organization's systems from the owner's cloud, with a recommendation. In [`VERSION_2.md`](./VERSION_2.md). No application code. |
 
 ### Phase 1 — Foundation and Multi-Tenant Identity
 **Acceptance:** A Platform Administrator can be bootstrapped and sign in; the schema makes an organization user without a valid organization impossible; CI is green on both stacks.
@@ -195,6 +196,8 @@ Work the owner has moved to version 2. Nothing here is built in version 1; each 
 | Three service plans per organization: Cloud, On-premises, Hybrid | 2026-11-10 | `VERSION_2.md` G1, G3, G4 |
 | An organization's own AI model (on-premises, private cloud or its own public-cloud account) | 2026-11-10 | `VERSION_2.md` G2 |
 | Sign in with classic Active Directory, without a password on domain computers | 2026-11-10 | `VERSION_2.md` C11 |
+| An organization's own e-mail server (SMTP) in every plan; the platform's when none is set | 2026-11-10 | `VERSION_2.md` G5 |
+| Reaching an organization's systems from the owner's cloud: options and recommendation, chosen when the step is reached | 2026-11-10 | `VERSION_2.md` G6 |
 
 Fixes are not version 2 (owner decision, 2026-11-10): what the review of 2026-11-10 found is fixed in version 1, in P13.25–P13.30 (Phase 13).
 
