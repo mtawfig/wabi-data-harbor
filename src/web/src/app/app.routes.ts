@@ -4,6 +4,8 @@ import { authGuard, guestGuard, organizationAdminGuard, organizationUserGuard, p
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./features/public/landing/landing.component').then((m) => m.LandingComponent) },
   { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./features/public/login/login.component').then((m) => m.LoginComponent) },
+  { path: 'forgot-password', loadComponent: () => import('./features/public/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent) },
+  { path: 'reset-password', loadComponent: () => import('./features/public/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent) },
   { path: 'bootstrap', loadComponent: () => import('./features/public/bootstrap/bootstrap.component').then((m) => m.BootstrapComponent) },
   { path: 'change-password', canActivate: [authGuard], loadComponent: () => import('./features/auth/change-password.component').then((m) => m.ChangePasswordComponent) },
   { path: 'print/history/:id/:version', canActivate: [authGuard, organizationUserGuard], loadComponent: () => import('./features/organization/history/history-print.component').then((m) => m.HistoryPrintComponent) },

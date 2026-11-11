@@ -14,6 +14,10 @@
   &__submit { height: 48px; font-size: 16px; margin-top: 4px; }
   &__note { font-size: 13px; margin: 12px 0 0; }
   &__link { font-size: 13px; }
+  // "Forgot password?" sits under the password field, at the end of the line in both directions.
+  &__forgot { align-self: flex-end; margin: -8px 0 4px; }
+  // The mark on a result card: link sent, password saved, link no longer valid.
+  &__state-icon { font-size: 40px; width: 40px; height: 40px; color: var(--wi-ocean); }
 }
 @media (max-width: 860px) {
   .auth-layout { grid-template-columns: 1fr; &__aside { padding: 24px; min-height: 180px; } &__aside-body h2 { font-size: 24px; } }

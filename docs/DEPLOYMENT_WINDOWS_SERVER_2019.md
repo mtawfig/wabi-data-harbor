@@ -1348,14 +1348,18 @@ new release at once instead of keeping the previous application for hours.
    **Healthy** too: when it's *Degraded*, its text names the setting of step 24 that still has a value meant for a
    developer's machine (the site address, the files folder, the key ring folder, the Platform Insights login).
 4. **AI Providers:** the default provider is listed, and **Test** succeeds.
-5. **Organizations → New organization**, with a real e-mail address for its administrator → **Create organization**.
+5. Sign out. On the sign-in page choose **Forgot password?**, enter the administrator e-mail and open the link in the
+   e-mail that arrives: it must open `https://<your domain>/reset-password` with two password fields (a link to
+   `localhost` means `Platform:BaseUrl` of step 24 is wrong). You don't have to change the password: close the page
+   and sign in again.
+6. **Organizations → New organization**, with a real e-mail address for its administrator → **Create organization**.
    The **temporary password e-mail** arrives, which proves e-mail works. (Temporary passwords are only e-mailed, never
    shown on screen.)
-6. Sign in as that organization administrator in a private window and change the password. Then **Organization
+7. Sign in as that organization administrator in a private window and change the password. Then **Organization
    Administration → Organization Settings → Report logo → Upload logo**. On the VPS,
    `Get-ChildItem (Join-Path $WI.Files 'organization-logos') -Recurse -File` lists a `.bin` file. This proves the files
    go to the files folder.
-7. Register an application under **Organization Administration → Applications** (your organization's database,
+8. Register an application under **Organization Administration → Applications** (your organization's database,
    read-only), or load the samples (step 34). Then ask a question on **Ask Wabi Insight**.
 
 ---

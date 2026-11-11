@@ -36,6 +36,7 @@ One SQL Server database, EF Core 10, migrations in `src/WabiInsight.Infrastructu
 | `Administrators` | Platform Administrators, **no `OrganizationId`** | unique `NormalizedEmail`; filtered unique index allows exactly one `IsBootstrapAdministrator` |
 | `OrganizationUsers` | Employees, **`OrganizationId` NOT NULL + FK** | unique `(OrganizationId, NormalizedEmail)`; unique `(OrganizationId, EmployeeNumber)`; `Status` check |
 | `LoginIdentities` | Global login registry across both stores | primary key `NormalizedEmail`; unique `(PrincipalType, PrincipalId)` |
+| `PasswordResetRequests` | Self-service reset links (P13.32): the hash of each token, its expiry, when it was used or replaced | unique `TokenHash`; an organization user's request names its organization, an administrator's never does (check constraint); read before sign-in by the hash, never by organization |
 | `SystemInitialization` | Bootstrap state | singleton (`Id = 1` check constraint) |
 | `PlatformSettings` | Key/value platform settings | primary key `Key` |
 | `AuditLogs` | Append-only security events | application guard rejects UPDATE/DELETE; `scripts/sql/create-runtime-login.sql` denies them at the database |

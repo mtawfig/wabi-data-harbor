@@ -49,6 +49,8 @@
         }
       </mat-form-field>
 
+      <a routerLink="/forgot-password" class="auth-card__link auth-card__forgot" data-testid="forgot-password-link">{{ 'login.forgot' | transloco }}</a>
+
       <button mat-flat-button type="submit" class="wi-full-width auth-card__submit" [disabled]="busy()" data-testid="login-submit">
         {{ (busy() ? 'login.signingIn' : 'login.submit') | transloco }}
       </button>

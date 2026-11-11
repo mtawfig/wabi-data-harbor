@@ -58,6 +58,8 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<LoginIdentity> LoginIdentities => Set<LoginIdentity>();
 
+    public DbSet<PasswordResetRequest> PasswordResetRequests => Set<PasswordResetRequest>();
+
     public DbSet<SystemInitialization> SystemInitialization => Set<SystemInitialization>();
 
     public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();

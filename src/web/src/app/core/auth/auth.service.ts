@@ -88,6 +88,39 @@ export class AuthService {
     return session;
   }
 
+  /**
+   * Self-service reset, step 1: asks for a reset link by e-mail. The API answers the same way for every address, so
+   * this resolves whether or not the address has an account.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    await this.postPublic('/api/auth/forgot-password', { email });
+  }
+
+  /** Whether the token of a reset link can still be used. */
+  async isResetLinkValid(token: string): Promise<boolean> {
+    return (await this.postPublic<{ valid: boolean }>('/api/auth/reset-password/check', { token })).valid;
+  }
+
+  /** Self-service reset, step 2: sets the new password. Nobody is signed in by it; any session this browser held is over. */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await this.postPublic('/api/auth/reset-password', { token, newPassword });
+    this.session.set(null);
+    await this.refreshCsrf().catch(() => undefined);
+  }
+
+  /** A request made while signed out: an antiforgery token that no longer matches is renewed and the request tried once more. */
+  private async postPublic<T = void>(url: string, body: unknown): Promise<T> {
+    try {
+      return await firstValueFrom(this.http.post<T>(url, body));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 400 && problemCode(error.error as ProblemDetails) === 'antiforgery') {
+        await this.refreshCsrf();
+        return await firstValueFrom(this.http.post<T>(url, body));
+      }
+      throw error;
+    }
+  }
+
   /** The landing route for the current session: platform overview, or the organization workspace. */
   homeUrl(): string {
     const session = this.session();
