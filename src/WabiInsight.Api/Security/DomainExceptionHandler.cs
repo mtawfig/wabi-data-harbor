@@ -8,7 +8,7 @@ namespace WabiInsight.Api.Security;
 
 /// <summary>
 /// Maps domain outcomes to RFC 9457 problem responses so controllers stay thin:
-/// NotFound → 404, conflicts → 409, validation → 400, tenant/role violations → 403.
+/// NotFound → 404, conflicts (including a concurrent save and a duplicate key) → 409, validation → 400, tenant/role violations → 403.
 /// </summary>
 public sealed class DomainExceptionHandler : IExceptionHandler
 {
@@ -33,6 +33,10 @@ public sealed class DomainExceptionHandler : IExceptionHandler
             SupportAccessDeniedException s => (StatusCodes.Status403Forbidden, "Support access denied", "support-access-denied", s.Code),
             TenantContextException t => (StatusCodes.Status403Forbidden, "Forbidden", "forbidden", t.Message),
             Core.Ai.AiProviderException a => (StatusCodes.Status502BadGateway, "AI provider error", "ai-provider", a.Code),
+            // Two people saving the same record: the second is told to reload instead of getting a server error (E3).
+            Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Changed by someone else", "concurrency-conflict", "concurrency_conflict"),
+            // A unique key taken by a request that ran at the same time (a double click, two administrators at once).
+            Microsoft.EntityFrameworkCore.DbUpdateException { InnerException: Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 } } => (StatusCodes.Status409Conflict, "Already exists", "already-exists", "duplicate_record"),
             _ => (0, string.Empty, string.Empty, string.Empty),
         };
 

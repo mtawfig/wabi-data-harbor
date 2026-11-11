@@ -49,7 +49,7 @@ public sealed record UpdateOrganizationUserRequest(
     [Required, RegularExpression("^(en|ar)$")] string PreferredLanguage,
     IReadOnlyCollection<string>? RoleCodes);
 
-public sealed record SetUserStatusRequest([Required, RegularExpression("^(Active|Inactive)$")] string Status);
+public sealed record SetUserStatusRequest([Required(ErrorMessage = "status_invalid"), RegularExpression("^(Active|Inactive)$", ErrorMessage = "status_invalid")] string Status);
 
 /// <summary>Create/reset responses for organization users: the temporary password is emailed; DeliveredTo is the masked address.</summary>
 public sealed record UserProvisioningResponse(Guid UserId, string DeliveredTo, bool MustChangePassword);

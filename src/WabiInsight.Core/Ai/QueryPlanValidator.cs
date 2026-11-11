@@ -68,7 +68,7 @@ public static partial class QueryPlanValidator
 
         void Object(string schema, string name, string alias, string where)
         {
-            if (!Identifier().IsMatch(schema ?? string.Empty) || !Identifier().IsMatch(name ?? string.Empty))
+            if (!CatalogName().IsMatch(schema ?? string.Empty) || !CatalogName().IsMatch(name ?? string.Empty))
             {
                 errors.Add(new PlanError("plan_object_invalid", $"{where}: '{schema}.{name}'"));
             }
@@ -431,7 +431,7 @@ public static partial class QueryPlanValidator
         }
 
         var split = Split(reference);
-        if (split.Alias.Length == 0 || !Identifier().IsMatch(split.Column) || !aliases.ContainsKey(split.Alias))
+        if (split.Alias.Length == 0 || !CatalogName().IsMatch(split.Column) || !aliases.ContainsKey(split.Alias))
         {
             errors.Add(new PlanError("plan_column_invalid", $"{where}: '{reference}'"));
             return null;
@@ -440,8 +440,14 @@ public static partial class QueryPlanValidator
         return split;
     }
 
-    [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_$#]{0,127}$")]
-    public static partial Regex Identifier();
+    /// <summary>
+    /// A schema, object or column name as the database has it (A3): up to 128 characters, spaces and any script allowed
+    /// ("Order Date", "تاريخ الطلب"), no control or invisible formatting characters, and none of the statement or comment
+    /// markers the compiled-SQL guard refuses anyway (";", "--", "/*", "*/"). This is a shape check only: the authorizer
+    /// accepts a name only when it matches an approved catalogue entry, and the compilers quote it.
+    /// </summary>
+    [GeneratedRegex(@"^(?!.*(?:;|--|/\*|\*/))[^\p{C}]{1,128}$")]
+    public static partial Regex CatalogName();
 
     [GeneratedRegex("^[A-Za-z][A-Za-z0-9_]{0,39}$")]
     public static partial Regex Alias();

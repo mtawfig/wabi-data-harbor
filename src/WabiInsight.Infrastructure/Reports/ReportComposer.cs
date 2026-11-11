@@ -58,10 +58,44 @@ public sealed partial class ReportComposer
         var watch = Stopwatch.StartNew();
         var completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(SystemPrompt, user, ReportSchema.Json, ReportSchema.Name, Math.Max(resolved.Descriptor.MaxOutputTokens, MinOutputTokens), resolved.Descriptor.Effort), cancellationToken);
         var usage = new PlanUsage(resolved.Descriptor.ProviderType.ToString(), completion.Model, completion.Usage.InputTokens, completion.Usage.OutputTokens, completion.Usage.CachedInputTokens, resolved.Descriptor.EstimateCost(completion.Usage), watch.Elapsed.TotalMilliseconds);
-        return (Parse(completion.Text, panels.Count, wantsEmail), usage);
+        var content = Parse(completion.Text, panels.Count, wantsEmail);
+        if (content.Incomplete || (CutOff(completion.StopReason) && content.Summary.Length == 0 && content.Sections.All(s => s.Body.Length == 0)))
+        {
+            MarkIncomplete(content, plan, language);
+        }
+
+        return (content, usage);
     }
 
-    private static ReportContent Fallback(string text) => new() { Title = "Report", Summary = PromptBuilder.SanitizeText(text, 4000) };
+    /// <summary>The provider stopped at its output limit (Anthropic "max_tokens", OpenAI "length", Gemini "MAX_TOKENS").</summary>
+    internal static bool CutOff(string? stopReason)
+        => string.Equals(stopReason, "max_tokens", StringComparison.OrdinalIgnoreCase) || string.Equals(stopReason, "length", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>A study that could not be written keeps its verified panels, a plain title and a note in the reader's language.</summary>
+    internal static void MarkIncomplete(ReportContent content, AnalysisPlan plan, string language)
+    {
+        content.Incomplete = true;
+        if (content.Title.Length == 0 || content.Title == "Report")
+        {
+            content.Title = PromptBuilder.Sanitize(PromptBuilder.PlainText(plan.Objective), 200);
+        }
+
+        content.Summary = language == "ar"
+            ? "تعذّر إكمال النص المكتوب لهذه الدراسة. الجداول والرسوم البيانية أدناه هي النتائج المُتحقَّق منها؛ يمكنك طرح السؤال مرة أخرى للحصول على التحليل المكتوب."
+            : "The written commentary for this study could not be completed. The tables and charts below are the verified results; ask the question again for the written analysis.";
+        content.KeyFindings = [];
+        content.Recommendations = [];
+        content.Email = null;
+    }
+
+    /// <summary>
+    /// Text that is not a readable report. Plain prose (a provider that ignored the JSON format) is kept as the summary;
+    /// anything with JSON in it is never printed as it is (it can be half an object), only flagged as incomplete.
+    /// </summary>
+    private static ReportContent Fallback(string text)
+        => text.Contains('{', StringComparison.Ordinal) || string.IsNullOrWhiteSpace(text)
+            ? new() { Title = "Report", Incomplete = true }
+            : new() { Title = "Report", Summary = PromptBuilder.SanitizeText(text, 4000) };
 
     /// <summary>Parses and sanitizes the model's report; panel references outside the range are dropped and panels never referenced are appended to the last section so nothing verified disappears.</summary>
     internal static ReportContent Parse(string text, int panelCount, bool wantsEmail)

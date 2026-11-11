@@ -241,12 +241,15 @@ public sealed class QueryPlanner : IQueryPlanner
         if (document.RootElement.ValueKind == JsonValueKind.Object && !document.RootElement.TryGetProperty("queries", out _) && document.RootElement.TryGetProperty("source", out _))
         {
             var single = JsonSerializer.Deserialize<QueryPlan>(json, JsonOptions) ?? throw new JsonException("Empty plan.");
+            single.RemoveNullEntries();
             return new AnalysisPlan { Objective = single.Objective, Assumptions = single.Assumptions, Queries = [single] };
         }
 
         var plan = JsonSerializer.Deserialize<AnalysisPlan>(json, JsonOptions) ?? throw new JsonException("Empty plan.");
-        foreach (var query in plan.Queries.Where(q => q is not null))
+        plan.Queries.RemoveAll(q => q is null);
+        foreach (var query in plan.Queries)
         {
+            query.RemoveNullEntries();
             query.Title = PromptBuilder.Sanitize(query.Title, QueryPlanValidator.MaxTitleLength + 1);
             if (string.IsNullOrEmpty(query.Objective))
             {

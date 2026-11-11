@@ -10,29 +10,75 @@ namespace WabiInsight.Core.Ai;
 /// </summary>
 public sealed class QueryPlan
 {
+    /// <summary>
+    /// Drops null entries a non-strict model can produce (<c>"select": [null]</c>, <c>"values": [null]</c>) so the validator
+    /// rejects or accepts the plan instead of failing with a server error (E3). JSON <c>null</c> lists and texts already
+    /// read as empty through the property setters.
+    /// </summary>
+    public void RemoveNullEntries()
+    {
+        Joins.RemoveAll(j => j is null);
+        foreach (var join in Joins)
+        {
+            join.On.RemoveAll(o => o is null);
+        }
+
+        Select.RemoveAll(s => s is null);
+        GroupBy.RemoveAll(g => g is null);
+        Having.RemoveAll(h => h is null);
+        OrderBy.RemoveAll(o => o is null);
+        Assumptions.RemoveAll(a => a is null);
+        foreach (var condition in Having)
+        {
+            condition.Values.RemoveAll(v => v is null);
+        }
+
+        Clean(Filters);
+
+        static void Clean(PlanFilterGroup? group)
+        {
+            if (group is null)
+            {
+                return;
+            }
+
+            group.Conditions.RemoveAll(c => c is null);
+            group.Groups.RemoveAll(g => g is null);
+            foreach (var condition in group.Conditions)
+            {
+                condition.Values.RemoveAll(v => v is null);
+            }
+
+            foreach (var child in group.Groups)
+            {
+                Clean(child);
+            }
+        }
+    }
+
     private List<PlanCondition> _having = [];
 
     /// <summary>Panel title when the plan is one query of a multi-query answer (dashboard); empty for a single answer.</summary>
     [JsonPropertyName("title")]
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("objective")]
-    public string Objective { get; set; } = string.Empty;
+    public string Objective { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("source")]
-    public PlanObjectRef Source { get; set; } = new();
+    public PlanObjectRef Source { get; set => field = value ?? new(); } = new();
 
     [JsonPropertyName("joins")]
-    public List<PlanJoin> Joins { get; set; } = [];
+    public List<PlanJoin> Joins { get; set => field = value ?? []; } = [];
 
     [JsonPropertyName("select")]
-    public List<PlanSelectItem> Select { get; set; } = [];
+    public List<PlanSelectItem> Select { get; set => field = value ?? []; } = [];
 
     [JsonPropertyName("filters")]
     public PlanFilterGroup? Filters { get; set; }
 
     [JsonPropertyName("groupBy")]
-    public List<string> GroupBy { get; set; } = [];
+    public List<string> GroupBy { get; set => field = value ?? []; } = [];
 
     /// <summary>
     /// Conditions on aggregated values (SQL HAVING), all of which must hold: each condition's column is the alias of an aggregate
@@ -42,7 +88,7 @@ public sealed class QueryPlan
     public List<PlanCondition> Having { get => _having; set => _having = value ?? []; }
 
     [JsonPropertyName("orderBy")]
-    public List<PlanOrderItem> OrderBy { get; set; } = [];
+    public List<PlanOrderItem> OrderBy { get; set => field = value ?? []; } = [];
 
     [JsonPropertyName("limit")]
     public int? Limit { get; set; }
@@ -51,47 +97,47 @@ public sealed class QueryPlan
     public PlanVisualization? Visualization { get; set; }
 
     [JsonPropertyName("assumptions")]
-    public List<string> Assumptions { get; set; } = [];
+    public List<string> Assumptions { get; set => field = value ?? []; } = [];
 }
 
 public sealed class PlanObjectRef
 {
     [JsonPropertyName("schema")]
-    public string Schema { get; set; } = string.Empty;
+    public string Schema { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("object")]
-    public string ObjectName { get; set; } = string.Empty;
+    public string ObjectName { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("alias")]
-    public string Alias { get; set; } = string.Empty;
+    public string Alias { get; set => field = value ?? string.Empty; } = string.Empty;
 }
 
 public sealed class PlanJoin
 {
     [JsonPropertyName("schema")]
-    public string Schema { get; set; } = string.Empty;
+    public string Schema { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("object")]
-    public string ObjectName { get; set; } = string.Empty;
+    public string ObjectName { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("alias")]
-    public string Alias { get; set; } = string.Empty;
+    public string Alias { get; set => field = value ?? string.Empty; } = string.Empty;
 
     /// <summary>inner or left.</summary>
     [JsonPropertyName("type")]
-    public string Type { get; set; } = "inner";
+    public string Type { get; set => field = value ?? "inner"; } = "inner";
 
     [JsonPropertyName("on")]
-    public List<PlanJoinCondition> On { get; set; } = [];
+    public List<PlanJoinCondition> On { get; set => field = value ?? []; } = [];
 }
 
 public sealed class PlanJoinCondition
 {
     [JsonPropertyName("left")]
-    public string Left { get; set; } = string.Empty;
+    public string Left { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("right")]
-    public string Right { get; set; } = string.Empty;
+    public string Right { get; set => field = value ?? string.Empty; } = string.Empty;
 }
 
 /// <summary>
@@ -105,7 +151,7 @@ public sealed class PlanSelectItem
     private string? _dateTrunc;
 
     [JsonPropertyName("alias")]
-    public string Alias { get; set; } = string.Empty;
+    public string Alias { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("column")]
     public string? Column { get => _column; set => _column = PlanText.NullIfEmpty(value); }
@@ -128,13 +174,13 @@ public sealed class PlanFilterGroup
 {
     /// <summary>and / or.</summary>
     [JsonPropertyName("logic")]
-    public string Logic { get; set; } = "and";
+    public string Logic { get; set => field = value ?? "and"; } = "and";
 
     [JsonPropertyName("conditions")]
-    public List<PlanCondition> Conditions { get; set; } = [];
+    public List<PlanCondition> Conditions { get; set => field = value ?? []; } = [];
 
     [JsonPropertyName("groups")]
-    public List<PlanFilterGroup> Groups { get; set; } = [];
+    public List<PlanFilterGroup> Groups { get; set => field = value ?? []; } = [];
 }
 
 public sealed class PlanCondition
@@ -142,18 +188,18 @@ public sealed class PlanCondition
     private string? _compareTo;
 
     [JsonPropertyName("column")]
-    public string Column { get; set; } = string.Empty;
+    public string Column { get; set => field = value ?? string.Empty; } = string.Empty;
 
     /// <summary>eq, neq, gt, gte, lt, lte, in, not_in, between, contains, starts_with, is_null, not_null.</summary>
     [JsonPropertyName("operator")]
-    public string Operator { get; set; } = string.Empty;
+    public string Operator { get; set => field = value ?? string.Empty; } = string.Empty;
 
     /// <summary>
     /// Literal values, an <see cref="AskerValues"/> placeholder the server replaces with the asker's own code after
     /// authorization (the model never sees the codes), or a <see cref="RelativeDates"/> placeholder resolved to a date at each run.
     /// </summary>
     [JsonPropertyName("values")]
-    public List<string> Values { get; set; } = [];
+    public List<string> Values { get; set => field = value ?? []; } = [];
 
     /// <summary>
     /// Compares <see cref="Column"/> with another column instead of values ("alias.Column" in filters, an aggregate alias
@@ -250,23 +296,23 @@ public static partial class RelativeDates
 public sealed class PlanOrderItem
 {
     [JsonPropertyName("alias")]
-    public string Alias { get; set; } = string.Empty;
+    public string Alias { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("direction")]
-    public string Direction { get; set; } = "asc";
+    public string Direction { get; set => field = value ?? "asc"; } = "asc";
 }
 
 public sealed class PlanVisualization
 {
     /// <summary>table, bar, line, pie, kpi.</summary>
     [JsonPropertyName("type")]
-    public string Type { get; set; } = "table";
+    public string Type { get; set => field = value ?? "table"; } = "table";
 
     [JsonPropertyName("x")]
     public string? X { get; set; }
 
     [JsonPropertyName("y")]
-    public List<string> Y { get; set; } = [];
+    public List<string> Y { get; set => field = value ?? []; } = [];
 }
 
 /// <summary>JSON schema sent as the structured-output format. Size and range limits are deliberately absent (providers reject them); the validator enforces them.</summary>
@@ -327,17 +373,17 @@ public static class QueryPlanSchema
 public sealed class AnalysisPlan
 {
     [JsonPropertyName("objective")]
-    public string Objective { get; set; } = string.Empty;
+    public string Objective { get; set => field = value ?? string.Empty; } = string.Empty;
 
     [JsonPropertyName("queries")]
-    public List<QueryPlan> Queries { get; set; } = [];
+    public List<QueryPlan> Queries { get; set => field = value ?? []; } = [];
 
     [JsonPropertyName("assumptions")]
-    public List<string> Assumptions { get; set; } = [];
+    public List<string> Assumptions { get; set => field = value ?? []; } = [];
 
     /// <summary>"report" (a written study rendered to PDF) and/or "email" (a draft introducing the findings); empty for a plain answer.</summary>
     [JsonPropertyName("deliverables")]
-    public List<string> Deliverables { get; set; } = [];
+    public List<string> Deliverables { get; set => field = value ?? []; } = [];
 
     public bool WantsReport => Deliverables.Contains("report", StringComparer.OrdinalIgnoreCase);
 

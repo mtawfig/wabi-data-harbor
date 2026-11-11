@@ -85,6 +85,13 @@ public sealed class QueryExecutor : IQueryExecutor
             var truncated = false;
             await using (var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult, cancellationToken))
             {
+                if (reader is OracleDataReader oracleReader)
+                {
+                    // An average over integers can carry more than 28 digits; read it rounded to .NET decimal precision
+                    // instead of failing with InvalidCastException (E3).
+                    oracleReader.SuppressGetDecimalInvalidCastException = true;
+                }
+
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
                     var typeName = reader.GetDataTypeName(i).ToLowerInvariant();
@@ -119,6 +126,12 @@ public sealed class QueryExecutor : IQueryExecutor
         {
             throw new AnalysisExecutionException(MapError(ex), ex.Message);
         }
+        catch (Exception ex) when (ex is not OperationCanceledException and not AnalysisExecutionException and not DomainException)
+        {
+            // Anything else while reading (a value the driver cannot convert, an unsupported column type): a stable code,
+            // so the run is recorded as failed instead of ending in a server error (E3).
+            throw new AnalysisExecutionException("query_failed", $"{ex.GetType().Name}: {ex.Message}");
+        }
         finally
         {
             if (transaction is not null)
@@ -141,7 +154,17 @@ public sealed class QueryExecutor : IQueryExecutor
             throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "connection_not_configured");
         }
 
-        var connectionString = _adapters.Resolve(application.DatabaseType).Normalize(_protector.Unprotect(application.EncryptedConnectionString));
+        string connectionString;
+        try
+        {
+            connectionString = _adapters.Resolve(application.DatabaseType).Normalize(_protector.Unprotect(application.EncryptedConnectionString));
+        }
+        catch (System.Security.Cryptography.CryptographicException ex)
+        {
+            // The key ring that protected the connection string is gone (a new server without the keys): say so plainly.
+            throw new AnalysisExecutionException("connection_unreadable", ex.Message);
+        }
+
         DbConnection connection = application.DatabaseType switch
         {
             DatabaseType.SqlServer => new SqlConnection(new SqlConnectionStringBuilder(connectionString) { ApplicationIntent = ApplicationIntent.ReadOnly }.ConnectionString),
@@ -160,10 +183,11 @@ public sealed class QueryExecutor : IQueryExecutor
 
             return connection;
         }
-        catch (DbException ex)
+        catch (Exception ex) when (ex is DbException or InvalidOperationException or TimeoutException)
         {
+            // A refused login, an unreachable server or an exhausted connection pool.
             await connection.DisposeAsync();
-            throw new AnalysisExecutionException("source_unreachable", ex.Message);
+            throw new AnalysisExecutionException("source_unreachable", $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 
