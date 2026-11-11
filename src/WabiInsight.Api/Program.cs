@@ -13,6 +13,7 @@ using WabiInsight.Api.Hosting;
 using WabiInsight.Api.Security;
 using WabiInsight.Core.Email;
 using WabiInsight.Infrastructure.DependencyInjection;
+using WabiInsight.Infrastructure.Logging;
 
 // One culture for the whole process, whatever the server's regional format is (review S6): storage folders, file names
 // and dates written without an explicit culture stay Gregorian with Latin digits. Text for people is formatted with
@@ -30,6 +31,10 @@ if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 }
+
+// The application's own log file ("Logging:File:Directory"), for servers where nothing collects the console output
+// (IIS). Added after appsettings.Local.json, where a server names the folder.
+builder.Logging.AddWabiInsightLogFile(builder.Configuration);
 
 builder.Services
     .AddControllers(options =>

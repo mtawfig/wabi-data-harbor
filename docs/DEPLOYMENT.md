@@ -137,7 +137,7 @@ Don't mount the API as an IIS sub-application named `api`. IIS would remove `/ap
 
 ## 5. After every upgrade
 
-1. Stop the API, deploy the new build, run `dotnet WabiInsight.Api.dll migrate`, start the API (`/health/ready` reports database reachability and, as `database-schema`, whether the database is behind the installed release: it is not Healthy until `migrate` has run).
+1. Stop the API, deploy the new build, run `dotnet WabiInsight.Api.dll migrate`, start the API (`/health/ready` reports database reachability and, as `database-schema`, whether the database is behind the installed release: it is not Healthy until `migrate` has run; `file-storage` and `key-ring` report whether the application's account can write to `Storage:RootPath` and `DataProtection:KeyRingPath`). Where nothing collects the console output (IIS), set `Logging:File:Directory` to a folder the application's account can write to: the API then keeps its own log there, one file a day.
 2. Deploy the new Angular build (hashed file names make the switch atomic; `index.html` is served with `no-cache`).
 3. Check `/health/ready`, sign in, open *Platform → System Health*.
 

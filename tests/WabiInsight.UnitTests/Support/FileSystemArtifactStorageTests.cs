@@ -35,6 +35,33 @@ public sealed class FileSystemArtifactStorageTests : IDisposable
         Assert.Null(await storage.OpenReadAsync(key));
     }
 
+    [Fact]
+    public async Task Delete_WorksWhileTheFileIsBeingRead_AndTheReaderKeepsItsContent()
+    {
+        var storage = new FileSystemArtifactStorage(Options.Create(new StorageOptions { RootPath = _root }), new SystemClock());
+        using var content = new MemoryStream(Encoding.UTF8.GetBytes("a logo being downloaded"));
+        var key = await storage.SaveAsync("organization-logos", content);
+        var folder = Path.GetDirectoryName(Path.Combine(_root, key.Replace('/', Path.DirectorySeparatorChar)))!;
+
+        await using (var download = await storage.OpenReadAsync(key))
+        {
+            Assert.NotNull(download);
+
+            // Windows keeps an open file locked; the delete must not wait for the download, nor fail.
+            await storage.DeleteAsync(key);
+            Assert.Null(await storage.OpenReadAsync(key));
+            Assert.Empty(storage.ListKeys());
+
+            // The same key can be written again at once (a replaced logo gets a new key, but nothing blocks this name).
+            using var reader = new StreamReader(download!);
+            Assert.Equal("a logo being downloaded", await reader.ReadToEndAsync());
+        }
+
+        // Nothing is left behind once the download has closed.
+        Assert.Empty(Directory.GetFiles(folder));
+        await storage.DeleteAsync(key);
+    }
+
     [Theory]
     [InlineData("../../etc/passwd")]
     [InlineData("support-attachments/2026/11/not-a-guid.bin")]

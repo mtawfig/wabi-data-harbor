@@ -735,6 +735,7 @@ $localSettings = [ordered]@{
         AzureBlob = [ordered]@{ ConnectionString = $storageConnection; ContainerName = 'wabi-insight-files'; ReadFromDiskWhenMissing = $false }
     }
     DataProtection = [ordered]@{ KeyRingPath = (Join-Path $WI.Root 'keys') }
+    Logging        = [ordered]@{ File = [ordered]@{ Directory = (Join-Path $WI.Root 'logs') } }
 }
 $localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
 $localSettings | ConvertTo-Json -Depth 5 | Set-Content -Path $localPath -Encoding UTF8
@@ -1045,7 +1046,7 @@ The build takes 3–5 minutes on GitHub; the installation takes 1–3 minutes on
 
 ```powershell
 Get-Content (Join-Path $WI.Root 'logs\deploy.log') -Tail 3                                   # … succeeded release=…
-(Invoke-WebRequest 'http://127.0.0.1:5080/health/ready' -UseBasicParsing).Content          # "status":"Healthy" … configuration-database and database-schema … Healthy
+(Invoke-WebRequest 'http://127.0.0.1:5080/health/ready' -UseBasicParsing).Content          # "status":"Healthy" … configuration-database, database-schema, file-storage, key-ring … Healthy
 (Invoke-WebRequest "https://$($WI.Domain)/health/ready" -UseBasicParsing).Content          # Healthy, through IIS
 Invoke-WebRequest 'http://127.0.0.1:5080/api/auth/csrf' -UseBasicParsing -Headers @{ 'X-Forwarded-Proto' = 'https' } | Out-Null   # first use of the key ring (the header stands for IIS: the API answers this over HTTPS only)
 Get-ChildItem (Join-Path $WI.Root 'keys')                                                  # key-<id>.xml: the key ring now exists

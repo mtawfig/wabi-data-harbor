@@ -67,6 +67,33 @@ jobs:
           name: api-test-results
           path: TestResults
 
+  # The first servers run Windows (IIS), and everything above runs on Linux. This job builds the solution and runs the
+  # unit tests on Windows, where paths, regional formats, time zone names and the PDF library's native files differ.
+  # The integration tests stay on Linux: they need SQL Server in a container, which Windows runners do not offer.
+  api-windows:
+    name: API on Windows (unit tests)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        run: dotnet restore WabiInsight.slnx
+      - name: Build
+        run: dotnet build WabiInsight.slnx --configuration Release --no-restore
+      - name: Test (unit)
+        run: >-
+          dotnet test tests/WabiInsight.UnitTests --configuration Release --no-build
+          --logger "trx;LogFileName=results.trx" --results-directory TestResults
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-windows-test-results
+          path: TestResults
+
   oracle:
     # Oracle end to end (P13.30) in its own job: SQL Server, Oracle and the whole integration suite together do not fit
     # a standard runner. Here SQL Server is capped and only the Oracle tests run.

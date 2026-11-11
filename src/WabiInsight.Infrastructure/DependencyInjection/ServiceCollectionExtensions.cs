@@ -137,12 +137,15 @@ public static class ServiceCollectionExtensions
             .AddCheck<ApiSelfHealthCheck>("api", tags: ["live", "ready"])
             .AddDbContextCheck<ConfigurationDbContext>("configuration-database", tags: ["ready"])
             .AddCheck<PendingMigrationsHealthCheck>("database-schema", tags: ["ready"])
+            .AddCheck<FileStorageHealthCheck>("file-storage", tags: ["ready"])
+            .AddCheck<KeyRingHealthCheck>("key-ring", tags: ["ready"])
             .AddCheck<DeploymentSettingsHealthCheck>("deployment-settings", tags: ["ops"])
             .AddCheck<EmailConfigurationHealthCheck>("email-provider", tags: ["ops"])
             .AddCheck<EmailOutboxHealthCheck>("email-outbox", tags: ["ops"])
             .AddCheck<SchedulerHealthCheck>("scheduler", tags: ["ops"]);
 
         services.TryAddSingleton<MigrationState>();
+        services.TryAddSingleton<FolderProbeCache>();
         services.AddOptions<Core.Applications.DataProtectionOptions>().Bind(configuration.GetSection(Core.Applications.DataProtectionOptions.SectionName));
         services.AddHostedService<DeploymentSettingsReporter>();
 
