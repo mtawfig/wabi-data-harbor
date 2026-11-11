@@ -188,7 +188,8 @@ public sealed partial class SupportOperationExecutor : ISupportOperationExecutor
         var timeZone = Text(p, "timeZone")?.Trim() ?? organization.TimeZone;
         var language = Text(p, "defaultLanguage") ?? organization.DefaultLanguage;
         var contactEmail = p.TryGetProperty("contactEmail", out _) ? Clean(Text(p, "contactEmail")) : organization.ContactEmail;
-        if (name.Length is 0 or > 200 || nameAr.Length is 0 or > 200 || timeZone.Length is 0 or > 64 || language is not ("en" or "ar") || (contactEmail is not null && !EmailNormalizer.IsPlausible(contactEmail)))
+        // The time zone is checked as on the organization's own form: an unknown name would silently run every schedule in UTC.
+        if (name.Length is 0 or > 200 || nameAr.Length is 0 or > 200 || timeZone.Length > 64 || !TimeZones.TryFind(timeZone, out _) || language is not ("en" or "ar") || (contactEmail is not null && !EmailNormalizer.IsPlausible(contactEmail)))
         {
             throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "organization_profile_invalid");
         }

@@ -137,7 +137,7 @@ Don't mount the API as an IIS sub-application named `api`. IIS would remove `/ap
 
 ## 5. After every upgrade
 
-1. Stop the API, deploy the new build, run `dotnet WabiInsight.Api.dll migrate`, start the API (the API refuses to start the web host when the database is behind the migrations only if you run the command; the `/health/ready` check reports database reachability).
+1. Stop the API, deploy the new build, run `dotnet WabiInsight.Api.dll migrate`, start the API (`/health/ready` reports database reachability and, as `database-schema`, whether the database is behind the installed release: it is not Healthy until `migrate` has run).
 2. Deploy the new Angular build (hashed file names make the switch atomic; `index.html` is served with `no-cache`).
 3. Check `/health/ready`, sign in, open *Platform → System Health*.
 

@@ -84,7 +84,8 @@ public static partial class ArtifactKeys
             throw new ArgumentException("Invalid storage category.", nameof(category));
         }
 
-        return $"{category}/{now:yyyy}/{now:MM}/{Ids.New():N}.bin";
+        // Always the Gregorian year and month in Latin digits, whatever the server's regional format is.
+        return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{category}/{now:yyyy}/{now:MM}/{Ids.New():N}.bin");
     }
 
     public static bool IsValidCategory(string? category) => category is not null && CategoryPattern().IsMatch(category);
@@ -117,7 +118,8 @@ public sealed class FileSystemArtifactStorage : IArtifactStorage
     public FileSystemArtifactStorage(IOptions<StorageOptions> options, IClock clock)
     {
         ArgumentNullException.ThrowIfNull(options);
-        _root = Path.GetFullPath(options.Value.RootPath);
+        // "D:\files\" and "D:\files" are the same folder: without the trailing separator every key resolves inside it.
+        _root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(options.Value.RootPath));
         _clock = clock;
     }
 
@@ -171,7 +173,9 @@ public sealed class FileSystemArtifactStorage : IArtifactStorage
     {
         ArtifactKeys.Validate(key);
         var path = Path.GetFullPath(Path.Combine(_root, key.Replace('/', Path.DirectorySeparatorChar)));
-        if (!path.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        // A drive root ("D:\") keeps its separator; any other root gets one, so "files-old" is never taken for "files".
+        var prefix = Path.EndsInDirectorySeparator(_root) ? _root : _root + Path.DirectorySeparatorChar;
+        if (!path.StartsWith(prefix, StringComparison.Ordinal))
         {
             throw new ArgumentException("Storage key escapes the root.", nameof(key));
         }

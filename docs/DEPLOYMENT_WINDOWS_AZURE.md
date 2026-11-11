@@ -1022,7 +1022,7 @@ Invoke-WebRequest -UseBasicParsing -OutFile (Join-Path $deployDir 'Deploy-WabiIn
     -Headers @{ Authorization = "Bearer $ghToken"; Accept = 'application/vnd.github.raw'; 'User-Agent' = 'wabi-insight-setup' }
 Remove-Variable ghToken
 Unblock-File (Join-Path $deployDir 'Deploy-WabiInsight.ps1')
-& (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -ScriptVersion          # 3
+& (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -ScriptVersion          # 4
 }
 ```
 
@@ -1045,9 +1045,9 @@ The build takes 3–5 minutes on GitHub; the installation takes 1–3 minutes on
 
 ```powershell
 Get-Content (Join-Path $WI.Root 'logs\deploy.log') -Tail 3                                   # … succeeded release=…
-(Invoke-WebRequest 'http://127.0.0.1:5080/health/ready' -UseBasicParsing).Content          # "status":"Healthy" … configuration-database … Healthy
+(Invoke-WebRequest 'http://127.0.0.1:5080/health/ready' -UseBasicParsing).Content          # "status":"Healthy" … configuration-database and database-schema … Healthy
 (Invoke-WebRequest "https://$($WI.Domain)/health/ready" -UseBasicParsing).Content          # Healthy, through IIS
-Invoke-WebRequest 'http://127.0.0.1:5080/api/auth/csrf' -UseBasicParsing | Out-Null          # first use of the key ring
+Invoke-WebRequest 'http://127.0.0.1:5080/api/auth/csrf' -UseBasicParsing -Headers @{ 'X-Forwarded-Proto' = 'https' } | Out-Null   # first use of the key ring (the header stands for IIS: the API answers this over HTTPS only)
 Get-ChildItem (Join-Path $WI.Root 'keys')                                                  # key-<id>.xml: the key ring now exists
 ```
 
@@ -1136,7 +1136,8 @@ Pop-Location
 
 ```powershell
 $r = $WI.Root
-Set-Content "$r\web\api\app_offline.htm" 'Updating'; Start-Sleep -Seconds 5
+Set-Content "$r\web\api\app_offline.htm" 'Updating'
+do { Start-Sleep -Seconds 2; try { [IO.File]::Open("$r\web\api\WabiInsight.Api.dll", 'Open', 'ReadWrite', 'None').Dispose(); $free = $true } catch { $free = $false } } until ($free)   # the API has stopped and let go of its files
 robocopy "$r\releases\previous-api" "$r\web\api" /MIR /XF appsettings.Local.json app_offline.htm /NFL /NDL /NJH /NJS
 Remove-Item "$r\web\api\app_offline.htm"
 robocopy "$r\releases\previous-web" "$r\web\app" /MIR /NFL /NDL /NJH /NJS

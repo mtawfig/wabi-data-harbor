@@ -174,7 +174,7 @@ CLI commands handled before the pipeline starts: `migrate` (apply migrations), `
 | Endpoint | Purpose |
 |---|---|
 | `GET /health/live` | Process liveness; JSON with per-check status. |
-| `GET /health/ready` | Readiness: API self-check plus configuration-database connectivity (P1.2). Storage, email and AI provider checks follow in later phases. |
+| `GET /health/ready` | Readiness: API self-check, configuration-database connectivity (P1.2) and `database-schema` (P13.31): not ready while the database is behind the installed release, so the deployment scripts put the previous release back instead of leaving an API that fails on its first query. Once seen up to date, the database is not asked again. The System Health page also shows `deployment-settings` (never part of readiness): Degraded while `Platform:BaseUrl`, `Storage:RootPath`, `DataProtection:KeyRingPath` or `Insights:ConnectionString` still has its development value, or when the server cannot resolve IANA time zone names; the same findings are logged as warnings at start-up. |
 | `GET /api/platform/info` | Public product identity (name, code, tagline, version, languages). Never exposes configuration or bootstrap state. |
 | `GET /api/auth/csrf` | Antiforgery cookie + request token (anonymous). |
 | `POST /api/auth/login` | Email/password login for both account categories; sets the `wi.session` cookie. Rate-limited. |

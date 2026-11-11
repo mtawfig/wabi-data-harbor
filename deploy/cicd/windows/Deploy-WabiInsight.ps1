@@ -7,10 +7,12 @@
     SYSTEM only) and run by the GitHub Actions self-hosted runner service. The installed copy, not the one in the
     runner's workspace, is what runs.
 
-    Backend:  stage -> keep the running release as "previous-api" -> app_offline.htm -> copy -> [backup + migrate] ->
-              remove app_offline.htm -> wait for /health/ready -> [storage-check when files are in Azure Blob Storage].
-              If migration or the health check fails, the previous binaries are restored (database changes made by a
-              migration are not rolled back; restore the backup).
+    Backend:  stage -> keep the running release as "previous-api" -> app_offline.htm -> wait until the API has released
+              its files -> copy -> [backup + migrate] -> remove app_offline.htm -> wait for /health/ready ->
+              [storage-check when files are in Azure Blob Storage].
+              If the copy, the migration or the health check fails, the previous binaries are restored (database changes
+              made by a migration are not rolled back; restore the backup). /health/ready is not Healthy while the
+              database is behind the release, so a release that needs migrations cannot be installed without them.
     Frontend: stage -> keep the live files as "previous-web" -> copy (index.html last) -> check the site over HTTPS.
     appsettings.Local.json (server settings) is never overwritten or deleted.
 
@@ -38,12 +40,13 @@ param(
     [string]$BackupTaskName = 'Wabi Insight backup',
     [int]$KeepReleases = 5,
     [int]$HealthAttempts = 45,
+    [int]$OfflineWaitSeconds = 120,
     [switch]$ScriptVersion
 )
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$DeployScriptVersion = 3
+$DeployScriptVersion = 4
 if ($ScriptVersion) { $DeployScriptVersion; return }
 if (-not $Component) { throw "-Component is required: backend, frontend or frontend+backend." }
 
@@ -106,14 +109,33 @@ function Test-ApiHealthy {
     }
     return $false
 }
+function Test-ApiFilesReleased {
+    # Windows keeps the DLLs of a running application locked: they can be replaced only once the worker process has
+    # let go of them. Opening the main DLL for exclusive access succeeds exactly then.
+    $dll = Join-Path $apiTarget 'WabiInsight.Api.dll'
+    if (-not (Test-Path $dll)) { return $true }
+    try {
+        $handle = [System.IO.File]::Open($dll, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+        $handle.Dispose()
+        return $true
+    } catch { return $false }
+}
 function Set-AppOffline([bool]$Offline) {
     $file = Join-Path $apiTarget 'app_offline.htm'
     if ($Offline) {
         Set-Content -Path $file -Value '<!doctype html><title>Updating</title><p>Wabi Insight is being updated. Please try again in a minute.</p>' -Encoding UTF8
-        Start-Sleep -Seconds 5      # the ASP.NET Core Module shuts the app down and releases the DLLs
+        # The ASP.NET Core Module notices the file, lets requests in flight finish (a long analysis can take a while) and
+        # shuts the application down. Wait until the files are really free instead of a fixed pause.
+        Start-Sleep -Seconds 3
+        for ($i = 1; $i -le $OfflineWaitSeconds; $i++) {
+            if (Test-ApiFilesReleased) { return $true }
+            Start-Sleep -Seconds 1
+        }
+        return (Test-ApiFilesReleased)
     } elseif (Test-Path $file) {
         Remove-Item $file -Force
     }
+    return $true
 }
 function Write-StartupErrors([datetime]$Since) {
     # The ASP.NET Core Module logs startup failures (with the app's captured stdout/stderr) to the Application event log.
@@ -126,13 +148,13 @@ function Restore-Backend {
     Write-Output '::warning::Restoring the previous backend release.'
     $previous = Join-Path $releases 'previous-api'
     if (Test-Path (Join-Path $previous 'WabiInsight.Api.dll')) {
-        Set-AppOffline $true
+        if (-not (Set-AppOffline $true)) { Write-Output '::warning::The API files are still in use; restoring anyway.' }
         Invoke-Robocopy $previous $apiTarget @('/MIR', '/XF', 'appsettings.Local.json', 'app_offline.htm')
-        Set-AppOffline $false
+        Set-AppOffline $false | Out-Null
         if (Test-ApiHealthy) { Write-Output 'Previous backend release is running again.' }
         else { Write-Output "::error::The previous release did not become healthy either: see $Root\logs and the Application event log." }
     } else {
-        Set-AppOffline $false
+        Set-AppOffline $false | Out-Null
         Write-Output '::error::No previous backend release to restore (first deployment).'
     }
 }
@@ -185,10 +207,20 @@ try {
         }
 
         Write-Step 'Backend: taking the API offline (app_offline.htm)'
-        Set-AppOffline $true
+        if (-not (Set-AppOffline $true)) {
+            # Nothing was copied yet: the running release is untouched, so it simply goes back online.
+            Set-AppOffline $false | Out-Null
+            Stop-Deploy "The API did not release its files within $OfflineWaitSeconds seconds (a request is still running, or another program holds them). Nothing was changed and the site is back online; try again in a few minutes."
+        }
 
         Write-Step "Backend: installing into $apiTarget"
-        Invoke-Robocopy $stageApi $apiTarget @('/MIR', '/XF', 'appsettings.Local.json', 'app_offline.htm')
+        try {
+            Invoke-Robocopy $stageApi $apiTarget @('/MIR', '/XF', 'appsettings.Local.json', 'app_offline.htm')
+        } catch {
+            # A copy that stops half-way leaves old and new files mixed: put the previous release back before failing.
+            Restore-Backend
+            throw
+        }
 
         if ($Migrate -eq 'yes') {
             $connection = Get-ServerSetting { param($s) $s.ConnectionStrings.ConfigurationDatabase }
@@ -230,8 +262,15 @@ try {
 
         Write-Step 'Backend: bringing the API online'
         $onlineAt = Get-Date
-        Set-AppOffline $false
+        Set-AppOffline $false | Out-Null
         if (-not (Test-ApiHealthy)) {
+            # What the API itself reports, for example a database that is behind this release (run with migrations).
+            $report = (Invoke-Native { curl.exe -sS --max-time 10 $ApiHealthUrl }) -join ''
+            $global:LASTEXITCODE = 0
+            if ($report) { Write-Output "Health report: $report" }
+            if ($report -match '"name":"database-schema","status":"Unhealthy"') {
+                Write-Output '::error::The database is behind this release: deploy again with "Apply database migrations" ticked.'
+            }
             Write-StartupErrors $onlineAt
             Restore-Backend
             Stop-Deploy "The new backend did not report Healthy at $ApiHealthUrl; the previous release was restored. The startup error is printed above (Application event log, source 'IIS AspNetCore Module V2')."

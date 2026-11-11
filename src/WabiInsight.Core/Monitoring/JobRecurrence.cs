@@ -1,3 +1,4 @@
+using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Monitoring;
 
 namespace WabiInsight.Core.Monitoring;
@@ -10,25 +11,7 @@ namespace WabiInsight.Core.Monitoring;
 public static class JobRecurrence
 {
     public static TimeZoneInfo ResolveTimeZone(string? id)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            return TimeZoneInfo.Utc;
-        }
-
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(id);
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            return TimeZoneInfo.Utc;
-        }
-        catch (InvalidTimeZoneException)
-        {
-            return TimeZoneInfo.Utc;
-        }
-    }
+        => TimeZones.TryFind(id, out var zone) ? zone : TimeZoneInfo.Utc;
 
     public static DateTimeOffset NextRun(ScheduledJob job, DateTimeOffset after)
     {

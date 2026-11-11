@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WabiInsight.Api.Contracts;
 using WabiInsight.Api.Authorization;
+using WabiInsight.Api.Security;
 using WabiInsight.Core.Ai;
 using WabiInsight.Core.Analysis;
 using WabiInsight.Core.Entities.Analysis;
@@ -138,6 +139,7 @@ public sealed class HistoryController : ControllerBase
 
     /// <summary>Runs the saved prompt again under the caller's current permissions; the outcome is a new version (422 rejected, 502 execution failure).</summary>
     [HttpPost("{historyId:guid}/rerun")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(RateLimitingSetup.AiPolicy)]
     [ProducesResponseType(typeof(AskResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(PlanRejectedResponse), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Rerun(Guid historyId, CancellationToken cancellationToken)

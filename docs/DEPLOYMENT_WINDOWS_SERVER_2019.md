@@ -506,7 +506,12 @@ Update-WiPath
 ```powershell
 Get-WebGlobalModule -Name AspNetCoreModuleV2 | Select-Object Name, Image
 dotnet --list-runtimes | Select-String 'Microsoft.AspNetCore.App 10\.'          # Microsoft.AspNetCore.App 10.0.x
+Get-Item "$env:windir\System32\icuuc.dll", "$env:windir\System32\icuin.dll" | Select-Object Name   # both are listed
 ```
+
+The last line is about time zones. .NET reads zone names such as `Asia/Dubai` through these two Windows files, which
+Windows Server 2019 and later include. If one is missing, the time zones offered on the organization form still work
+(the API knows their Windows names), and **System Health** shows a `deployment-settings` note about it.
 
 ## 14. IIS URL Rewrite 2.1
 
@@ -1177,7 +1182,7 @@ Get-ChildItem (Join-Path $WI.Backup 'files') | Select-Object Name               
 
 ```powershell
 $deployScript = Join-Path $WI.Root 'deploy\Deploy-WabiInsight.ps1'
-if (Test-Path $deployScript) { & $deployScript -ScriptVersion } else { 'not installed' }     # 3 = the current version is installed
+if (Test-Path $deployScript) { & $deployScript -ScriptVersion } else { 'not installed' }     # 4 = the current version is installed
 ```
 
 The runner runs this installed copy, never a copy from GitHub. Only Administrators and SYSTEM can change it (step 10),
@@ -1209,7 +1214,7 @@ Invoke-WebRequest -UseBasicParsing -OutFile (Join-Path $deployDir 'Deploy-WabiIn
     -Headers @{ Authorization = "Bearer $ghToken"; Accept = 'application/vnd.github.raw'; 'User-Agent' = 'wabi-insight-setup' }
 Remove-Variable ghToken
 Unblock-File (Join-Path $deployDir 'Deploy-WabiInsight.ps1')                # downloaded files are blocked by default
-& (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -ScriptVersion            # 3
+& (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -ScriptVersion            # 4
 }
 ```
 
@@ -1253,8 +1258,8 @@ Get-Content (Join-Path $WI.Root 'logs\deploy.log') -Tail 3                      
 Get-Content (Join-Path $WI.Root 'web\api\deploy-info.json')                                  # "version": the commit you deployed
 Test-Path (Join-Path $WI.Root 'web\api\app_offline.htm')                                     # False
 Invoke-WiSql -Database WabiInsightDB "SELECT COUNT(*) AS Applied, MAX(MigrationId) AS Latest FROM dbo.__EFMigrationsHistory"   # a number and the newest migration's name
-(Invoke-WebRequest 'http://127.0.0.1:5080/health/ready' -UseBasicParsing).Content          # "status":"Healthy" … configuration-database … Healthy
-Invoke-WebRequest 'http://127.0.0.1:5080/api/auth/csrf' -UseBasicParsing | Out-Null          # first use of the key ring
+(Invoke-WebRequest 'http://127.0.0.1:5080/health/ready' -UseBasicParsing).Content          # "status":"Healthy" … configuration-database and database-schema … Healthy
+Invoke-WebRequest 'http://127.0.0.1:5080/api/auth/csrf' -UseBasicParsing -Headers @{ 'X-Forwarded-Proto' = 'https' } | Out-Null   # first use of the key ring (the header stands for IIS: the API answers this over HTTPS only)
 Get-ChildItem (Join-Path $WI.Root 'keys')                                                  # key-<id>.xml: the key ring now exists
 (Invoke-WebRequest "https://$($WI.Domain)/health/ready" -UseBasicParsing).Content          # Healthy, through IIS and ARR
 $r = Invoke-WebRequest "http://$($WI.Domain)/login" -MaximumRedirection 0 -UseBasicParsing -ErrorAction SilentlyContinue
@@ -1323,11 +1328,25 @@ Test-NetConnection api.anthropic.com -Port 443 -InformationLevel Quiet          
 Get-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Filter 'system.webServer/proxy' -Name enabled   # True
 ```
 
+**Verify from your own computer** (not from the VPS: IIS treats callers on the server itself differently), in
+PowerShell or a terminal, with your domain:
+
+```powershell
+curl.exe -s -i -X POST "https://<your domain>/api/auth/login" -H "Content-Type: application/json" -d "{}"   # HTTP 400 with Content-Type: application/problem+json and a JSON body, not an IIS error page
+curl.exe -s -I "https://<your domain>/index.html"      # Cache-Control: no-cache
+curl.exe -s -I "https://<your domain>/i18n/en.json"    # Cache-Control: no-cache
+```
+
+The first proves that the API's error messages reach the browser through IIS; the other two that browsers pick up a
+new release at once instead of keeping the previous application for hours.
+
 **[Browser] Verify**, from your own computer:
 1. Open `https://<your domain>`. The landing page loads with a padlock, and **العربية** switches the layout to right to
    left.
 2. **Sign in** with the administrator e-mail and the first password. You're asked to change the password; do it.
-3. **System Health** (in the platform menu): the database and the API are healthy.
+3. **System Health** (in the platform menu): the database and the API are healthy. `deployment-settings` must be
+   **Healthy** too: when it's *Degraded*, its text names the setting of step 24 that still has a value meant for a
+   developer's machine (the site address, the files folder, the key ring folder, the Platform Insights login).
 4. **AI Providers:** the default provider is listed, and **Test** succeeds.
 5. **Organizations → New organization**, with a real e-mail address for its administrator → **Create organization**.
    The **temporary password e-mail** arrives, which proves e-mail works. (Temporary passwords are only e-mailed, never
@@ -1513,6 +1532,13 @@ until they're copied.
 | Both, no migration | `frontend+backend` | off |
 | Not sure | `frontend+backend` | on (an empty migration step is harmless: *Configuration database is up to date*, and you get a fresh backup) |
 
+A release that contains a migration can't be installed with **migrate_database** off: the new API reports *not ready*
+while the database is behind it, so the deployment stops with *The database is behind this release*, puts the previous
+API back and changes nothing in the database. Run it again with **migrate_database** ticked.
+
+The script waits until the API has finished the requests in flight and released its files (up to two minutes) before
+it copies anything. If that takes longer, nothing is changed and the site goes back online.
+
 `C:\wabitex-apps\wabi-insight\web\api\deploy-info.json` shows which commit is live. To see what changed since, open
 `https://github.com/mtawfig/wabi-data-harbor/compare/<deployed sha>...main` and look for new files under
 `Persistence/Migrations`.
@@ -1541,7 +1567,8 @@ until they're copied.
 
 ```powershell
 $r = $WI.Root
-Set-Content "$r\web\api\app_offline.htm" 'Updating'; Start-Sleep -Seconds 5
+Set-Content "$r\web\api\app_offline.htm" 'Updating'
+do { Start-Sleep -Seconds 2; try { [IO.File]::Open("$r\web\api\WabiInsight.Api.dll", 'Open', 'ReadWrite', 'None').Dispose(); $free = $true } catch { $free = $false } } until ($free)   # the API has stopped and let go of its files
 robocopy "$r\releases\previous-api" "$r\web\api" /MIR /XF appsettings.Local.json app_offline.htm /NFL /NDL /NJH /NJS
 Remove-Item "$r\web\api\app_offline.htm"
 robocopy "$r\releases\previous-web" "$r\web\app" /MIR /NFL /NDL /NJH /NJS
@@ -1645,7 +1672,9 @@ can sign in.
 | Deploy: *Backup task finished with result …; nothing was migrated* | The backup failed (SQL rights, folder rights or a full disk). The previous API was put back. | Step 30 **Do** again, then its **Verify**. To see the error, run `powershell -NoProfile -ExecutionPolicy Bypass -File "$($WI.Backup)\backup.ps1"` |
 | Deploy: *did not report Healthy* or *Migration failed* | The previous API was put back and is running | The job log shows the startup error (also in **Event Viewer**, source *IIS AspNetCore Module V2*). Migrations already applied stay applied: restore the backup if you must go back (step 39). |
 | Deploy: *The release is installed, but …* | IIS, ARR or the certificate didn't answer correctly | Steps 15, 25 and 26 **Verify** |
-| Deploy: *robocopy … failed* | A file was locked | Run again. If it persists, `Restart-WebAppPool WabiInsightApi` and run again. |
+| Deploy: *The API did not release its files within 120 seconds* | A long request was still running (a study or a report), or another program holds the files. Nothing was changed and the site is back online. | Run again in a few minutes. If it persists, `Restart-WebAppPool WabiInsightApi` and run again. |
+| Deploy: *robocopy … failed* | A file could not be copied (locked by another program, or the disk is full). The previous API was put back. | `Get-PSDrive C` for free space, then run again. |
+| Deploy: *The database is behind this release* | The release contains a migration and **migrate_database** was off. The previous API was put back; nothing changed in the database. | Run again with **migrate_database** ticked. |
 | Deploy waits forever on *Waiting for a runner* | The runner service is stopped | `Get-Service 'actions.runner.*' \| Start-Service` |
 | Deploy: *Another deployment is running* | Two runs at once | Wait for the first one, then run again |
 | `https://<domain>` works from your computer but times out on the VPS | Your provider doesn't route the VPS to its own public address | Check from your own computer instead. The deploy script isn't affected: it checks through `127.0.0.1`. |

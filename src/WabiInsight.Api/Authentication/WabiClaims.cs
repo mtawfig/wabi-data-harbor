@@ -61,6 +61,17 @@ public static class WabiClaims
         return new ClaimsPrincipal(new ClaimsIdentity(claims, AuthenticationType, Name, Role));
     }
 
+    /// <summary>
+    /// The same session with another interface language: every other claim is kept as it is, including the security stamp
+    /// and the time it was last checked, so changing the language never refreshes a session that is due to end.
+    /// </summary>
+    public static ClaimsPrincipal WithLanguage(ClaimsPrincipal user, string language)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        var claims = user.Claims.Where(claim => claim.Type != Language).Select(claim => new Claim(claim.Type, claim.Value)).Append(new Claim(Language, language));
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, AuthenticationType, Name, Role));
+    }
+
     /// <summary>Rebuilds the trusted principal from cookie claims. Returns null for anything malformed.</summary>
     public static TenantPrincipal? ToTenantPrincipal(ClaimsPrincipal user)
     {
