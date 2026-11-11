@@ -69,9 +69,12 @@ export class HistoryDetailComponent {
     this.history.collections().subscribe({ next: (c) => this.collections.set(c), error: () => undefined });
   }
 
-  load(select?: number): void {
+  /** Loads the analysis; after a failed re-run the message stays on screen (`keepError`) while the versions refresh. */
+  load(select?: number, keepError = false): void {
     this.loading.set(true);
-    this.error.set(null);
+    if (!keepError) {
+      this.error.set(null);
+    }
     this.history.get(this.historyId).subscribe({
       next: (d) => {
         this.detail.set(d);
@@ -127,7 +130,7 @@ export class HistoryDetailComponent {
         } else {
           this.error.set(problemMessage(e, this.transloco));
         }
-        this.load();
+        this.load(undefined, true);
       },
     });
   }

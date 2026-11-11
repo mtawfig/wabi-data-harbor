@@ -94,7 +94,7 @@ public sealed class DocxExporter : IAnswerExporter
                     body.Append(Paragraph($"{(rtl ? (isChart ? "شكل" : "جدول") : (isChart ? "Figure" : "Table"))} {number.ToString(culture)}.{(section.Panels.IndexOf(i) + 1).ToString(culture)} — {(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective)}", rtl, "Caption"));
                     if (isChart)
                     {
-                        body.Append(Image(main, ChartImageRenderer.RenderImage(type, panel.Result.Series, culture: culture), rtl));
+                        body.Append(Image(main, ChartImageRenderer.RenderImage(type, ColumnHeaders.Series(panel, rtl), culture: culture), rtl));
                     }
                     else
                     {
@@ -203,7 +203,8 @@ public sealed class DocxExporter : IAnswerExporter
     private static Table RowsTable(AnalysisPanel panel, bool rtl, CultureInfo culture)
     {
         var columns = panel.Result.Columns;
-        var headers = columns.Select(c => QuestPdfReportRenderer.Label(c.Name)).ToList();
+        var names = ColumnHeaders.For(panel, rtl);
+        var headers = columns.Select(c => ColumnHeaders.Header(names, c.Name)).ToList();
         var rows = panel.Result.Rows.Take(MaxTableRows)
             .Select(r => (IReadOnlyList<string>)columns.Select((c, i) => QuestPdfReportRenderer.FormatValue(i < r.Count ? r[i] : null, c.IsNumeric, culture)).ToList())
             .ToList();

@@ -45,7 +45,7 @@
                 <thead><tr><th>{{ 'admin.metadata.object' | transloco }}</th><th>{{ 'admin.permissions.access' | transloco }}</th><th>{{ 'admin.permissions.columns' | transloco }}</th><th>{{ 'admin.permissions.rows' | transloco }}</th><th>{{ 'admin.permissions.mapping' | transloco }}</th></tr></thead>
                 <tbody>
                   @for (o of rows(); track o.objectId) {
-                    <tr class="row" [class.row--active]="editing()?.objectId === o.objectId" [class.row--off]="!o.isApproved" (click)="edit(o)" [attr.data-testid]="'perm-row-' + o.objectName">
+                    <tr class="row" [class.row--active]="editing()?.objectId === o.objectId" [class.row--off]="!o.isApproved" (click)="edit(o)" tabindex="0" role="button" (keydown.enter)="edit(o)" (keydown.space)="$event.preventDefault(); edit(o)" [attr.data-testid]="'perm-row-' + o.objectName">
                       <td><span class="wi-ltr"><span class="wi-muted">{{ o.schemaName }}.</span><strong>{{ o.objectName }}</strong></span>@if (objectLabel(o)) { <span class="wi-muted small label">{{ objectLabel(o) }}</span> }@if (!o.isApproved) { <span class="chip pending">{{ 'admin.metadata.pending' | transloco }}</span> }</td>
                       <td><span class="chip" [attr.data-on]="o.granted">{{ (o.granted ? 'admin.permissions.granted' : 'admin.permissions.notGranted') | transloco }}</span></td>
                       <td>@if (o.granted) { {{ o.allColumns ? ('admin.permissions.allColumns' | transloco) : ('admin.permissions.someColumns' | transloco: { count: grantedColumns(o), total: o.columns.length }) }} } @else { — }</td>

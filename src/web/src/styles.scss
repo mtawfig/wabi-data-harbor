@@ -220,3 +220,13 @@ a {
     overflow-wrap: anywhere;
   }
 }
+
+/* Rows that open something can be reached with Tab and opened with Enter or Space (F3); show where the focus is. */
+tr[tabindex='0'] {
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--wi-ocean);
+    outline-offset: -2px;
+  }
+}

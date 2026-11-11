@@ -117,6 +117,9 @@ public interface IOrganizationService
     /// <summary>The signed-in organization user's own organization (tenant context only).</summary>
     Task<OrganizationProfile> GetCurrentAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>The signed-in organization user's own roles with their names in English and Arabic (profile page).</summary>
+    Task<IReadOnlyList<MyRoleDto>> GetMyRolesAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Organization Administrators: replaces the logo used on report pages (PNG or JPEG, at most 1 MB).</summary>
     Task SetLogoAsync(LogoUpload upload, CancellationToken cancellationToken = default);
 
@@ -173,3 +176,6 @@ public sealed class OrganizationValidationException : Exception
 
     public IReadOnlyList<string> Errors { get; } = [];
 }
+
+/// <summary>One of the caller's own roles: the stable code and its display names.</summary>
+public sealed record MyRoleDto(string RoleCode, string NameEn, string NameAr);

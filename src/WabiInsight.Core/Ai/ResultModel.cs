@@ -49,27 +49,48 @@ public static class ResultCalculator
                 // A second category column (direction, status, ...) becomes one series per value over the distinct x values.
                 var categories = rows.Select(r => xIndex >= 0 ? Format(r[xIndex]) : string.Empty).Distinct().ToList();
                 var keys = rows.Select(r => Format(r[keyIndex])).Distinct().ToList();
-                var lookup = new Dictionary<(string Key, string Category), IReadOnlyList<object?>>();
-                foreach (var row in rows)
-                {
-                    lookup.TryAdd((Format(row[keyIndex]), xIndex >= 0 ? Format(row[xIndex]) : string.Empty), row);
-                }
-
                 foreach (var yIndex in yIndexes)
                 {
+                    // Rows that share a series value and a category (a third column the chart does not show) add up.
+                    var totals = new Dictionary<(string Key, string Category), double>();
+                    foreach (var row in rows)
+                    {
+                        var cell = (Format(row[keyIndex]), xIndex >= 0 ? Format(row[xIndex]) : string.Empty);
+                        totals[cell] = totals.GetValueOrDefault(cell) + (ToDouble(row[yIndex]) ?? 0d);
+                    }
+
                     foreach (var key in keys)
                     {
                         var name = yIndexes.Count == 1 ? key : $"{columns[yIndex].Name} · {key}";
-                        series.Add(new ResultSeries(name, categories, categories.Select(c => lookup.TryGetValue((key, c), out var row) ? ToDouble(row[yIndex]) ?? 0d : 0d).ToList()));
+                        series.Add(new ResultSeries(name, categories, categories.Select(c => Math.Round(totals.GetValueOrDefault((key, c)), 4)).ToList()));
                     }
                 }
             }
             else
             {
-                var categories = rows.Select((r, index) => xIndex >= 0 ? Format(r[xIndex]) : (index + 1).ToString(CultureInfo.InvariantCulture)).ToList();
-                foreach (var yIndex in yIndexes)
+                if (xIndex < 0)
                 {
-                    series.Add(new ResultSeries(columns[yIndex].Name, categories, rows.Select(r => ToDouble(r[yIndex]) ?? 0d).ToList()));
+                    var positions = rows.Select((_, index) => (index + 1).ToString(CultureInfo.InvariantCulture)).ToList();
+                    foreach (var yIndex in yIndexes)
+                    {
+                        series.Add(new ResultSeries(columns[yIndex].Name, positions, rows.Select(r => ToDouble(r[yIndex]) ?? 0d).ToList()));
+                    }
+                }
+                else
+                {
+                    // One bar, point or slice per category, in first-seen order; rows that repeat a category add up instead of drawing it twice.
+                    var categories = rows.Select(r => Format(r[xIndex])).Distinct().ToList();
+                    foreach (var yIndex in yIndexes)
+                    {
+                        var totals = new Dictionary<string, double>();
+                        foreach (var row in rows)
+                        {
+                            var category = Format(row[xIndex]);
+                            totals[category] = totals.GetValueOrDefault(category) + (ToDouble(row[yIndex]) ?? 0d);
+                        }
+
+                        series.Add(new ResultSeries(columns[yIndex].Name, categories, categories.Select(c => Math.Round(totals[c], 4)).ToList()));
+                    }
                 }
             }
         }

@@ -102,6 +102,30 @@ public sealed class AuthController : ControllerBase
             User.FindFirst(WabiClaims.Language)?.Value ?? "en"));
     }
 
+    /// <summary>
+    /// The signed-in person's own interface language (C10), kept on the account so it follows them to every browser and
+    /// device. The session is re-issued with the new language and its current expiry, so the next reload agrees.
+    /// </summary>
+    [HttpPut("language")]
+    [ProducesResponseType<SessionResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SessionResponse>> SetLanguage([FromBody] SetLanguageRequest request, CancellationToken cancellationToken)
+    {
+        var account = await _authentication.SetPreferredLanguageAsync(request.Language ?? string.Empty, cancellationToken);
+        if (account is null)
+        {
+            ModelState.AddModelError(nameof(request.Language), "language_invalid");
+            return ValidationProblem(ModelState);
+        }
+
+        var current = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            WabiClaims.ToClaimsPrincipal(account, _clock.UtcNow),
+            current.Properties ?? CookieAuthenticationSetup.NewSessionProperties());
+        return Ok(ToSession(account));
+    }
+
     [HttpPost("change-password")]
     [ProducesResponseType<SessionResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]

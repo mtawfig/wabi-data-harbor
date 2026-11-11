@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { problemMessage } from '../../../core/problem-message';
 import { Component, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,7 +10,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
-import { ProblemDetails } from '../../../core/auth/session.model';
 import { CreateOrganizationRequest, OrganizationDetail, OrganizationStatus, UpdateOrganizationRequest } from '../../../core/organizations/organizations.models';
 import { OrganizationsService } from '../../../core/organizations/organizations.service';
 import { OrganizationFormComponent } from './organization-form.component';
@@ -78,8 +78,7 @@ export class OrganizationDetailComponent {
   }
 
   private fail(response: HttpErrorResponse): void {
-    const problem = response.error as ProblemDetails | undefined;
-    this.error.set(problem?.detail || problem?.title || this.transloco.translate('organizations.errors.unknown'));
+    this.error.set(problemMessage(response, this.transloco, 'organizations.errors.unknown'));
     this.busy.set(false);
   }
 }

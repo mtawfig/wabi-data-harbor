@@ -20,6 +20,7 @@ import { EffectiveObjectAccess, EffectivePermissions, ObjectGrant, ROW_SCOPES, R
 import { PermissionsService } from '../../../core/organizations/permissions.service';
 import { RoleMetricGrants } from '../../../core/platform/insights.models';
 import { InsightsService } from '../../../core/platform/insights.service';
+import { Subscription } from 'rxjs';
 import { problemMessage } from '../../../core/problem-message';
 
 interface GrantDraft {
@@ -65,6 +66,7 @@ export class PermissionsComponent {
   readonly preview = signal<EffectivePermissions | null>(null);
   readonly previewLoading = signal(false);
   readonly metricGrants = signal<RoleMetricGrants | null>(null);
+  private matrixRequest?: Subscription;
   readonly metricDraft = signal<Set<string>>(new Set());
   readonly metricsLoading = signal(false);
 
@@ -171,9 +173,13 @@ export class PermissionsComponent {
       this.metricGrants.set(null);
       return;
     }
+    this.metricGrants.set(null);
     this.metricsLoading.set(true);
     this.insights.roleMetrics(roleId).subscribe({
       next: (g) => {
+        if (g.roleId !== this.selectedRole()) {
+          return;
+        }
         this.metricGrants.set(g);
         this.metricDraft.set(new Set(g.grantedMetricIds));
         this.metricsLoading.set(false);
@@ -231,10 +237,17 @@ export class PermissionsComponent {
       this.matrix.set(null);
       return;
     }
+    // The grid is cleared while it loads, and only the answer for the role and application still selected is shown:
+    // a slow answer for the previous role can never appear (and be saved) under the new one (F4).
+    this.matrix.set(null);
     this.loading.set(true);
     this.error.set(null);
-    this.permissions.matrix(roleId, applicationId).subscribe({
+    this.matrixRequest?.unsubscribe();
+    this.matrixRequest = this.permissions.matrix(roleId, applicationId).subscribe({
       next: (m) => {
+        if (m.roleId !== this.selectedRole() || m.applicationId !== this.selectedApp()) {
+          return;
+        }
         this.matrix.set(m);
         this.loading.set(false);
       },
@@ -250,6 +263,9 @@ export class PermissionsComponent {
     this.draft.set({ granted: o.granted, allColumns: o.granted ? o.allColumns : true, columnIds: new Set(o.columns.filter((c) => c.granted).map((c) => c.columnId)), rowScope: o.rowScope ?? null });
     this.mapping.set(null);
     this.permissions.mapping(o.objectId).subscribe((m) => {
+      if (m.objectId !== this.editing()?.objectId) {
+        return;
+      }
       this.mapping.set(m);
       this.mappingDraft.set({ employeeColumnId: m.employeeColumnId ?? null, departmentColumnId: m.departmentColumnId ?? null, sectionColumnId: m.sectionColumnId ?? null });
     });

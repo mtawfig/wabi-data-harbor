@@ -90,6 +90,16 @@ describe('describePanel', () => {
     expect(d.having).toEqual(['إجمالي المبلغ أكبر من ١٠٠٬٠٠٠']);
   });
 
+  it('names table columns and chart series from the catalogue in Arabic, and keeps the planner alias in English', () => {
+    expect(describePanel(panel, 'ar', translator('ar')).headers).toEqual({
+      branch: 'اسم الفرع',
+      month: 'وقت الترحيل حسب الشهر',
+      total_amount: 'إجمالي المبلغ',
+      postings: 'عدد الصفوف',
+    });
+    expect(describePanel(panel, 'en', translator('en')).headers).toEqual({ branch: 'Branch name', month: 'Month', total_amount: 'Total amount', postings: 'Postings' });
+  });
+
   it('falls back to readable column names for answers stored before labels existed, and never shows SQL', () => {
     const older: AnalysisPanel = { ...panel, labels: undefined };
     const d = describePanel(older, 'en', translator('en'));

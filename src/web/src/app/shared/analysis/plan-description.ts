@@ -19,6 +19,12 @@ export interface PlanDescription {
   having: string[];
   order: string[];
   limit: number | null;
+  /**
+   * Result column (the plan's output alias, lower-case) → the header to show. In Arabic every column is named from the
+   * plan and the catalogue's Arabic display names ("مجموع المبلغ"); in English the planner's alias reads well already, so
+   * only a plain column with a catalogue name uses that name.
+   */
+  headers: Record<string, string>;
 }
 
 const ASKER: Record<string, string> = {
@@ -150,6 +156,12 @@ export function describePanel(panel: AnalysisPanel, language: string, t: Transla
   };
 
   const aggregated = select.some((s) => !!s.aggregate);
+  const headers: Record<string, string> = {};
+  for (const s of select) {
+    const plain = !s.aggregate && !s.dateTrunc;
+    const named = plain ? display(labels.get((s.column ?? '').toLowerCase())) : null;
+    headers[s.alias.toLowerCase()] = language === 'ar' ? item(s) : (named ?? humanize(s.alias));
+  }
   return {
     title: panel.title || plan.title || plan.objective,
     sources: [...new Set(objects.map((o) => object(o.alias)))],
@@ -160,6 +172,7 @@ export function describePanel(panel: AnalysisPanel, language: string, t: Transla
     having: (plan.having ?? []).map((c) => condition(c, alias)),
     order: (plan.orderBy ?? []).map((o) => t(o.direction?.toLowerCase() === 'desc' ? 'ask.plan.desc' : 'ask.plan.asc', { column: alias(o.alias) })),
     limit: plan.limit ?? null,
+    headers,
   };
 }
 

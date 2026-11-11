@@ -10,7 +10,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
-import { ProblemDetails } from '../../../core/auth/session.model';
 import { OrganizationProfile, TIME_ZONES } from '../../../core/organizations/organizations.models';
 import { OrganizationProfileService } from '../../../core/organizations/organizations.service';
 import { problemMessage } from '../../../core/problem-message';
@@ -84,8 +83,7 @@ export class OrganizationSettingsComponent {
         this.busy.set(false);
       },
       error: (response: HttpErrorResponse) => {
-        const problem = response.error as ProblemDetails | undefined;
-        this.error.set(problem?.detail || this.transloco.translate('organizations.errors.unknown'));
+        this.error.set(problemMessage(response, this.transloco, 'organizations.errors.unknown'));
         this.busy.set(false);
       },
     });

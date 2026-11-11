@@ -42,7 +42,7 @@
           <ng-container matColumnDef="columns"><th mat-header-cell *matHeaderCellDef class="num">{{ 'admin.metadata.columns' | transloco }}</th><td mat-cell *matCellDef="let o" class="num">{{ o.approvedColumnCount | wiNumber }} / {{ o.columnCount | wiNumber }}</td></ng-container>
           <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.status' | transloco }}</th><td mat-cell *matCellDef="let o"><span class="chip" [attr.data-on]="o.isApproved">{{ (o.isApproved ? 'admin.metadata.approved' : 'admin.metadata.pending') | transloco }}</span></td></ng-container>
           <tr mat-header-row *matHeaderRowDef="objectColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: objectColumns" class="row" [class.row--active]="detail()?.summary?.objectId === row.objectId" (click)="open(row.objectId)" [attr.data-testid]="'meta-row-' + row.objectName"></tr>
+          <tr mat-row *matRowDef="let row; columns: objectColumns" class="row" [class.row--active]="detail()?.summary?.objectId === row.objectId" (click)="open(row.objectId)" tabindex="0" role="button" (keydown.enter)="open(row.objectId)" (keydown.space)="$event.preventDefault(); open(row.objectId)" [attr.data-testid]="'meta-row-' + row.objectName"></tr>
         </table>
         @if (!loading() && items().length === 0) { <p class="empty wi-muted">{{ (selectedApp()?.lastMetadataRefreshAt ? 'admin.metadata.empty' : 'admin.metadata.neverRefreshed') | transloco }}</p> }
         <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[25, 50, 100]" (page)="onPage($event)" />

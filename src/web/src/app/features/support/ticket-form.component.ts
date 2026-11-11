@@ -13,7 +13,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { concatMap, from, lastValueFrom } from 'rxjs';
 import { problemMessage } from '../../core/problem-message';
-import { ALLOWED_ATTACHMENT_EXTENSIONS, MAX_ATTACHMENT_BYTES, TICKET_IMPACTS, TICKET_TYPES, TicketImpact, TicketType } from '../../core/support/support.models';
+import { ALLOWED_ATTACHMENT_EXTENSIONS, MAX_ATTACHMENT_BYTES, TICKET_IMPACTS, TICKET_TYPES, TicketDetail, TicketImpact, TicketType } from '../../core/support/support.models';
 import { SupportService } from '../../core/support/support.service';
 
 /** New ticket (specification §15.6). Reference, organization, requester and status are set by the server. */
@@ -68,17 +68,34 @@ export class TicketFormComponent {
     this.busy.set(true);
     this.error.set(null);
     const v = this.form.getRawValue();
+    let ticket: TicketDetail;
     try {
-      const ticket = await lastValueFrom(this.support.create({ ...v, category: v.category || undefined }));
-      const id = ticket.summary.ticketId;
+      ticket = await lastValueFrom(this.support.create({ ...v, category: v.category || undefined }));
+    } catch (response) {
+      this.error.set(problemMessage(response as HttpErrorResponse, this.transloco));
+      this.busy.set(false);
+      return;
+    }
+
+    // The ticket exists from here on: whatever happens to the attachments, open it, so submitting again can never
+    // create a second ticket (F4). A file that could not be added is reported there and can be added again.
+    const id = ticket.summary.ticketId;
+    let uploadError: string | null = null;
+    try {
       if (this.files().length > 0) {
         await lastValueFrom(from(this.files()).pipe(concatMap((file) => this.support.upload('app', id, file))), { defaultValue: null });
       }
-      this.snack.open(this.transloco.translate('support.created', { reference: ticket.summary.referenceNumber }), undefined, { duration: 6000 });
-      await this.router.navigate(['/app/support', id]);
     } catch (response) {
-      this.error.set(problemMessage(response as HttpErrorResponse, this.transloco));
-    } finally {
+      uploadError = problemMessage(response as HttpErrorResponse, this.transloco);
+    }
+    const created = this.transloco.translate('support.created', { reference: ticket.summary.referenceNumber });
+    if (uploadError) {
+      this.snack.open(`${created} ${this.transloco.translate('support.attachmentFailed', { reason: uploadError })}`, this.transloco.translate('common.close'), { duration: 15000 });
+    } else {
+      this.snack.open(created, undefined, { duration: 6000 });
+    }
+    // Stays busy while leaving the form, so a second click cannot submit it again.
+    if (!(await this.router.navigate(['/app/support', id]))) {
       this.busy.set(false);
     }
   }

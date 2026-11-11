@@ -1,7 +1,7 @@
 <section class="wi-page detail">
   <header class="wi-page__header">
     <div class="detail__heading">
-      <p class="wi-eyebrow"><a routerLink="/app/history" class="detail__back"><mat-icon>arrow_back</mat-icon>{{ 'history.title' | transloco }}</a></p>
+      <p class="wi-eyebrow"><a routerLink="/app/history" class="detail__back"><mat-icon class="wi-flip-rtl">arrow_back</mat-icon>{{ 'history.title' | transloco }}</a></p>
       @if (detail(); as d) {
         @if (editingTitle()) {
           <div class="detail__rename">

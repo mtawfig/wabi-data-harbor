@@ -305,4 +305,35 @@ public sealed class SqlCompilerTests
         var (_, flat) = ResultCalculator.Calculate(columns, ranking, new PlanVisualization { Type = "bar", X = "direction", Y = ["flights"] });
         Assert.Equal("flights", Assert.Single(flat).Name);
     }
+
+    [Fact]
+    public void ResultCalculator_AddsUpRowsThatShareACategory()
+    {
+        // The rows carry a column the chart does not show (the branch), so a month appears more than once.
+        var columns = new[] { new ResultColumn("month", "nvarchar", false, false), new ResultColumn("branch", "nvarchar", false, false), new ResultColumn("amount", "decimal", true, false) };
+        var rows = Enumerable.Range(0, 15).Select(i => (IReadOnlyList<object?>)new object?[] { i < 10 ? "Jan" : "Feb", $"Branch {i}", 1.5m }).ToList();
+        rows.Add(new object?[] { "Feb", "Branch 99", null });
+        var (_, series) = ResultCalculator.Calculate(columns, rows, new PlanVisualization { Type = "bar", X = "month", Y = ["amount"] });
+        var s = Assert.Single(series);
+        Assert.Equal(["Jan", "Feb"], s.Categories);
+        Assert.Equal([15, 7.5], s.Values);
+
+        var (_, pie) = ResultCalculator.Calculate(columns, rows, new PlanVisualization { Type = "pie", X = "month", Y = ["amount"] });
+        Assert.Equal([15, 7.5], Assert.Single(pie).Values);
+    }
+
+    [Fact]
+    public void ResultCalculator_AddsUpRowsThatShareASeriesAndACategory()
+    {
+        var columns = new[] { new ResultColumn("month", "nvarchar", false, false), new ResultColumn("direction", "nvarchar", false, false), new ResultColumn("flights", "int", true, false) };
+        var rows = new List<IReadOnlyList<object?>>
+        {
+            new object?[] { "Jan", "Arrival", 10 }, new object?[] { "Jan", "Arrival", 5 }, new object?[] { "Jan", "Departure", 11 },
+            new object?[] { "Feb", "Departure", 4 }, new object?[] { "Feb", "Departure", 6 },
+        };
+        var (_, series) = ResultCalculator.Calculate(columns, rows, new PlanVisualization { Type = "bar", X = "month", Y = ["flights"] });
+        Assert.Equal(["Arrival", "Departure"], series.Select(s => s.Name));
+        Assert.Equal([15, 0], series[0].Values);
+        Assert.Equal([11, 10], series[1].Values);
+    }
 }

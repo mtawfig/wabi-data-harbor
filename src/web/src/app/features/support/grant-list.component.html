@@ -33,7 +33,7 @@
       <ng-container matColumnDef="expires"><th mat-header-cell *matHeaderCellDef>{{ 'supportAccess.expiresAt' | transloco }}</th><td mat-cell *matCellDef="let g">{{ g.expiresAt && (g.status === 'Approved' || g.status === 'Active') ? (g.expiresAt | wiDate: 'medium') : '—' }}</td></ng-container>
       <ng-container matColumnDef="created"><th mat-header-cell *matHeaderCellDef>{{ 'support.fields.created' | transloco }}</th><td mat-cell *matCellDef="let g">{{ g.createdAt | wiDate: 'medium' }}</td></ng-container>
       <tr mat-header-row *matHeaderRowDef="columns()"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns()" class="row" (click)="open(row)" [attr.data-testid]="'grant-row-' + row.ticketReference"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns()" class="row" (click)="open(row)" tabindex="0" role="link" (keydown.enter)="open(row)" (keydown.space)="$event.preventDefault(); open(row)" [attr.data-testid]="'grant-row-' + row.ticketReference"></tr>
     </table>
     @if (!loading() && items().length === 0) { <p class="empty wi-muted">{{ 'supportAccess.empty' | transloco }}</p> }
     <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50]" (page)="onPage($event)" />

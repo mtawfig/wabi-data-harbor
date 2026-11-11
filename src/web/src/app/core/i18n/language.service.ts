@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
+import { Subject } from 'rxjs';
 
 export type AppLanguage = 'en' | 'ar';
 export type TextDirection = 'ltr' | 'rtl';
@@ -9,9 +10,9 @@ export const SUPPORTED_LANGUAGES: readonly AppLanguage[] = ['en', 'ar'];
 const STORAGE_KEY = 'wi.lang';
 
 /**
- * Runtime language switching with RTL support. The choice is persisted per browser and, once a user
- * is signed in, mirrored from the account's preferred language. Sets <html lang dir> so Angular Material
- * and CSS logical properties follow the direction automatically.
+ * Runtime language switching with RTL support. The person's own choice is kept in this browser and, once they are
+ * signed in, saved on their account (C10), so it survives a reload, a new tab and the print view. Sets <html lang dir>
+ * so Angular Material and CSS logical properties follow the direction automatically.
  */
 @Injectable({ providedIn: 'root' })
 export class LanguageService {
@@ -21,6 +22,8 @@ export class LanguageService {
   readonly current = signal<AppLanguage>('en');
   readonly direction = computed<TextDirection>(() => (this.current() === 'ar' ? 'rtl' : 'ltr'));
   readonly isRtl = computed(() => this.direction() === 'rtl');
+  /** Emits when the person picks a language with the switcher (not when the app applies a stored one). */
+  readonly chosen = new Subject<AppLanguage>();
 
   initialize(): void {
     const stored = this.readStored();
@@ -50,6 +53,12 @@ export class LanguageService {
 
   toggle(): void {
     this.use(this.current() === 'en' ? 'ar' : 'en');
+    this.chosen.next(this.current());
+  }
+
+  /** The language this browser last chose, or null when it never chose one. */
+  storedChoice(): AppLanguage | null {
+    return this.readStored();
   }
 
   private readStored(): AppLanguage | null {
