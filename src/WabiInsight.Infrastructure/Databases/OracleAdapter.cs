@@ -6,7 +6,12 @@ using WabiInsight.Core.Entities.Organizations;
 
 namespace WabiInsight.Infrastructure.Databases;
 
-/// <summary>Oracle source adapter over the managed driver: dictionary views only (USER_*/ALL_*), never business rows. Live tests run only with WI_TEST_ORACLE_CONNECTION.</summary>
+/// <summary>
+/// Oracle source adapter over the managed driver: dictionary views only (USER_*/ALL_*/SESSION_*), never business rows.
+/// Discovery lists what the login can read in every schema that is not maintained by Oracle, so a dedicated read-only
+/// login that was granted SELECT on the application's schema sees that schema (A2). End-to-end tests run against a real
+/// Oracle database when WI_TEST_ORACLE_CONNECTION is set (CI runs Oracle Free as a service container).
+/// </summary>
 public sealed class OracleAdapter : IDatabaseAdapter
 {
     public DatabaseType DatabaseType => DatabaseType.Oracle;
@@ -61,11 +66,16 @@ public sealed class OracleAdapter : IDatabaseAdapter
             await connection.OpenAsync(cancellationToken);
             var version = connection.ServerVersion;
             var user = await ScalarAsync(connection, "SELECT USER FROM DUAL", cancellationToken);
+            // Read-only means no way to change data (A2): no system privilege that writes any table (directly or through a
+            // role, which SESSION_PRIVS includes), no DBA role, no write grant on someone else's table (directly or through
+            // an enabled role), and no table of its own, because an owner may change its own tables without any grant.
             var writes = await ScalarAsync(connection, """
                 SELECT COUNT(*) FROM (
-                  SELECT privilege FROM user_sys_privs WHERE privilege IN ('INSERT ANY TABLE','UPDATE ANY TABLE','DELETE ANY TABLE','CREATE ANY TABLE','ALTER ANY TABLE','DROP ANY TABLE')
-                  UNION ALL SELECT granted_role FROM user_role_privs WHERE granted_role IN ('DBA')
-                  UNION ALL SELECT privilege FROM user_tab_privs WHERE privilege IN ('INSERT','UPDATE','DELETE','ALTER'))
+                  SELECT privilege FROM session_privs WHERE privilege IN ('INSERT ANY TABLE','UPDATE ANY TABLE','DELETE ANY TABLE','CREATE ANY TABLE','ALTER ANY TABLE','DROP ANY TABLE','LOCK ANY TABLE','EXECUTE ANY PROCEDURE')
+                  UNION ALL SELECT granted_role FROM user_role_privs WHERE granted_role = 'DBA'
+                  UNION ALL SELECT privilege FROM user_tab_privs WHERE grantee = USER AND privilege IN ('INSERT','UPDATE','DELETE','ALTER','MERGE VIEW')
+                  UNION ALL SELECT privilege FROM role_tab_privs WHERE role IN (SELECT role FROM session_roles) AND privilege IN ('INSERT','UPDATE','DELETE','ALTER')
+                  UNION ALL SELECT table_name FROM user_tables)
                 """, cancellationToken);
             var readOnly = writes is not null && Convert.ToInt64(writes, System.Globalization.CultureInfo.InvariantCulture) == 0;
             if (!readOnly)
@@ -103,7 +113,9 @@ public sealed class OracleAdapter : IDatabaseAdapter
                             WHERE k.constraint_type = 'P' AND k.owner = o.owner AND k.table_name = o.object_name AND kc.column_name = c.column_name) THEN 1 ELSE 0 END AS is_pk
                 FROM all_objects o
                 JOIN all_tab_columns c ON c.owner = o.owner AND c.table_name = o.object_name
-                WHERE o.object_type IN ('TABLE','VIEW') AND o.owner = USER
+                WHERE o.object_type IN ('TABLE','VIEW')
+                  AND o.owner IN (SELECT username FROM all_users WHERE oracle_maintained = 'N')
+                  AND o.object_name NOT LIKE 'BIN$%'
                 ORDER BY o.owner, o.object_name, c.column_id
                 """;
             command.CommandTimeout = 60;
@@ -138,8 +150,9 @@ public sealed class OracleAdapter : IDatabaseAdapter
                 JOIN all_cons_columns kc ON kc.owner = k.owner AND kc.constraint_name = k.constraint_name
                 JOIN all_constraints r ON r.owner = k.r_owner AND r.constraint_name = k.r_constraint_name
                 JOIN all_cons_columns rc ON rc.owner = r.owner AND rc.constraint_name = r.constraint_name AND rc.position = kc.position
-                WHERE k.constraint_type = 'R' AND k.owner = USER
-                ORDER BY k.constraint_name
+                WHERE k.constraint_type = 'R'
+                  AND k.owner IN (SELECT username FROM all_users WHERE oracle_maintained = 'N')
+                ORDER BY k.owner, k.constraint_name
                 """;
             command.CommandTimeout = 60;
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);

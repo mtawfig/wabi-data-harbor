@@ -146,7 +146,10 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
 
         // GROUP BY / ORDER BY
         var groupBy = query.GroupBy.Select(g => aliasExpressions[g]).ToList();
-        var orderBy = query.OrderBy.Select(o => $"{Quote(o.Alias)} {(o.Direction.Equals("desc", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC")}").ToList();
+        // An ORDER BY item names a select alias case-insensitively; quote it as the select item spells it, because Oracle
+        // compares quoted names exactly ("total" would not find "Total": ORA-00904).
+        string SelectAlias(string alias) => query.Select.FirstOrDefault(s => string.Equals(s.Alias, alias, StringComparison.OrdinalIgnoreCase))?.Alias ?? alias;
+        var orderBy = query.OrderBy.Select(o => $"{Quote(SelectAlias(o.Alias))} {(o.Direction.Equals("desc", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC")}").ToList();
 
         var sql = new StringBuilder();
         sql.Append("SELECT ").Append(string.Join(", ", select)).Append(' ').Append(from);

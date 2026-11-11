@@ -39,9 +39,24 @@ jobs:
           --health-timeout 5s
           --health-retries 12
           --health-start-period 20s
+      # Oracle Free for the Oracle end-to-end tests (P13.30): a read-only login, discovery, row scopes and execution.
+      oracle:
+        image: gvenzl/oracle-free:23-slim-faststart
+        env:
+          ORACLE_PASSWORD: "WabiOracle_Ci_2026"
+        ports:
+          - 1521:1521
+        options: >-
+          --health-cmd healthcheck.sh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 20s
     env:
       # Used by integration tests from P1.2 onward. Not a real credential.
       WI_TEST_SQLSERVER_CONNECTION: "Server=localhost,1433;Database=WabiInsightTests;User Id=sa;Password=WabiInsight_Ci_2026!;TrustServerCertificate=True;Encrypt=True"
+      # The administrator of the Oracle service above (P13.30); the tests create their own schema and read-only login. Not a real credential.
+      WI_TEST_ORACLE_CONNECTION: "User Id=system;Password=WabiOracle_Ci_2026;Data Source=localhost:1521/FREEPDB1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
