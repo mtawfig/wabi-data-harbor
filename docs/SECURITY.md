@@ -114,6 +114,11 @@ Shares are explicit grants inside one organization: the recipient must be an act
 - **Own role names.** `GET /api/organization/my-roles` returns the caller's active roles (code and EN/AR names) in their own organization only.
 - **Antiforgery after a lost session.** The web app fetches a fresh token as soon as the API reports the session gone, and retries a sign-in once if the old token is refused, so the token check stays strict without making the first sign-in fail.
 
+## Query engine names and failures (P13.29)
+- **Catalogue names.** A plan may name schemas, objects and columns with spaces or any script, but never control or invisible formatting characters, `;`, `--` or `/*`, and never more than 128 characters. This is a shape check only: the authorizer still accepts a name only when it is an approved catalogue entry, the compilers quote every identifier with the quote character doubled, and the compiled-SQL guard is unchanged.
+- **Failures are coded and recorded.** Any failure while reading a source becomes a stable code (`query_failed`, `source_unreachable`, `connection_unreadable`); the raw message stays in the server log, and the run is recorded with its query log and a failed history version. Concurrent saves and duplicate keys are answered with 409 and a code; the error handler clears the failed request's pending changes before recording the error event.
+- **AI providers.** Every provider answer is read through a size limit, with or without a Content-Length.
+
 ## Azure deployment (P13.18)
 - **Deploy (Azure)** (`deploy-azure.yml`) signs in to Azure with OpenID Connect: a federated credential bound to this repository's `production-azure` environment, an identity with Contributor on one resource group only; no Azure key or password is stored in GitHub. GitHub keeps three secrets: the SQL administrator password and the two bootstrap values.
 - The SQL firewall admits Azure services and, for the length of a database step only, the runner's own address (removed in an `always()` step). Azure SQL keeps point-in-time backups; the run summary records the restore point taken before migrations.

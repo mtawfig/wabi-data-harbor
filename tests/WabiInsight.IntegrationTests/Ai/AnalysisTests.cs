@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.IntegrationTests.Api;
 using WabiInsight.IntegrationTests.Database;
@@ -51,6 +53,84 @@ public sealed class AnalysisTests : IDisposable
         {
             FakeAiProvider.Script = null;
         }
+    }
+
+    /// <summary>A plan with the study deliverable: the tickets query, then a written report.</summary>
+    private static string StudyPlan() => $$"""{"objective":"Ticket study","deliverables":["report"],"assumptions":[],"queries":[{{TicketsByStatusPlan("Critical")}}]}""";
+
+    [Fact]
+    public async Task Study_CutOffIsReportedPlainly_AndProviderAndExecutorFailuresAreRecorded()
+    {
+        FakeAiProvider.Script = null;
+        FakeAiProvider.StopReason = null;
+        try
+        {
+            using var alice = await LoginAsync(TestData.AliceEmail);
+            var (applicationId, _) = await PrepareApplicationAsync(alice, "aistudy");
+            var roles = (await (await alice.GetAsync("/api/roles")).ReadJsonAsync()).EnumerateArray().ToList();
+            var managementId = roles.Single(r => r.GetProperty("roleCode").GetString() == "Management").GetProperty("roleId").GetGuid();
+            var (managerId, managerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId);
+            using var manager = await LoginAsync(managerEmail);
+
+            // 1. The study stops at the output limit: the answer and its PDF keep the verified panels with a plain note,
+            //    never the broken JSON (E7).
+            FakeAiProvider.Script = request => request.SchemaName == Core.Ai.ReportSchema.Name ? """{"title":"Ticket study","summary":"Most tickets ar""" : StudyPlan();
+            FakeAiProvider.StopReason = request => request.SchemaName == Core.Ai.ReportSchema.Name ? "max_tokens" : "end_turn";
+            var cut = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Write a ticket study", language = "en" });
+            Assert.True(cut.StatusCode == HttpStatusCode.OK, await cut.Content.ReadAsStringAsync());
+            var answer = await cut.ReadJsonAsync();
+            var interpretation = answer.GetProperty("interpretation");
+            Assert.True(interpretation.GetProperty("incomplete").GetBoolean());
+            Assert.Contains("could not be completed", interpretation.GetProperty("narrative").GetString(), StringComparison.Ordinal);
+            Assert.DoesNotContain("{", interpretation.GetProperty("narrative").GetString(), StringComparison.Ordinal);
+            Assert.True(answer.GetProperty("panels")[0].GetProperty("result").GetProperty("rowCount").GetInt32() >= 0);
+
+            // 2. The provider fails while writing the study, after the queries ran: the run is recorded as failed with its
+            //    query log, and the caller gets the provider's code (E7).
+            FakeAiProvider.StopReason = null;
+            FakeAiProvider.Script = request => request.SchemaName == Core.Ai.ReportSchema.Name ? throw new Core.Ai.AiProviderException("ai_provider_timeout", "slow") : StudyPlan();
+            var failed = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Write another ticket study", language = "en" });
+            Assert.Equal(HttpStatusCode.BadGateway, failed.StatusCode);
+            Assert.Contains("ai_provider_timeout", await failed.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                var metric = await context.AnalysisExecutionMetrics.IgnoreQueryFilters().Where(m => m.UserId == managerId).OrderByDescending(m => m.CreatedAt).FirstAsync();
+                Assert.Equal(Core.Entities.Ai.AnalysisStatus.Failed, metric.Status);
+                Assert.Equal("report", metric.FailureStage);
+                Assert.Equal("ai_provider_timeout", metric.FailureCode);
+                Assert.True(await context.AnalysisQueryLogs.IgnoreQueryFilters().AnyAsync(l => l.MetricId == metric.MetricId));
+            }
+
+            // 3. The source read fails in a way the database driver does not report as a database error (E3): a stable
+            //    code, and the run is recorded like any other failed query.
+            using var throwing = _factory.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddScoped<Core.Ai.IQueryExecutor, ThrowingExecutor>()));
+            var client = throwing.CreateClient();
+            Assert.Equal(HttpStatusCode.OK, (await client.LoginAsync(managerEmail, TestData.UserPassword)).StatusCode);
+            FakeAiProvider.Script = _ => TicketsByStatusPlan("Critical");
+            var broken = await client.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Tickets per status", language = "en" });
+            Assert.Equal(HttpStatusCode.BadGateway, broken.StatusCode);
+            Assert.Contains("query_failed", await broken.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                var metric = await context.AnalysisExecutionMetrics.IgnoreQueryFilters().Where(m => m.UserId == managerId).OrderByDescending(m => m.CreatedAt).FirstAsync();
+                Assert.Equal(Core.Entities.Ai.AnalysisStatus.Failed, metric.Status);
+                Assert.Equal("execute", metric.FailureStage);
+                Assert.Equal("query_failed", metric.FailureCode);
+                Assert.True(await context.AnalysisQueryLogs.IgnoreQueryFilters().AnyAsync(l => l.MetricId == metric.MetricId));
+            }
+        }
+        finally
+        {
+            FakeAiProvider.Script = null;
+            FakeAiProvider.StopReason = null;
+        }
+    }
+
+    /// <summary>An executor whose read fails with a non-database exception (an unconvertible value, a driver bug).</summary>
+    private sealed class ThrowingExecutor : Core.Ai.IQueryExecutor
+    {
+        public Task<Core.Ai.AnalysisResult> ExecuteAsync(Guid applicationId, Core.Ai.Compilers.CompiledQuery query, Core.Ai.PlanVisualization? visualization, CancellationToken cancellationToken = default)
+            => throw new InvalidCastException("Specified cast is not valid.");
     }
 
     private async Task RunAskFlowAsync()

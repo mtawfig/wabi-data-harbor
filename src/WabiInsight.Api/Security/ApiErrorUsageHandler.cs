@@ -28,6 +28,8 @@ public sealed partial class ApiErrorUsageHandler : IExceptionHandler
     {
         try
         {
+            // Whatever the failed operation had staged must not be saved together with the error event.
+            httpContext.RequestServices.GetService<Infrastructure.Persistence.ConfigurationDbContext>()?.ChangeTracker.Clear();
             var usage = httpContext.RequestServices.GetRequiredService<IUsageEventWriter>();
             await usage.AppendAndSaveAsync(
                 UsageEventTypes.ApiError,

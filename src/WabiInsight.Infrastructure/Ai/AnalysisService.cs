@@ -151,6 +151,15 @@ public sealed partial class AnalysisService : IAnalysisService
             await FailAsync(metric, AnalysisStatus.Failed, "execute", ex.Code, total, cancellationToken, request.HistoryId, QueryLog(request, metric, planned.Plan, queries));
             throw;
         }
+        catch (Exception ex) when (ex is not OperationCanceledException and not PlanRejectedException)
+        {
+            // Every failed query is recorded (E3): an unexpected failure gets the same metric, query log and failed
+            // history version as a database error, and the caller a stable code instead of a server error.
+            LogExecutionFailed(_logger, "query_failed", ex);
+            await _accessFacts.RecordAsync(new AccessFactRecording(request.ApplicationId, planned.Authorized.Select(a => new PlanExecution(a.Plan, 0)).ToList(), AccessOutcome.Failed, MetricId: metric.MetricId, FailureCode: "query_failed"), cancellationToken);
+            await FailAsync(metric, AnalysisStatus.Failed, "execute", "query_failed", total, cancellationToken, request.HistoryId, QueryLog(request, metric, planned.Plan, queries));
+            throw new AnalysisExecutionException("query_failed", $"{ex.GetType().Name}: {ex.Message}");
+        }
 
         metric.ExecuteMs = panels.Sum(p => p.Result.DurationMs);
         metric.RowCount = panels.Sum(p => p.Result.RowCount);
@@ -166,12 +175,26 @@ public sealed partial class AnalysisService : IAnalysisService
             var organization = await _context.Organizations.AsNoTracking().SingleAsync(o => o.OrganizationId == organizationId, cancellationToken);
             var applicationName = language == "ar" ? application.ApplicationNameAr : application.ApplicationName;
             var organizationName = language == "ar" ? organization.OrganizationNameAr : organization.OrganizationName;
-            var (content, reportUsage) = await _reports.ComposeAsync(organizationId, request.Question, language, planned.Plan, panels, planned.Plan.WantsEmail, organizationName, applicationName, cancellationToken);
+            ReportContent content;
+            PlanUsage reportUsage;
+            try
+            {
+                (content, reportUsage) = await _reports.ComposeAsync(organizationId, request.Question, language, planned.Plan, panels, planned.Plan.WantsEmail, organizationName, applicationName, cancellationToken);
+            }
+            catch (AiProviderException ex)
+            {
+                // The queries ran; the provider failed while writing the study. Record the run as failed with its query log
+                // instead of losing it, then report the provider error as before (E7).
+                LogExecutionFailed(_logger, ex.Code, ex);
+                await FailAsync(metric, AnalysisStatus.Failed, "report", ex.Code, total, cancellationToken, request.HistoryId, QueryLog(request, metric, planned.Plan, queries));
+                throw;
+            }
+
             metric.ReportInputTokens = reportUsage.InputTokens;
             metric.ReportOutputTokens = reportUsage.OutputTokens;
             metric.InterpretMs = reportUsage.DurationMs;
             metric.EstimatedCost += reportUsage.EstimatedCost;
-            interpretation = new Interpretation(content.Summary, content.KeyFindings, reportUsage);
+            interpretation = new Interpretation(content.Summary, content.KeyFindings, reportUsage, Incomplete: content.Incomplete);
 
             if (planned.Plan.WantsReport)
             {

@@ -57,7 +57,15 @@ public sealed class UsersController : ControllerBase
 
     [HttpPost("{id:guid}/status")]
     public async Task<ActionResult<OrganizationUserDto>> SetStatus(Guid id, [FromBody] SetUserStatusRequest request, CancellationToken cancellationToken)
-        => Ok(await _users.SetStatusAsync(id, Enum.Parse<OrganizationUserStatus>(request.Status), cancellationToken));
+    {
+        if (!EnumInput.TryParse<OrganizationUserStatus>(request.Status, out var status))
+        {
+            ModelState.AddModelError(nameof(request.Status), "status_invalid");
+            return ValidationProblem(ModelState);
+        }
+
+        return Ok(await _users.SetStatusAsync(id, status, cancellationToken));
+    }
 
     [HttpPost("{id:guid}/reset-password")]
     public async Task<ActionResult<UserProvisioningResponse>> ResetPassword(Guid id, CancellationToken cancellationToken)

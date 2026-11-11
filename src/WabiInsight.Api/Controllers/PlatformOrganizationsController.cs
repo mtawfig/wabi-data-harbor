@@ -65,7 +65,12 @@ public sealed class PlatformOrganizationsController : ControllerBase
     [ProducesResponseType<OrganizationDetail>(StatusCodes.Status200OK)]
     public async Task<ActionResult<OrganizationDetail>> SetStatus(Guid id, [FromBody] SetOrganizationStatusRequest request, CancellationToken cancellationToken)
     {
-        var status = Enum.Parse<OrganizationStatus>(request.Status);
+        if (!EnumInput.TryParse<OrganizationStatus>(request.Status, out var status))
+        {
+            ModelState.AddModelError(nameof(request.Status), "status_invalid");
+            return ValidationProblem(ModelState);
+        }
+
         var result = await _organizations.SetStatusAsync(id, status, request.Reason, cancellationToken);
         return result.Outcome == OrganizationOperationOutcome.Success ? Ok(result.Organization) : ToProblem(result);
     }

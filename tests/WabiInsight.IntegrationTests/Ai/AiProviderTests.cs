@@ -27,6 +27,9 @@ public sealed class FakeAiProvider : IAiProvider
     /// <summary>When set, decides the answer per request (planning vs interpretation); otherwise NextText is returned.</summary>
     public static Func<AiRequest, string>? Script { get; set; }
 
+    /// <summary>When set, the stop reason per request (a cut-off answer is "max_tokens"); otherwise "end_turn".</summary>
+    public static Func<AiRequest, string>? StopReason { get; set; }
+
     public static AiRequest? LastRequest { get; private set; }
 
     public static AiProviderDescriptor? LastDescriptor { get; private set; }
@@ -44,7 +47,7 @@ public sealed class FakeAiProvider : IAiProvider
         }
 
         var text = Script?.Invoke(request) ?? NextText;
-        return Task.FromResult(new AiCompletion(text, new AiUsage(1500, 400, 1000), descriptor.Model, "end_turn"));
+        return Task.FromResult(new AiCompletion(text, new AiUsage(1500, 400, 1000), descriptor.Model, StopReason?.Invoke(request) ?? "end_turn"));
     }
 }
 

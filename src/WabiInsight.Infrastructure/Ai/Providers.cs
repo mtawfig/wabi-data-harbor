@@ -73,7 +73,7 @@ public abstract class HttpAiProvider : IAiProvider
                 throw new AiProviderException("ai_provider_response_too_large", "Response exceeded the size limit.");
             }
 
-            var text = await response.Content.ReadAsStringAsync(cancellationToken);
+            var text = await ReadBoundedAsync(response.Content, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 var code = (int)response.StatusCode switch
@@ -99,6 +99,26 @@ public abstract class HttpAiProvider : IAiProvider
     }
 
     protected static string Truncate(string value) => value.Length <= 500 ? value : value[..500];
+
+    /// <summary>Reads the body up to the size limit even when the server sends no Content-Length (chunked).</summary>
+    private static async Task<string> ReadBoundedAsync(HttpContent content, CancellationToken cancellationToken)
+    {
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[81920];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > MaxResponseBytes)
+            {
+                throw new AiProviderException("ai_provider_response_too_large", "Response exceeded the size limit.");
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
+    }
 
     protected static long Count(JsonNode? node) => node is null ? 0 : node.GetValueKind() == JsonValueKind.Number ? node.GetValue<long>() : 0;
 
@@ -172,6 +192,10 @@ public sealed class OpenAiCompatibleProvider : HttpAiProvider
 {
     public const string DefaultEndpoint = "https://api.openai.com/v1";
 
+    /// <summary>OpenAI's service and Azure OpenAI take max_completion_tokens.</summary>
+    internal static bool UsesCompletionTokens(Uri endpoint)
+        => endpoint.Host.Equals("api.openai.com", StringComparison.OrdinalIgnoreCase) || endpoint.Host.EndsWith(".openai.azure.com", StringComparison.OrdinalIgnoreCase);
+
     public OpenAiCompatibleProvider(IHttpClientFactory factory)
         : base(factory)
     {
@@ -183,25 +207,36 @@ public sealed class OpenAiCompatibleProvider : HttpAiProvider
     {
         ArgumentNullException.ThrowIfNull(descriptor);
         ArgumentNullException.ThrowIfNull(request);
+        var endpoint = new Uri($"{(descriptor.Endpoint ?? DefaultEndpoint).TrimEnd('/')}/chat/completions");
         var body = new Dictionary<string, object?>
         {
             ["model"] = descriptor.Model,
-            ["max_tokens"] = request.MaxOutputTokens,
             ["messages"] = new[] { new { role = "system", content = request.SystemPrompt }, new { role = "user", content = request.FullUserContent } },
         };
+
+        // OpenAI's own service takes max_completion_tokens (its reasoning models reject max_tokens); other compatible
+        // servers (Mistral, vLLM, Ollama, LM Studio) still expect max_tokens (E7).
+        body[UsesCompletionTokens(endpoint) ? "max_completion_tokens" : "max_tokens"] = request.MaxOutputTokens;
         if (request.JsonSchema is not null)
         {
             body["response_format"] = new { type = "json_schema", json_schema = new { name = request.SchemaName, schema = ParseSchema(request.JsonSchema), strict = true } };
         }
 
         var headers = new Dictionary<string, string> { ["Authorization"] = $"Bearer {descriptor.ApiKey}" };
-        var json = await PostAsync(descriptor, new Uri($"{(descriptor.Endpoint ?? DefaultEndpoint).TrimEnd('/')}/chat/completions"), headers, body, cancellationToken);
+        var json = await PostAsync(descriptor, endpoint, headers, body, cancellationToken);
         var choice = (json["choices"] as JsonArray)?.FirstOrDefault();
-        var text = choice?["message"]?["content"]?.GetValue<string>() ?? string.Empty;
+        var message = choice?["message"];
+        var text = message?["content"]?.GetValueKind() == JsonValueKind.String ? message["content"]!.GetValue<string>() : string.Empty;
         var finish = choice?["finish_reason"]?.GetValue<string>();
         if (finish == "content_filter")
         {
             throw new AiProviderException("ai_provider_refused", "The provider's content filter declined the request.");
+        }
+
+        // With a JSON schema, OpenAI states a refusal in its own field instead of the content.
+        if (message?["refusal"]?.GetValueKind() == JsonValueKind.String && text.Length == 0)
+        {
+            throw new AiProviderException("ai_provider_refused", Truncate(message["refusal"]!.GetValue<string>()));
         }
 
         var usage = json["usage"];
@@ -247,24 +282,79 @@ public sealed class GeminiProvider : HttpAiProvider
             throw new AiProviderException("ai_provider_refused", "The provider's safety filter declined the request.");
         }
 
-        var text = string.Concat((candidate?["content"]?["parts"] as JsonArray ?? []).Select(p => p?["text"]?.GetValue<string>() ?? string.Empty));
+        // Thought summaries (parts marked "thought") are not the answer; thinking tokens are billed as output (E7).
+        var text = string.Concat((candidate?["content"]?["parts"] as JsonArray ?? []).Where(p => p?["thought"]?.GetValueKind() != JsonValueKind.True).Select(p => p?["text"]?.GetValue<string>() ?? string.Empty));
         var usage = json["usageMetadata"];
-        return new AiCompletion(text, new AiUsage(Count(usage?["promptTokenCount"]), Count(usage?["candidatesTokenCount"]), Count(usage?["cachedContentTokenCount"])), descriptor.Model, finish);
+        var model = json["modelVersion"]?.GetValueKind() == JsonValueKind.String ? json["modelVersion"]!.GetValue<string>() : descriptor.Model;
+        return new AiCompletion(text, new AiUsage(Count(usage?["promptTokenCount"]), Count(usage?["candidatesTokenCount"]) + Count(usage?["thoughtsTokenCount"]), Count(usage?["cachedContentTokenCount"])), model, finish);
     }
 
     /// <summary>Inlines $ref definitions and drops keywords Gemini rejects. Validation still happens server-side on our side.</summary>
     internal static JsonNode SimplifyForGemini(JsonNode schema)
     {
         var defs = schema["$defs"] as JsonObject;
-        return Rewrite(schema, defs, 0);
+        var rewritten = Rewrite(schema, defs, 0);
+        Prune(rewritten);
+        return rewritten;
     }
 
+    /// <summary>
+    /// Gemini rejects an object schema without properties. The recursive filter groups end in one (where the nesting
+    /// limit cuts the recursion): such a property is dropped, with its entry in "required", so the deepest level simply
+    /// has no further groups. The server's validator enforces the real limits either way.
+    /// </summary>
+    private static void Prune(JsonNode? node)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                if (obj["properties"] is JsonObject properties)
+                {
+                    foreach (var name in properties.Where(p => IsEmptyObject(p.Value)).Select(p => p.Key).ToList())
+                    {
+                        properties.Remove(name);
+                        if (obj["required"] is JsonArray required)
+                        {
+                            foreach (var item in required.Where(r => r?.GetValue<string>() == name).ToList())
+                            {
+                                required.Remove(item);
+                            }
+                        }
+                    }
+                }
+
+                foreach (var (_, value) in obj.ToList())
+                {
+                    Prune(value);
+                }
+
+                break;
+            case JsonArray array:
+                foreach (var item in array)
+                {
+                    Prune(item);
+                }
+
+                break;
+        }
+    }
+
+    private static bool IsEmptyObject(JsonNode? schema) => schema switch
+    {
+        JsonObject o when o["type"]?.GetValueKind() == JsonValueKind.String && o["type"]!.GetValue<string>() == "array" => IsEmptyObject(o["items"]),
+        JsonObject o when o["type"]?.GetValueKind() == JsonValueKind.String && o["type"]!.GetValue<string>() == "object" => o["properties"] is not JsonObject p || p.Count == 0 || p.All(x => IsEmptyObject(x.Value)),
+        _ => false,
+    };
+
+    /// <summary>How many references deep a recursive definition (a filter group inside a filter group) is expanded.</summary>
+    private const int MaxReferenceDepth = 4;
+
+    /// <summary>
+    /// Copies the schema, inlining references. <paramref name="depth"/> counts expanded references only, so plain nesting
+    /// is copied whole; a reference past the limit becomes an empty object, which <see cref="Prune"/> then removes.
+    /// </summary>
     private static JsonNode Rewrite(JsonNode node, JsonObject? defs, int depth)
     {
-        if (depth > 12)
-        {
-            return new JsonObject { ["type"] = "object" };
-        }
 
         switch (node)
         {
@@ -272,7 +362,7 @@ public sealed class GeminiProvider : HttpAiProvider
                 if (obj["$ref"] is JsonValue reference && defs is not null)
                 {
                     var name = reference.GetValue<string>().Split('/')[^1];
-                    return defs[name] is { } target ? Rewrite(target, defs, depth + 1) : new JsonObject { ["type"] = "object" };
+                    return depth < MaxReferenceDepth && defs[name] is { } target ? Rewrite(target, defs, depth + 1) : new JsonObject { ["type"] = "object" };
                 }
 
                 var copy = new JsonObject();
@@ -287,7 +377,7 @@ public sealed class GeminiProvider : HttpAiProvider
                     {
                         // Gemini has no anyOf: take the first non-null option and mark it nullable.
                         var first = options.FirstOrDefault(o => o?["type"]?.GetValue<string>() != "null") ?? options.First();
-                        var rewritten = Rewrite(first!, defs, depth + 1);
+                        var rewritten = Rewrite(first!, defs, depth);
                         if (rewritten is JsonObject ro)
                         {
                             ro["nullable"] = true;
@@ -300,7 +390,7 @@ public sealed class GeminiProvider : HttpAiProvider
                         continue;
                     }
 
-                    copy[key] = value is null ? null : Rewrite(value, defs, depth + 1);
+                    copy[key] = value is null ? null : Rewrite(value, defs, depth);
                 }
 
                 return copy;
@@ -308,7 +398,7 @@ public sealed class GeminiProvider : HttpAiProvider
                 var list = new JsonArray();
                 foreach (var item in array)
                 {
-                    list.Add(item is null ? null : Rewrite(item, defs, depth + 1));
+                    list.Add(item is null ? null : Rewrite(item, defs, depth));
                 }
 
                 return list;

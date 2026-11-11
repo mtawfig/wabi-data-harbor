@@ -9,6 +9,13 @@ namespace WabiInsight.Core.Ai;
 /// </summary>
 public sealed class ReportContent
 {
+    /// <summary>
+    /// True when the written study was cut off or unreadable (E7): the document then carries the verified tables and
+    /// charts with a short note instead of the model's broken text. Set by the server, never read from the model.
+    /// </summary>
+    [JsonIgnore]
+    public bool Incomplete { get; set; }
+
     [JsonPropertyName("title")]
     public string Title { get; set; } = string.Empty;
 

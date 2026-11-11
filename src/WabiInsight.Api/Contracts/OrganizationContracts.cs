@@ -36,7 +36,7 @@ public sealed record UpdateOrganizationProfileRequest(
     bool RequireSecondAdminApprovalForSupportAccess = false);
 
 public sealed record SetOrganizationStatusRequest(
-    [Required, RegularExpression("^(Active|Suspended|Deactivated)$")] string Status,
+    [Required(ErrorMessage = "status_invalid"), RegularExpression("^(Active|Suspended|Deactivated)$", ErrorMessage = "status_invalid")] string Status,
     [MaxLength(500)] string? Reason);
 
 /// <summary>Create/resend responses: the initial administrator's temporary password is emailed; DeliveredTo is the masked address.</summary>
