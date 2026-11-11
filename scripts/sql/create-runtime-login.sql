@@ -6,7 +6,7 @@ USE [master];
 IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'wabi_insight_app')
     CREATE LOGIN [wabi_insight_app] WITH PASSWORD = N'<replace-with-strong-secret>', CHECK_POLICY = ON;
 GO
-USE [WabiInsight];
+USE [WabiInsightDB];
 IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'wabi_insight_app')
     CREATE USER [wabi_insight_app] FOR LOGIN [wabi_insight_app];
 GO

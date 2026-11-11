@@ -507,7 +507,7 @@ public sealed partial class OrganizationService : IOrganizationService
             errors.Add("country_code_invalid");
         }
 
-        if (string.IsNullOrWhiteSpace(timeZone) || !TimeZoneInfo.TryFindSystemTimeZoneById(timeZone.Trim(), out _))
+        if (!TimeZones.TryFind(timeZone, out _))
         {
             errors.Add("time_zone_invalid");
         }

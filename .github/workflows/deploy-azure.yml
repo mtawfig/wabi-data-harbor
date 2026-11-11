@@ -294,6 +294,8 @@ jobs:
             echo "Not ready yet (HTTP $code); waiting…"
             sleep 10
           done
+          # What the API itself reports, for example a database that is behind this release (run with "Database: apply migrations").
+          echo "Health report: $(curl -s --max-time 15 "$WI_APP_URL/health/ready" | head -c 800 || true)"
           echo "::error::$WI_APP_URL/health/ready did not answer 200 within 6 minutes. See the App Service's Log stream in the Azure portal (docs/DEPLOYMENT_AZURE.md, step 31)."
           exit 1
 

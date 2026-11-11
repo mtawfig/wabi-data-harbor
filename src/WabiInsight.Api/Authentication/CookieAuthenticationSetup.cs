@@ -55,7 +55,14 @@ public static class CookieAuthenticationSetup
                     },
                     OnSigningIn = context =>
                     {
-                        context.Properties!.Items[IssuedAtProperty] = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+                        // A new sign-in (or a password change) starts the absolute lifetime; a session re-issued with
+                        // its own properties, as the language change does, keeps the time the person signed in.
+                        if (!context.Properties!.Items.ContainsKey(IssuedAtProperty))
+                        {
+                            var clock = context.HttpContext.RequestServices.GetRequiredService<IClock>();
+                            context.Properties.Items[IssuedAtProperty] = clock.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+                        }
+
                         return Task.CompletedTask;
                     },
                     OnCheckSlidingExpiration = context =>

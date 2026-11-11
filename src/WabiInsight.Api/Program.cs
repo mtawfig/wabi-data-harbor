@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -12,6 +13,14 @@ using WabiInsight.Api.Hosting;
 using WabiInsight.Api.Security;
 using WabiInsight.Core.Email;
 using WabiInsight.Infrastructure.DependencyInjection;
+
+// One culture for the whole process, whatever the server's regional format is (review S6): storage folders, file names
+// and dates written without an explicit culture stay Gregorian with Latin digits. Text for people is formatted with
+// the culture of their own language where it is produced.
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -416,6 +416,17 @@ public sealed class SupportAccessTests : IDisposable
         var settings = await ExecuteAsync(platform, "UpdateOrganizationSettings", null, new { description = "Updated by support" });
         Assert.Equal(HttpStatusCode.OK, settings.StatusCode);
         Assert.Equal("Updated by support", (await (await alice.GetAsync("/api/organization")).ReadJsonAsync()).GetProperty("description").GetString());
+
+        // P13.31: a time zone the server does not know is refused in support mode as on the organization's own form
+        // (it would silently run every schedule in UTC); a known one is saved.
+        var zoneBefore = (await (await alice.GetAsync("/api/organization")).ReadJsonAsync()).GetProperty("timeZone").GetString();
+        var unknownZone = await ExecuteAsync(platform, "UpdateOrganizationSettings", null, new { timeZone = "Mars/Olympus" });
+        Assert.Equal(HttpStatusCode.BadRequest, unknownZone.StatusCode);
+        Assert.Contains("organization_profile_invalid", await unknownZone.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Equal(zoneBefore, (await (await alice.GetAsync("/api/organization")).ReadJsonAsync()).GetProperty("timeZone").GetString());
+        Assert.Equal(HttpStatusCode.OK, (await ExecuteAsync(platform, "UpdateOrganizationSettings", null, new { timeZone = "Asia/Riyadh" })).StatusCode);
+        Assert.Equal("Asia/Riyadh", (await (await alice.GetAsync("/api/organization")).ReadJsonAsync()).GetProperty("timeZone").GetString());
+        Assert.Equal(HttpStatusCode.OK, (await ExecuteAsync(platform, "UpdateOrganizationSettings", null, new { timeZone = zoneBefore })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await ExecuteAsync(platform, "CreateOrganizationUser", null, new { email = "nope@org-a.test", fullName = "Nope" })).StatusCode);
 
         // Any OrganizationAdmin revokes immediately: the session ends and execution stops.

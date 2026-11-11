@@ -87,6 +87,9 @@ public sealed class HardeningTests : IDisposable
         Assert.NotEqual(HttpStatusCode.TooManyRequests, first.StatusCode);
         var second = await client.PostJsonAsync("/api/ai/plan", new { });
         Assert.Equal(HttpStatusCode.TooManyRequests, second.StatusCode);
+        // Running a saved question again spends the same budget (P13.31): it calls the model like a new question.
+        var rerun = await client.PostJsonAsync($"/api/history/{Guid.NewGuid()}/rerun", new { });
+        Assert.Equal(HttpStatusCode.TooManyRequests, rerun.StatusCode);
         // Other endpoints are untouched by the analysis budget.
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/me")).StatusCode);
     }

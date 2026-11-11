@@ -42,6 +42,9 @@ public sealed class HealthAndInfoTests : IDisposable
         if (path == "/health/ready")
         {
             Assert.Contains("configuration-database", checks);
+            Assert.Contains("database-schema", checks);
+            // Settings to review never make the site "not ready".
+            Assert.DoesNotContain("deployment-settings", checks);
         }
     }
 

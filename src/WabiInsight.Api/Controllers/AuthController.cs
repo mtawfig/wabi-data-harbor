@@ -104,7 +104,7 @@ public sealed class AuthController : ControllerBase
 
     /// <summary>
     /// The signed-in person's own interface language (C10), kept on the account so it follows them to every browser and
-    /// device. The session is re-issued with the new language and its current expiry, so the next reload agrees.
+    /// device. The session is re-issued with the new language and nothing else changed, so the next reload agrees.
     /// </summary>
     [HttpPut("language")]
     [ProducesResponseType<SessionResponse>(StatusCodes.Status200OK)]
@@ -118,10 +118,13 @@ public sealed class AuthController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
+        // Only the language changes in the session. Its security stamp, the time that stamp was last checked and the
+        // time the person signed in stay as they were, so a session that a password change or the absolute lifetime is
+        // about to end still ends (review S1).
         var current = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
-            WabiClaims.ToClaimsPrincipal(account, _clock.UtcNow),
+            WabiClaims.WithLanguage(User, account.PreferredLanguage),
             current.Properties ?? CookieAuthenticationSetup.NewSessionProperties());
         return Ok(ToSession(account));
     }

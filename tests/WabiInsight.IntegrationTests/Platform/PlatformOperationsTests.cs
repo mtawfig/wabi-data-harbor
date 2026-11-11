@@ -114,6 +114,11 @@ public sealed class PlatformOperationsTests : IDisposable
         Assert.Equal("Healthy", checks["email-provider"]);
         Assert.Contains("email-outbox", checks.Keys);
         Assert.Contains("api", checks.Keys);
+        // P13.31: the schema matches the release, and settings still at their development values are named.
+        Assert.Equal("Healthy", checks["database-schema"]);
+        Assert.Equal("Degraded", checks["deployment-settings"]);
+        var settings = report.GetProperty("checks").EnumerateArray().Single(c => c.GetProperty("name").GetString() == "deployment-settings");
+        Assert.Contains("Platform:BaseUrl", settings.GetProperty("description").GetString(), StringComparison.Ordinal);
         Assert.True(report.GetProperty("checkedAt").GetDateTimeOffset() > DateTimeOffset.UtcNow.AddMinutes(-1));
     }
 

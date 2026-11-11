@@ -168,7 +168,7 @@ The runner runs `C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1`, ne
 **Check:**
 
 ```powershell
-if (Test-Path 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1') { & 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion } else { 'not installed' }   # 3 = current version installed
+if (Test-Path 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1') { & 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion } else { 'not installed' }   # 4 = current version installed
 ```
 
 **Do:** download the script of `main` with a GitHub token (*Contents: read*). If you have a checkout of the repository, copy the file instead.
@@ -191,7 +191,7 @@ Get-Content (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -TotalCount 5   # re
 **Verify:**
 
 ```powershell
-& 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion          # 3
+& 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion          # 4
 icacls 'C:\wabitex-apps\wabi-insight\deploy'                                            # SYSTEM and Administrators only
 Get-ExecutionPolicy -Scope LocalMachine                                   # RemoteSigned (default) or stricter-but-allowing local scripts
 ```
@@ -256,7 +256,9 @@ The first run created the schema. Create the administrator once, with [DEPLOYMEN
 | Deploy: *Check the server's deploy script* | Script missing. | Step 4. A **warning** that the script "differs" means the repository has a newer deploy script. Reinstall it (step 4). |
 | Deploy: backend `did not report Healthy` / `Migration failed` | The previous backend was **restored automatically** and is running. | The job log shows the startup error from the Application event log (source *IIS AspNetCore Module V2*, also in Event Viewer). Migrations already applied stay applied. Restore the backup taken just before (`D:\wabi-insight\backup`) if you must go back. |
 | Deploy: `The release is installed, but …` (site check) | The release is live, but IIS, ARR or the certificate didn't answer correctly. | Deployment guide steps 15, 25 and 26 **Verify**. |
-| Deploy: `robocopy … failed` | A file was locked (rare: the app wasn't fully stopped). | Run again. If it persists, `Restart-WebAppPool WabiInsightApi` and run again. |
+| Deploy: `The API did not release its files within 120 seconds` | A long request was still running, or another program holds the files. Nothing was changed; the site is back online. | Run again in a few minutes. If it persists, `Restart-WebAppPool WabiInsightApi` and run again. |
+| Deploy: `robocopy … failed` | A file could not be copied (locked by another program, or a full disk). The previous backend was **restored**. | Check free space on `C:`, then run again. |
+| Deploy: `The database is behind this release` | The release contains a migration and **migrate_database** was off. The previous backend was **restored**; the database is unchanged. | Run again with **migrate_database** ticked. |
 | Deploy waits forever on `Waiting for a runner` | The runner service is stopped or offline. | `Get-Service 'actions.runner.*' \| Start-Service`. |
 | `Another deployment is running` | Two runs at once. | The workflow queues runs (`concurrency`). Wait and run again. |
 

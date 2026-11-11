@@ -172,6 +172,10 @@ EOF
     step "Backend: starting $SERVICE"
     systemctl start "$SERVICE" || true
     if ! api_healthy; then
+        # What the API itself reports, for example a database that is behind this release (deploy with migrations).
+        report="$(curl -sS --max-time 5 "$API_HEALTH_URL" 2>/dev/null | head -c 800 || true)"
+        if [ -n "$report" ]; then echo "Health report: $report"; fi
+        case "$report" in *'"name":"database-schema","status":"Unhealthy"'*) echo "::error::The database is behind this release: deploy again with database migrations applied." ;; esac
         journalctl -u "$SERVICE" -n 40 --no-pager 2>/dev/null || true
         restore_backend
         fail "The new backend did not report Healthy at $API_HEALTH_URL; the previous release was restored."

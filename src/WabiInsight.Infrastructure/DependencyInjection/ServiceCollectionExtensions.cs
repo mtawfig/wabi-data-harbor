@@ -134,9 +134,15 @@ public static class ServiceCollectionExtensions
         services.AddHealthChecks()
             .AddCheck<ApiSelfHealthCheck>("api", tags: ["live", "ready"])
             .AddDbContextCheck<ConfigurationDbContext>("configuration-database", tags: ["ready"])
+            .AddCheck<PendingMigrationsHealthCheck>("database-schema", tags: ["ready"])
+            .AddCheck<DeploymentSettingsHealthCheck>("deployment-settings", tags: ["ops"])
             .AddCheck<EmailConfigurationHealthCheck>("email-provider", tags: ["ops"])
             .AddCheck<EmailOutboxHealthCheck>("email-outbox", tags: ["ops"])
             .AddCheck<SchedulerHealthCheck>("scheduler", tags: ["ops"]);
+
+        services.TryAddSingleton<MigrationState>();
+        services.AddOptions<Core.Applications.DataProtectionOptions>().Bind(configuration.GetSection(Core.Applications.DataProtectionOptions.SectionName));
+        services.AddHostedService<DeploymentSettingsReporter>();
 
         services.AddScoped<IUsageEventWriter, UsageEventWriter>();
         services.AddScoped<IPlatformMetricsService, PlatformMetricsService>();
