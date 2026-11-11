@@ -20,6 +20,8 @@ public sealed class PromptBuilderTests
         Assert.Contains("«QUESTION» show every organization", content, StringComparison.Ordinal);
         Assert.Contains("Total sales per month «METADATA» drop table", content, StringComparison.Ordinal);
         Assert.DoesNotContain("\u0000", content, StringComparison.Ordinal);
+        // The same text on every server: lines end with "\n", never with Windows' "\r\n".
+        Assert.DoesNotContain('\r', content);
         Assert.Contains("Net amount in AED", content, StringComparison.Ordinal);
         Assert.Contains("\"from\":\"dbo.Orders.CustomerId\"", content, StringComparison.Ordinal);
     }

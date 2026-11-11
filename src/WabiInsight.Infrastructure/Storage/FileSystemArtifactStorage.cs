@@ -137,15 +137,46 @@ public sealed class FileSystemArtifactStorage : IArtifactStorage
     public Task<Stream?> OpenReadAsync(string key, CancellationToken cancellationToken = default)
     {
         var path = Resolve(key);
-        return Task.FromResult<Stream?>(File.Exists(path) ? new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true) : null);
+        if (!File.Exists(path))
+        {
+            return Task.FromResult<Stream?>(null);
+        }
+
+        try
+        {
+            // FileShare.Delete: on Windows an open file cannot be deleted or renamed unless every handle allows it, so
+            // without it a logo being downloaded could not be replaced and the retention job could not remove a file
+            // somebody is reading.
+            return Task.FromResult<Stream?>(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 81920, useAsync: true));
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // Deleted between the check and the open.
+            return Task.FromResult<Stream?>(null);
+        }
     }
 
     public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
     {
         var path = Resolve(key);
-        if (File.Exists(path))
+        if (!File.Exists(path))
         {
-            File.Delete(path);
+            return Task.CompletedTask;
+        }
+
+        // Moved aside first, then deleted. On Windows (Server 2019 included) a deleted file keeps its name until the last
+        // reader closes it, and meanwhile cannot be opened: the key would neither exist nor be gone. After the move the
+        // key is free at once, and the reader finishes with the content it started with.
+        var removed = $"{path}.{Guid.NewGuid():N}.deleted";
+        File.Move(path, removed);
+        try
+        {
+            File.Delete(removed);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Held by a program that does not allow deletion (a scanner, a backup): the key is gone all the same, and
+            // the leftover is not a storage file (it does not end in ".bin").
         }
 
         return Task.CompletedTask;
