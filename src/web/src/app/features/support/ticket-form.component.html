@@ -51,14 +51,14 @@
       <p class="hint" style="margin-top: 8px">{{ 'support.pendingUploads' | transloco }}</p>
       <div class="files">
         @for (f of files(); track f.name + f.size) {
-          <span class="file"><mat-icon>description</mat-icon>{{ f.name }}<button mat-icon-button type="button" (click)="remove(f)" style="width: 24px; height: 24px; padding: 0"><mat-icon style="font-size: 16px; width: 16px; height: 16px">close</mat-icon></button></span>
+          <span class="file"><mat-icon>description</mat-icon>{{ f.name }}<button mat-icon-button type="button" (click)="remove(f)" [attr.aria-label]="'common.removeFile' | transloco: { name: f.name }" style="width: 24px; height: 24px; padding: 0"><mat-icon style="font-size: 16px; width: 16px; height: 16px">close</mat-icon></button></span>
         }
       </div>
     }
 
     <div class="form-actions">
       <a mat-button routerLink="/app/support">{{ 'common.cancel' | transloco }}</a>
-      <button mat-flat-button type="submit" [disabled]="busy()" data-testid="ticket-submit"><mat-icon>send</mat-icon>{{ 'support.submit' | transloco }}</button>
+      <button mat-flat-button type="submit" [disabled]="busy()" data-testid="ticket-submit"><mat-icon class="wi-flip-rtl">send</mat-icon>{{ 'support.submit' | transloco }}</button>
     </div>
   </form>
 </section>

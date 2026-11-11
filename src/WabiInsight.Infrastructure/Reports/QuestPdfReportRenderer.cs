@@ -170,7 +170,7 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                                     figure.Item().PaddingBottom(2).Text($"{(rtl ? (isChart ? "شكل" : "جدول") : (isChart ? "Figure" : "Table"))} {number.ToString(culture)}.{(section.Panels.IndexOf(i) + 1).ToString(culture)} — {(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective)}").FontSize(10).SemiBold().FontColor(Ocean);
                                     if (isChart)
                                     {
-                                        figure.Item().Border(1).BorderColor(Border).Padding(6).Element(c => ChartComposer.Draw(c, SvgChartBuilder.Render(type, panel.Result.Series, ChartWidth, type == "pie" ? 220 : 240, culture)));
+                                        figure.Item().Border(1).BorderColor(Border).Padding(6).Element(c => ChartComposer.Draw(c, SvgChartBuilder.Render(type, ColumnHeaders.Series(panel, rtl), ChartWidth, type == "pie" ? 220 : 240, culture)));
                                     }
                                     else
                                     {
@@ -277,7 +277,8 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
     private static void Table(IContainer container, AnalysisPanel panel, CultureInfo culture)
     {
         var columns = panel.Result.Columns;
-        var headers = columns.Select(c => Label(c.Name)).ToList();
+        var names = ColumnHeaders.For(panel, culture.TwoLetterISOLanguageName == "ar");
+        var headers = columns.Select(c => ColumnHeaders.Header(names, c.Name)).ToList();
         var rows = panel.Result.Rows.Take(MaxTableRows)
             .Select(r => (IReadOnlyList<string>)columns.Select((c, i) => FormatValue(i < r.Count ? r[i] : null, c.IsNumeric, culture)).ToList())
             .ToList();

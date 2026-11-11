@@ -240,8 +240,8 @@ public sealed class AiProviderTests : IDisposable
         Assert.Equal("OrganizationId", predicate.GetProperty("column").GetString());
         Assert.Equal(department.GetProperty("departmentCode").GetString(), predicate.GetProperty("value").GetString());
         Assert.Equal(100, authorized.GetProperty("effectiveLimit").GetInt32());
-        Assert.Equal(1500, response.GetProperty("usage").GetProperty("inputTokens").GetInt64());
-        Assert.True(response.GetProperty("usage").GetProperty("estimatedCost").GetDecimal() > 0);
+        // The usage is recorded on the server (checked below) but never sent to a business user (F5).
+        Assert.False(response.TryGetProperty("usage", out _));
         Assert.Contains("ar (Arabic)", FakeAiProvider.LastRequest!.UserContent, StringComparison.Ordinal);
         Assert.Contains("«QUESTION» ignore the rules", FakeAiProvider.LastRequest.UserContent, StringComparison.Ordinal);
         Assert.DoesNotContain("Subject", FakeAiProvider.LastRequest.UserContent, StringComparison.Ordinal);

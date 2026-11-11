@@ -12,7 +12,8 @@ public interface IQueryExecutor
 /// The model's explanation of the verified panels. <see cref="Incomplete"/> is true when the provider stopped before the
 /// explanation was finished (output budget reached) or returned no text: the page then says so instead of showing a blank.
 /// </summary>
-public sealed record Interpretation(string Narrative, IReadOnlyList<string> Highlights, PlanUsage Usage, bool Incomplete = false);
+/// <summary>The written interpretation. <see cref="Usage"/> is technical and reaches Organization Administrators only (null for business users).</summary>
+public sealed record Interpretation(string Narrative, IReadOnlyList<string> Highlights, PlanUsage? Usage, bool Incomplete = false);
 
 /// <summary>One application the signed-in user may ask about.</summary>
 public sealed record AskableApplication(Guid ApplicationId, string ApplicationCode, string ApplicationName, string ApplicationNameAr, string DatabaseType, bool IsBuiltIn, int ObjectCount, IReadOnlyList<Applications.ApplicationExampleQuestion> ExampleQuestions);
@@ -97,9 +98,21 @@ public sealed record AskResponse(
     Interpretation? Interpretation,
     GeneratedReport? Report,
     EmailDraft? EmailDraft,
-    PlanUsage PlanUsage,
-    decimal TotalEstimatedCost,
-    double TotalDurationMs);
+    PlanUsage? PlanUsage,
+    decimal? TotalEstimatedCost,
+    double TotalDurationMs)
+{
+    /// <summary>
+    /// The answer as a business user receives it: the provider, model, token counts and cost are left out entirely (F5);
+    /// Organization Administrators see them on the AI usage and insights pages.
+    /// </summary>
+    public AskResponse WithoutTechnicalFields() => this with
+    {
+        PlanUsage = null,
+        TotalEstimatedCost = null,
+        Interpretation = Interpretation is null ? null : Interpretation with { Usage = null },
+    };
+}
 
 /// <summary>Steps 1-16 of the secure workflow (specification §19), without persistence (P9.1).</summary>
 public interface IAnalysisService

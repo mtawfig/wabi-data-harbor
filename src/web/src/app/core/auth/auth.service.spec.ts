@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTestTransloco } from '../../testing/transloco-testing';
 import { authInterceptor } from './auth.interceptor';
+import { LanguageService } from '../i18n/language.service';
 import { AuthService } from './auth.service';
 import { Session } from './session.model';
 
@@ -26,6 +27,7 @@ describe('AuthService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
+    localStorage.removeItem('wi.lang');
     TestBed.configureTestingModule({
       providers: [provideRouter([]), provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting(), provideTestTransloco()],
     });
@@ -85,5 +87,52 @@ describe('AuthService', () => {
     await login;
 
     expect(document.documentElement.getAttribute('dir')).toBe('rtl');
+  });
+
+  it('keeps the language this browser chose after a reload and brings the account up to date (C10)', async () => {
+    localStorage.setItem('wi.lang', 'ar');
+    const init = service.initialize();
+    http.expectOne('/api/auth/csrf').flush({ token: 't', headerName: 'X-XSRF-TOKEN' });
+    await settle();
+    http.expectOne('/api/auth/me').flush({ ...orgSession, preferredLanguage: 'en' });
+    await init;
+    expect(document.documentElement.getAttribute('dir')).toBe('rtl');
+    const save = http.expectOne({ method: 'PUT', url: '/api/auth/language' });
+    expect(save.request.body).toEqual({ language: 'ar' });
+    save.flush({ ...orgSession, preferredLanguage: 'ar' });
+    await settle();
+    expect(service.session()?.preferredLanguage).toBe('ar');
+  });
+
+  it('saves a language picked with the switcher on the signed-in account', async () => {
+    service.session.set(orgSession);
+    const language = TestBed.inject(LanguageService);
+    language.use('en');
+    language.toggle();
+    http.expectOne({ method: 'PUT', url: '/api/auth/language' }).flush({ ...orgSession, preferredLanguage: 'ar' });
+    await settle();
+    expect(localStorage.getItem('wi.lang')).toBe('ar');
+    expect(service.session()?.preferredLanguage).toBe('ar');
+  });
+
+  it('renews the antiforgery token when the session is lost and retries a sign-in the old token spoiled (F1)', async () => {
+    service.session.set(orgSession);
+    service.sessionLost();
+    http.expectOne('/api/auth/csrf').flush({ token: 'fresh', headerName: 'X-XSRF-TOKEN' });
+    await settle();
+    expect(service.csrfToken()).toBe('fresh');
+
+    const login = service.login('alice@org-a.test', 'x');
+    http.expectOne('/api/auth/login').flush({ type: 'https://wabi-insight.dev/problems/antiforgery' }, { status: 400, statusText: 'Bad Request' });
+    await settle();
+    http.expectOne('/api/auth/csrf').flush({ token: 'again', headerName: 'X-XSRF-TOKEN' });
+    await settle();
+    const retry = http.expectOne('/api/auth/login');
+    expect(retry.request.headers.get('X-XSRF-TOKEN')).toBe('again');
+    retry.flush(orgSession);
+    await settle();
+    http.expectOne('/api/auth/csrf').flush({ token: 'after', headerName: 'X-XSRF-TOKEN' });
+    await login;
+    expect(service.isAuthenticated()).toBe(true);
   });
 });

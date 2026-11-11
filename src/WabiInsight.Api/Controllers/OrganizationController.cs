@@ -27,6 +27,10 @@ public sealed class OrganizationController : ControllerBase
         return Ok(await _organizations.GetCurrentAsync(cancellationToken));
     }
 
+    /// <summary>The caller's own roles with their names, so the profile shows "Management" / "الإدارة" rather than codes.</summary>
+    [HttpGet("my-roles")]
+    public async Task<ActionResult<IReadOnlyList<MyRoleDto>>> MyRoles(CancellationToken cancellationToken) => Ok(await _organizations.GetMyRolesAsync(cancellationToken));
+
     [HttpPut]
     [Authorize(Policy = Policies.OrganizationAdmin)]
     [ProducesResponseType<OrganizationProfile>(StatusCodes.Status200OK)]

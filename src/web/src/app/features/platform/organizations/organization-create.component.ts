@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
-import { ProblemDetails, problemCode } from '../../../core/auth/session.model';
+import { problemMessage } from '../../../core/problem-message';
 import { CreateOrganizationRequest, UpdateOrganizationRequest } from '../../../core/organizations/organizations.models';
 import { OrganizationsService } from '../../../core/organizations/organizations.service';
 import { OrganizationFormComponent } from './organization-form.component';
@@ -52,12 +52,7 @@ export class OrganizationCreateComponent {
         void this.router.navigate(['/platform/organizations', created.organizationId]);
       },
       error: (response: HttpErrorResponse) => {
-        const problem = response.error as ProblemDetails | undefined;
-        const code = problemCode(problem) ?? 'unknown';
-        const detail = problem?.detail ?? '';
-        const key = `organizations.errors.${code}`;
-        const translated = this.transloco.translate(key);
-        this.error.set(translated === key ? detail || this.transloco.translate('organizations.errors.unknown') : translated);
+        this.error.set(problemMessage(response, this.transloco, 'organizations.errors.unknown'));
         this.busy.set(false);
       },
     });

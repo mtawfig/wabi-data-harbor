@@ -69,7 +69,7 @@
         @if (panels().length > 1) { <h3>{{ p.title || p.plan.objective }}</h3> }
         <div class="ask__table-wrap">
           <table class="ask__table" data-testid="ask-table">
-            <thead><tr>@for (col of p.result.columns; track col.name) { <th [class.num]="col.isNumeric">{{ label(col.name) }}</th> }</tr></thead>
+            <thead><tr>@for (col of p.result.columns; track col.name) { <th [class.num]="col.isNumeric">{{ header(p, col.name) }}</th> }</tr></thead>
             <tbody>@for (row of p.result.rows; track $index) { <tr>@for (col of p.result.columns; track col.name; let i = $index) { <td [class.num]="col.isNumeric">{{ format(row[i], col.isNumeric) }}</td> }</tr> }</tbody>
           </table>
         </div>

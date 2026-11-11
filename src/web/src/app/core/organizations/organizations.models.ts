@@ -64,3 +64,10 @@ export interface OrganizationProfile {
 export type UpdateOrganizationProfileRequest = Omit<OrganizationProfile, 'organizationId' | 'organizationCode' | 'countryCode' | 'status' | 'createdAt' | 'hasLogo'>;
 
 export const TIME_ZONES = ['UTC', 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Qatar', 'Asia/Kuwait', 'Asia/Bahrain', 'Asia/Muscat', 'Africa/Cairo', 'Asia/Amman', 'Europe/London', 'Europe/Berlin', 'America/New_York'];
+
+/** One of the signed-in user's roles with its display names. */
+export interface MyRole {
+  roleCode: string;
+  nameEn: string;
+  nameAr: string;
+}

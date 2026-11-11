@@ -28,7 +28,7 @@
             <thead><tr><th>{{ 'platformInsights.view' | transloco }}</th><th>{{ 'platformInsights.names' | transloco }}</th><th class="num">{{ 'platformInsights.columns' | transloco }}</th><th>{{ 'admin.fields.status' | transloco }}</th></tr></thead>
             <tbody>
               @for (o of objects(); track o.objectId) {
-                <tr class="row" [class.row--active]="selectedObject()?.objectId === o.objectId" [class.row--off]="!o.isPresent" (click)="openObject(o)" [attr.data-testid]="'insights-view-' + o.viewName">
+                <tr class="row" [class.row--active]="selectedObject()?.objectId === o.objectId" [class.row--off]="!o.isPresent" (click)="openObject(o)" tabindex="0" role="button" (keydown.enter)="openObject(o)" (keydown.space)="$event.preventDefault(); openObject(o)" [attr.data-testid]="'insights-view-' + o.viewName">
                   <td><span class="wi-ltr"><span class="wi-muted">insights.</span><strong>{{ o.viewName }}</strong></span>@if (!o.isPresent) { <span class="chip off">{{ 'admin.metadata.removed' | transloco }}</span> }</td>
                   <td>{{ o.displayNameEn }}<br /><span dir="rtl">{{ o.displayNameAr }}</span></td>
                   <td class="num">{{ approvedCount(o) }} / {{ o.columns.length }}</td>

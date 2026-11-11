@@ -95,7 +95,7 @@ public sealed class XlsxExporter : IAnswerExporter
             {
                 row++;
                 summary.Cell(row++, 1).SetValue(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective).Style.Font.SetBold();
-                var chart = ChartImageRenderer.RenderImage(type, panel.Result.Series, culture: rtl ? CultureInfo.GetCultureInfo("ar-AE") : CultureInfo.InvariantCulture);
+                var chart = ChartImageRenderer.RenderImage(type, ColumnHeaders.Series(panel, rtl), culture: rtl ? CultureInfo.GetCultureInfo("ar-AE") : CultureInfo.InvariantCulture);
                 using var png = new MemoryStream(chart.Png);
                 // Rows above may be taller than the default because of wrapped text; anchor one row lower and leave room below the
                 // image (default rows are 20 px; a chart with angled labels is taller than 340 px).
@@ -112,10 +112,11 @@ public sealed class XlsxExporter : IAnswerExporter
             var sheet = workbook.AddWorksheet(SheetName(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective, index, used));
             sheet.RightToLeft = rtl;
             var columns = panel.Result.Columns;
+            var names = ColumnHeaders.For(panel, rtl);
             for (var c = 0; c < columns.Count; c++)
             {
                 var header = sheet.Cell(1, c + 1);
-                header.Value = QuestPdfReportRenderer.Label(columns[c].Name);
+                header.Value = ColumnHeaders.Header(names, columns[c].Name);
                 header.Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#E8EFF8"));
             }
 

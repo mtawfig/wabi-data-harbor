@@ -59,6 +59,9 @@ export class AnalysisAnswerComponent {
     return this.panels().map((p) => describePanel(p, language, (key, params) => this.transloco.translate(key, params)));
   });
 
+  /** Each panel's column headers in the interface language (the catalogue's Arabic names in Arabic). */
+  private readonly headers = computed(() => new Map(this.panels().map((p, i) => [p, this.descriptions()[i]?.headers ?? {}])));
+
   /** Single-number panels become headline cards: the first numeric cell of the first row. */
   readonly kpis = computed<KpiCard[]>(() =>
     this.panels()
@@ -73,6 +76,7 @@ export class AnalysisAnswerComponent {
   /** Chart panels (bar, line, pie) with the series the server calculated. */
   readonly charts = computed<ChartCard[]>(() => {
     const rtl = this.language.isRtl();
+    this.headers();
     return this.panels()
       .map((p, index) => ({ p, index }))
       .filter(({ p }) => this.chartType(p) !== null && p.result.series.length > 0)
@@ -113,6 +117,21 @@ export class AnalysisAnswerComponent {
     return items.join(this.language.current() === 'ar' ? '، ' : ', ');
   }
 
+  /** A result column's header: the plan's name for it in the interface language, else the alias as words. */
+  header(p: AnalysisPanel, name: string): string {
+    return this.headers().get(p)?.[name.toLowerCase()] ?? this.label(name);
+  }
+
+  /** A series is named after its measure, a value of the second category column, or both ("amount · Arrival"). */
+  private seriesName(p: AnalysisPanel, name: string): string {
+    const measures = this.headers().get(p) ?? {};
+    const split = name.indexOf(' · ');
+    if (split > 0 && measures[name.slice(0, split).toLowerCase()]) {
+      return `${measures[name.slice(0, split).toLowerCase()]} · ${name.slice(split + 3)}`;
+    }
+    return measures[name.toLowerCase()] ?? name;
+  }
+
   /** Column aliases come from the plan (snake_case identifiers); show them as words. */
   label(name: string): string {
     const words = name.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim();
@@ -145,7 +164,7 @@ export class AnalysisAnswerComponent {
       ...base,
       legend: p.result.series.length > 1 ? { bottom: 0, textStyle: { color: '#5B6B82' } } : undefined,
       xAxis: { ...(base.xAxis as object), data: p.result.series[0].categories.map((c) => this.axisLabel(c)) },
-      series: p.result.series.map((s) => ({ name: s.name, type: type === 'line' ? 'line' : 'bar', smooth: type === 'line', showSymbol: false, areaStyle: type === 'line' ? { opacity: 0.08 } : undefined, barMaxWidth: 36, data: s.values })),
+      series: p.result.series.map((s) => ({ name: this.seriesName(p, s.name), type: type === 'line' ? 'line' : 'bar', smooth: type === 'line', showSymbol: false, areaStyle: type === 'line' ? { opacity: 0.08 } : undefined, barMaxWidth: 36, data: s.values })),
     };
   }
 }

@@ -33,6 +33,15 @@ export class AuthService {
   readonly canAuthorRules = computed(() => this.isOrganizationAdmin() || this.isManagement());
   readonly mustChangePassword = computed(() => this.session()?.mustChangePassword ?? false);
 
+  constructor() {
+    // A language picked with the switcher while signed in is saved on the account (C10).
+    this.language.chosen.subscribe((language) => {
+      if (this.session()) {
+        void this.saveLanguage(language);
+      }
+    });
+  }
+
   /** Called once at startup: fetch an antiforgery token and restore the session if the cookie is valid. */
   async initialize(): Promise<void> {
     try {
@@ -53,7 +62,7 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<Session> {
     try {
-      const session = await firstValueFrom(this.http.post<Session>('/api/auth/login', { email, password }));
+      const session = await this.postLogin(email, password);
       await this.refreshCsrf();
       this.applySession(session);
       return session;
@@ -91,15 +100,52 @@ export class AuthService {
     return session.principalType === 'PlatformAdministrator' ? '/platform/overview' : '/app/ask';
   }
 
-  /** Called by the HTTP interceptor when the API reports the session is gone. */
+  /**
+   * Called by the HTTP interceptor when the API reports the session is gone. The antiforgery token was bound to the old
+   * session, so a fresh one is fetched at once; otherwise the first sign-in afterwards would be refused (F1).
+   */
   sessionLost(): void {
     this.session.set(null);
+    void this.refreshCsrf().catch(() => undefined);
   }
 
+  /** Signs in; a token that no longer matches (an expired session, a token fetched in another tab) is renewed and the sign-in tried once more. */
+  private async postLogin(email: string, password: string): Promise<Session> {
+    try {
+      return await firstValueFrom(this.http.post<Session>('/api/auth/login', { email, password }));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 400 && problemCode(error.error as ProblemDetails) === 'antiforgery') {
+        await this.refreshCsrf();
+        return await firstValueFrom(this.http.post<Session>('/api/auth/login', { email, password }));
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * The browser's own choice wins over the account's stored language, so switching and then reloading never flips the
+   * interface back; the account is brought up to date so other devices follow. Without a choice in this browser, the
+   * account's language applies.
+   */
   private applySession(session: Session): void {
     this.session.set(session);
-    if (session.preferredLanguage === 'ar' || session.preferredLanguage === 'en') {
-      this.language.use(session.preferredLanguage);
+    const stored = this.language.storedChoice();
+    if (stored) {
+      this.language.use(stored);
+      if (stored !== session.preferredLanguage && !session.mustChangePassword) {
+        void this.saveLanguage(stored);
+      }
+    } else if (session.preferredLanguage === 'ar' || session.preferredLanguage === 'en') {
+      this.language.use(session.preferredLanguage, false);
+    }
+  }
+
+  private async saveLanguage(language: 'en' | 'ar'): Promise<void> {
+    try {
+      const session = await firstValueFrom(this.http.put<Session>('/api/auth/language', { language }));
+      this.session.update((current) => (current ? { ...current, preferredLanguage: session.preferredLanguage } : current));
+    } catch {
+      // The interface already shows the chosen language and this browser keeps it; the account catches up next time.
     }
   }
 

@@ -95,7 +95,7 @@
       </div>
       <div class="actions">
         <button mat-button type="button" (click)="proposing.set(false)">{{ 'common.cancel' | transloco }}</button>
-        <button mat-flat-button type="button" (click)="submitProposal()" [disabled]="busy() || !reason().trim()" data-testid="grant-submit"><mat-icon>send</mat-icon>{{ 'supportAccess.submitProposal' | transloco }}</button>
+        <button mat-flat-button type="button" (click)="submitProposal()" [disabled]="busy() || !reason().trim()" data-testid="grant-submit"><mat-icon class="wi-flip-rtl">send</mat-icon>{{ 'supportAccess.submitProposal' | transloco }}</button>
       </div>
     </section>
   }
@@ -142,8 +142,8 @@
           <div class="buttons">
             @if (g.allowedActions.includes('approve')) { <button mat-flat-button type="button" (click)="act(g, 'approve')" [disabled]="busy()" data-testid="grant-approve"><mat-icon>verified</mat-icon>{{ 'supportAccess.actions.approve' | transloco }}</button> }
             @if (g.allowedActions.includes('decline')) { <button mat-stroked-button type="button" (click)="act(g, 'decline')" [disabled]="busy()" data-testid="grant-decline"><mat-icon>block</mat-icon>{{ 'supportAccess.actions.decline' | transloco }}</button> }
-            @if (g.allowedActions.includes('enter')) { <button mat-flat-button type="button" (click)="act(g, 'enter')" [disabled]="busy()" data-testid="grant-enter"><mat-icon>login</mat-icon>{{ 'supportAccess.actions.enter' | transloco }}</button> }
-            @if (g.allowedActions.includes('exit')) { <button mat-stroked-button type="button" (click)="act(g, 'exit')" [disabled]="busy()" data-testid="grant-exit"><mat-icon>logout</mat-icon>{{ 'supportAccess.actions.exit' | transloco }}</button> }
+            @if (g.allowedActions.includes('enter')) { <button mat-flat-button type="button" (click)="act(g, 'enter')" [disabled]="busy()" data-testid="grant-enter"><mat-icon class="wi-flip-rtl">login</mat-icon>{{ 'supportAccess.actions.enter' | transloco }}</button> }
+            @if (g.allowedActions.includes('exit')) { <button mat-stroked-button type="button" (click)="act(g, 'exit')" [disabled]="busy()" data-testid="grant-exit"><mat-icon class="wi-flip-rtl">logout</mat-icon>{{ 'supportAccess.actions.exit' | transloco }}</button> }
             @if (g.allowedActions.includes('complete')) { <button mat-stroked-button type="button" (click)="act(g, 'complete')" [disabled]="busy()" data-testid="grant-complete"><mat-icon>task_alt</mat-icon>{{ 'supportAccess.actions.complete' | transloco }}</button> }
             @if (g.allowedActions.includes('revoke')) { <button mat-stroked-button color="warn" type="button" (click)="act(g, 'revoke')" [disabled]="busy()" data-testid="grant-revoke"><mat-icon>cancel</mat-icon>{{ 'supportAccess.actions.revoke' | transloco }}</button> }
           </div>

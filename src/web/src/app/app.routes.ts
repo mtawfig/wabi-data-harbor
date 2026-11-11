@@ -15,7 +15,8 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'ask' },
       { path: 'dashboard', loadComponent: () => import('./features/organization/dashboard/user-dashboard.component').then((m) => m.UserDashboardComponent) },
       { path: 'ask', loadComponent: () => import('./features/organization/ask/ask.component').then((m) => m.AskComponent) },
-      { path: 'insights', loadComponent: () => import('./features/organization/insights/organization-insights.component').then((m) => m.OrganizationInsightsComponent) },
+      // Organization Insights is for Organization Administrators only (F5); the old business-user address leads there.
+      { path: 'insights', pathMatch: 'full', redirectTo: 'admin/insights' },
       { path: 'history', loadComponent: () => import('./features/organization/history/history-list.component').then((m) => m.HistoryListComponent) },
       { path: 'history/:id', loadComponent: () => import('./features/organization/history/history-detail.component').then((m) => m.HistoryDetailComponent) },
       { path: 'reports', loadComponent: () => import('./features/organization/history/reports-list.component').then((m) => m.ReportsListComponent) },

@@ -12,7 +12,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
-import { map, startWith, switchMap, timer } from 'rxjs';
+import { EMPTY, catchError, map, switchMap, timer } from 'rxjs';
 import { NotificationsService } from '../../core/notifications/notifications.service';
 import { SupportAccessService } from '../../core/support/support-access.service';
 import { SupportModeBannerComponent } from '../../features/support/support-mode-banner.component';
@@ -61,14 +61,15 @@ export class AppShellComponent {
   constructor() {
     // Collapse the sidebar automatically on small screens; it then opens as an overlay from the menu button.
     effect(() => this.opened.set(!this.isHandset()));
-    // Unread badge: refreshed on load and every minute while the shell is open.
+    // Unread badge: refreshed on load and every minute while the shell is open. A failed poll (a deployment, a network
+    // blip) is skipped, not fatal, so the next minute tries again.
     timer(0, 60_000)
-      .pipe(startWith(0), switchMap(() => this.notifications.refreshUnread()), takeUntilDestroyed(this.destroyRef))
-      .subscribe({ error: () => undefined });
+      .pipe(switchMap(() => this.notifications.refreshUnread().pipe(catchError(() => EMPTY))), takeUntilDestroyed(this.destroyRef))
+      .subscribe();
     // Support-mode session (platform shell only): the banner must reflect expiry and revocation without a reload.
     timer(0, 60_000)
-      .pipe(switchMap(() => (this.accent() === 'platform' ? this.supportAccess.refreshSession() : [])), takeUntilDestroyed(this.destroyRef))
-      .subscribe({ error: () => undefined });
+      .pipe(switchMap(() => (this.accent() === 'platform' ? this.supportAccess.refreshSession().pipe(catchError(() => EMPTY)) : EMPTY)), takeUntilDestroyed(this.destroyRef))
+      .subscribe();
   }
 
   notificationsLink(): string {

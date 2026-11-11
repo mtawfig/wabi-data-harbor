@@ -1,15 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import {
-  CreateOrganizationRequest,
-  OrganizationDetail,
-  OrganizationProfile,
-  OrganizationStatus,
-  PagedResult,
-  UpdateOrganizationProfileRequest,
-  UpdateOrganizationRequest,
-} from './organizations.models';
+import { CreateOrganizationRequest, MyRole, OrganizationDetail, OrganizationProfile, OrganizationStatus, PagedResult, UpdateOrganizationProfileRequest, UpdateOrganizationRequest } from './organizations.models';
 
 /** Platform Administrator operations on organizations. Responses carry counts, never application names. */
 @Injectable({ providedIn: 'root' })
@@ -56,6 +48,10 @@ export class OrganizationProfileService {
 
   get(): Observable<OrganizationProfile> {
     return this.http.get<OrganizationProfile>('/api/organization');
+  }
+
+  myRoles(): Observable<MyRole[]> {
+    return this.http.get<MyRole[]>('/api/organization/my-roles');
   }
 
   update(request: UpdateOrganizationProfileRequest): Observable<OrganizationProfile> {

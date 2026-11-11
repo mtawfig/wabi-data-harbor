@@ -1,7 +1,7 @@
 <section class="wi-page shared">
   <header class="wi-page__header">
     <div class="shared__heading">
-      <p class="wi-eyebrow"><a routerLink="/app/shared-with-me" class="shared__back"><mat-icon>arrow_back</mat-icon>{{ 'sharing.withMe.title' | transloco }}</a></p>
+      <p class="wi-eyebrow"><a routerLink="/app/shared-with-me" class="shared__back"><mat-icon class="wi-flip-rtl">arrow_back</mat-icon>{{ 'sharing.withMe.title' | transloco }}</a></p>
       @if (detail(); as d) {
         <h1 data-testid="shared-title">{{ d.share.title }}</h1>
         <p class="wi-muted shared__meta">

@@ -198,10 +198,13 @@ public sealed partial class AnalysisService : IAnalysisService
             try
             {
                 interpretation = await InterpretAsync(organizationId, request.Question, language, planned.Plan, panels, cancellationToken);
-                metric.InterpretInputTokens = interpretation.Usage.InputTokens;
-                metric.InterpretOutputTokens = interpretation.Usage.OutputTokens;
-                metric.InterpretMs = interpretation.Usage.DurationMs;
-                metric.EstimatedCost += interpretation.Usage.EstimatedCost;
+                if (interpretation.Usage is { } usage)
+                {
+                    metric.InterpretInputTokens = usage.InputTokens;
+                    metric.InterpretOutputTokens = usage.OutputTokens;
+                    metric.InterpretMs = usage.DurationMs;
+                    metric.EstimatedCost += usage.EstimatedCost;
+                }
             }
             catch (AiProviderException ex)
             {

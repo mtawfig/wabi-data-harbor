@@ -26,6 +26,7 @@ public sealed class AuthenticationService : IAuthenticationService
     private readonly IClock _clock;
     private readonly SecurityOptions _options;
     private readonly IUsageEventWriter _usage;
+    private readonly IAccountResolver _resolver;
 
     public AuthenticationService(
         ConfigurationDbContext context,
@@ -34,7 +35,8 @@ public sealed class AuthenticationService : IAuthenticationService
         ITenantContext tenantContext,
         IClock clock,
         IOptions<SecurityOptions> options,
-        IUsageEventWriter usage)
+        IUsageEventWriter usage,
+        IAccountResolver resolver)
     {
         _context = context;
         _hasher = hasher;
@@ -43,6 +45,7 @@ public sealed class AuthenticationService : IAuthenticationService
         _clock = clock;
         _options = options.Value;
         _usage = usage;
+        _resolver = resolver;
     }
 
     public async Task<LoginResult> LoginAsync(string email, string password, string? ipAddress, CancellationToken cancellationToken = default)
@@ -82,6 +85,40 @@ public sealed class AuthenticationService : IAuthenticationService
             PrincipalType.OrganizationUser => await ChangeOrganizationUserPasswordAsync(principal.UserId!.Value, currentPassword, newPassword, cancellationToken),
             _ => throw new TenantContextException("No authenticated principal."),
         };
+    }
+
+    public async Task<AuthenticatedAccount?> SetPreferredLanguageAsync(string language, CancellationToken cancellationToken = default)
+    {
+        if (language is not ("en" or "ar"))
+        {
+            return null;
+        }
+
+        var principal = _tenantContext.Principal;
+        string previous;
+        switch (principal.PrincipalType)
+        {
+            case PrincipalType.PlatformAdministrator:
+                var admin = await _context.Administrators.SingleAsync(a => a.AdministratorId == principal.AdministratorId, cancellationToken);
+                previous = admin.PreferredLanguage;
+                admin.PreferredLanguage = language;
+                break;
+            case PrincipalType.OrganizationUser:
+                var user = await _context.OrganizationUsers.SingleAsync(u => u.UserId == principal.UserId, cancellationToken);
+                previous = user.PreferredLanguage;
+                user.PreferredLanguage = language;
+                break;
+            default:
+                throw new TenantContextException("No authenticated principal.");
+        }
+
+        if (previous != language)
+        {
+            await _audit.AppendAndSaveAsync(AuditEvents.LanguageChanged, principal.PrincipalType.ToString(), (principal.AdministratorId ?? principal.UserId)!.Value.ToString(), new { from = previous, to = language }, cancellationToken: cancellationToken);
+        }
+
+        var resolved = await _resolver.ResolveAsync(principal.PrincipalType, (principal.AdministratorId ?? principal.UserId)!.Value, cancellationToken);
+        return resolved.Account;
     }
 
     public Task RecordLogoutAsync(CancellationToken cancellationToken = default)

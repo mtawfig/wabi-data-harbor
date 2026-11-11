@@ -10,6 +10,12 @@ public interface IAuthenticationService
     Task<ChangePasswordResult> ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken cancellationToken = default);
 
     Task RecordLogoutAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Saves the signed-in person's own interface language ("en" or "ar", C10) and returns the account to re-issue the
+    /// session with; false when the language is not supported.
+    /// </summary>
+    Task<AuthenticatedAccount?> SetPreferredLanguageAsync(string language, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Loads the stored state of a principal for session revalidation and the tenant context.</summary>

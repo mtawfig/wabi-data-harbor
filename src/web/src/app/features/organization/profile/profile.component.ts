@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
 import { AuthService } from '../../../core/auth/auth.service';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { OrganizationProfile } from '../../../core/organizations/organizations.models';
+import { MyRole, OrganizationProfile } from '../../../core/organizations/organizations.models';
 import { OrganizationProfileService } from '../../../core/organizations/organizations.service';
 import { LanguageSwitcherComponent } from '../../../shared/ui/language-switcher.component';
 
@@ -34,7 +34,7 @@ import { LanguageSwitcherComponent } from '../../../shared/ui/language-switcher.
             <p class="wi-muted wi-ltr">{{ s.email }}</p>
             <dl>
               <dt>{{ 'profile.organization' | transloco }}</dt><dd>{{ organizationName() || '—' }}</dd>
-              <dt>{{ 'profile.roles' | transloco }}</dt><dd><span class="chips">@for (r of s.roles; track r) { <span class="chip">{{ r }}</span> } @empty { <span class="wi-muted">—</span> }</span></dd>
+              <dt>{{ 'profile.roles' | transloco }}</dt><dd><span class="chips">@for (r of roleNames(s.roles); track r) { <span class="chip">{{ r }}</span> } @empty { <span class="wi-muted">—</span> }</span></dd>
               <dt>{{ 'profile.accountType' | transloco }}</dt><dd>{{ 'profile.types.' + s.principalType | transloco }}</dd>
               <dt>{{ 'profile.preferredLanguage' | transloco }}</dt><dd>{{ (s.preferredLanguage === 'ar' ? 'common.arabic' : 'common.english') | transloco }}</dd>
             </dl>
@@ -75,9 +75,20 @@ export class ProfileComponent {
   readonly language = inject(LanguageService);
   private readonly profiles = inject(OrganizationProfileService);
   readonly profile = signal<OrganizationProfile | null>(null);
+  /** The user's roles by name in the interface language (F2); null until loaded, when the codes are shown. */
+  readonly roles = signal<MyRole[] | null>(null);
 
   constructor() {
     this.profiles.get().subscribe({ next: (p) => this.profile.set(p), error: () => this.profile.set(null) });
+    this.profiles.myRoles().subscribe({ next: (r) => this.roles.set(r), error: () => this.roles.set(null) });
+  }
+
+  roleNames(codes: string[]): string[] {
+    const roles = this.roles();
+    if (!roles) {
+      return codes;
+    }
+    return roles.map((r) => (this.language.current() === 'ar' ? r.nameAr || r.nameEn : r.nameEn || r.nameAr));
   }
 
   organizationName(): string | null {

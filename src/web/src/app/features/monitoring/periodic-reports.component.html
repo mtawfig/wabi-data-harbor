@@ -181,7 +181,7 @@
                 } @else { <span class="wi-muted small">{{ 'monitoring.rules.neverRun' | transloco }}</span> }
               </td>
               <td class="row-actions">
-                <button mat-icon-button type="button" (click)="runNow(s)" [disabled]="busy()" [attr.aria-label]="'periodic.runNow' | transloco" [attr.data-testid]="'periodic-run-' + s.name"><mat-icon>send</mat-icon></button>
+                <button mat-icon-button type="button" (click)="runNow(s)" [disabled]="busy()" [attr.aria-label]="'periodic.runNow' | transloco" [attr.data-testid]="'periodic-run-' + s.name"><mat-icon class="wi-flip-rtl">send</mat-icon></button>
                 <button mat-icon-button type="button" (click)="openLog(s)" [attr.aria-label]="'periodic.logShort' | transloco"><mat-icon>receipt_long</mat-icon></button>
                 @if (s.canEdit) {
                   <button mat-icon-button type="button" (click)="edit(s)" [attr.aria-label]="'periodic.edit' | transloco"><mat-icon>edit</mat-icon></button>

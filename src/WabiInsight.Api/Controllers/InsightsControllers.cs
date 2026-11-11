@@ -66,9 +66,9 @@ public sealed class PlatformInsightsController : ControllerBase
 }
 
 /// <summary>
-/// Organization side of Platform Insights: the metrics the signed-in user may run (all approved ones for
-/// Organization Administrators, granted ones otherwise), metric queries, the organization dashboard and
-/// per-role metric grants. Everything is scoped to the caller's organization by the services.
+/// Organization side of Platform Insights: the approved metrics, metric queries, the organization dashboard and
+/// per-role metric grants, for Organization Administrators only since P13.28 (F5: business users never see view and
+/// column names). The stored per-role grants are kept. Everything is scoped to the caller's organization by the services.
 /// </summary>
 [ApiController]
 [Route("api/insights")]
@@ -84,10 +84,13 @@ public sealed class InsightsController : ControllerBase
         _grants = grants;
     }
 
+    /// <summary>Organization Administrators only (F5): the catalogue names views and columns, which business users never see.</summary>
     [HttpGet("catalog")]
+    [Authorize(Policy = Policies.OrganizationAdmin)]
     public async Task<ActionResult<OrganizationInsightsCatalog>> Catalog(CancellationToken cancellationToken) => Ok(await _queries.GetApprovedCatalogAsync(cancellationToken));
 
     [HttpPost("metrics/{code}/query")]
+    [Authorize(Policy = Policies.OrganizationAdmin)]
     public async Task<ActionResult<MetricResult>> Query(string code, [FromBody] MetricQueryRequestBody request, CancellationToken cancellationToken)
         => Ok(await _queries.QueryMetricAsync(code, request.ToRequest(), cancellationToken));
 

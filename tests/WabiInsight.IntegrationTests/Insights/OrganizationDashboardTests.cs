@@ -92,9 +92,10 @@ public sealed class OrganizationDashboardTests : IDisposable
         var (_, analystEmail) = await InsertUserAsync(_db.Data.OrganizationAId, analystId);
         using var analyst = await LoginAsync(analystEmail);
 
-        // Nothing granted: empty catalog, metric not found; the organization administrator sees everything approved.
-        Assert.Empty((await (await analyst.GetAsync("/api/insights/catalog")).ReadJsonAsync()).GetProperty("metrics").EnumerateArray());
-        Assert.Equal(HttpStatusCode.NotFound, (await analyst.PostJsonAsync("/api/insights/metrics/users.total/query", new { })).StatusCode);
+        // Organization Insights itself is for administrators only (F5); grants decide what a role may ask about in natural language.
+        Assert.Equal(HttpStatusCode.Forbidden, (await analyst.GetAsync("/api/insights/catalog")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await analyst.PostJsonAsync("/api/insights/metrics/users.total/query", new { })).StatusCode);
+        Assert.Empty(await InsightsViewsAsync(analyst));
         var grants = await (await alice.GetAsync($"/api/insights/roles/{analystId}/metrics")).ReadJsonAsync();
         Assert.False(grants.GetProperty("isAutomatic").GetBoolean());
         Assert.Empty(grants.GetProperty("grantedMetricIds").EnumerateArray());
@@ -111,10 +112,8 @@ public sealed class OrganizationDashboardTests : IDisposable
         var set = await alice.PutAsJsonAsync(new Uri($"/api/insights/roles/{analystId}/metrics", UriKind.Relative), new { metricIds = new[] { usersTotal } });
         Assert.Equal(HttpStatusCode.OK, set.StatusCode);
         Assert.Single((await set.ReadJsonAsync()).GetProperty("grantedMetricIds").EnumerateArray());
-        var catalog = await (await analyst.GetAsync("/api/insights/catalog")).ReadJsonAsync();
-        Assert.Equal("users.total", catalog.GetProperty("metrics").EnumerateArray().Single().GetProperty("metricCode").GetString());
-        Assert.Equal(HttpStatusCode.OK, (await analyst.PostJsonAsync("/api/insights/metrics/users.total/query", new { })).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await analyst.PostJsonAsync("/api/insights/metrics/logins.total/query", new { })).StatusCode);
+        Assert.Equal(["Users"], await InsightsViewsAsync(analyst));
+        Assert.Equal(HttpStatusCode.Forbidden, (await analyst.PostJsonAsync("/api/insights/metrics/users.total/query", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await analyst.GetAsync($"/api/insights/roles/{analystId}/metrics")).StatusCode);
 
         // Organization B's administrator cannot read or write A's role grants.
@@ -125,9 +124,23 @@ public sealed class OrganizationDashboardTests : IDisposable
 
         // Revoke: empty set removes the rows and the analyst loses the metric.
         Assert.Equal(HttpStatusCode.OK, (await alice.PutAsJsonAsync(new Uri($"/api/insights/roles/{analystId}/metrics", UriKind.Relative), new { metricIds = Array.Empty<Guid>() })).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await analyst.PostJsonAsync("/api/insights/metrics/users.total/query", new { })).StatusCode);
+        Assert.Empty(await InsightsViewsAsync(analyst));
         await using var context = _db.CreateContext(_db.Data.PlatformAdministrator);
         Assert.False(await context.RoleMetricGrants.IgnoreQueryFilters().AnyAsync(g => g.RoleId == analystId));
         Assert.True(await context.AuditLogs.IgnoreQueryFilters().AnyAsync(a => a.EventType == "Insights.MetricGrantChanged" && a.EntityId == analystId.ToString()));
+    }
+
+    /// <summary>The Platform Insights views a user may ask about in natural language (empty when the built-in application is not offered).</summary>
+    private static async Task<List<string>> InsightsViewsAsync(HttpClient client)
+    {
+        var applications = (await (await client.GetAsync("/api/ai/applications")).ReadJsonAsync()).EnumerateArray().ToList();
+        var builtIn = applications.SingleOrDefault(a => a.GetProperty("isBuiltIn").GetBoolean());
+        if (builtIn.ValueKind == System.Text.Json.JsonValueKind.Undefined)
+        {
+            return [];
+        }
+
+        var snapshot = await (await client.GetAsync($"/api/ai/applications/{builtIn.GetProperty("applicationId").GetGuid()}/snapshot")).ReadJsonAsync();
+        return snapshot.GetProperty("objects").EnumerateArray().Select(o => o.GetProperty("name").GetString()!).ToList();
     }
 }

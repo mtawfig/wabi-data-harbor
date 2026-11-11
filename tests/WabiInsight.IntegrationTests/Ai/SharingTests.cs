@@ -120,7 +120,8 @@ public sealed class SharingTests : IDisposable
             var detail = await (await colleague.GetAsync($"/api/shares/with-me/{historyId}")).ReadJsonAsync();
             Assert.Equal("Write a ticket study as PDF and an email", detail.GetProperty("originalPrompt").GetString());
             Assert.Single(detail.GetProperty("versions").EnumerateArray());
-            Assert.Equal(0, detail.GetProperty("versions")[0].GetProperty("estimatedCost").GetDecimal());
+            Assert.False(detail.GetProperty("versions")[0].TryGetProperty("estimatedCost", out _));
+            Assert.False(detail.GetProperty("versions")[0].TryGetProperty("modelName", out _));
             var requestsBefore = FakeAiProvider.Requests.Count;
             var stored = await (await colleague.GetAsync($"/api/shares/with-me/{historyId}/versions/1/result")).ReadJsonAsync();
             Assert.Equal(answer.GetProperty("panels")[1].GetProperty("result").GetProperty("rows").GetRawText(), stored.GetProperty("panels")[1].GetProperty("result").GetProperty("rows").GetRawText());

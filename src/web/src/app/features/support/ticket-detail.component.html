@@ -92,7 +92,7 @@
                 <mat-label>{{ 'support.conversation.reply' | transloco }}</mat-label>
                 <textarea matInput rows="3" [ngModel]="reply()" (ngModelChange)="reply.set($event)" [placeholder]="'support.conversation.placeholder' | transloco" maxlength="8000" data-testid="ticket-reply"></textarea>
               </mat-form-field>
-              <button mat-flat-button type="button" (click)="sendReply()" [disabled]="busy() || !reply().trim()" data-testid="ticket-send"><mat-icon>send</mat-icon>{{ 'support.conversation.send' | transloco }}</button>
+              <button mat-flat-button type="button" (click)="sendReply()" [disabled]="busy() || !reply().trim()" data-testid="ticket-send"><mat-icon class="wi-flip-rtl">send</mat-icon>{{ 'support.conversation.send' | transloco }}</button>
             </div>
           } @else {
             <p class="wi-muted">{{ 'support.conversation.closed' | transloco }}</p>

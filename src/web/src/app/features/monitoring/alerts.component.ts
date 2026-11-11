@@ -66,6 +66,8 @@ export class AlertsComponent {
   readonly loading = signal(false);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  /** A failure of the page itself (the list, an alert opened from a link, the digest preview), shown above the list (F1). */
+  readonly pageError = signal<string | null>(null);
   readonly selected = signal<AlertDetail | null>(null);
   readonly note = signal('');
   readonly confirmSuspend = signal(false);
@@ -128,6 +130,7 @@ export class AlertsComponent {
 
   load(): void {
     this.loading.set(true);
+    this.pageError.set(null);
     this.monitoring
       .alerts({
         status: this.status(),
@@ -141,7 +144,8 @@ export class AlertsComponent {
           this.loading.set(false);
         },
         error: (response: HttpErrorResponse) => {
-          this.error.set(problemMessage(response, this.transloco));
+          this.page.set(null);
+          this.pageError.set(problemMessage(response, this.transloco));
           this.loading.set(false);
         },
       });
@@ -170,8 +174,9 @@ export class AlertsComponent {
     this.note.set('');
     this.monitoring.alert(alertId).subscribe({
       next: (d) => this.selected.set(d),
+      // Nothing is open yet (a notification link to an alert that is gone or no longer visible): say so on the page.
       error: (response: HttpErrorResponse) =>
-        this.error.set(problemMessage(response, this.transloco)),
+        this.pageError.set(response.status === 404 ? this.transloco.translate('monitoring.alerts.notFound') : problemMessage(response, this.transloco)),
     });
   }
 
@@ -199,7 +204,11 @@ export class AlertsComponent {
   }
 
   previewDigest(): void {
-    this.monitoring.digestPreview().subscribe({ next: (d) => this.digest.set(d) });
+    this.pageError.set(null);
+    this.monitoring.digestPreview().subscribe({
+      next: (d) => this.digest.set(d),
+      error: (response: HttpErrorResponse) => this.pageError.set(problemMessage(response, this.transloco)),
+    });
   }
 
   private run(call: ReturnType<MonitoringService['act']>): void {

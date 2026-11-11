@@ -26,7 +26,19 @@
     "add": "Add",
     "delete": "Delete",
     "close": "Close",
-    "saved": "Saved"
+    "saved": "Saved",
+    "menu": "Menu",
+    "paginator": {
+      "itemsPerPage": "Items per page",
+      "next": "Next page",
+      "previous": "Previous page",
+      "first": "First page",
+      "last": "Last page",
+      "range": "{{start}} – {{end}} of {{length}}",
+      "empty": "0 of {{length}}"
+    },
+    "removeFile": "Remove {{name}}",
+    "moreActions": "More actions"
   },
   "landing": {
     "nav": {
@@ -224,7 +236,9 @@
       "about": "Wabi Insight (AP-AIR) is the bilingual enterprise AI intelligence platform by Wabitex: ask your data, trust the answer.",
       "rights": "© {{year}} Wabitex. All rights reserved.",
       "demo": "Demonstration content uses fictional data."
-    }
+    },
+    "navLabel": "Sections",
+    "footerLabel": "Footer"
   },
   "login": {
     "title": "Sign in",
@@ -984,7 +998,33 @@
       "draft_reference_not_permitted": "The draft referred to a table or column the owner may not read, so it was rejected. Rephrase or choose a template.",
       "settings_ai_budget_invalid": "The monthly AI budget must be greater than zero (or left empty).",
       "application_example_too_long": "An example question is longer than 200 characters.",
-      "application_examples_too_many": "An application can have at most six example questions."
+      "application_examples_too_many": "An application can have at most six example questions.",
+      "administrator_full_name_required": "Enter the administrator's full name.",
+      "ai_schema_invalid": "The AI provider could not use the answer format. Please try again.",
+      "contact_email_invalid": "Enter a valid contact e-mail address.",
+      "country_code_invalid": "Choose a valid country.",
+      "default_language_invalid": "Choose English or Arabic as the default language.",
+      "employee_number_invalid": "The employee number is not valid (up to 50 characters).",
+      "insights_bucket_invalid": "Choose a valid time grouping.",
+      "language_invalid": "Choose English or Arabic.",
+      "organization_code_invalid": "The organization code is not valid (letters, digits and dashes).",
+      "organization_name_ar_invalid": "Enter the organization's Arabic name.",
+      "organization_name_invalid": "Enter the organization's name.",
+      "organization_not_found": "This organization was not found.",
+      "phone_invalid": "Enter a valid phone number.",
+      "platform_insights_has_no_connection_string": "Platform Insights uses the platform's own data and has no connection string.",
+      "question_required": "Write a question first.",
+      "report_plan_invalid": "This analysis can no longer run as a Periodic Report. Ask the question again and save the new answer.",
+      "rule_column_not_on_object": "A column of this rule is no longer on its data object.",
+      "rule_object_required": "Choose the data object the rule watches.",
+      "rule_severity_invalid": "Choose a valid severity.",
+      "status_invalid": "Choose a valid status.",
+      "subscription_application_unavailable": "The application of this report is no longer available to you.",
+      "template_not_found": "This role template was not found.",
+      "time_zone_invalid": "Choose a valid time zone.",
+      "request_body_too_large": "The request is too large. Use a smaller file or shorter text.",
+      "too_many_requests": "Too many requests in a short time. Please wait a minute and try again.",
+      "network": "The server could not be reached. Check your connection and try again."
     },
     "applications": {
       "title": "Applications",
@@ -1160,7 +1200,7 @@
       "via": "via",
       "noRows": "no rows",
       "tabMetrics": "Platform Insights metrics",
-      "metricsHint": "Which Platform Insights metrics this role may run in Organization Insights and ask about in natural language. Organization Administrators have all approved metrics automatically.",
+      "metricsHint": "Which Platform Insights metrics this role may ask about in natural language. Organization Administrators have all approved metrics automatically and are the only ones who open Organization Insights.",
       "metricsAutomatic": "The Organization Administrator role has every approved metric automatically.",
       "noMetrics": "No approved metrics yet.",
       "metricsSaved": "Metric grants saved."
@@ -1431,7 +1471,8 @@
     "widgetAll": "View all",
     "queueWidget": "Open tickets",
     "queueAll": "Open the queue",
-    "submit": "Create ticket"
+    "submit": "Create ticket",
+    "attachmentFailed": "An attachment could not be added ({{reason}}); add it again on the ticket."
   },
   "notifications": {
     "title": "Notifications",
@@ -2129,7 +2170,8 @@
       "suspend": "Suspend user",
       "suspendConfirm": "Suspend {{name}}? They are signed out at once and cannot sign in until an administrator reactivates them. This is recorded in the audit log.",
       "suspendYes": "Yes, suspend",
-      "timeline": "Timeline"
+      "timeline": "Timeline",
+      "notFound": "This alert does not exist, or you can no longer see it."
     },
     "rules": {
       "title": "Monitoring Rules",

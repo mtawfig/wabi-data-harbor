@@ -249,7 +249,8 @@ public sealed class SharingService : ISharingService
         var versions = await _context.AnalysisHistoryVersions.AsNoTracking().Where(v => v.HistoryId == historyId && v.Status == AnalysisHistoryStatus.Completed).OrderByDescending(v => v.VersionNumber).ToListAsync(cancellationToken);
         var reportNames = await _context.AnalysisArtifacts.AsNoTracking().Where(a => a.HistoryId == historyId && a.Kind == AnalysisArtifactKind.ReportPdf).ToDictionaryAsync(a => a.VersionId, a => a.FileName, cancellationToken);
         return new SharedAnalysisDetailDto(summary, entry.OriginalPrompt, entry.PromptLanguage,
-            versions.Select(v => new HistoryVersionDto(v.VersionId, v.VersionNumber, v.Status, v.FailureStage, v.FailureCode, v.ModelName, 0, 0, 0, v.DurationMs, v.PanelCount, v.RowCount, v.ResultArtifactId != null, v.ReportArtifactId != null, reportNames.GetValueOrDefault(v.VersionId), v.CreatedAt)).ToList());
+            // A recipient never sees the sharer's model, tokens or cost (F5).
+            versions.Select(v => new HistoryVersionDto(v.VersionId, v.VersionNumber, v.Status, v.FailureStage, v.FailureCode, null, null, null, null, v.DurationMs, v.PanelCount, v.RowCount, v.ResultArtifactId != null, v.ReportArtifactId != null, reportNames.GetValueOrDefault(v.VersionId), v.CreatedAt)).ToList());
     }
 
     public async Task<AskResponse?> GetSharedVersionResultAsync(Guid historyId, int versionNumber, CancellationToken cancellationToken = default)
@@ -261,7 +262,7 @@ public sealed class SharingService : ISharingService
         }
 
         await using var stream = await _storage.OpenReadAsync(artifact.StorageKey, cancellationToken);
-        return stream is null ? null : await JsonSerializer.DeserializeAsync<AskResponse>(stream, JsonOptions, cancellationToken);
+        return stream is null ? null : (await JsonSerializer.DeserializeAsync<AskResponse>(stream, JsonOptions, cancellationToken))?.WithoutTechnicalFields();
     }
 
     public async Task<ArtifactDownload?> OpenSharedVersionReportAsync(Guid historyId, int versionNumber, CancellationToken cancellationToken = default)

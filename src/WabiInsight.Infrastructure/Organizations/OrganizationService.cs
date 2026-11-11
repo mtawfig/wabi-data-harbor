@@ -301,6 +301,18 @@ public sealed partial class OrganizationService : IOrganizationService
             .SingleAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<MyRoleDto>> GetMyRolesAsync(CancellationToken cancellationToken = default)
+    {
+        var organizationId = _tenantContext.RequireOrganizationId();
+        var userId = _tenantContext.Principal.UserId;
+        return await (from ur in _context.UserRoles.AsNoTracking()
+                      join r in _context.Roles.AsNoTracking() on ur.RoleId equals r.RoleId
+                      where ur.OrganizationId == organizationId && r.OrganizationId == organizationId && ur.UserId == userId && r.IsActive
+                      orderby r.NameEn
+                      select new MyRoleDto(r.RoleCode, r.NameEn, r.NameAr))
+            .ToListAsync(cancellationToken);
+    }
+
     /// <summary>
     /// PNG and JPEG only (P13.25). SVG is a document that can carry script, and no text filter over it is reliable;
     /// a logo uploaded as SVG before this rule is still served, as a download that cannot run (see the controller).

@@ -8,6 +8,8 @@
     <button mat-stroked-button type="button" (click)="previewDigest()" data-testid="alerts-digest"><mat-icon>mark_email_unread</mat-icon>{{ 'monitoring.alerts.previewDigest' | transloco }}</button>
   </header>
 
+  @if (pageError(); as e) { <div class="form-error" role="alert" data-testid="alerts-error"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
   @if (page(); as p) {
     <div class="kpis" data-testid="alerts-kpis">
       <div class="kpi"><span class="kpi__value">{{ p.openCount | wiNumber }}</span><span class="kpi__label">{{ 'monitoring.alerts.openCount' | transloco }}</span></div>
@@ -72,7 +74,7 @@
           </li>
         }
       </ul>
-      @if ((page()?.items?.length ?? 0) === 0 && !loading()) {
+      @if ((page()?.items?.length ?? 0) === 0 && !loading() && !pageError()) {
         <div class="empty-state">
           <mat-icon>task_alt</mat-icon>
           <p>{{ 'monitoring.alerts.empty' | transloco }}</p>

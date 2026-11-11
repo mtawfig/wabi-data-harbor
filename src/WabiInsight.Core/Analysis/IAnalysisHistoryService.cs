@@ -33,9 +33,13 @@ public sealed record HistorySummaryDto(
     bool IsFavorite,
     bool IsArchived,
     bool HasReport,
-    decimal EstimatedCost,
+    decimal? EstimatedCost,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt);
+    DateTimeOffset? UpdatedAt)
+{
+    /// <summary>Without the cost, which only Organization Administrators see (F5).</summary>
+    public HistorySummaryDto WithoutTechnicalFields() => this with { EstimatedCost = null };
+}
 
 public sealed record HistoryVersionDto(
     Guid VersionId,
@@ -44,23 +48,30 @@ public sealed record HistoryVersionDto(
     string? FailureStage,
     string? FailureCode,
     string? ModelName,
-    long InputTokens,
-    long OutputTokens,
-    decimal EstimatedCost,
+    long? InputTokens,
+    long? OutputTokens,
+    decimal? EstimatedCost,
     double DurationMs,
     int PanelCount,
     int RowCount,
     bool HasResult,
     bool HasReport,
     string? ReportFileName,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt)
+{
+    /// <summary>Without the model, token counts and cost, which only Organization Administrators see (F5).</summary>
+    public HistoryVersionDto WithoutTechnicalFields() => this with { ModelName = null, InputTokens = null, OutputTokens = null, EstimatedCost = null };
+}
 
 public sealed record HistoryDetailDto(
     HistorySummaryDto Summary,
     string OriginalPrompt,
     string PromptLanguage,
     IReadOnlyList<HistoryVersionDto> Versions,
-    IReadOnlyList<CollectionSummaryDto> Collections);
+    IReadOnlyList<CollectionSummaryDto> Collections)
+{
+    public HistoryDetailDto WithoutTechnicalFields() => this with { Summary = Summary.WithoutTechnicalFields(), Versions = Versions.Select(v => v.WithoutTechnicalFields()).ToList() };
+}
 
 public sealed record CollectionSummaryDto(Guid CollectionId, string Name, string? Description, int ItemCount, DateTimeOffset CreatedAt, DateTimeOffset? UpdatedAt);
 

@@ -43,3 +43,6 @@ public sealed record CreateAdministratorRequest(
 public sealed record AccountProvisioningResponse(Guid Id, string DeliveredTo, bool MustChangePassword, Guid? EmailMessageId);
 
 public sealed record SetAdministratorStatusRequest(bool IsActive);
+
+/// <summary>The caller's own interface language: "en" or "ar".</summary>
+public sealed record SetLanguageRequest(string? Language);

@@ -23,7 +23,11 @@ if (!builder.Environment.IsEnvironment("Testing"))
 }
 
 builder.Services
-    .AddControllers(options => options.Filters.Add<AntiforgeryValidationFilter>())
+    .AddControllers(options =>
+    {
+        options.Filters.Add<AntiforgeryValidationFilter>();
+        options.Filters.Add<TechnicalFieldsFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
