@@ -119,7 +119,8 @@ public sealed class HardeningTests : IDisposable
         var assembly = typeof(Program).Assembly;
         var controllers = assembly.GetTypes().Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract).ToList();
         Assert.True(controllers.Count > 20, "controller discovery failed");
-        string[] publicActions = ["AuthController.Csrf", "AuthController.Login", "BootstrapController.Status", "BootstrapController.Initialize", "PlatformInfoController.Get"];
+        // The three steps of the self-service password reset (P13.32) are public by nature: the person cannot sign in.
+        string[] publicActions = ["AuthController.Csrf", "AuthController.Login", "AuthController.ForgotPassword", "AuthController.CheckResetLink", "AuthController.ResetPassword", "BootstrapController.Status", "BootstrapController.Initialize", "PlatformInfoController.Get"];
         var seen = new List<string>();
         foreach (var controller in controllers)
         {

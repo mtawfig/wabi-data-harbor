@@ -11,6 +11,9 @@ public static class AuditEvents
     public const string Logout = "Auth.Logout";
     public const string PasswordChanged = "Auth.PasswordChanged";
     public const string LanguageChanged = "Auth.LanguageChanged";
+    public const string PasswordResetRequested = "Auth.PasswordResetRequested";
+    public const string PasswordResetIgnored = "Auth.PasswordResetIgnored";
+    public const string PasswordResetCompleted = "Auth.PasswordResetCompleted";
     public const string AdministratorPasswordReset = "Administrator.PasswordReset";
     public const string AdministratorCreated = "Administrator.Created";
     public const string AdministratorActivated = "Administrator.Activated";

@@ -21,12 +21,74 @@ public sealed class AuthController : ControllerBase
     private readonly IAuthenticationService _authentication;
     private readonly IAntiforgery _antiforgery;
     private readonly IClock _clock;
+    private readonly IPasswordResetService _passwordReset;
 
-    public AuthController(IAuthenticationService authentication, IAntiforgery antiforgery, IClock clock)
+    public AuthController(IAuthenticationService authentication, IAntiforgery antiforgery, IClock clock, IPasswordResetService passwordReset)
     {
         _authentication = authentication;
         _antiforgery = antiforgery;
         _clock = clock;
+        _passwordReset = passwordReset;
+    }
+
+    /// <summary>
+    /// The least time a reset request takes to answer. Sending a link costs a few more database writes than doing
+    /// nothing, and without this floor the difference would tell an account from an unknown address.
+    /// </summary>
+    internal static readonly TimeSpan ForgotPasswordFloor = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>
+    /// Self-service reset, step 1 (P13.32). Always 204, whatever the address: an account that may sign in receives a
+    /// link by e-mail; an unknown, inactive or suspended one receives nothing, and the caller cannot tell which.
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitingSetup.PasswordResetPolicy)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var floor = Task.Delay(ForgotPasswordFloor, cancellationToken);
+        await _passwordReset.RequestAsync(request.Email, HttpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+        await floor;
+        return NoContent();
+    }
+
+    /// <summary>Whether a reset link can still be used, so the page shows the form only for a link that works.</summary>
+    [HttpPost("reset-password/check")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitingSetup.PasswordResetPolicy)]
+    public async Task<ActionResult<ResetLinkStatusResponse>> CheckResetLink([FromBody] ResetLinkRequest request, CancellationToken cancellationToken)
+        => Ok(new ResetLinkStatusResponse(await _passwordReset.IsValidAsync(request.Token, cancellationToken)));
+
+    /// <summary>
+    /// Self-service reset, step 2: sets the new password with the link's token. Nobody is signed in by it: the person
+    /// signs in with the new password, and every session that was open is over.
+    /// </summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitingSetup.PasswordResetPolicy)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _passwordReset.CompleteAsync(request.Token, request.NewPassword, cancellationToken);
+        if (result.Outcome == PasswordResetOutcome.Success)
+        {
+            // This browser may hold a session of the same account from before; it is over like every other one.
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+
+            return NoContent();
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(result.Outcome == PasswordResetOutcome.LinkInvalid ? nameof(request.Token) : nameof(request.NewPassword), error);
+        }
+
+        return ValidationProblem(ModelState);
     }
 
     /// <summary>Issues the antiforgery cookie/token pair. Called before login and again after login (tokens are bound to the identity).</summary>

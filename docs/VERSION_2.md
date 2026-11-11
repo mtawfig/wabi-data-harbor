@@ -207,6 +207,8 @@ A Cloud-plan organization can therefore use its own e-mail server and nothing el
 
 ### G5. An organization's own e-mail server (owner decision, 2026-11-10)
 
+**Prepared in version 1 (P13.32).** The mail server of a message is chosen in one place, `IEmailRoute.SenderFor(organizationId)`; every message carries its organization from the outbox to the delivery worker. Version 1 returns the platform's server for everyone. This item replaces that route; nothing changes where messages are written, and the self-service reset link (P13.32) follows the organization's server like every other message. **To decide with this item:** what happens to a reset link while the organization's server is down. Its lifetime (30 minutes) is shorter than the hour a temporary password waits below, so waiting that long would deliver a link that no longer works.
+
 **Goal.** In every plan, an organization can have its e-mails (temporary passwords, shared analyses, alert digests, Periodic Reports, support notices) sent through its own SMTP server, from its own address and display name. An organization that sets none keeps the platform's server and sender, as in version 1 (`no-reply@…`, "Wabi Insight Notifications").
 
 **Requirements.**

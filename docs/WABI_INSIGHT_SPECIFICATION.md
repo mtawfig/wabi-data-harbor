@@ -143,7 +143,7 @@ Local email/password only; no SSO, directory, social login or public registratio
 
 **[Decision] Policies:** password 12–128 characters, no composition rules, not equal to the email, sample password rejected outside Development; lockout after 5 failures for 15 minutes (configurable); identical error for unknown email / wrong password; sliding idle timeout 30 min and absolute lifetime 12 h (platform-configurable); cookies `HttpOnly; Secure; SameSite=Lax`; antiforgery via `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` header; security stamp re-validated at most every 5 minutes so password change, deactivation, suspension and administrator reset invalidate sessions.
 
-Supported: login/logout, password change, forced first-login change, administrator-assisted reset (one-time reset token or temporary password with `MustChangePassword`), lockout, inactive-account and suspended-organization denial, expiration, invalidation.
+Supported: login/logout, password change, forced first-login change, administrator-assisted reset (one-time reset token or temporary password with `MustChangePassword`), self-service reset through a one-time link sent by e-mail (organization users and Platform Administrators; the e-mail carries a link valid for 30 minutes, never a password, and the page that opens asks for the new password twice), lockout, inactive-account and suspended-organization denial, expiration, invalidation.
 
 ---
 
@@ -351,7 +351,7 @@ Conventions: uuid v7 keys, UTC `datetime2`, `RowVersion` on editable aggregates,
 ---
 
 ## 28. API endpoints
-Authentication: `/api/auth` (login, logout, me, change-password, accept-invitation, csrf), `/api/bootstrap`.
+Authentication: `/api/auth` (login, logout, me, change-password, forgot-password, reset-password/check, reset-password, accept-invitation, csrf), `/api/bootstrap`.
 Platform: `/api/platform/dashboard`, `/organizations`, `/administrators`, `/settings`, `/health`, `/metrics`, `/role-templates`, `/insights-catalog`, `/audit`, `/api/platform/support/tickets…`, `/api/platform/support/access-grants`.
 Organization: `/api/organization` (current organization profile, settings, dashboard), `/api/users`, `/api/departments`, `/api/sections`, `/api/roles`, `/api/applications`, `/api/metadata`, `/api/permissions`.
 AI and reporting: `/api/ai`, `/api/history`, `/api/reports`, `/api/shares`, `/api/notifications`, `/api/integrations`.

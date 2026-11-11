@@ -218,7 +218,7 @@ public sealed class EmailOutboxWorkerTests
             Worker = new EmailOutboxWorker(
                 _channel,
                 _services.GetRequiredService<IServiceScopeFactory>(),
-                sender,
+                new PlatformEmailRoute(sender),
                 new FixedClock(),
                 Options.Create(options ?? new EmailOptions()),
                 NullLogger<EmailOutboxWorker>.Instance)

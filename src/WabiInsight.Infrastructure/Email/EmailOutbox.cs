@@ -14,6 +14,22 @@ using WabiInsight.Infrastructure.Persistence;
 
 namespace WabiInsight.Infrastructure.Email;
 
+/// <summary>
+/// Version 1 route: every message, for every organization and for the platform itself, leaves through the platform's
+/// mail server (the "Email" settings). An organization's own server (Version 2, G5) is added here and nowhere else.
+/// </summary>
+public sealed class PlatformEmailRoute : IEmailRoute
+{
+    private readonly IEmailSender _platform;
+
+    public PlatformEmailRoute(IEmailSender platform)
+    {
+        _platform = platform;
+    }
+
+    public IEmailSender SenderFor(Guid? organizationId) => _platform;
+}
+
 /// <summary>In-process queue shared by the outbox (producer) and the worker (consumer).</summary>
 public sealed class EmailDeliveryChannel
 {
@@ -64,7 +80,8 @@ public sealed class EmailOutbox : IEmailOutbox
         _context.EmailMessages.Add(record);
         _usage.Append(UsageEventTypes.EmailQueued, "EmailMessage", record.EmailMessageId.ToString(), metadata: new { templateCode }, organizationId: record.OrganizationId);
         await _context.SaveChangesAsync(cancellationToken);
-        await _queue.Channel.Writer.WriteAsync((record.EmailMessageId, message), cancellationToken);
+        // The message carries its organization to the worker, where the route picks the mail server.
+        await _queue.Channel.Writer.WriteAsync((record.EmailMessageId, message with { OrganizationId = record.OrganizationId }), cancellationToken);
         return record.EmailMessageId;
     }
 }
@@ -180,18 +197,18 @@ public sealed partial class EmailOutboxWorker : BackgroundService
 
     private readonly EmailDeliveryChannel _queue;
     private readonly IServiceScopeFactory _scopes;
-    private readonly IEmailSender _sender;
+    private readonly IEmailRoute _route;
     private readonly ILogger<EmailOutboxWorker> _logger;
     private readonly EmailOptions _options;
     private readonly DateTimeOffset _startedAt;
 
-    public EmailOutboxWorker(EmailDeliveryChannel queue, IServiceScopeFactory scopes, IEmailSender sender, IClock clock, IOptions<EmailOptions> options, ILogger<EmailOutboxWorker> logger)
+    public EmailOutboxWorker(EmailDeliveryChannel queue, IServiceScopeFactory scopes, IEmailRoute route, IClock clock, IOptions<EmailOptions> options, ILogger<EmailOutboxWorker> logger)
     {
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(options);
         _queue = queue;
         _scopes = scopes;
-        _sender = sender;
+        _route = route;
         _options = options.Value;
         _logger = logger;
 
@@ -271,7 +288,7 @@ public sealed partial class EmailOutboxWorker : BackgroundService
             Exception? failure = null;
             try
             {
-                await _sender.SendAsync(message, deliveryToken);
+                await _route.SenderFor(message.OrganizationId).SendAsync(message, deliveryToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !deliveryToken.IsCancellationRequested)
             {

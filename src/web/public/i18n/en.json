@@ -257,7 +257,8 @@
       "rate_limited": "Too many attempts. Please wait a minute and try again.",
       "antiforgery": "Your session token expired. Please try again.",
       "unknown": "Sign-in failed. Please try again."
-    }
+    },
+    "forgot": "Forgot password?"
   },
   "changePassword": {
     "title": "Change your password",
@@ -277,6 +278,41 @@
       "password_is_sample": "The sample development password is not allowed.",
       "password_unchanged": "Choose a password different from the current one.",
       "password_required": "Enter a new password."
+    }
+  },
+  "forgotPassword": {
+    "title": "Forgot your password?",
+    "subtitle": "Enter the e-mail address you sign in with. We will send you a link to choose a new password.",
+    "submit": "Send reset link",
+    "sending": "Sending…",
+    "sentTitle": "Check your e-mail",
+    "sentBody": "If an account exists for this address, we sent a link to choose a new password.",
+    "sentNote": "The link expires soon (the e-mail says when) and can be used once. If nothing arrives, check your spam folder or ask your administrator.",
+    "backToSignIn": "Back to sign in",
+    "asideTitle": "Reset your password",
+    "asideBody": "Your current password keeps working until you choose a new one.",
+    "errors": {
+      "rate_limited": "Too many attempts. Please wait a minute and try again.",
+      "unknown": "The request could not be sent. Check your connection and try again."
+    }
+  },
+  "resetPassword": {
+    "title": "Choose a new password",
+    "subtitle": "Type the new password twice. Every device that is signed in will be signed out.",
+    "submit": "Save new password",
+    "saving": "Saving…",
+    "show": "Show or hide the password",
+    "checking": "Checking your link…",
+    "invalidTitle": "This link is not valid any more",
+    "invalidBody": "A reset link works once and for a short time, and only the newest one you asked for. Ask for a new link to continue.",
+    "requestNew": "Send a new link",
+    "doneTitle": "Your password was changed",
+    "doneBody": "Sign in with your new password.",
+    "unavailable": "The link could not be checked. Check your connection and try again.",
+    "tryAgain": "Try again",
+    "errors": {
+      "rate_limited": "Too many attempts. Please wait a minute and try again.",
+      "unknown": "The password could not be saved. Please try again."
     }
   },
   "bootstrap": {

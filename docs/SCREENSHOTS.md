@@ -184,6 +184,20 @@ Captured from the running app with the Wabi Bank sample organization (now with g
 | Arabic on a phone: the list stacks | Branch Manager, Deira | [p13-11-how-ar-mobile](screenshots/p13-11-how-ar-mobile.png) |
 | Globe-only language switch on a phone, aligned with the bell and account icons, English and Arabic | Teller, Deira | [p13-11-switcher-en-mobile](screenshots/p13-11-switcher-en-mobile.png) · [p13-11-switcher-ar-mobile](screenshots/p13-11-switcher-ar-mobile.png) |
 
+## P13.32 — Self-service password reset
+
+Captured from the running application with the demo organization (e-mails written by the File provider and rendered in the browser).
+
+| What it shows | English | Arabic |
+|---|---|---|
+| "Forgot password?" on the sign-in page | [p13-32-login-forgot-en](screenshots/p13-32-login-forgot-en.png) | |
+| Asking for a link | [p13-32-forgot-password-en](screenshots/p13-32-forgot-password-en.png) | [p13-32-forgot-password-ar](screenshots/p13-32-forgot-password-ar.png) |
+| The same confirmation for every address | [p13-32-forgot-password-sent-en](screenshots/p13-32-forgot-password-sent-en.png) | [p13-32-forgot-password-sent-ar](screenshots/p13-32-forgot-password-sent-ar.png) |
+| The e-mail: a link, never a password | [p13-32-reset-email-en](screenshots/p13-32-reset-email-en.png) | [p13-32-reset-email-ar](screenshots/p13-32-reset-email-ar.png) |
+| The page the link opens: the new password, twice | [p13-32-reset-password-en](screenshots/p13-32-reset-password-en.png) · [phone](screenshots/p13-32-reset-password-mobile-en.png) | [p13-32-reset-password-ar](screenshots/p13-32-reset-password-ar.png) |
+| Password changed | [p13-32-reset-password-done-en](screenshots/p13-32-reset-password-done-en.png) | |
+| Opened without a link, or with a used or expired one: no form | [p13-32-reset-password-invalid-en](screenshots/p13-32-reset-password-invalid-en.png) | [p13-32-reset-password-invalid-ar](screenshots/p13-32-reset-password-invalid-ar.png) |
+
 ## Feature screenshots by PR
 
 Earlier PRs keep their own captures under `docs/screenshots/p<phase>-<n>-*.png` (listed per PR in `docs/DESIGN_SYSTEM.md`), the recorded demo under `docs/demo/`, and the brand sheet at `docs/screenshots/p11-1-brand-sheet.png`.

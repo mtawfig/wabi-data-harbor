@@ -46,3 +46,16 @@ public sealed record SetAdministratorStatusRequest(bool IsActive);
 
 /// <summary>The caller's own interface language: "en" or "ar".</summary>
 public sealed record SetLanguageRequest(string? Language);
+
+/// <summary>Self-service reset, step 1: the sign-in e-mail of the account. The answer is the same for every address.</summary>
+public sealed record ForgotPasswordRequest([Required, MaxLength(256)] string Email);
+
+/// <summary>Self-service reset: the token of the link in the e-mail.</summary>
+public sealed record ResetLinkRequest([Required, MaxLength(128)] string Token);
+
+public sealed record ResetLinkStatusResponse(bool Valid);
+
+/// <summary>Self-service reset, step 2: the link's token and the new password.</summary>
+public sealed record ResetPasswordRequest(
+    [Required, MaxLength(128)] string Token,
+    [Required, MaxLength(1024)] string NewPassword);

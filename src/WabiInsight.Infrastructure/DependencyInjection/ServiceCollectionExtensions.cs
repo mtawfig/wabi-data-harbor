@@ -76,6 +76,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuditWriter, AuditWriter>();
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
+        services.AddScoped<IPasswordResetService, PasswordResetService>();
         services.AddScoped<IAdministratorAccountService, AdministratorAccountService>();
         services.AddScoped<IOrganizationUserProvisioningService, OrganizationUserProvisioningService>();
         services.AddScoped<IOrganizationService, OrganizationService>();
@@ -105,6 +106,7 @@ public static class ServiceCollectionExtensions
                 break;
         }
 
+        services.TryAddSingleton<IEmailRoute, PlatformEmailRoute>();
         services.AddSingleton<EmailDeliveryChannel>();
         services.AddScoped<IEmailOutbox, EmailOutbox>();
         services.AddScoped<IEmailDeliveryLog, EmailDeliveryLog>();

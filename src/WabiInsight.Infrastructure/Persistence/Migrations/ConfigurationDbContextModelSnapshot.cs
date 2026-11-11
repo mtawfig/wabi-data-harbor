@@ -2954,6 +2954,63 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.PasswordResetRequest", b =>
+                {
+                    b.Property<Guid>("PasswordResetRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PrincipalId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PrincipalType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("RequestedFromIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("PasswordResetRequestId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("PrincipalType", "PrincipalId", "CreatedAt");
+
+                    b.ToTable("PasswordResetRequests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PasswordResetRequests_Organization", "([PrincipalType] = 'OrganizationUser' AND [OrganizationId] IS NOT NULL) OR ([PrincipalType] = 'PlatformAdministrator' AND [OrganizationId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_PasswordResetRequests_PrincipalType", "[PrincipalType] IN ('PlatformAdministrator','OrganizationUser')");
+                        });
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Platform.PlatformSetting", b =>
                 {
                     b.Property<string>("Key")
@@ -4128,6 +4185,14 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Platform.LoginIdentity", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.PasswordResetRequest", b =>
                 {
                     b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
                         .WithMany()

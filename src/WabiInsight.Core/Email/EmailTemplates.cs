@@ -5,6 +5,93 @@ namespace WabiInsight.Core.Email;
 /// <summary>Bilingual transactional templates. Arabic messages are rendered RTL.</summary>
 public static class EmailTemplates
 {
+    /// <summary>
+    /// The self-service reset link (P13.32). The link is the only secret in the message, works once and stops working
+    /// after <paramref name="validMinutes"/> minutes; no password is ever sent.
+    /// </summary>
+    public static EmailMessage PasswordResetLink(string toEmail, string toName, string resetUrl, int validMinutes, string language, string replyTo = "")
+    {
+        var ar = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase);
+        var minutes = validMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var subject = ar ? "إعادة تعيين كلمة المرور في وابي إنسايت" : "Reset your Wabi Insight password";
+        var greeting = ar ? $"مرحبًا {toName}،" : $"Hello {toName},";
+        var intro = ar
+            ? "وصلنا طلب لإعادة تعيين كلمة المرور لحسابك في وابي إنسايت. اضغط الزر التالي لاختيار كلمة مرور جديدة:"
+            : "We received a request to reset the password of your Wabi Insight account. Use the button below to choose a new password:";
+        var button = ar ? "اختيار كلمة مرور جديدة" : "Choose a new password";
+        var validity = ar
+            ? $"الرابط صالح لمدة {minutes} دقيقة ويُستخدم مرة واحدة فقط. لا تشاركه مع أحد."
+            : $"The link works for {minutes} minutes and can be used once. Do not share it.";
+        var fallback = ar ? "إذا لم يعمل الزر، انسخ هذا الرابط إلى المتصفح:" : "If the button does not work, copy this link into your browser:";
+        var ignore = ar
+            ? "إذا لم تطلب ذلك فتجاهل هذه الرسالة: كلمة مرورك الحالية تبقى كما هي."
+            : "If you did not ask for this, ignore this message: your current password stays as it is.";
+        var text = $"{greeting}\n\n{intro}\n{resetUrl}\n\n{validity}\n\n{ignore}\n";
+        return Compose(toEmail, toName, subject, language, replyTo, text, greeting, [intro], (button, resetUrl), [validity, fallback], resetUrl, ignore);
+    }
+
+    /// <summary>Tells the account's owner that the password was just changed through a reset link (P13.32).</summary>
+    public static EmailMessage PasswordChangedNotice(string toEmail, string toName, string signInUrl, string language, bool platformAdministrator, string replyTo = "")
+    {
+        var ar = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase);
+        var subject = ar ? "تم تغيير كلمة المرور في وابي إنسايت" : "Your Wabi Insight password was changed";
+        var greeting = ar ? $"مرحبًا {toName}،" : $"Hello {toName},";
+        var intro = ar
+            ? "تم تغيير كلمة المرور لحسابك في وابي إنسايت باستخدام رابط إعادة التعيين. أُنهيت جميع الجلسات المفتوحة، ويمكنك تسجيل الدخول بكلمة المرور الجديدة."
+            : "The password of your Wabi Insight account was just changed with a reset link. Every open session was ended, and you can sign in with the new password.";
+        var button = ar ? "تسجيل الدخول" : "Sign in";
+        var ignore = (ar, platformAdministrator) switch
+        {
+            (true, true) => "إذا لم تكن أنت من غيّرها، اطلب من مدير منصة آخر إعادة تعيين كلمة مرورك فورًا.",
+            (true, false) => "إذا لم تكن أنت من غيّرها، تواصل مع مدير مؤسستك فورًا.",
+            (false, true) => "If it was not you, ask another Platform Administrator to reset your password at once.",
+            _ => "If it was not you, contact your organization administrator at once.",
+        };
+        var text = $"{greeting}\n\n{intro}\n{signInUrl}\n\n{ignore}\n";
+        return Compose(toEmail, toName, subject, language, replyTo, text, greeting, [intro], (button, signInUrl), [], null, ignore);
+    }
+
+    /// <summary>The shared layout of the account messages: greeting, paragraphs, one button, notes, an optional plain link.</summary>
+    private static EmailMessage Compose(string toEmail, string toName, string subject, string language, string replyTo, string text, string greeting, string[] paragraphs, (string Label, string Url) button, string[] notes, string? plainLink, string closing)
+    {
+        var ar = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase);
+        var dir = ar ? "rtl" : "ltr";
+        var font = ar ? "'IBM Plex Sans Arabic', Arial, sans-serif" : "Inter, Arial, sans-serif";
+        var footer = ar ? "وابي إنسايت — اسأل بياناتك. وثق بالإجابة." : "Wabi Insight — Ask Your Data. Trust the Answer.";
+        var body = new System.Text.StringBuilder();
+        foreach (var paragraph in paragraphs)
+        {
+            body.Append(System.Globalization.CultureInfo.InvariantCulture, $"<p style=\"font-size:15px;line-height:1.6;margin:0 0 16px;\">{WebUtility.HtmlEncode(paragraph)}</p>");
+        }
+
+        body.Append(System.Globalization.CultureInfo.InvariantCulture, $"<p style=\"margin:0 0 20px;\"><a href=\"{WebUtility.HtmlEncode(button.Url)}\" style=\"display:inline-block;background:#087df2;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px;\">{WebUtility.HtmlEncode(button.Label)}</a></p>");
+        foreach (var note in notes)
+        {
+            body.Append(System.Globalization.CultureInfo.InvariantCulture, $"<p style=\"font-size:14px;line-height:1.6;color:#334155;margin:0 0 8px;\">{WebUtility.HtmlEncode(note)}</p>");
+        }
+
+        if (plainLink is not null)
+        {
+            body.Append(System.Globalization.CultureInfo.InvariantCulture, $"<p style=\"font-size:13px;direction:ltr;unicode-bidi:isolate;word-break:break-all;color:#087df2;margin:0 0 20px;\">{WebUtility.HtmlEncode(plainLink)}</p>");
+        }
+
+        var html = $"""
+            <!doctype html>
+            <html lang="{(ar ? "ar" : "en")}" dir="{dir}">
+            <body style="margin:0;background:#f5f8fc;font-family:{font};color:#0b1f3a;">
+              <div style="max-width:560px;margin:24px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:32px;direction:{dir};text-align:start;">
+                <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#087df2;margin:0 0 12px;">Wabi Insight · AP-AIR</p>
+                <p style="font-size:16px;margin:0 0 12px;">{WebUtility.HtmlEncode(greeting)}</p>
+                {body}
+                <p style="font-size:13px;color:#334155;margin:0 0 8px;">{WebUtility.HtmlEncode(closing)}</p>
+                <p style="font-size:12px;color:#94a3b8;margin:0;">{WebUtility.HtmlEncode(footer)}</p>
+              </div>
+            </body>
+            </html>
+            """;
+        return new EmailMessage(toEmail, toName, subject, html, text, ar ? "ar" : "en") { ReplyTo = string.IsNullOrWhiteSpace(replyTo) ? null : replyTo };
+    }
+
     public static EmailMessage TemporaryPassword(
         string toEmail,
         string toName,

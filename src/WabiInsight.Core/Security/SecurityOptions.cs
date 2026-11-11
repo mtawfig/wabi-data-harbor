@@ -35,6 +35,18 @@ public sealed class SecurityOptions
     [Range(1, 100000)]
     public int BootstrapRateLimitPerMinute { get; set; } = 3;
 
+    /// <summary>How long a password reset link stays usable (self-service reset).</summary>
+    [Range(5, 1440)]
+    public int PasswordResetLinkMinutes { get; set; } = 30;
+
+    /// <summary>Reset links one account may ask for in an hour; further requests are ignored without a word.</summary>
+    [Range(1, 100)]
+    public int PasswordResetRequestsPerHour { get; set; } = 3;
+
+    /// <summary>Requests per minute per client address on the reset endpoints (ask for a link, check it, use it).</summary>
+    [Range(1, 100000)]
+    public int PasswordResetRateLimitPerMinute { get; set; } = 10;
+
     /// <summary>Requests per minute per signed-in principal (or client address when anonymous) across the whole API.</summary>
     [Range(1, 1000000)]
     public int ApiRateLimitPerMinute { get; set; } = 600;

@@ -13,6 +13,12 @@ public sealed record EmailMessage(
 {
     public string? ReplyTo { get; init; }
 
+    /// <summary>
+    /// The organization this message is sent for, set by the outbox; null for a message about the platform itself (to a
+    /// Platform Administrator). <see cref="IEmailRoute"/> chooses the mail server from it.
+    /// </summary>
+    public Guid? OrganizationId { get; init; }
+
     /// <summary>Files to attach (a shared report). Kept in memory with the message; never persisted by the outbox.</summary>
     public IReadOnlyList<EmailAttachment> Attachments { get; init; } = [];
 }
@@ -24,11 +30,25 @@ public interface IEmailSender
     Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// The one place that decides which mail server a message leaves through. Version 1 has one server, the platform's
+/// (the "Email" settings), for everyone. When an organization can set its own server (Version 2, G5), its messages are
+/// routed here, and every kind of message follows without a change where it is written: temporary passwords, reset
+/// links, shared analyses, digests, Periodic Reports.
+/// </summary>
+public interface IEmailRoute
+{
+    /// <summary>The server that sends messages for this organization; the platform's when it has none of its own, or for null.</summary>
+    IEmailSender SenderFor(Guid? organizationId);
+}
+
 /// <summary>Stable template codes recorded on EmailMessages for metrics (drafts vs sent, specification §12.3).</summary>
 public static class EmailTemplateCodes
 {
     public const string AccountCreated = "Account.Created";
     public const string PasswordReset = "Account.PasswordReset";
+    public const string PasswordResetLink = "Account.PasswordResetLink";
+    public const string PasswordChangedNotice = "Account.PasswordChanged";
     public const string SupportNotification = "Support.Notification";
     public const string AnalysisShared = "Analysis.Shared";
     public const string AnalysisEmailed = "Analysis.Emailed";
