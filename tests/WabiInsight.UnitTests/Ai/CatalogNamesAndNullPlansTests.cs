@@ -79,4 +79,16 @@ public sealed class CatalogNamesAndNullPlansTests
         bad.RemoveNullEntries();
         Assert.Contains(QueryPlanValidator.Validate(bad), e => e.Code == "plan_object_invalid");
     }
+
+    [Fact]
+    public void OrderBy_QuotesTheAliasAsTheSelectItemSpellsIt()
+    {
+        // Oracle compares quoted names exactly: ORDER BY "total" would not find the column "Total" (ORA-00904).
+        var plan = JsonSerializer.Deserialize<QueryPlan>(ArabicPlan.Replace("\"alias\":\"total\",\"column\"", "\"alias\":\"Total\",\"column\"", StringComparison.Ordinal), Json)!;
+        Assert.Equal("Total", plan.Select[1].Alias);
+        Assert.Equal("total", plan.OrderBy[0].Alias);
+        Assert.Empty(QueryPlanValidator.Validate(plan));
+        Assert.Contains("ORDER BY \"Total\" DESC", new OracleCompiler().Compile(Authorized(plan)).Sql, StringComparison.Ordinal);
+        Assert.Contains("ORDER BY [Total] DESC", new SqlServerCompiler().Compile(Authorized(plan)).Sql, StringComparison.Ordinal);
+    }
 }

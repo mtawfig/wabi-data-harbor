@@ -67,6 +67,65 @@ jobs:
           name: api-test-results
           path: TestResults
 
+  oracle:
+    # Oracle end to end (P13.30) in its own job: SQL Server, Oracle and the whole integration suite together do not fit
+    # a standard runner. Here SQL Server is capped and only the Oracle tests run.
+    name: Oracle (end to end)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "WabiInsight_Ci_2026!"
+          MSSQL_PID: Developer
+          MSSQL_MEMORY_LIMIT_MB: "2048"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'WabiInsight_Ci_2026!' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 20s
+      oracle:
+        image: gvenzl/oracle-free:23-slim
+        env:
+          ORACLE_PASSWORD: "WabiOracle_Ci_2026"
+        ports:
+          - 1521:1521
+        options: >-
+          --health-cmd healthcheck.sh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+          --health-start-period 30s
+    env:
+      # Not real credentials: the CI service containers above. The Oracle tests create their own schema and read-only login.
+      WI_TEST_SQLSERVER_CONNECTION: "Server=localhost,1433;Database=WabiInsightOracleTests;User Id=sa;Password=WabiInsight_Ci_2026!;TrustServerCertificate=True;Encrypt=True"
+      WI_TEST_ORACLE_CONNECTION: "User Id=system;Password=WabiOracle_Ci_2026;Data Source=localhost:1521/FREEPDB1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        run: dotnet restore tests/WabiInsight.IntegrationTests
+      - name: Build
+        run: dotnet build tests/WabiInsight.IntegrationTests --configuration Release --no-restore
+      - name: Test (Oracle)
+        run: >-
+          dotnet test tests/WabiInsight.IntegrationTests --configuration Release --no-build
+          --filter "FullyQualifiedName~Oracle"
+          --logger "trx;LogFileName=oracle.trx" --results-directory TestResults
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-test-results
+          path: TestResults
+
   web:
     name: Web (Angular 22)
     runs-on: ubuntu-latest

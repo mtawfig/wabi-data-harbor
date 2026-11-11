@@ -50,6 +50,9 @@ dotnet tool restore && dotnet ef migrations add <Name> --project src/WabiInsight
 WI_TEST_SQLSERVER_CONNECTION="Server=localhost,1433;Database=master;User Id=sa;Password=WabiInsight_Dev_2026!;TrustServerCertificate=True;Encrypt=True" dotnet test WabiInsight.slnx
 # Azure Blob storage tests need Azurite: Docker (Testcontainers) or a local `azurite-blob --skipApiVersionCheck` with
 # WI_TEST_AZURITE_CONNECTION="UseDevelopmentStorage=true"
+# Oracle end-to-end tests (P13.30) need Oracle Free and its administrator connection (CI job "Oracle (end to end)"):
+# docker run -d --name wi-oracle -p 1521:1521 -e ORACLE_PASSWORD=WabiOracle_Dev_2026 gvenzl/oracle-free:23-slim
+# WI_TEST_ORACLE_CONNECTION="User Id=system;Password=WabiOracle_Dev_2026;Data Source=localhost:1521/FREEPDB1"
 
 # Web (from src/web)
 npm ci
