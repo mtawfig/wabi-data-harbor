@@ -43,6 +43,9 @@ public sealed class HealthAndInfoTests : IDisposable
         {
             Assert.Contains("configuration-database", checks);
             Assert.Contains("database-schema", checks);
+            // P13.33: the folders the application writes to are part of being ready.
+            Assert.Contains("file-storage", checks);
+            Assert.Contains("key-ring", checks);
             // Settings to review never make the site "not ready".
             Assert.DoesNotContain("deployment-settings", checks);
         }

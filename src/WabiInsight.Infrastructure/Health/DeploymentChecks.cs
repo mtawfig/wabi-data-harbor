@@ -156,3 +156,92 @@ public sealed class PendingMigrationsHealthCheck : IHealthCheck
             data: new Dictionary<string, object> { ["pending"] = pending.Count, ["next"] = pending[0] });
     }
 }
+
+/// <summary>Remembers for a minute that a folder accepted a file, so a readiness probe every few seconds does not write to the disk each time.</summary>
+public sealed class FolderProbeCache
+{
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTimeOffset> _writable = new(StringComparer.Ordinal);
+
+    /// <summary>Null when a file can be created and deleted in the folder (creating the folder if needed); otherwise why not.</summary>
+    public string? Problem(string directory, DateTimeOffset now)
+    {
+        if (_writable.TryGetValue(directory, out var checkedAt) && now - checkedAt < TimeSpan.FromMinutes(1))
+        {
+            return null;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(directory);
+            var probe = Path.Combine(directory, $".write-check-{Guid.NewGuid():N}.tmp");
+            File.WriteAllText(probe, "Wabi Insight write check");
+            File.Delete(probe);
+            _writable[directory] = now;
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        {
+            _writable.TryRemove(directory, out _);
+            return ex is UnauthorizedAccessException or System.Security.SecurityException ? "access is denied to the account the application runs as" : ex.Message;
+        }
+    }
+}
+
+/// <summary>
+/// Not ready while the application cannot write to the files folder (P13.33). Found at deployment, as the account the
+/// application runs as, instead of at somebody's first question: a missing permission on the folder would otherwise
+/// fail every answer after the AI call and the source queries were already paid for.
+/// </summary>
+public sealed class FileStorageHealthCheck : IHealthCheck
+{
+    private readonly StorageOptions _storage;
+    private readonly FolderProbeCache _probe;
+    private readonly IClock _clock;
+
+    public FileStorageHealthCheck(IOptions<StorageOptions> storage, FolderProbeCache probe, IClock clock)
+    {
+        _storage = storage.Value;
+        _probe = probe;
+        _clock = clock;
+    }
+
+    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        if (_storage.UsesAzureBlob)
+        {
+            // The container is reached over the network: the storage-check command proves it at deployment.
+            return Task.FromResult(HealthCheckResult.Healthy("Files are kept in Azure Blob Storage (checked by the storage-check command)."));
+        }
+
+        var folder = Path.GetFullPath(_storage.RootPath);
+        return Task.FromResult(_probe.Problem(folder, _clock.UtcNow) is { } problem
+            ? HealthCheckResult.Unhealthy($"The files folder (Storage:RootPath, {folder}) cannot be written: {problem}.")
+            : HealthCheckResult.Healthy("The files folder can be written."));
+    }
+}
+
+/// <summary>
+/// Not ready while the application cannot write to the key ring folder (P13.33): without it the first sign-in fails,
+/// and stored connection strings cannot be protected.
+/// </summary>
+public sealed class KeyRingHealthCheck : IHealthCheck
+{
+    private readonly DataProtectionOptions _dataProtection;
+    private readonly FolderProbeCache _probe;
+    private readonly IClock _clock;
+
+    public KeyRingHealthCheck(IOptions<DataProtectionOptions> dataProtection, FolderProbeCache probe, IClock clock)
+    {
+        _dataProtection = dataProtection.Value;
+        _probe = probe;
+        _clock = clock;
+    }
+
+    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        var folder = Path.GetFullPath(_dataProtection.KeyRingPath);
+        return Task.FromResult(_probe.Problem(folder, _clock.UtcNow) is { } problem
+            ? HealthCheckResult.Unhealthy($"The key ring folder (DataProtection:KeyRingPath, {folder}) cannot be written: {problem}.")
+            : HealthCheckResult.Healthy("The key ring folder can be written."));
+    }
+}

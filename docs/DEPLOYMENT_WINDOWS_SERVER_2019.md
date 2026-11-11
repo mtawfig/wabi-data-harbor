@@ -387,7 +387,7 @@ w32tm /resync
 | `C:\wabitex-apps\wabi-insight\web\app` | The web app (IIS site `WabiInsight`) |
 | `C:\wabitex-apps\wabi-insight\web\api` | The API (IIS site `WabiInsightApi`) and `appsettings.Local.json` (this server's settings) |
 | `C:\wabitex-apps\wabi-insight\keys` | The key ring. **Losing it makes every stored connection string and provider key unreadable.** Backed up every night (step 30). |
-| `C:\wabitex-apps\wabi-insight\logs` | The deploy log `deploy.log` and, when you turn it on, the API's startup log |
+| `C:\wabitex-apps\wabi-insight\logs` | The deploy log `deploy.log` and the API's own log, one file a day: `wabi-insight-<yyyyMMdd>.log` (UTC; kept 30 days) |
 | `C:\wabitex-apps\wabi-insight\releases` | The last 5 releases, plus `previous-api` and `previous-web` for rolling back |
 | `C:\wabitex-apps\wabi-insight\deploy` | The deploy script that the runner runs (step 31) |
 | `C:\wabitex-apps\wabi-insight\install`, `tools` | Downloaded installers; the certificate tool (win-acme) |
@@ -820,7 +820,9 @@ account or the AI key.**
 - the connection to **this VPS's** SQL Server Express (steps 18–21);
 - the site's address (used in every e-mail link);
 - the files folder, kept on this server's disk;
-- the key-ring folder.
+- the key-ring folder;
+- the folder of the application's log file. Under IIS the API has no console, so without this its messages (e-mails
+  sent, scheduled runs, start-up notes) are written nowhere; only warnings reach the Windows Event Log.
 
 It loads last and **overrides** `appsettings.json` (and environment variables). **Deployments never overwrite or delete
 it.**
@@ -838,6 +840,7 @@ $localSettings = [ordered]@{
     Platform          = [ordered]@{ BaseUrl = "https://$($WI.Domain)" }
     Storage           = [ordered]@{ Provider = 'FileSystem'; RootPath = $WI.Files }
     DataProtection    = [ordered]@{ KeyRingPath = (Join-Path $WI.Root 'keys') }
+    Logging           = [ordered]@{ File = [ordered]@{ Directory = (Join-Path $WI.Root 'logs') } }
 }
 $localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
 if (-not (Test-Path $localPath)) { $localSettings | ConvertTo-Json -Depth 5 | Set-Content -Path $localPath -Encoding UTF8 }
@@ -860,6 +863,7 @@ $localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
 (Get-Content $localPath -Raw) -replace 'Password=[^;]*', 'Password=***'
 (Get-Content $localPath -Raw | ConvertFrom-Json).Platform.BaseUrl          # https://<your domain>
 (Get-Content $localPath -Raw | ConvertFrom-Json).Storage.RootPath          # D:\wabi-insight\files (or C:\…)
+(Get-Content $localPath -Raw | ConvertFrom-Json).Logging.File.Directory    # C:\wabitex-apps\wabi-insight\logs
 ```
 
 ## 25. The two IIS sites
@@ -1258,9 +1262,10 @@ Get-Content (Join-Path $WI.Root 'logs\deploy.log') -Tail 3                      
 Get-Content (Join-Path $WI.Root 'web\api\deploy-info.json')                                  # "version": the commit you deployed
 Test-Path (Join-Path $WI.Root 'web\api\app_offline.htm')                                     # False
 Invoke-WiSql -Database WabiInsightDB "SELECT COUNT(*) AS Applied, MAX(MigrationId) AS Latest FROM dbo.__EFMigrationsHistory"   # a number and the newest migration's name
-(Invoke-WebRequest 'http://127.0.0.1:5080/health/ready' -UseBasicParsing).Content          # "status":"Healthy" … configuration-database and database-schema … Healthy
+(Invoke-WebRequest 'http://127.0.0.1:5080/health/ready' -UseBasicParsing).Content          # "status":"Healthy" … configuration-database, database-schema, file-storage, key-ring … Healthy
 Invoke-WebRequest 'http://127.0.0.1:5080/api/auth/csrf' -UseBasicParsing -Headers @{ 'X-Forwarded-Proto' = 'https' } | Out-Null   # first use of the key ring (the header stands for IIS: the API answers this over HTTPS only)
 Get-ChildItem (Join-Path $WI.Root 'keys')                                                  # key-<id>.xml: the key ring now exists
+Get-Content (Get-ChildItem (Join-Path $WI.Root 'logs\wabi-insight-*.log') | Sort-Object Name | Select-Object -Last 1) -Tail 5   # the API's own log: the newest lines
 (Invoke-WebRequest "https://$($WI.Domain)/health/ready" -UseBasicParsing).Content          # Healthy, through IIS and ARR
 $r = Invoke-WebRequest "http://$($WI.Domain)/login" -MaximumRedirection 0 -UseBasicParsing -ErrorAction SilentlyContinue
 "$($r.StatusCode) $($r.Headers.Location)"                                                  # 301 https://<your domain>/login
@@ -1678,6 +1683,8 @@ can sign in.
 | Deploy: *The release is installed, but …* | IIS, ARR or the certificate didn't answer correctly | Steps 15, 25 and 26 **Verify** |
 | Deploy: *The API did not release its files within 120 seconds* | A long request was still running (a study or a report), or another program holds the files. Nothing was changed and the site is back online. | Run again in a few minutes. If it persists, `Restart-WebAppPool WabiInsightApi` and run again. |
 | Deploy: *robocopy … failed* | A file could not be copied (locked by another program, or the disk is full). The previous API was put back. | `Get-PSDrive C` for free space, then run again. |
+| Deploy: the health report says `file-storage` or `key-ring` is *Unhealthy* | The API's account can't write to the files folder or the key ring folder; the text names the folder. The previous API was put back (on a first deployment there is none, and the site stays offline until this is fixed). | Step 23 **Do** (the `icacls` lines), then step 24 **Verify** (`Storage.RootPath`), and run again. |
+| Something failed and the page only says *try again* | The reason is in the API's log | `Get-Content (Get-ChildItem C:\wabitex-apps\wabi-insight\logs\wabi-insight-*.log \| Sort-Object Name \| Select-Object -Last 1) -Tail 50`; lines marked `ERR` or `WRN` carry the cause. |
 | Deploy: *The database is behind this release* | The release contains a migration and **migrate_database** was off. The previous API was put back; nothing changed in the database. | Run again with **migrate_database** ticked. |
 | Deploy waits forever on *Waiting for a runner* | The runner service is stopped | `Get-Service 'actions.runner.*' \| Start-Service` |
 | Deploy: *Another deployment is running* | Two runs at once | Wait for the first one, then run again |
