@@ -25,9 +25,9 @@ North region.
  │ IIS site "WabiInsight"   ── /            → the web app   (C:\wabitex-apps\wabi-insight\web\app)
  │   (URL Rewrite + ARR)    ── /api, /health → IIS site "WabiInsightApi" on 127.0.0.1:5080
  │                                             (C:\wabitex-apps\wabi-insight\web\api)
- │                                                  │ SQL on localhost, port 1433 (never open to the internet)
+ │                                                  │ SQL on localhost, port 1433 or 14333 (never open to the internet)
  │                                                  ▼
- │ SQL Server 2025 Express (instance SQLEXPRESS)
+ │ SQL Server 2025 Express (instance SQLEXPRESS, or SQLEXPRESS2025 next to an existing SQL Server: step 22)
  │   WabiInsightDB · organizations' databases · demo databases (FlightOperationsDB, … WabiBankITDB)
  │ Key ring: C:\wabitex-apps\wabi-insight\keys
  │ Nightly task "Wabi Insight backup" → D:\wabi-insight\backup\<date-time>\  (every database + logins + key ring)
@@ -189,7 +189,7 @@ Desktop in, and nothing else.
 | 443 (HTTPS) | The website | Anywhere |
 | 3389 (Remote Desktop) | Your access | **Only your own IP address**, if the panel allows it (strongly recommended) |
 
-**Don't open** port 1433 (SQL Server) or 5080 (the API). Only programs on the VPS itself use them.
+**Don't open** ports 1433 or 14333 (SQL Server) or 5080 (the API). Only programs on the VPS itself use them.
 
 Outgoing connections must be allowed (they usually are by default):
 - HTTPS (443) to GitHub: `github.com`, `api.github.com`, `codeload.github.com`, `objects.githubusercontent.com`,
@@ -291,10 +291,17 @@ $WI = [ordered]@{
     Root           = 'C:\wabitex-apps\wabi-insight'  # the application: web\app, web\api, keys, logs, releases, deploy
     Files          = "$dataRoot\files"               # only used if you ever switch the files back from Azure to the disk
     Backup         = "$dataRoot\backup"              # nightly backups (step 36)
+    SqlInstance    = 'SQLEXPRESS'                    # CHANGE to 'SQLEXPRESS2025' if this server already runs SQL Server for other applications (step 22)
+    SqlPort        = 1433                            # CHANGE to 14333 in that case
 }
 New-Item -ItemType Directory -Force -Path $WI.Root | Out-Null
 $WI | Export-Clixml (Join-Path $WI.Root 'wabi-insight.vars.xml')
 ```
+
+**Already have SQL Server on this VPS for other applications** (for example SQL Server 2019 Express used by other web
+sites)? Then set `SqlInstance = 'SQLEXPRESS2025'` and `SqlPort = 14333`: Wabi Insight gets its own SQL Server 2025
+instance on its own port, and the existing one is **not touched** (step 22 explains). If you're not sure, run step 22's
+**Check** first, then come back here.
 
 To change a value later, edit it and paste the box again: the saved copy is updated. **In a new window**, load the
 values back with:
@@ -335,7 +342,7 @@ function Invoke-WiSql {
     # -Tables shows every result of a script as its own table (the sample scripts return several).
     param([string]$Query, [string]$InputFile, [string]$Database = 'master', [pscredential]$Credential, [switch]$Tables)
     Import-Module SqlServer -Verbose:$false
-    $p = @{ ServerInstance = 'localhost,1433'; Database = $Database; TrustServerCertificate = $true; QueryTimeout = 1800; DisableVariables = $true; ErrorAction = 'Stop' }
+    $p = @{ ServerInstance = "localhost,$($WI.SqlPort)"; Database = $Database; TrustServerCertificate = $true; QueryTimeout = 1800; DisableVariables = $true; ErrorAction = 'Stop' }
     if ($InputFile) { $p.InputFile = $InputFile } else { $p.Query = $Query }
     if ($Credential) { $p.Credential = $Credential }
     if ($Tables) { Invoke-Sqlcmd @p -OutputAs DataTables | ForEach-Object { $_ | Format-Table -AutoSize | Out-String -Width 250 } }
@@ -787,10 +794,32 @@ Run every step in **[VPS PowerShell]**, with the session settings, `$WI` and the
 Get-Service -Name 'MSSQL$*' -ErrorAction SilentlyContinue | Select-Object Name, Status, StartType
 ```
 
-- **No output:** SQL Server isn't installed. Continue with step 23.
-- **`MSSQL$SQLEXPRESS` is listed:** it's installed. **Skip steps 23 and 24**, but do step 25 on it. Make sure your
-  Windows administrator account can manage it: `sqlcmd -S localhost\SQLEXPRESS -E -Q "SELECT IS_SRVROLEMEMBER('sysadmin')"`
-  must print `1` (if `sqlcmd` isn't found, skip this check and see whether step 26's **Verify** works).
+Then choose your case:
+
+| What you see | Your case | What to do |
+|---|---|---|
+| No output | SQL Server isn't installed | Keep step 5's `SqlInstance = 'SQLEXPRESS'` and `SqlPort = 1433`. Continue with step 23. |
+| `MSSQL$SQLEXPRESS` (or another `MSSQL$…`) **used by other applications** on this server, for example SQL Server 2019 Express behind your other web sites | **Side by side** (recommended): Wabi Insight gets its own SQL Server 2025 instance | In step 5 set `SqlInstance = 'SQLEXPRESS2025'` and `SqlPort = 14333`, paste the values box again, then continue with step 23. The existing instance, its databases, its port and its logins are **not changed**; your other applications keep working as before. |
+| `MSSQL$SQLEXPRESS` that **nothing else uses** | Reuse it | Keep `SQLEXPRESS` / `1433`. **Skip steps 23 and 24**, and do step 25 on it. With Express 2019 or 2022 each database is limited to 10 GB (2025: 50 GB). |
+
+**Side by side, what to know:**
+- Two SQL Server versions on one Windows server is a normal, supported setup. Each instance has its own Windows service
+  (`MSSQL$SQLEXPRESS` and `MSSQL$SQLEXPRESS2025`), its own databases, logins and `sa` password.
+- The existing instance keeps its name and port, so the connection strings of your other applications don't change.
+  Port `14333` must be free: `Test-NetConnection localhost -Port 14333 -InformationLevel Quiet` must print `False` now.
+  If it prints `True`, choose another free port (for example `14334`) in step 5.
+- **Memory:** each Express instance uses up to about 1.4 GB for its cache, plus overhead. Two instances need about
+  3–4 GB together: comfortable on 8 GB.
+- **Backups:** Wabi Insight's nightly backup (step 36) covers only **its own** instance. Keep backing up the other
+  instance's databases the way you do today.
+- Microsoft's installer adds the new instance without touching the existing one. Uninstalling one later (**Settings →
+  Apps → Microsoft SQL Server 20xx → Uninstall → Remove**, choosing that instance) leaves the other in place.
+- Later, if you want, the other applications' databases can move to the 2025 instance (a 2019 backup restores on 2025;
+  the reverse is not possible).
+
+If you reuse an existing instance, make sure your Windows administrator account can manage it:
+`sqlcmd -S localhost\SQLEXPRESS -E -Q "SELECT IS_SRVROLEMEMBER('sysadmin')"` must print `1` (if `sqlcmd` isn't found,
+see whether step 26's **Verify** works).
 
 ## 23. Download the installation media
 
@@ -817,13 +846,14 @@ Start-Process $ssei -ArgumentList '/ACTION=Download', "/MEDIAPATH=$media", '/MED
 ## 24. Install SQL Server Express (mixed mode, TCP on)
 
 **Why:** this installs SQL Server unattended, with the choices the application needs:
-- the instance `SQLEXPRESS`, started automatically with Windows;
+- the instance named in step 5 (`SQLEXPRESS`, or `SQLEXPRESS2025` side by side), started automatically with Windows;
 - **mixed mode**, with the `sa` password from step 7;
 - the local **Administrators** group as SQL Server administrators, so your Windows account (and the nightly backup
   task) can manage it;
-- **TCP on**, named pipes off, the SQL Server Browser off (not needed with a fixed port).
+- **TCP on**, named pipes off; on a server without another instance, the SQL Server Browser off (not needed with a fixed
+  port). Side by side, the Browser is left as it is, because the existing applications may use it.
 
-**Check:** `Get-Service 'MSSQL$SQLEXPRESS' -ErrorAction SilentlyContinue` (a result means it's installed: go to step 25).
+**Check:** `Get-Service "MSSQL`$$($WI.SqlInstance)" -ErrorAction SilentlyContinue` (a result means it's installed: go to step 25).
 
 **Do:** paste the **`sa` password** from step 7 when asked. Setup takes 5–15 minutes and shows nothing until it ends.
 
@@ -836,10 +866,11 @@ $setupDir = Join-Path $media 'setup'
 Start-Process $package -ArgumentList '/q', "/x:`"$setupDir`"" -Wait
 $arguments = @(
     '/Q', '/ACTION=Install', '/IACCEPTSQLSERVERLICENSETERMS', '/FEATURES=SQLEngine',
-    '/INSTANCENAME=SQLEXPRESS', '/SQLSVCACCOUNT="NT Service\MSSQL$SQLEXPRESS"', '/SQLSVCSTARTUPTYPE=Automatic',
+    "/INSTANCENAME=$($WI.SqlInstance)", "/SQLSVCACCOUNT=`"NT Service\MSSQL`$$($WI.SqlInstance)`"", '/SQLSVCSTARTUPTYPE=Automatic',
     '/SQLSYSADMINACCOUNTS="BUILTIN\Administrators"', '/SECURITYMODE=SQL', "/SAPWD=`"$sa`"",
-    '/TCPENABLED=1', '/NPENABLED=0', '/BROWSERSVCSTARTUPTYPE=Disabled', '/UPDATEENABLED=False'
+    '/TCPENABLED=1', '/NPENABLED=0', '/UPDATEENABLED=False'
 )
+if (-not (Get-Service 'MSSQL$*' -ErrorAction SilentlyContinue)) { $arguments += '/BROWSERSVCSTARTUPTYPE=Disabled' }   # alone on this server
 $p = Start-Process (Join-Path $setupDir 'setup.exe') -ArgumentList $arguments -Wait -PassThru
 "setup exit code $($p.ExitCode)"      # 0 = success, 3010 = success, reboot required
 Remove-Variable sa
@@ -856,27 +887,29 @@ Remove-Variable sa
 **Verify:**
 
 ```powershell
-Get-Service 'MSSQL$SQLEXPRESS' | Select-Object Status, StartType        # Running, Automatic
+Get-Service "MSSQL`$$($WI.SqlInstance)" | Select-Object Status, StartType        # Running, Automatic
+Get-Service 'MSSQL$*' | Select-Object Name, Status                         # side by side: both instances, both Running
 Get-Content "$env:ProgramFiles\Microsoft SQL Server\*\Setup Bootstrap\Log\Summary.txt" | Select-String 'Final result|Exit code' | Select-Object -First 2   # Passed, 0
 ```
 
-## 25. Fixed TCP port 1433 and mixed-mode sign-in
+## 25. Fixed TCP port (1433, or 14333 side by side) and mixed-mode sign-in
 
-**Why:** the API connects to `localhost,1433`. Express uses a changing port by default, and an existing installation may
-accept Windows accounts only.
+**Why:** the API connects to `localhost,1433` (or `localhost,14333` side by side): the port in step 5. Express uses a
+changing port by default, and an existing installation may accept Windows accounts only. This step changes **only** the
+instance named in step 5.
 
 **Check** (the **Do** box uses `$sqlKey` from here, so run this first):
 
 ```powershell
-$instanceId = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').SQLEXPRESS     # e.g. MSSQL17.SQLEXPRESS
+$instanceId = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').($WI.SqlInstance)   # e.g. MSSQL17.SQLEXPRESS2025
 $sqlKey = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$instanceId\MSSQLServer"
 [pscustomobject]@{
     LoginMode       = (Get-ItemProperty $sqlKey).LoginMode                                         # 2 = mixed mode
     TcpEnabled      = (Get-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp").Enabled                  # 1
-    TcpPort         = (Get-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp\IPAll").TcpPort            # 1433
+    TcpPort         = (Get-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp\IPAll").TcpPort            # 1433 (14333 side by side)
     TcpDynamicPorts = (Get-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp\IPAll").TcpDynamicPorts    # (empty)
 }
-Test-NetConnection -ComputerName localhost -Port 1433 -InformationLevel Quiet                     # True
+Test-NetConnection -ComputerName localhost -Port $WI.SqlPort -InformationLevel Quiet              # True
 ```
 
 **Do:**
@@ -885,14 +918,17 @@ Test-NetConnection -ComputerName localhost -Port 1433 -InformationLevel Quiet   
 Set-ItemProperty $sqlKey -Name LoginMode -Value 2
 Set-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp" -Name Enabled -Value 1
 Set-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp\IPAll" -Name TcpDynamicPorts -Value ''
-Set-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp\IPAll" -Name TcpPort -Value '1433'
-Restart-Service 'MSSQL$SQLEXPRESS' -Force
+Set-ItemProperty "$sqlKey\SuperSocketNetLib\Tcp\IPAll" -Name TcpPort -Value "$($WI.SqlPort)"
+Restart-Service "MSSQL`$$($WI.SqlInstance)" -Force
 ```
 
-**Verify:** run the **Check** box again: `2, 1, 1433, (empty)` and `True`.
+**Verify:** run the **Check** box again: `2, 1, 1433` (or `14333`)`, (empty)` and `True`. Side by side, your other
+applications still work (open one of their pages).
 
-**If not:** `Test-NetConnection` stays `False` → `Get-Service 'MSSQL$SQLEXPRESS'` must be *Running*; if it stopped,
-**Event Viewer** (`eventvwr`) → **Windows Logs → Application**, source *MSSQL$SQLEXPRESS*, says why.
+**If not:** `Test-NetConnection` stays `False` → `Get-Service "MSSQL`$$($WI.SqlInstance)"` must be *Running*; if it
+stopped, **Event Viewer** (`eventvwr`) → **Windows Logs → Application**, source *MSSQL$SQLEXPRESS2025* (or
+*MSSQL$SQLEXPRESS*), says why: often *the port is already in use* → choose another free port in step 5 and run step 25
+again.
 
 ## 26. The PowerShell `SqlServer` module
 
@@ -965,7 +1001,7 @@ Invoke-WiSql -Database WabiInsightDB -Credential $dbCredential "SELECT DB_NAME()
 **Verify** (each line must print `True`):
 
 ```powershell
-Test-NetConnection localhost -Port 1433 -InformationLevel Quiet                              # SQL Server Express (step 25)
+Test-NetConnection localhost -Port $WI.SqlPort -InformationLevel Quiet                       # SQL Server Express (step 25)
 Test-NetConnection github.com -Port 443 -InformationLevel Quiet                              # GitHub
 Test-NetConnection api.github.com -Port 443 -InformationLevel Quiet                          # GitHub's API (the runner, downloads)
 Test-NetConnection api.anthropic.com -Port 443 -InformationLevel Quiet                       # the AI provider
@@ -1055,7 +1091,7 @@ if (-not $dbPassword) { $dbPassword = Read-WiSecret 'Password of wabiinsightdbow
 $storageCs = Read-WiSecret 'Azure Storage connection string (step 10)'
 if ($storageCs -notmatch "AccountName=$($WI.StorageAccount);") { throw "The connection string is not for the storage account $($WI.StorageAccount) (step 5)." }
 $localSettings = [ordered]@{
-    ConnectionStrings = [ordered]@{ ConfigurationDatabase = "Server=localhost,1433;Database=WabiInsightDB;User Id=wabiinsightdbowner;Password=$dbPassword;Encrypt=True;TrustServerCertificate=True;" }
+    ConnectionStrings = [ordered]@{ ConfigurationDatabase = "Server=localhost,$($WI.SqlPort);Database=WabiInsightDB;User Id=wabiinsightdbowner;Password=$dbPassword;Encrypt=True;TrustServerCertificate=True;" }
     Platform          = [ordered]@{ BaseUrl = "https://$($WI.Domain)" }
     Storage           = [ordered]@{
         Provider  = 'AzureBlob'
@@ -1143,7 +1179,7 @@ Both folders are still empty, so the sites show errors until the first deploymen
 ```powershell
 Get-NetFirewallRule -DisplayGroup 'World Wide Web Services (HTTP)', 'Secure World Wide Web Services (HTTPS)' -ErrorAction SilentlyContinue |
     Select-Object DisplayName, Enabled, Direction, Action
-Get-NetFirewallPortFilter | Where-Object LocalPort -eq 1433 | Get-NetFirewallRule | Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' } | Select-Object DisplayName   # (nothing)
+Get-NetFirewallPortFilter | Where-Object { $_.LocalPort -in '1433', "$($WI.SqlPort)" } | Get-NetFirewallRule | Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' } | Select-Object DisplayName   # (nothing)
 Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*$($WI.Domain)*" -or $_.DnsNameList.Unicode -contains $WI.Domain } | Select-Object Subject, NotAfter, Thumbprint
 ```
 
@@ -1192,8 +1228,8 @@ netsh http show sslcert hostnameport="$($WI.Domain):443" | Select-String 'Certif
 Get-ScheduledTask | Where-Object TaskName -like 'win-acme*' | Select-Object TaskName, State    # the renewal task, Ready
 ```
 
-Run the **Check** box again too: the HTTP and HTTPS rules show `True / Inbound / Allow`, no inbound rule lists port
-1433, and the certificate is listed with an expiry date (`NotAfter`) in the future.
+Run the **Check** box again too: the HTTP and HTTPS rules show `True / Inbound / Allow`, no inbound rule lists the SQL
+port, and the certificate is listed with an expiry date (`NotAfter`) in the future.
 
 ---
 # Part G — CI/CD and backups: deploy from GitHub with one click
@@ -1338,6 +1374,7 @@ backup`** does it every night at 02:30:
 | `keys.zip`: the key ring | same folder |
 | A copy of the folder | Azure, container `wabi-backups`, folder `<yyyyMMdd-HHmm>/` |
 
+- It backs up the Wabi Insight instance only (step 5's port); side by side, the other instance is not included.
 - The VPS keeps the last **7** nights (about 0.5 GB a night with the demo organizations). Azure keeps **30** days
   (step 13).
 - **The deploy script runs this same task before every database migration**, and stops if it fails. Keep the task name
@@ -1361,7 +1398,7 @@ folder, and registers the task:
 ```powershell
 . {
 $backup = $WI.Backup
-icacls $backup /grant 'NT Service\MSSQL$SQLEXPRESS:(OI)(CI)M' | Out-Null             # SQL Server writes the .bak files
+icacls $backup /grant "NT Service\MSSQL`$$($WI.SqlInstance):(OI)(CI)M" | Out-Null    # SQL Server writes the .bak files
 Invoke-WiSql "IF SUSER_ID(N'NT AUTHORITY\SYSTEM') IS NULL CREATE LOGIN [NT AUTHORITY\SYSTEM] FROM WINDOWS; ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\SYSTEM];"
 $sas = Read-WiSecret 'Backups upload SAS URL (step 12)'
 if ($sas -notmatch '^https://[a-z0-9]+\.blob\.core\.windows\.net/wabi-backups\?.*sig=') { throw 'This is not the SAS URL of the wabi-backups container (step 12).' }
@@ -1379,7 +1416,7 @@ $log = Join-Path $PSScriptRoot 'backup.log'
 function Write-Log([string]$Message) { Add-Content -Path $log -Value ('{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $Message) }
 try {
     Import-Module SqlServer
-    $sql = @{ ServerInstance = 'localhost,1433'; TrustServerCertificate = $true; QueryTimeout = 3600; DisableVariables = $true }
+    $sql = @{ ServerInstance = '__SERVER__'; TrustServerCertificate = $true; QueryTimeout = 3600; DisableVariables = $true }
     $stamp = Get-Date -Format 'yyyyMMdd-HHmm'
     $night = Join-Path $PSScriptRoot $stamp
     New-Item -ItemType Directory -Force -Path $night | Out-Null
@@ -1415,7 +1452,7 @@ try {
     exit 1
 }
 '@
-$script = $script.Replace('__KEYS__', (Join-Path $WI.Root 'keys')).Replace('__SAS__', $sasFile)
+$script = $script.Replace('__KEYS__', (Join-Path $WI.Root 'keys')).Replace('__SAS__', $sasFile).Replace('__SERVER__', "localhost,$($WI.SqlPort)")
 Set-Content -Path (Join-Path $backup 'backup.ps1') -Value $script -Encoding UTF8
 $action    = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$backup\backup.ps1`""
 $trigger   = New-ScheduledTaskTrigger -Daily -At '02:30'
@@ -1672,7 +1709,7 @@ Invoke-WiSql -Database WabiInsightDB "GRANT SELECT ON SCHEMA::[insights] TO [wab
 $localPath = Join-Path $WI.Root 'web\api\appsettings.Local.json'
 $settings = Get-Content $localPath -Raw | ConvertFrom-Json
 $settings | Add-Member -Force -NotePropertyName Insights -NotePropertyValue ([pscustomobject]@{
-    ConnectionString = "Server=localhost,1433;Database=WabiInsightDB;User Id=wabi_insight_insights;Password=$insightsPassword;Encrypt=True;TrustServerCertificate=True;" })
+    ConnectionString = "Server=localhost,$($WI.SqlPort);Database=WabiInsightDB;User Id=wabi_insight_insights;Password=$insightsPassword;Encrypt=True;TrustServerCertificate=True;" })
 $settings | ConvertTo-Json -Depth 6 | Set-Content $localPath -Encoding UTF8
 Remove-Variable insightsPassword
 Restart-WebAppPool 'WabiInsightApi'
@@ -1823,11 +1860,13 @@ encrypts connection strings with this server's key ring.
 | WBK | Digital Banking | `Server=localhost,1433;Database=WabiBankDigitalDB;User Id=wbdigital_reader;Password=WbDigital#Reader#2026;Encrypt=True;TrustServerCertificate=True;` |
 | WBK | IT Help Desk | `Server=localhost,1433;Database=WabiBankITDB;User Id=wbit_reader;Password=WbIt#Reader#2026;Encrypt=True;TrustServerCertificate=True;` |
 
+**Side by side (step 22):** write your port instead of `1433` in each string, for example `Server=localhost,14333;…`.
+
 These sample passwords are published in the repository's READMEs; they're safe here only because SQL Server is not
 reachable from the internet (steps 2 and 32).
 
 **If not:** *Test connection* fails with *Login failed* → the string was pasted incompletely (it must end with
-`TrustServerCertificate=True;`). *A network-related error* → step 25 (port 1433).
+`TrustServerCertificate=True;`). *A network-related error* → the port in the string isn't step 5's port, or step 25.
 
 **Verify:** sign in as another sample user, for example `khalid.alsuwaidi@gulfaviation.example` (GAS CEO) → change the
 password → **Ask** → choose *Flight Operations* → click one of the example questions → an answer with a table or chart
@@ -1994,7 +2033,7 @@ restored. Wabi Insight only ever **reads** it, through a login that can only rea
    $db  = 'AcmeErpDB'                                   # CHANGE: the database name on this server (letters and digits)
    $bak = 'D:\wabi-insight\import\AcmeErp.bak'          # CHANGE: the file
    $reader = ($db.ToLower() -replace '[^a-z0-9]', '') + '_reader'
-   icacls (Split-Path $bak -Parent) /grant 'NT Service\MSSQL$SQLEXPRESS:(OI)(CI)RX' | Out-Null
+   icacls (Split-Path $bak -Parent) /grant "NT Service\MSSQL`$$($WI.SqlInstance):(OI)(CI)RX" | Out-Null
    $dataPath = (Invoke-WiSql "SELECT CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS nvarchar(260)) AS P").P
    $logPath  = (Invoke-WiSql "SELECT CAST(SERVERPROPERTY('InstanceDefaultLogPath') AS nvarchar(260)) AS P").P
    $moves = Invoke-WiSql "RESTORE FILELISTONLY FROM DISK = N'$bak'" | ForEach-Object {
@@ -2006,7 +2045,7 @@ restored. Wabi Insight only ever **reads** it, through a login that can only rea
    Invoke-WiSql "IF SUSER_ID(N'$reader') IS NULL CREATE LOGIN [$reader] WITH PASSWORD = N'$readerPassword', DEFAULT_DATABASE = [$db], CHECK_POLICY = ON ELSE ALTER LOGIN [$reader] WITH PASSWORD = N'$readerPassword';"
    Invoke-WiSql -Database $db "IF DATABASE_PRINCIPAL_ID(N'$reader') IS NULL CREATE USER [$reader] FOR LOGIN [$reader] ELSE ALTER USER [$reader] WITH LOGIN = [$reader]; ALTER ROLE db_datareader ADD MEMBER [$reader];"
    "Connection string (store it; it is shown once):"
-   "Server=localhost,1433;Database=$db;User Id=$reader;Password=$readerPassword;Encrypt=True;TrustServerCertificate=True;"
+   "Server=localhost,$($WI.SqlPort);Database=$db;User Id=$reader;Password=$readerPassword;Encrypt=True;TrustServerCertificate=True;"
    Remove-Variable readerPassword
    }
    ```
@@ -2096,7 +2135,7 @@ still work because the key ring came back with the databases). Then run the full
 ## 52. Security checklist
 
 - **Remote Desktop:** port 3389 open to your own IP only (step 2), and a long Administrator password.
-- **SQL Server:** port 1433 closed to the internet, in the provider panel (step 2) and in Windows (step 32). The
+- **SQL Server:** its port (1433 or 14333) closed to the internet, in the provider panel (step 2) and in Windows (step 32). The
   application uses `wabiinsightdbowner`, which owns `WabiInsightDB` only; organizations' databases are read through
   read-only logins. The `sa` password is in your password manager only.
 - **Azure Storage:** both containers private; the storage firewall allows only the VPS and you (step 11); the
@@ -2132,7 +2171,8 @@ Not included: the AI provider's usage, your domain, your e-mail service.
 | `404` on `/api/…`, but the site loads | ARR proxy off, or the web app's `web.config` missing | Step 21 **Verify**; deploy `frontend` again |
 | `502.3` after about 2 minutes on a study | ARR timeout | Step 21: timeout `00:10:00` |
 | *Login failed for user 'wabiinsightdbowner'* | Wrong password in `appsettings.Local.json`, or mixed mode off | Step 27 **Verify**; step 25 **Check**. A forgotten password: `Invoke-WiSql "ALTER LOGIN [wabiinsightdbowner] WITH PASSWORD = N'<new password>';"`, put it after `Password=` in `appsettings.Local.json` (`notepad (Join-Path $WI.Root 'web\api\appsettings.Local.json')`), then `Restart-WebAppPool WabiInsightApi` |
-| *A network-related or instance-specific error* connecting to SQL | TCP off or not on port 1433 | Step 25 |
+| *A network-related or instance-specific error* connecting to SQL | TCP off, or not on step 5's port | Step 25 |
+| Side by side: your other applications can't reach their database any more | Step 25 was run on their instance | Step 5 must name `SQLEXPRESS2025` / `14333`; set the other instance's port back to what it was (step 25 with its name) |
 | Deploy: *Storage check failed*, or files don't open (*403*) | The VPS can't reach the container | Step 11 (VPS IP in the storage firewall); step 10 (key rotated? new connection string in step 30); then `Restart-WebAppPool WabiInsightApi` |
 | Signed out right after signing in | The site was opened with `http://` | Use `https://` |
 | E-mails don't arrive | SMTP settings or outgoing port | `Invoke-WiSql -Database WabiInsightDB "SELECT TOP 10 Status, RecipientEmail, LastError, CreatedAt FROM dbo.EmailMessages ORDER BY CreatedAt DESC"`; ask the provider to allow outgoing 587/465 |
