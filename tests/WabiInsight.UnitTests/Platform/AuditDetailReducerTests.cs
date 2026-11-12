@@ -5,7 +5,7 @@ namespace WabiInsight.UnitTests.Platform;
 
 public sealed class AuditDetailReducerTests
 {
-    private static JsonElement Parse(string? json) => JsonDocument.Parse(json!).RootElement;
+    private static JsonElement Parse(string? json) => JsonElement.Parse(json!);
 
     private static string[] Withheld(string? json) => [.. Parse(json).GetProperty("withheld").EnumerateArray().Select(w => w.GetString()!)];
 
