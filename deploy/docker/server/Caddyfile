@@ -1,0 +1,31 @@
+# Caddy: the HTTPS front door of Wabi Insight (docs/DEPLOYMENT_LINUX_DOCKER.md).
+# It obtains and renews the Let's Encrypt certificate for WI_DOMAIN by itself, redirects http:// to https://, and
+# passes /api and /health to the API and everything else to the web app. (With WI_DOMAIN=localhost it uses its own
+# local certificate instead, for tests.)
+{
+	email {$WI_ACME_EMAIL}
+	# Empty normally. WI_CADDY_OPTIONS=local_certs in .env makes Caddy use its own certificate instead of Let's
+	# Encrypt: used to test a copy on a new server before DNS points at it (guide step 46).
+	{$WI_CADDY_OPTIONS}
+}
+
+{$WI_DOMAIN} {
+	encode zstd gzip
+
+	# Ticket attachments are limited to 10 MB by the API; 12 MB leaves room for the form around them.
+	request_body {
+		max_size 12MB
+	}
+
+	# HSTS on every answer that does not already carry it (the API sets its own).
+	header ?Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	@backend path /api/* /health/*
+	handle @backend {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		reverse_proxy web:80
+	}
+}

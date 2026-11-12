@@ -1,4 +1,6 @@
-# actionlint configuration: custom label of the self-hosted deployment runners (docs/DEVOPS_LINUX.md, docs/DEVOPS_WINDOWS.md).
+# actionlint configuration: custom labels of the self-hosted deployment runners (docs/DEVOPS_LINUX.md,
+# docs/DEVOPS_WINDOWS.md, docs/DEPLOYMENT_LINUX_DOCKER.md).
 self-hosted-runner:
   labels:
     - wabi-insight
+    - wabi-insight-docker

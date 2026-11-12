@@ -1,0 +1,107 @@
+# Wabi Insight on one Linux server with Docker (docs/DEPLOYMENT_LINUX_DOCKER.md).
+#
+# Installed by `wabi-docker install` as /opt/wabi-insight/compose.yaml and run only through the `wabi-docker` command,
+# which supplies the image version (WI_IMAGE_TAG). The settings come from two files next to it:
+#   .env      — this stack: domain, certificate e-mail, image registry, SQL Server administrator password, backups;
+#   api.env   — the application's settings (database connection, files in Azure Blob, e-mail, AI keys…).
+#
+#   Internet ──443/80──▶ caddy (HTTPS certificate) ──/api, /health──▶ api ──▶ sqlserver
+#                                                  └──everything else─▶ web (the web app)
+#
+# Only caddy publishes ports. The API, the web container and SQL Server are reachable on the private network
+# "wabi" only, so the database is never exposed to the internet.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      WI_DOMAIN: ${WI_DOMAIN:?Set WI_DOMAIN in /opt/wabi-insight/.env}
+      WI_ACME_EMAIL: ${WI_ACME_EMAIL:?Set WI_ACME_EMAIL in /opt/wabi-insight/.env}
+      WI_CADDY_OPTIONS: ${WI_CADDY_OPTIONS:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      wabi:
+        # A fixed address: the API trusts the client address and https scheme that this proxy, and only this
+        # proxy, passes on (ReverseProxy__KnownProxies__0 below).
+        ipv4_address: 172.30.0.10
+    depends_on:
+      - web
+      - api
+    logging: *logging
+
+  web:
+    image: ${WI_REGISTRY:-ghcr.io/mtawfig}/wabi-insight-web:${WI_IMAGE_TAG:-none}
+    restart: unless-stopped
+    networks: [wabi]
+    logging: *logging
+
+  api:
+    image: ${WI_REGISTRY:-ghcr.io/mtawfig}/wabi-insight-api:${WI_IMAGE_TAG:-none}
+    restart: unless-stopped
+    # The API keeps sending the e-mails it already holds for Email:ShutdownGraceSeconds (20) before it stops.
+    stop_grace_period: 30s
+    env_file:
+      - ./api.env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Platform__BaseUrl: https://${WI_DOMAIN:?Set WI_DOMAIN in /opt/wabi-insight/.env}
+      ReverseProxy__KnownProxies__0: 172.30.0.10
+      Storage__RootPath: /var/lib/wabi-insight/artifacts
+      DataProtection__KeyRingPath: /var/lib/wabi-insight/keys
+    volumes:
+      - api-files:/var/lib/wabi-insight/artifacts
+      - api-keys:/var/lib/wabi-insight/keys
+    networks: [wabi]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    logging: *logging
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    # The connection strings printed by the sample scripts use this name, and the API reaches the server by it.
+    hostname: sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${WI_SA_PASSWORD:?Set WI_SA_PASSWORD in /opt/wabi-insight/.env}
+      MSSQL_PID: ${WI_MSSQL_EDITION:-Express}
+    volumes:
+      - mssql:/var/opt/mssql
+      - ./samples:/samples:ro
+      - ./sql:/wabi-sql:ro
+    networks: [wabi]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    logging: *logging
+
+volumes:
+  caddy-data:
+  caddy-config:
+  api-files:
+  api-keys:
+  mssql:
+
+networks:
+  wabi:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
