@@ -1,0 +1,161 @@
+# Manual deployment to a Linux server that runs Wabi Insight with Docker (docs/DEPLOYMENT_LINUX_DOCKER.md, Part E).
+# Never runs automatically: Actions → "Deploy (Docker)" → Run workflow → choose the branch (or a commit to roll back).
+#
+#   images  (GitHub)        tests (optional), builds the API and web images, pushes them to GitHub's container
+#                           registry as ghcr.io/<owner>/wabi-insight-{api,web}:<12-character commit>
+#   deploy  (your server)   the self-hosted runner (labels self-hosted, linux, wabi-insight-docker) runs the root-owned
+#                           /usr/local/sbin/wabi-docker through one sudo rule: it downloads that version, backs up,
+#                           migrates, starts it, checks it and goes back to the previous version if it is not healthy.
+#
+# The images stay private: they contain appsettings.json (owner decision G). The deploy job reads them with the
+# workflow's own short-lived token; nothing is stored on the server.
+name: Deploy (Docker)
+run-name: "Deploy (Docker) ${{ inputs.ref || github.ref_name }} by @${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: "Run the unit tests and the web tests before building"
+        type: boolean
+        default: true
+      ref:
+        description: "Optional commit SHA or tag to deploy instead of the selected branch (e.g. to roll back)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-docker
+  cancel-in-progress: false
+
+jobs:
+  images:
+    name: Build and publish the images
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      registry: ${{ steps.version.outputs.registry }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Version and registry
+        id: version
+        run: |
+          echo "version=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+          echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v4
+        if: inputs.run_tests
+        with:
+          dotnet-version: "10.0.x"
+      - name: Unit tests
+        if: inputs.run_tests
+        run: dotnet test tests/WabiInsight.UnitTests --configuration Release
+      - uses: actions/setup-node@v4
+        if: inputs.run_tests
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      - name: Web lint and tests
+        if: inputs.run_tests
+        working-directory: src/web
+        run: |
+          npm ci
+          npm run lint
+          npm test
+
+      - name: Sign in to the container registry
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Build and push the API image
+        env:
+          IMAGE: ${{ steps.version.outputs.registry }}/wabi-insight-api:${{ steps.version.outputs.version }}
+        run: |
+          docker build -f src/WabiInsight.Api/Dockerfile \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Build and push the web image
+        env:
+          IMAGE: ${{ steps.version.outputs.registry }}/wabi-insight-web:${{ steps.version.outputs.version }}
+        run: |
+          docker build -f src/web/Dockerfile \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" -t "$IMAGE" src/web
+          docker push "$IMAGE"
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          REGISTRY: ${{ steps.version.outputs.registry }}
+        run: |
+          {
+            echo "### Images published"
+            echo "- \`$REGISTRY/wabi-insight-api:$VERSION\`"
+            echo "- \`$REGISTRY/wabi-insight-web:$VERSION\`"
+            echo ""
+            echo "By hand on a server: \`sudo wabi-docker deploy $VERSION\` (after \`sudo wabi-docker registry-login\`)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy to the Docker server
+    needs: images
+    runs-on: [self-hosted, linux, wabi-insight-docker]
+    environment:
+      name: production-docker
+      url: ${{ vars.WI_PUBLIC_URL }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    env:
+      VERSION: ${{ needs.images.outputs.version }}
+      WABI_DOCKER: /usr/local/sbin/wabi-docker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          sparse-checkout: deploy/docker/server
+
+      - name: Check the server's wabi-docker command
+        run: |
+          if [ ! -x "$WABI_DOCKER" ]; then
+            echo "::error::$WABI_DOCKER is not installed. See docs/DEPLOYMENT_LINUX_DOCKER.md step 16."
+            exit 1
+          fi
+          if ! installed=$(sudo -n "$WABI_DOCKER" version); then
+            echo "::error::The runner user may not run $WABI_DOCKER with sudo. See docs/DEPLOYMENT_LINUX_DOCKER.md step 25."
+            exit 1
+          fi
+          expected=$(grep -m1 '^readonly SCRIPT_VERSION=' deploy/docker/server/wabi-docker.sh | cut -d= -f2)
+          if [ "$installed" != "$expected" ]; then
+            echo "::warning::The server has wabi-docker version $installed, this version of the repository has $expected. Update it on the server (docs/DEPLOYMENT_LINUX_DOCKER.md step 38), then run this deployment again if it fails."
+          fi
+
+      - name: Deploy version ${{ env.VERSION }}
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$TOKEN" | sudo -n "$WABI_DOCKER" deploy "$VERSION" --registry-user "$GITHUB_ACTOR"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deploy (Docker)"
+            echo "- Version: \`$VERSION\`"
+            echo "- Site: ${{ vars.WI_PUBLIC_URL }}"
+            echo "- On the server: \`sudo wabi-docker status\`"
+          } >> "$GITHUB_STEP_SUMMARY"

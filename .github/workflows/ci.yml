@@ -181,7 +181,7 @@ jobs:
   images:
     name: Container images
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - name: Build API image
@@ -195,3 +195,36 @@ jobs:
           curl -fsS http://localhost:8080/health/live
           docker logs api | tail -20
           docker rm -f api
+      # The whole server stack of docs/DEPLOYMENT_LINUX_DOCKER.md, exactly as a server runs it: wabi-docker install, init,
+      # deploy, bootstrap, sign-in through HTTPS (Caddy's local certificate for "localhost"), backup and restore.
+      - name: Docker server stack (wabi-docker)
+        env:
+          ADMIN_PASSWORD: "Ci#Docker#Admin#2026" # not a real credential: a throw-away CI database
+        run: |
+          set -euo pipefail
+          docker tag wabi-insight-api:ci local/wabi-insight-api:ci
+          docker tag wabi-insight-web:ci local/wabi-insight-web:ci
+          sudo bash deploy/docker/server/wabi-docker.sh install "$GITHUB_WORKSPACE"
+          sudo sed -i 's/^WI_DOMAIN=.*/WI_DOMAIN=localhost/; s/^WI_ACME_EMAIL=.*/WI_ACME_EMAIL=ci@example.com/; s#^WI_REGISTRY=.*#WI_REGISTRY=local#' /opt/wabi-insight/.env
+          sudo wabi-docker init
+          sudo wabi-docker deploy ci --no-pull
+          curl -fsSk https://localhost/health/ready | grep '"status":"Healthy"' > /dev/null
+          curl -fsSk https://localhost/ | grep '<app-root' > /dev/null
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost/login)" = 308
+          sudo WI_BOOTSTRAP_EMAIL=ci.admin@wabi.test WI_BOOTSTRAP_PASSWORD="$ADMIN_PASSWORD" wabi-docker bootstrap < /dev/null
+          sign_in() {
+            rm -f cookies.txt
+            token=$(curl -fsSk -c cookies.txt https://localhost/api/auth/csrf | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+            curl -fsSk -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $token" -H 'Content-Type: application/json' \
+              -d "{\"email\":\"ci.admin@wabi.test\",\"password\":\"$ADMIN_PASSWORD\"}" https://localhost/api/auth/login | grep '"principalType":"PlatformAdministrator"' > /dev/null
+          }
+          sign_in
+          sudo wabi-docker backup --no-upload
+          backup=$(sudo ls -1t /opt/wabi-insight/backups | grep -m1 '^wabi-backup-')
+          sudo wabi-docker restore "$backup"
+          curl -fsSk https://localhost/health/ready | grep '"status":"Healthy"' > /dev/null
+          sign_in
+          sudo wabi-docker status
+      - name: Docker server stack logs
+        if: failure()
+        run: sudo docker compose --project-name wabi-insight --project-directory /opt/wabi-insight -f /opt/wabi-insight/compose.yaml logs --tail 80 || true

@@ -4,12 +4,13 @@ Wabi Insight is three deployable parts: the **Angular build** (static files), th
 
 **Step-by-step guides**, written for beginners: each one goes from a fresh server (or a new Azure subscription) to the live site, deployment **and** CI/CD, with a glossary, an information sheet, and a *Check*, *Do* and *Verify* for every step:
 
+- [Ubuntu 24.04 LTS with Docker: Caddy (HTTPS) + web + API + SQL Server Express in containers, managed by `wabi-docker`, deployed from GitHub (Deploy (Docker)), encrypted backups, and moving the same containers to another server or an Azure VM](DEPLOYMENT_LINUX_DOCKER.md)
 - [Ubuntu 24.04 LTS: nginx + systemd + SQL Server Express, deployed from GitHub (Deploy (Linux))](DEPLOYMENT_LINUX.md)
 - [Windows Server 2019: IIS + ARR + SQL Server Express, deployed from GitHub (Deploy (Windows))](DEPLOYMENT_WINDOWS_SERVER_2019.md)
 - [Windows Server 2019 VPS: IIS + ARR, with Azure SQL Database and Azure Blob Storage (Deploy (Windows))](DEPLOYMENT_WINDOWS_AZURE.md)
 - [Microsoft Azure: App Service + Azure SQL Database + Blob Storage, no server to maintain (Deploy (Azure))](DEPLOYMENT_AZURE.md)
 
-**CI/CD:** after the first setup, deploy from GitHub with one click (*Actions → Deploy (Linux) / Deploy (Windows)*: frontend, backend or both, optional database migration, automatic restore when the new backend isn't healthy). See [DEVOPS_LINUX.md](DEVOPS_LINUX.md) and [DEVOPS_WINDOWS.md](DEVOPS_WINDOWS.md). *Actions → Deploy (Azure)* creates the Azure resources and deploys the database, API and web app with checkboxes; see [DEPLOYMENT_AZURE.md](DEPLOYMENT_AZURE.md).
+**CI/CD:** after the first setup, deploy from GitHub with one click (*Actions → Deploy (Linux) / Deploy (Windows)*: frontend, backend or both, optional database migration, automatic restore when the new backend isn't healthy). See [DEVOPS_LINUX.md](DEVOPS_LINUX.md) and [DEVOPS_WINDOWS.md](DEVOPS_WINDOWS.md). *Actions → Deploy (Docker)* builds the two images, publishes them privately to GitHub's container registry and has the server's runner run `wabi-docker deploy` (backup, migration, health check, automatic return to the previous version); see [DEPLOYMENT_LINUX_DOCKER.md](DEPLOYMENT_LINUX_DOCKER.md). *Actions → Deploy (Azure)* creates the Azure resources and deploys the database, API and web app with checkboxes; see [DEPLOYMENT_AZURE.md](DEPLOYMENT_AZURE.md).
 
 **SQL Server Express** 2019, 2022 and 2025 are supported. The full integration suite passes on each. Express limits are 10 GB per database (50 GB on 2025), a 1,410 MB buffer pool and no SQL Server Agent (schedule backups with cron or Task Scheduler); see the guides.
 
@@ -76,6 +77,8 @@ Without nginx or IIS in front, the API can serve the Angular build itself: set `
 The API sets `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Cache-Control: no-store` and a `Content-Security-Policy` on every response; the web server sets the policy for the Angular shell (see the nginx and IIS files below).
 
 ## 2. Docker Compose (recommended for a single host)
+
+> **For a production server, use [DEPLOYMENT_LINUX_DOCKER.md](DEPLOYMENT_LINUX_DOCKER.md)**: the stack in `deploy/docker/server` adds HTTPS (Caddy), images from GitHub's registry, one-click deployments, encrypted backups with off-server copies and a tested restore on a new server. The files below (`docker-compose.prod.yml`) build the images on the host and remain for a quick single-host trial.
 
 Files: `src/WabiInsight.Api/Dockerfile`, `src/web/Dockerfile` + `src/web/nginx.conf`, `deploy/docker/docker-compose.prod.yml`, `deploy/docker/.env.example`.
 
