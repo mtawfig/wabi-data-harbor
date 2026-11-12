@@ -657,6 +657,7 @@ A **call** is one answer the platform produces with the AI, which is what costs 
 | 2026-11-10 | Owner decisions: asking by e-mail moved to version 3 (its requirements kept in §6), version 2 keeps WhatsApp only; plans sized by calls instead of users, with what counts as a call and the usual rules (yearly pool on-premises, monthly allowance on Cloud, warnings at 80% and 100%, a 10% grace, top-ups); all prices in AED. |
 | 2026-11-10 | Owner decision: pricing by **users with a pooled allowance** (50 calls a month per user, shared by the organization) and **free viewers**, chosen over calls only and over a fixed allowance for each person on their own; on-premises tiers by users (20, 100, 400) with the same licence prices; Cloud at AED 175 / 150 / 125 per user a month by volume, minimum 5. |
 | 2026-11-12 | New §12, *Proposals to discuss and confirm*: X1, a separate database for each organization (owner's proposal; not decided). Question 11 points to it. |
+| 2026-11-12 | §12: X2, forecasts in answers, calculated by the application and shown as labelled forecast columns (owner's proposal after the first deployment; not decided). |
 
 
 ## 12. Proposals to discuss and confirm
@@ -729,3 +730,61 @@ A cheaper step for one strict organization exists already in G4: a **dedicated i
 3. Which records stay in the platform database (the list above is proposed): in particular user profiles, and help-desk attachments?
 4. Always Encrypted on the owner's side: no, chosen columns, or more?
 5. Version: version 2 (and which release in §8), or version 3?
+
+### X2. Forecasts in answers (proposed by the owner, 2026-11-12; to discuss)
+
+**Where it came from.** On the first deployment the owner asked, as the manager of the aviation sample organization: delayed flights per month in 2025, arrivals and departures in two tables, each with the minimum, average and maximum delay, **and a column with the expected average delay for the same month of 2027**. The two tables came back. The forecast came back only as a sentence in the explanation ("with one year there is no trend to project… a seasonal baseline, not a statistical forecast"), not as a column.
+
+**Why version 1 cannot do it, whatever the wording.**
+- Every table and chart is the result of a typed, validated, read-only query plan. A plan can only select, filter, group and aggregate values that exist in the source; it has no step that produces a value for a period that is not in the data.
+- The part that writes the explanation receives the results and is told never to invent, extrapolate or recompute beyond simple comparisons of the listed values. That rule is what makes every number in an answer traceable to the source, and it stays.
+- A prompt cannot change how a table is drawn (a coloured column).
+
+**Idea.** A forecast is a **calculation done by the application**, not by the AI model. The model only recognises that a forecast is asked for and describes it in the plan; the API computes it with a fixed, documented method from the query's own results; the answer shows it as forecast, never as data.
+
+**How it would work.**
+1. **In the plan.** A new optional step on a panel: *forecast this measure, over this time grain, for these future periods, split by these columns* (for example: average delay, by month, for 2027, per direction). The plan validator accepts it only when the panel is a time series (a date or period column with a known grain) and the measure is numeric. The step never changes the SQL that is authorised and compiled; it only asks the API to run a second, widened query for the history (below).
+2. **History.** The API reads the same measure over **every period available in the source**, not only the period asked about, under the asker's own permissions and row scopes, so a forecast never uses rows the asker may not read.
+3. **Method** (chosen by the API from the amount of history, and named in the answer):
+
+   | History of the same measure | Method | Shown as |
+   |---|---|---|
+   | Fewer than 2 full cycles (for example one year of months) | Seasonal baseline: the same period of the last cycle | "Baseline, not a forecast: only one year of data" |
+   | 2 full cycles | Seasonal baseline adjusted by the year-on-year change | Forecast with a low-confidence note |
+   | 3 cycles or more | Seasonal method with trend (Holt-Winters additive, or seasonal-naive with drift when the series is short or irregular) | Forecast with a range |
+   | No seasonality in the grain (for example yearly totals) | Linear trend over at least 3 points | Forecast with a range |
+
+   A range (low and high) is shown whenever there is enough history to estimate one. Counts and amounts that cannot be negative are never forecast below zero. Horizon limit: no further ahead than the length of the history (one year of data cannot forecast 2035).
+4. **In the answer.**
+   - Tables: forecast columns come after the data columns, with a **distinct background and a "Forecast" label** in the header, in the application, PDF, Word and Excel alike (the owner asked for a light blue column; the colour comes from the organization's template, H3).
+   - Charts: forecast periods drawn as a dashed line or lighter bars, with the range as a band.
+   - "How this was computed" names the method, the years used, the number of points, and the warning when the history is short.
+   - The explanation may quote forecast values, always with the word *forecast* or *expected*, and never mixes them into totals of real data.
+5. **Stored and audited** like any result: the forecast values, method and history range are saved with the answer's version, so reopening it from My History never recomputes or changes it.
+
+**What stays as it is.**
+- The AI model still never computes or invents a number; its rule against extrapolation is unchanged. It writes about forecast values the API calculated and labelled.
+- No model-generated SQL; the history query is the authorised plan with its period filter widened by the API.
+- Permissions and row scopes apply to the history exactly as to the answer.
+- No business-domain logic in the engine: the method depends only on the shape of the series, not on what it measures.
+
+**Limits to state openly.**
+- A forecast from a statistical method is an estimate from past values only; it knows nothing about plans, new routes, strikes or weather. The answer says so.
+- With one year of history the result is a baseline (2027 looks like 2025). The sample databases hold 2025 only, so the demo would show exactly this case unless more years are generated.
+- Irregular or very sparse series (many empty months) are refused with a clear message instead of a misleading line.
+
+**Where else it would be used.** Periodic Reports (a forecast column in a monthly report), dashboards (B-items of §5), and monitoring rules of Phase 14 (alert when the actual value leaves the forecast range) could reuse the same calculation later; none of that is part of X2.
+
+**Size.** Medium to large: about four pull requests.
+1. Plan model, validator, history query and the calculation (with unit tests on known series, including the short-history cases).
+2. Answer model, storage, "How this was computed", explanation rules.
+3. Tables and charts in the application (English and Arabic), then PDF, Word and Excel.
+4. Sample data for more than one year (so the demo shows a real forecast), live checks and documentation.
+
+**To discuss and confirm.**
+1. Is X2 wanted for version 2, and in which release of §8?
+2. Methods: the table above (simple, explainable, no external library needed for the first two rows), or start with the baseline and year-on-year adjustment only and add the seasonal method later?
+3. Short history: show a labelled baseline (proposed), or refuse to forecast with fewer than two years?
+4. Range (low and high): shown by default, or only when asked?
+5. May a forecast be requested for any numeric measure, or only for measures an organization administrator marks as *forecastable* in the catalogue (safer for ratios and percentages)?
+6. Sample data: extend the two sample organizations to 2023–2025 so forecasts can be demonstrated?
