@@ -33,8 +33,8 @@ at `https://<your domain>`, with everything on **one server**:
 Without a second disk (`D:`), the files and the backups go to `C:\wabi-insight` instead. Step 5 chooses this for you.
 
 Other guides:
-- Database in **Azure SQL** and files in **Azure Blob Storage** instead of SQL Server Express and the disk:
-  [DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md).
+- The same server with the **files and the backup copies in Azure Blob Storage** (UAE North), the demo organizations and
+  a restore on a new VPS: [DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md).
 - More detail on the deployment pipeline: [DEVOPS_WINDOWS.md](DEVOPS_WINDOWS.md).
 - The same on Linux: [DEPLOYMENT_LINUX.md](DEPLOYMENT_LINUX.md). Every configuration key: [DEPLOYMENT.md](DEPLOYMENT.md).
 
@@ -1008,8 +1008,8 @@ port 1433, and the certificate is listed with an expiry date (`NotAfter`) in the
 - A migration that has run **stays applied**, even when the deployment fails afterwards. To undo it, restore the backup
   (step 39).
 - **No server secret is stored in GitHub.** The server keeps its own `appsettings.Local.json`.
-- The same workflow also serves the Azure setup ([DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md)). The deploy
-  script tells the two apart from the connection string in `appsettings.Local.json`.
+- The same workflow also serves [DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md) (files in Azure Blob Storage;
+  the deploy script then checks the container after each backend deployment).
 
 **The run options:**
 
@@ -1478,7 +1478,7 @@ Files stay on the VPS disk unless you switch them to a private Azure Blob Storag
 time. The database stays in SQL Server Express.
 
 To create the storage account and the container, follow [DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md):
-step 8 (only part 1, the resource group), step 11, step 12 (only the container `wabi-insight-files`) and step 13. The
+step 8, step 9 (only the container `wabi-insight-files`), step 10 and step 11. The
 VPS then needs outgoing HTTPS to `<account>.blob.core.windows.net`. The settings are explained in
 [DEPLOYMENT.md, File storage](DEPLOYMENT.md#file-storage-server-disk-or-azure-blob-storage).
 
@@ -1519,7 +1519,7 @@ until they're copied.
 
 - After the switch, every backend deployment runs `storage-check` and reports a problem with the container.
 - The nightly task (step 30) still mirrors the disk folder, which no longer receives new files. Protect the container
-  with Azure's soft delete instead (step 11 of the Azure guide).
+  with Azure's soft delete instead (step 8 of the Azure guide).
 - To switch back, set `Provider` to `FileSystem` in `appsettings.Local.json` and restart the pool. Files created while
   on Azure stay in the container.
 - Switching the line in the repository's `appsettings.json` would not change this server: its `appsettings.Local.json`

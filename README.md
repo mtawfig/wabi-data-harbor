@@ -12,7 +12,7 @@ Wabi Insight (platform code AP-AIR) is a secure, bilingual (English/Arabic), mul
 - [Version 2: scope and requirements (planned, not built)](docs/VERSION_2.md)
 - [Progress log](docs/PROGRESS.md)
 - [Proactive agent design (Phase 14): Monitoring Rules, Alerts, Periodic Reports](docs/PROACTIVE_AGENT.md)
-- [Deployment guide (Docker, Linux, IIS, Azure)](docs/DEPLOYMENT.md) · step by step for beginners: [Windows Server 2019 + SQL Server Express](docs/DEPLOYMENT_WINDOWS_SERVER_2019.md) · [Windows Server 2019 VPS + Azure SQL + Azure Blob Storage](docs/DEPLOYMENT_WINDOWS_AZURE.md) · [Ubuntu 24.04](docs/DEPLOYMENT_LINUX.md) · [Azure App Service](docs/DEPLOYMENT_AZURE.md)
+- [Deployment guide (Docker, Linux, IIS, Azure)](docs/DEPLOYMENT.md) · step by step for beginners: [Windows Server 2019 + SQL Server Express](docs/DEPLOYMENT_WINDOWS_SERVER_2019.md) · [Windows Server 2019 VPS + SQL Server Express, files in Azure Blob Storage](docs/DEPLOYMENT_WINDOWS_AZURE.md) · [Ubuntu with Docker](docs/DEPLOYMENT_LINUX_DOCKER.md) · [Ubuntu 24.04](docs/DEPLOYMENT_LINUX.md) · [Azure App Service](docs/DEPLOYMENT_AZURE.md)
 - CI/CD (deploy from GitHub Actions with one click: Deploy (Windows), Deploy (Linux), Deploy (Azure)): [Windows](docs/DEVOPS_WINDOWS.md) · [Linux](docs/DEVOPS_LINUX.md) · [Azure](docs/DEPLOYMENT_AZURE.md)
 - Build, test and run commands for developers: [CLAUDE.md, *Essential commands*](CLAUDE.md#essential-commands)
 - [Security](docs/SECURITY.md) · [Architecture](docs/ARCHITECTURE.md) · [Design system](docs/DESIGN_SYSTEM.md) · [Screens](docs/SCREENSHOTS.md) · [Performance](docs/PERFORMANCE.md)

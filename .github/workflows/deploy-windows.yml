@@ -1,4 +1,4 @@
-# Manual deployment to the Windows Server (IIS) (docs/DEVOPS_WINDOWS.md; with Azure SQL + Azure Blob Storage:
+# Manual deployment to the Windows Server (IIS) (docs/DEVOPS_WINDOWS.md; with the files in Azure Blob Storage:
 # docs/DEPLOYMENT_WINDOWS_AZURE.md). Never runs automatically:
 # Actions → "Deploy (Windows)" → Run workflow → choose the branch, what to deploy and whether to migrate the database.
 # Build: GitHub-hosted runners. Install: the self-hosted runner service on the server (labels self-hosted, windows,
