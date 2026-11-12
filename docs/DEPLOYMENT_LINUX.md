@@ -1563,7 +1563,7 @@ By default, the files are on this server's disk (`/var/lib/wabi-insight/artifact
 
 **Do:**
 1. Create the storage account and copy its connection string: follow
-   [DEPLOYMENT_WINDOWS_AZURE.md steps 11–13](DEPLOYMENT_WINDOWS_AZURE.md#11-storage-account-for-the-files) (you need
+   [DEPLOYMENT_WINDOWS_AZURE.md steps 8–10](DEPLOYMENT_WINDOWS_AZURE.md#8-the-storage-account-uae-north) (you need
    only the container `wabi-insight-files`). Store the connection string in your password manager.
 2. Open the settings file: `nano /etc/wabi-insight/api.env`. On the two lines under *Files in Azure Blob Storage*,
    remove the `# ` at the start; on the second one, replace everything after `ConnectionString=` with your connection

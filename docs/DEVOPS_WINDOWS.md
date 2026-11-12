@@ -2,7 +2,7 @@
 
 This guide connects your Windows Server 2019 (IIS) machine to GitHub so that you deploy Wabi Insight from the **Actions** tab with one click. Nothing deploys automatically. Every step has a **Check** (already done?), a **Do** and a **Verify** command, like the deployment guide.
 
-The Linux equivalent is [DEVOPS_LINUX.md](DEVOPS_LINUX.md). Setting up the server itself is [DEPLOYMENT_WINDOWS_SERVER_2019.md](DEPLOYMENT_WINDOWS_SERVER_2019.md). With the database in **Azure SQL** and the files in **Azure Blob Storage**, follow [DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md) instead: it covers the server and this CI/CD setup in one beginner's guide, with the same workflow and deploy script (which then records the Azure SQL restore point before migrations and checks the blob container after each backend deployment).
+The Linux equivalent is [DEVOPS_LINUX.md](DEVOPS_LINUX.md). Setting up the server itself is [DEPLOYMENT_WINDOWS_SERVER_2019.md](DEPLOYMENT_WINDOWS_SERVER_2019.md). With the files in **Azure Blob Storage** (and every database still on the VPS), follow [DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md) instead: it covers the server, this CI/CD setup, nightly backups copied to Azure and the demo organizations in one beginner's guide, with the same workflow and deploy script (which checks the blob container after each backend deployment, and records an Azure SQL restore point before migrations when the database is in Azure SQL, Appendix B of that guide).
 
 ## How it works
 

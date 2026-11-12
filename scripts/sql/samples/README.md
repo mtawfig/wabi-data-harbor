@@ -41,7 +41,7 @@ SQL Server Management Studio and Azure Data Studio work too: open each file and 
 3. Sign in to Wabi Insight as the organization administrator and, under **Organization Administration → Applications**, for each of *Flight Operations*, *HR, Payroll and Attendance* and *Procurement and Stores*: **Replace connection** with the read-only connection string (04 prints them; use the server address the API reaches), **Test connection** (must report *read-only verified*), then **Approve**. This step cannot be scripted: connection strings are encrypted with the deployment's Data Protection key ring and never stored in plain text.
 
 
-> **Application database in Azure SQL** (`docs/DEPLOYMENT_WINDOWS_AZURE.md`): the seed script reads the sample databases, so it can't run against Azure SQL. Keep the sample databases in a SQL Server Express on the VPS and follow Part H of that guide (steps 43–48): it copies the application database to the VPS, runs the seed there and copies the result back.
+> **Application database in Azure SQL** (the earlier version of `docs/DEPLOYMENT_WINDOWS_AZURE.md`, see its Appendix B): the seed script reads the sample databases, so it can't run against Azure SQL. Keep the sample databases in a SQL Server Express on the VPS and follow Part H of [that version](https://github.com/mtawfig/wabi-data-harbor/blob/5053287/docs/DEPLOYMENT_WINDOWS_AZURE.md) (steps 43–48): it copies the application database to the VPS, runs the seed there and copies the result back. With every database on the VPS (the current `docs/DEPLOYMENT_WINDOWS_AZURE.md`, Part I), the scripts simply run in order.
 
 ## Sample users
 

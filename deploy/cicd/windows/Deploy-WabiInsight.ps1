@@ -16,7 +16,7 @@
     Frontend: stage -> keep the live files as "previous-web" -> copy (index.html last) -> check the site over HTTPS.
     appsettings.Local.json (server settings) is never overwritten or deleted.
 
-    Azure SQL Database (the connection string names *.database.windows.net, docs/DEPLOYMENT_WINDOWS_AZURE.md): Azure keeps
+    Azure SQL Database (the connection string names *.database.windows.net, docs/DEPLOYMENT_WINDOWS_AZURE.md Appendix B): Azure keeps
     the backups, so before migrations the script records the point-in-time restore point (deploy log and run summary);
     the "Wabi Insight backup" task, when present, still runs first (on that setup it copies the key ring to Azure).
 
@@ -167,8 +167,8 @@ if ($Migrate -eq 'yes' -and -not $deployBackend) {
 }
 if ($deployBackend) {
     if (-not $ApiDir -or -not (Test-Path (Join-Path $ApiDir 'WabiInsight.Api.dll'))) { Stop-Deploy "-ApiDir must point at the published API (WabiInsight.Api.dll not found in '$ApiDir')." }
-    if (-not (Test-Path $dotnet)) { Stop-Deploy "$dotnet not found: install the ASP.NET Core Hosting Bundle (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 13, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 21)." }
-    if (-not (Test-Path (Join-Path $apiTarget 'appsettings.Local.json'))) { Stop-Deploy "$apiTarget\appsettings.Local.json is missing: create it first (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 24, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 26)." }
+    if (-not (Test-Path $dotnet)) { Stop-Deploy "$dotnet not found: install the ASP.NET Core Hosting Bundle (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 13, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 19)." }
+    if (-not (Test-Path (Join-Path $apiTarget 'appsettings.Local.json'))) { Stop-Deploy "$apiTarget\appsettings.Local.json is missing: create it first (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 24, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 30)." }
 }
 if ($deployFrontend) {
     if (-not $WebDir -or -not (Test-Path (Join-Path $WebDir 'browser\index.html'))) { Stop-Deploy "-WebDir must contain browser\index.html (the Angular build) and iis\web.config." }
@@ -229,7 +229,7 @@ try {
                 # Azure SQL keeps automatic backups: record the moment to restore to if this migration must be undone.
                 $restorePoint = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                 Write-Step "Database: Azure SQL Database, point-in-time restore point $restorePoint (UTC)"
-                Write-Output 'To undo this migration: Azure portal -> SQL database -> Restore -> point in time = this moment (docs/DEPLOYMENT_WINDOWS_AZURE.md step 38).'
+                Write-Output 'To undo this migration: Azure portal -> SQL database -> Restore -> point in time = this moment (docs/DEPLOYMENT_WINDOWS_AZURE.md Appendix B).'
                 Write-DeployLog "azure-sql restore-point=$restorePoint"
                 if ($env:GITHUB_STEP_SUMMARY) { Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "Azure SQL point-in-time restore point before the migration: **$restorePoint** (UTC)`n" -Encoding UTF8 }
             }
@@ -243,7 +243,7 @@ try {
                 $result = (Get-ScheduledTaskInfo -TaskName $BackupTaskName).LastTaskResult
                 if ($result -ne 0) { Restore-Backend; Stop-Deploy "Backup task finished with result $result; nothing was migrated." }
             } elseif ($azureSql) {
-                Write-Output "::warning::Scheduled task '$BackupTaskName' not found: the key ring was not copied before the migration (docs/DEPLOYMENT_WINDOWS_AZURE.md step 32). The database itself is covered by the restore point above."
+                Write-Output "::warning::Scheduled task '$BackupTaskName' not found: the key ring was not copied before the migration (docs/DEPLOYMENT_WINDOWS_AZURE.md step 36). The database itself is covered by the restore point above."
             } else {
                 Write-Output "::warning::Scheduled task '$BackupTaskName' not found: migrating without a fresh backup (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 30)."
             }
@@ -289,7 +289,7 @@ try {
                 $storageExit = $LASTEXITCODE
             } finally { Pop-Location }
             $global:LASTEXITCODE = 0
-            if ($storageExit -ne 0) { Stop-Deploy 'Storage check failed: the new backend is running, but it cannot use the Azure Blob Storage container. Check Storage:AzureBlob (connection string, container name) in appsettings.Local.json (docs/DEPLOYMENT_WINDOWS_AZURE.md steps 12, 13 and 26).' }
+            if ($storageExit -ne 0) { Stop-Deploy 'Storage check failed: the new backend is running, but it cannot use the Azure Blob Storage container. Check Storage:AzureBlob (connection string, container name) in appsettings.Local.json (docs/DEPLOYMENT_WINDOWS_AZURE.md steps 9, 10, 11 and 30).' }
         }
     }
 

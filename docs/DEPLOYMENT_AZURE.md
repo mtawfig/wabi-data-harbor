@@ -1076,7 +1076,7 @@ Use this if Wabi Insight already runs on a server of yours, set up with [DEPLOYM
 [DEPLOYMENT_WINDOWS_SERVER_2019.md](DEPLOYMENT_WINDOWS_SERVER_2019.md): SQL Server on that server and the files on its
 disk. You bring three things to Azure: the **database** (as a bacpac file), the **key ring** and the **files**.
 
-If your installation already uses Azure SQL and Azure Blob Storage ([DEPLOYMENT_WINDOWS_AZURE.md](DEPLOYMENT_WINDOWS_AZURE.md)),
+If your installation already uses Azure SQL and Azure Blob Storage ([DEPLOYMENT_WINDOWS_AZURE.md, Appendix B](DEPLOYMENT_WINDOWS_AZURE.md#appendix-b--the-database-in-azure-sql-instead-of-the-vps)),
 this appendix doesn't cover it.
 
 **Before you start:**
