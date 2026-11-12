@@ -496,7 +496,7 @@ The requirements worked out for version 2, kept so that version 3 starts from th
 | 7 | Sharing sends the owner's stored result to the recipient, whatever the recipient's own permissions. Keep this (the owner decides), or check the recipient's permissions too? | Sharing |
 | 8 | E-mails: accept storing the message encrypted until it is sent (E4), or keep the version 1 rule that bodies are never stored? | E4 |
 | 9 | Which of the *Could* items should move up or be dropped? | All |
-| 11 | Hybrid with the platform database at the organization's location: a dedicated installation per organization in the owner's cloud (proposed, keeps one database per installation), or a shared installation with a separate database per organization (a change to the architecture)? | G4 |
+| 11 | Hybrid with the platform database at the organization's location: a dedicated installation per organization in the owner's cloud (proposed, keeps one database per installation), or a shared installation with a separate database per organization (a change to the architecture)? The second option is now written out as proposal X1 (§12). | G4, X1 |
 | 12 | Hybrid, files: which stores are supported first (Azure Blob Storage in the organization's subscription, S3-compatible storage, a network share)? | G4 |
 | 13 | On-premises licence: contract only, or a licence file the installation checks (organization, expiry, number of users)? | G3 |
 | 14 | On-premises updates: how often a release is packaged, how many past releases are supported, and who applies them. | G3 |
@@ -656,3 +656,76 @@ A **call** is one answer the platform produces with the AI, which is what costs 
 | 2026-11-10 | Owner decisions 24 (plans and business model adopted; proposed prices added in §10; the Wabi Hub becomes a Must), 25 (WhatsApp: summary, personal download link, dashboards as a high-quality image; Twilio) and 26 (e-mail question address as recommended). |
 | 2026-11-10 | Owner decisions: asking by e-mail moved to version 3 (its requirements kept in §6), version 2 keeps WhatsApp only; plans sized by calls instead of users, with what counts as a call and the usual rules (yearly pool on-premises, monthly allowance on Cloud, warnings at 80% and 100%, a 10% grace, top-ups); all prices in AED. |
 | 2026-11-10 | Owner decision: pricing by **users with a pooled allowance** (50 calls a month per user, shared by the organization) and **free viewers**, chosen over calls only and over a fixed allowance for each person on their own; on-premises tiers by users (20, 100, 400) with the same licence prices; Cloud at AED 175 / 150 / 125 per user a month by volume, minimum 5. |
+| 2026-11-12 | New §12, *Proposals to discuss and confirm*: X1, a separate database for each organization (owner's proposal; not decided). Question 11 points to it. |
+
+
+## 12. Proposals to discuss and confirm
+
+Items raised by the owner after the version 2 scope was written. They are **not decided** and not in the proposed order (§8): each one is described here so the owner can discuss it, then confirm it (it moves into §5 with an ID of its area and an "owner decision" date), change it, or drop it. Nothing here is built.
+
+### X1. A separate database for each organization (proposed by the owner, 2026-11-12; to discuss)
+
+**Idea.** Today one configuration database holds everything: the platform's own records and every organization's configuration, questions and results, kept apart by `OrganizationId` and tenant filters (§3). X1 splits it in two:
+
+- a **platform database** that holds only what the platform needs to run, bill and support organizations, and none of their business data;
+- one **organization database** per organization, holding everything that belongs to that organization. It sits on the owner's side by default, or at the organization's location if the organization asks.
+
+**Platform database (owner's side).**
+- Organizations: status, plan and limits (users, calls, AI budget), and the usage counts that billing and the plan warnings need (§10).
+- Platform Administrators.
+- Sign-in accounts of organization users: e-mail, password hash, status, organization, lockout and reset requests. They must stay here: sign-in happens before the platform knows which organization database to open.
+- Platform-level settings: AI providers and their settings, the platform's e-mail server, the WhatsApp provider (D4), the organization's own mail server (G5) and model address (G2).
+- The help desk: tickets, comments, attachments, support access grants. Customers type their own text into tickets; the terms of service say so.
+- The schedule of background jobs (when, which organization, which job), not the job definitions.
+- Delivery records of e-mails and WhatsApp messages (recipient, status, time) and AI call metering (provider, model, tokens, cost, success, duration). Never a prompt, a question, an answer, a result or a message body.
+- The connection details of each organization database, encrypted by the API.
+
+**Organization database (one per organization).**
+- Structure and people: departments, sections, user profiles (names, employee numbers, department, section, language), roles, user roles, permissions and row scopes.
+- Data sources: registered applications with their encrypted connection strings, the catalogue (objects, columns, relationships, labels, semantic roles), example questions.
+- Work: questions, history and versions, query logs, access facts, shares, notifications, collections, reports and their files' references, alert rules, rule evaluations, alerts, Periodic Report definitions and deliveries.
+- The organization's own audit trail.
+
+**Where an organization database lives.**
+- **Owner's side (default):** one database per organization in the same region as the platform (for example an Azure SQL elastic pool in UAE North), so many small databases share one cost.
+- **Organization's location (on request):** their SQL Server, reached through the private network path of G6. The API needs a login that can read, write and change the schema of that one database, because each upgrade adds tables and columns.
+
+**Security.**
+- Every connection encrypted (TLS).
+- Every database encrypted at rest.
+- Secrets (connection strings, provider keys, mail passwords) encrypted by the API, so only the API can read them, as today.
+- "Readable only by the API" needs a decision. Encryption at rest protects disks and backups, but not against a database administrator who has access:
+  - for a database at the organization's location, the organization's administrators can read their own data, which is usually what they want;
+  - for databases on the owner's side, keeping the owner's own staff out needs Always Encrypted with keys held by the API, which makes searching and sorting much harder. It is proposed only for chosen columns, if at all.
+- The physical split adds a second wall between organizations; the tenant filters and ownership checks stay.
+
+**What changes in the product.**
+- The data model is split in two, with two sets of migrations; nearly every service changes how it reaches its data.
+- **Upgrades fan out:** every release migrates the platform database and then each organization database. A failure on one leaves that organization offline with a clear message and does not stop the others; the deploy log lists each database's version.
+- **Availability:** every page of an organization reads its database. When that database is unreachable, that organization's users get a clear message and other organizations are unaffected. A database at the organization's location adds a network hop to every click.
+- **Sign-in** reads the platform database; the first request after it opens the organization database and resolves roles and permissions there.
+- **Support mode:** a Platform Administrator with an approved grant (§16 of the specification) works in the organization database for the duration of the grant; the grant itself is recorded in the platform database.
+- **Background jobs:** the scheduler stays in the platform database and runs each job against the organization database it names.
+- **Platform Insights:** reads each organization database instead of one shared set of views.
+- **The platform's dashboards** (organizations, users, calls, e-mails, AI cost) read the platform database only, as they are built from counts.
+- **Backups, restore and offboarding** become per organization: restoring one organization never touches another, and an organization that leaves is removed by deleting its database (with an export first, if the contract says so).
+- **Tests:** every multi-organization test runs against at least two organization databases.
+
+**What X1 changes in recorded decisions.**
+- §3 (one configuration database per installation) and the project rules in `CLAUDE.md` ("one SQL Server config DB") change.
+- Question 11 (§7) gets the second answer, "a shared installation with a separate database per organization", instead of the dedicated installation proposed there.
+
+**Size.** Very large: a re-architecture rather than a feature, many pull requests over several weeks, larger than any phase so far.
+
+**Proposed stages, if confirmed.**
+1. **Organization databases on the owner's side only** (elastic pool, same region as the platform): the isolation, per-organization backup and simple offboarding, without the network and latency risks.
+2. **Organization databases at the organization's location**, for organizations that require it, over the private path of G6.
+
+A cheaper step for one strict organization exists already in G4: a **dedicated installation** of the web app and API for that organization alone, pointing at a database it hosts. It needs almost no code change and can be offered before X1.
+
+**To discuss and confirm.**
+1. Is X1 wanted, or is the dedicated installation of G4 enough for the organizations that ask?
+2. If wanted: stage 1 only for now, or both stages?
+3. Which records stay in the platform database (the list above is proposed): in particular user profiles, and help-desk attachments?
+4. Always Encrypted on the owner's side: no, chosen columns, or more?
+5. Version: version 2 (and which release in §8), or version 3?
