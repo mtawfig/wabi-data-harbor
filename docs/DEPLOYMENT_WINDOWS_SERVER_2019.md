@@ -76,7 +76,9 @@ setting is in [DEPLOYMENT.md](DEPLOYMENT.md). Use **one** guide for a server, no
 - Text in `<angle brackets>` is a placeholder. Replace it with your own value, **without** the brackets.
 - **Red text in PowerShell means an error.** Stop, read it, and look it up in *Troubleshooting* (step 49).
 - **Never paste a password, key or token into a chat, an e-mail or GitHub.** Keep each one in a password manager
-  (Bitwarden, 1Password, KeePass…).
+  (Bitwarden, 1Password, KeePass…): an app on **your own computer or phone**, not on the server, that keeps your
+  secrets in one encrypted vault. When this guide says *store it in your password manager*, create an entry there and
+  paste the value in.
 
 ### Windows basics you'll use
 
@@ -278,6 +280,8 @@ $WI = [ordered]@{
     Backup         = "$dataRoot\backup"              # nightly backups (step 30)
     SqlInstance    = 'SQLEXPRESS'                    # CHANGE to 'SQLEXPRESS2025' if this server already runs SQL Server for other applications (step 16)
     SqlPort        = 1433                            # CHANGE to 14333 in that case
+    BackupDatabases = @()                            # empty = back up every database of that SQL Server; list names only when it is shared with other applications (step 16)
+    RunnerDir      = 'C:\actions-runner'             # CHANGE to 'C:\actions-runner-wabi-insight' if this server already has a GitHub runner for another project (step 29)
 }
 New-Item -ItemType Directory -Force -Path $WI.Root | Out-Null
 $WI | Export-Clixml (Join-Path $WI.Root 'wabi-insight.vars.xml')
@@ -288,7 +292,14 @@ sites)? Then set `SqlInstance = 'SQLEXPRESS2025'` and `SqlPort = 14333`: Wabi In
 instance on its own port, and the existing one is **not touched** (step 16 explains). If you're not sure, run step 16's
 **Check** first, then come back here.
 
-To change a value later, edit it and paste the box again: the saved copy is updated. **In a new window**, load the
+To change a value later, edit it and paste the box again: the saved copy is updated. To change **one** value without
+retyping the others (for example a mistyped name):
+
+```powershell
+$WI = Import-Clixml C:\wabitex-apps\wabi-insight\wabi-insight.vars.xml
+$WI.Domain = 'insight.example.com'            # the value to correct
+$WI | Export-Clixml C:\wabitex-apps\wabi-insight\wabi-insight.vars.xml
+``` **In a new window**, load the
 values back with:
 
 ```powershell
@@ -400,6 +411,14 @@ save it. Then `cls` to clear the screen.
 They contain only letters, digits and `-`, which meets SQL Server's rules and is safe inside connection strings. Don't use
 `;`, `'` or `"` in these passwords.
 
+These two lines only **create and show** two random passwords. They change nothing on the server and save nothing:
+you copy them into your password manager, and they take effect when you paste them in steps 18, 21 and
+24. Running the lines again shows two **different** passwords: keep one pair and use it throughout.
+
+**Your own passwords instead?** Skip the two lines and store your own in the password manager. Each needs at least 12
+characters with three of: upper case, lower case, digits, symbols (SQL Server refuses weaker ones), and must not
+contain `;`, `'` or `"`.
+
 **Verify:** both passwords are in your password manager.
 
 ---
@@ -451,7 +470,10 @@ Set-TimeZone -Id 'Arabian Standard Time'      # UAE time
 w32tm /resync
 ```
 
-**Verify:** `Get-TimeZone` shows `Arabian Standard Time`, and `w32tm /query /status` shows a recent `Last Successful Sync
+**A VPS outside the UAE?** The time zone is your choice: it only decides when 02:30 is for the nightly backup and how
+the backup folders are named. Keep the server's zone, or set UAE time anyway; in both cases run `w32tm /resync`.
+
+**Verify:** `Get-TimeZone` shows the zone you chose (for example `Arabian Standard Time`), and `w32tm /query /status` shows a recent `Last Successful Sync
 Time`. **If** `w32tm /resync` says *The computer did not resync*: run `net start w32time` and try again.
 
 ## 10. Folders
@@ -587,6 +609,10 @@ Get-WebGlobalModule -Name AspNetCoreModuleV2 | Select-Object Name, Image
 dotnet --list-runtimes | Select-String 'Microsoft.AspNetCore.App 10\.'          # Microsoft.AspNetCore.App 10.0.x
 ```
 
+A server that already runs other .NET sites has `dotnet` and the IIS module from an older version (8 or 9). Wabi
+Insight needs **version 10**: the `10.0.x` line above must be there. Installing it does not remove or change the older
+versions; the two `net` lines restart IIS, so every site on the server is offline for a few seconds.
+
 **If not:** `dotnet` is *not recognized* → close PowerShell, open a new one as administrator, load step 5 again, and run
 **Verify** again.
 
@@ -682,6 +708,23 @@ Then choose your case:
   Apps → Microsoft SQL Server 20xx → Uninstall → Remove**, choosing that instance) leaves the other in place.
 - Later, if you want, the other applications' databases can move to the 2025 instance (a 2019 backup restores on 2025;
   the reverse is not possible).
+
+**Reusing an instance that other applications also use** works too (keep `SQLEXPRESS` / `1433`, skip steps 17 and
+18), with three things to know:
+- step 19 changes the port and the sign-in mode of that instance: do it only if its **Check** shows other values, and
+  expect a restart of SQL Server (the other applications lose their connection for a few seconds);
+- the nightly backup (step 30) would include the other applications' databases and logins. To back up **only Wabi
+  Insight's**, list them in step 5 and paste its values box again:
+
+  ```powershell
+  BackupDatabases = @('WabiInsightDB', 'FlightOperationsDB', 'HumanResourcesDB', 'ProcurementStoresDB',
+                      'WabiBankPersonnelDB', 'WabiBankCoreBankingDB', 'WabiBankFinanceDB', 'WabiBankDigitalDB', 'WabiBankITDB')
+  ```
+
+  (the platform database and the eight demo databases; names that don't exist yet are skipped). Add each
+  organization's database to the list when you add it (step 44);
+- the instance's version decides the limits: Express 2019 and 2022 allow 10 GB per database, and a customer's `.bak`
+  from a newer SQL Server cannot be restored on an older one.
 
 If you reuse an existing instance, make sure your Windows administrator account can manage it:
 `sqlcmd -S localhost\SQLEXPRESS -E -Q "SELECT IS_SRVROLEMEMBER('sysadmin')"` must print `1` (if `sqlcmd` isn't found,
@@ -1049,26 +1092,45 @@ Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*$($WI.Do
    ```
 
 2. Get a free Let's Encrypt certificate with **win-acme**. It renews by itself. DNS (step 3) must already point at the
-   VPS (step 6's last line), and port 80 must be open (step 2):
+   VPS (step 6's last line), and port 80 must be open (step 2). The box uses a win-acme that is already on the server
+   (for example in `C:\Tools\win-acme`, when other sites use it) or downloads it:
 
    ```powershell
-   $release = Invoke-RestMethod 'https://api.github.com/repos/win-acme/win-acme/releases/latest' -Headers @{ 'User-Agent' = 'wabi-insight-setup' }
-   $asset = $release.assets | Where-Object name -match 'x64\.trimmed\.zip$' | Select-Object -First 1
-   $zip = Get-WiDownload $asset.browser_download_url $asset.name
-   $wacsDir = Join-Path $WI.Root 'tools\win-acme'
-   Expand-Archive $zip -DestinationPath $wacsDir -Force
+   . {
+   $wacs = @('C:\Tools\win-acme\wacs.exe', (Join-Path $WI.Root 'tools\win-acme\wacs.exe'), "$env:ProgramFiles\win-acme\wacs.exe") |
+       Where-Object { Test-Path $_ } | Select-Object -First 1
+   if (-not $wacs) {
+       $release = Invoke-RestMethod 'https://api.github.com/repos/win-acme/win-acme/releases/latest' -Headers @{ 'User-Agent' = 'wabi-insight-setup' }
+       $asset = $release.assets | Where-Object name -match 'x64.*\.zip$' |
+           Sort-Object { $_.name -notmatch 'trimmed' }, { $_.name -match 'pluggable' } | Select-Object -First 1
+       if (-not $asset) { throw "No x64 zip found in win-acme $($release.tag_name): download it from https://www.win-acme.com and extract it into $(Join-Path $WI.Root 'tools\win-acme')." }
+       $zip = Get-WiDownload $asset.browser_download_url $asset.name
+       $wacsDir = Join-Path $WI.Root 'tools\win-acme'
+       Expand-Archive $zip -DestinationPath $wacsDir -Force
+       $wacs = Join-Path $wacsDir 'wacs.exe'
+   }
+   "Using $wacs"
    $siteId = (Get-Website -Name 'WabiInsight').Id
-   & (Join-Path $wacsDir 'wacs.exe') --source iis --siteid $siteId --host $WI.Domain --emailaddress $WI.CertEmail --accepttos
+   & $wacs --source iis --siteid $siteId --host $WI.Domain --emailaddress $WI.CertEmail --accepttos `
+       --installation iis --installationsiteid $siteId --sslport 443
+   }
    ```
 
-**You should see:** win-acme validates over port 80 (*Authorization result: valid*), stores the certificate, adds the
-`https` binding (port 443) to the site, and creates a daily renewal task.
+**You should see:** `Using …\wacs.exe`, then win-acme validates over port 80 (*Authorization result: valid*), stores the
+certificate, **adds the `https` binding (port 443) to the site**, and creates or reuses its daily renewal task. An
+existing win-acme keeps the certificates of your other sites as they are and adds one renewal for this site.
 
 **If not:**
 - *Authorization failed* / *Timeout* → DNS doesn't point at the VPS yet (step 6, last line), or port 80 is closed
-  (step 2). Fix it and run the last line again.
-- *An argument error* in your win-acme version → run `& (Join-Path $wacsDir 'wacs.exe')` without arguments and choose
-  **N: Create certificate (default settings)** → the site **WabiInsight**.
+  (step 2). Fix it and paste the box again.
+- The certificate is created but **no `https` binding** appears (the output has *Store with CertificateStore* and no
+  line about IIS) → your win-acme didn't run the IIS installation: paste the box again; if it still adds none, run
+  `& $wacs` without arguments → **M: Create certificate (full options)** → source **IIS**, site **WabiInsight**, store
+  **Certificate Store**, installation **IIS Web**. Don't add the binding by hand: a renewal would not update it.
+- *No x64 zip found* or a download error → get the x64 zip from <https://www.win-acme.com>, extract it into
+  `C:\wabitex-apps\wabi-insight\tools\win-acme`, and paste the box again.
+- *An argument error* in your win-acme version → run `& $wacs` without arguments and choose **N: Create certificate
+  (default settings)** → the site **WabiInsight**.
 - **You already have a certificate (`.pfx` file)?** Copy it to the VPS and import it instead:
   `Import-PfxCertificate -FilePath <path> -CertStoreLocation Cert:\LocalMachine\My -Password (Read-Host -AsSecureString)`,
   then `New-WebBinding -Name 'WabiInsight' -Protocol https -Port 443 -HostHeader $WI.Domain -SslFlags 1` and
@@ -1115,6 +1177,9 @@ port, and the certificate is listed with an expiry date (`NotAfter`) in the futu
 - A migration that has run **stays applied**, even when the deployment fails afterwards. To undo it, restore the backup
   (step 43).
 - **No server secret is stored in GitHub.** The server keeps its own `appsettings.Local.json`.
+- **Nothing is deployed by itself.** Merging a pull request starts only the **CI** run on `main` (build and tests).
+  A deployment starts when you click **Run workflow** on **Deploy (Windows)**, and you don't have to wait for the CI
+  run first: the deployment builds and tests the code itself.
 
 **The run options:**
 
@@ -1149,11 +1214,17 @@ On GitHub Free, private repositories don't get branch rules and reviewers; the w
 **Why:** the runner receives the deployments you start on GitHub. It runs as **LocalSystem**, because deployments write
 to protected folders, take the API offline, start the backup task and run migrations.
 
+**Another GitHub runner already on this server** (for another project, usually in `C:\actions-runner`)? Leave it alone.
+Set `RunnerDir = 'C:\actions-runner-wabi-insight'` in step 5 and paste its values box again: Wabi Insight gets its own
+runner folder and its own Windows service. A runner only takes jobs of the repository it is registered to, so the two
+never pick up each other's work.
+
 **[VPS PowerShell] Check:**
 
 ```powershell
-Test-Path 'C:\actions-runner\config.cmd'
-Get-Service -Name 'actions.runner.*' -ErrorAction SilentlyContinue | Select-Object Name, Status, StartType
+$WI.RunnerDir                                                  # C:\actions-runner, or C:\actions-runner-wabi-insight next to another runner
+Test-Path (Join-Path $WI.RunnerDir 'config.cmd')               # True = already downloaded
+Get-Service -Name 'actions.runner.*' -ErrorAction SilentlyContinue | Select-Object Name, Status, StartType   # every runner on this server
 ```
 
 **Do, part 1:** download the runner into a folder only administrators can read (it will hold its credentials), and
@@ -1161,7 +1232,10 @@ check the download's fingerprint:
 
 ```powershell
 . {
-$runnerDir = 'C:\actions-runner'
+$runnerDir = $WI.RunnerDir
+if ((Test-Path (Join-Path $runnerDir '.runner')) -and -not (Select-String -Path (Join-Path $runnerDir '.runner') -Pattern $WI.Repo -SimpleMatch -Quiet)) {
+    throw "$runnerDir holds a runner of another repository: set RunnerDir = 'C:\actions-runner-wabi-insight' in step 5 and run this again."
+}
 New-Item -ItemType Directory -Force -Path $runnerDir | Out-Null
 icacls $runnerDir /inheritance:r /grant:r 'SYSTEM:(OI)(CI)F' 'BUILTIN\Administrators:(OI)(CI)F' | Out-Null
 $release = Invoke-RestMethod 'https://api.github.com/repos/actions/runner/releases/latest' -Headers @{ 'User-Agent' = 'wabi-insight-setup' }
@@ -1177,37 +1251,42 @@ Remove-Item $zip
 }
 ```
 
-**You should see:** `checksum OK`. **If** it prints `Runner checksum mismatch`: delete `C:\actions-runner` and run the
-box again.
+**You should see:** `checksum OK`. **If** it prints `Runner checksum mismatch`: delete the folder in `$WI.RunnerDir` and
+run the box again. **If** it says the folder *holds a runner of another repository*: follow the message.
 
 **Do, part 2:** register it:
-1. **[GitHub]** **Settings → Actions → Runners → New self-hosted runner → Windows**. In the *Configure* box, copy only
-   the token after `--token` (a long code). It's valid for **one hour**.
+1. **[GitHub]** the repository `mtawfig/wabi-data-harbor` → **Settings → Actions → Runners → New self-hosted runner →
+   Windows**. In the *Configure* box, copy only the token after `--token` (a long code). It's valid for **one hour**, and
+   it is a secret: paste it only into the PowerShell prompt below, never into a chat or an e-mail.
 2. **[VPS PowerShell]** paste the token when asked:
 
 ```powershell
 . {
-Set-Location 'C:\actions-runner'
+Set-Location $WI.RunnerDir
 $token = Read-Host 'Runner registration token'
 .\config.cmd --unattended --url "https://github.com/$($WI.Repo)" --token $token `
     --name "$env:COMPUTERNAME-wabi-insight" --labels wabi-insight --work _work --runasservice --replace
 Remove-Variable token
-$service = Get-Service -Name 'actions.runner.*' | Select-Object -First 1
-sc.exe config $service.Name obj= LocalSystem | Out-Null          # deployments change protected folders
-sc.exe config $service.Name start= delayed-auto | Out-Null
-Restart-Service $service.Name
+$serviceName = (Get-Content (Join-Path $WI.RunnerDir '.service') -Raw).Trim()     # this runner's own service, not another runner's
+"Wabi Insight runner service: $serviceName"
+sc.exe config $serviceName obj= LocalSystem | Out-Null           # deployments change protected folders
+sc.exe config $serviceName start= delayed-auto | Out-Null
+Restart-Service $serviceName
+Set-Location $HOME
 }
 ```
 
-**You should see:** *√ Runner successfully added*, *√ Settings Saved*, and the service is installed.
+**You should see:** *√ Runner successfully added*, *√ Settings Saved*, then `Wabi Insight runner service:
+actions.runner.mtawfig-wabi-data-harbor.…`.
 
 **If not:** *Http response code: NotFound* or *token expired* → get a new token (item 1) and paste the box again.
 
 **Verify:**
 
 ```powershell
-Get-CimInstance Win32_Service -Filter "Name LIKE 'actions.runner.%'" | Select-Object Name, State, StartName, StartMode   # Running, LocalSystem, Auto
-Get-Content (Get-ChildItem 'C:\actions-runner\_diag' -Filter 'Runner_*.log' | Sort-Object LastWriteTime | Select-Object -Last 1).FullName -Tail 20 | Select-String 'Listening for Jobs'
+$serviceName = (Get-Content (Join-Path $WI.RunnerDir '.service') -Raw).Trim()
+Get-CimInstance Win32_Service -Filter "Name = '$serviceName'" | Select-Object Name, State, StartName, StartMode   # Running, LocalSystem, Auto
+Get-Content (Get-ChildItem (Join-Path $WI.RunnerDir '_diag') -Filter 'Runner_*.log' | Sort-Object LastWriteTime | Select-Object -Last 1).FullName -Tail 20 | Select-String 'Listening for Jobs'
 ```
 
 **[GitHub] Settings → Actions → Runners** shows the runner **Idle**, with the labels `self-hosted`, `Windows`, `X64` and
@@ -1227,6 +1306,9 @@ Server Agent, so a Windows scheduled task named **`Wabi Insight backup`** does i
 | `files\`: a mirror of `D:\wabi-insight\files` (robocopy copies only the changes) | `D:\wabi-insight\backup\files\` |
 
 - It backs up the Wabi Insight instance only (step 5's port); side by side, the other instance is not included.
+- On an instance **shared** with other applications, it backs up only the databases listed in step 5
+  (`BackupDatabases`) and the SQL logins those databases use; `backup.log` names the listed databases that don't exist
+  yet. With an empty list it backs up every database and login of the instance.
 - The VPS keeps the last **7** nights (about 0.5 GB a night with the demo organizations).
 - **The deploy script runs this same task before every database migration**, and stops if it fails. Keep the task name
   exactly `Wabi Insight backup`.
@@ -1255,7 +1337,7 @@ Invoke-WiSql "IF SUSER_ID(N'NT AUTHORITY\SYSTEM') IS NULL CREATE LOGIN [NT AUTHO
 $script = @'
 # Nightly backup of every database, the SQL logins, the key ring and the files.
 # Runs as SYSTEM from the "Wabi Insight backup" task (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md, step 30). Log: backup.log here.
-param([string]$Keys = '__KEYS__', [string]$Files = '__FILES__', [int]$KeepDays = 7)
+param([string]$Keys = '__KEYS__', [string]$Files = '__FILES__', [int]$KeepDays = 7, [string[]]$Only = @(__ONLY__))
 $ErrorActionPreference = 'Stop'
 $log = Join-Path $PSScriptRoot 'backup.log'
 function Write-Log([string]$Message) { Add-Content -Path $log -Value ('{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $Message) }
@@ -1266,13 +1348,18 @@ try {
     $night = Join-Path $PSScriptRoot $stamp
     New-Item -ItemType Directory -Force -Path $night | Out-Null
     Write-Log "start $stamp"
-    $databases = @((Invoke-Sqlcmd @sql -Query "SELECT name FROM sys.databases WHERE database_id > 4 AND source_database_id IS NULL AND state_desc = N'ONLINE' ORDER BY name").name)
+    # $Only empty: every database of this SQL Server. $Only filled (step 5, BackupDatabases): those databases and their logins only.
+    $which = if ($Only.Count) { 'name IN (' + (($Only | ForEach-Object { "N'" + $_.Replace("'", "''") + "'" }) -join ', ') + ')' } else { 'database_id > 4' }
+    $databases = @((Invoke-Sqlcmd @sql -Query "SELECT name FROM sys.databases WHERE $which AND source_database_id IS NULL AND state_desc = N'ONLINE' ORDER BY name").name)
     foreach ($db in $databases) {
         $bak = Join-Path $night "$db.bak"
         Invoke-Sqlcmd @sql -Query "BACKUP DATABASE [$db] TO DISK = N'$bak' WITH INIT, CHECKSUM;"
         Write-Log "database $db $([math]::Round((Get-Item $bak).Length / 1MB, 1)) MB"
     }
-    $logins = Invoke-Sqlcmd @sql -MaxCharLength 8000 -Query "SELECT CONCAT(N'IF SUSER_ID(N''', name, N''') IS NULL CREATE LOGIN [', name, N'] WITH PASSWORD = ', CONVERT(nvarchar(max), CAST(LOGINPROPERTY(name, 'PasswordHash') AS varbinary(256)), 1), N' HASHED, SID = ', CONVERT(nvarchar(max), sid, 1), N', CHECK_POLICY = OFF, DEFAULT_DATABASE = [master];') AS Line FROM sys.sql_logins WHERE name <> N'sa' AND name NOT LIKE N'##%' ORDER BY name;"
+    $missing = @($Only | Where-Object { $databases -notcontains $_ })
+    if ($missing.Count) { Write-Log "not on this server (yet): $($missing -join ', ')" }
+    $ownLogins = if ($Only.Count -and $databases.Count) { 'AND sid IN (' + (($databases | ForEach-Object { "SELECT sid FROM [$_].sys.database_principals WHERE type = 'S' AND sid IS NOT NULL" }) -join ' UNION ') + ')' } else { '' }
+    $logins = Invoke-Sqlcmd @sql -MaxCharLength 8000 -Query "SELECT CONCAT(N'IF SUSER_ID(N''', name, N''') IS NULL CREATE LOGIN [', name, N'] WITH PASSWORD = ', CONVERT(nvarchar(max), CAST(LOGINPROPERTY(name, 'PasswordHash') AS varbinary(256)), 1), N' HASHED, SID = ', CONVERT(nvarchar(max), sid, 1), N', CHECK_POLICY = OFF, DEFAULT_DATABASE = [master];') AS Line FROM sys.sql_logins WHERE name <> N'sa' AND name NOT LIKE N'##%' $ownLogins ORDER BY name;"
     @($logins | ForEach-Object { $_.Line }) | Set-Content -Path (Join-Path $night 'logins.sql') -Encoding UTF8
     if (Get-ChildItem $Keys -Force) {        # the key ring stays empty until the API first starts (step 31)
         Compress-Archive -Path $Keys -DestinationPath (Join-Path $night 'keys.zip') -Force
@@ -1292,6 +1379,7 @@ try {
 }
 '@
 $script = $script.Replace('__KEYS__', (Join-Path $WI.Root 'keys')).Replace('__FILES__', $WI.Files).Replace('__SERVER__', "localhost,$($WI.SqlPort)")
+$script = $script.Replace('__ONLY__', ((@($WI.BackupDatabases) | Where-Object { $_ } | ForEach-Object { "'" + $_.Replace("'", "''") + "'" }) -join ', '))
 Set-Content -Path (Join-Path $backup 'backup.ps1') -Value $script -Encoding UTF8
 $action    = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$backup\backup.ps1`""
 $trigger   = New-ScheduledTaskTrigger -Daily -At '02:30'
@@ -1338,7 +1426,7 @@ SYSTEM can change it (step 10), so a workflow can't replace the deploy logic.
 
 ```powershell
 $deployScript = Join-Path $WI.Root 'deploy\Deploy-WabiInsight.ps1'
-if (Test-Path $deployScript) { & $deployScript -ScriptVersion } else { 'not installed' }     # 4 = the current version is installed
+if (Test-Path $deployScript) { & $deployScript -ScriptVersion } else { 'not installed' }     # 5 = the current version is installed
 ```
 
 **Do, part 1:** create a short-lived GitHub token, used once to download the script:
@@ -1361,7 +1449,7 @@ $ghToken = Read-WiSecret 'GitHub token (Contents: read)'
 Get-WiRepoFile 'deploy/cicd/windows/Deploy-WabiInsight.ps1' (Join-Path $deployDir 'Deploy-WabiInsight.ps1') $ghToken
 Remove-Variable ghToken
 Unblock-File (Join-Path $deployDir 'Deploy-WabiInsight.ps1')                # downloaded files are blocked by default
-& (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -ScriptVersion            # 4
+& (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -ScriptVersion            # 5
 }
 ```
 
@@ -1402,9 +1490,11 @@ ends with `Deployment <release> succeeded.` All jobs are green ✓.
 
 | What you see | Cause | Fix |
 |---|---|---|
-| The deploy job waits *Waiting for a runner to pick up this job* | The runner service is stopped | Step 29 **Verify**; `Get-Service 'actions.runner.*' \| Start-Service` |
+| The deploy job waits *Waiting for a runner to pick up this job* | The runner service is stopped | Step 29 **Verify**; `Start-Service (Get-Content (Join-Path $WI.RunnerDir '.service') -Raw).Trim()` |
 | *Check the server's deploy script* fails | Part 2 not done | Part 2 |
 | *appsettings.Local.json is missing* | Step 24 not done | Step 24 |
+| *The server has no .NET 10 runtime* (or, with an older deploy script, *You must install or update .NET to run this application* during the migration) | The Hosting Bundle 10 is not installed; an older .NET on the server is not enough | Step 13 **Do**, then run the deployment again. Nothing was changed in the database. |
+| A **Build** job fails (red, on GitHub) | The code did not build or a test failed. Nothing reached the server. | Open the red step: its last lines name the file and the error. Fix it in a pull request, merge, and run the deployment again. |
 | *Backup task finished with result 1; nothing was migrated* | The backup failed | Step 30, the **If not** table (`backup.log`) |
 | *did not report Healthy* | The API couldn't start; the job prints the reason | Usually a typo in `appsettings.Local.json` or a wrong database password (step 24) |
 | `file-storage` or `key-ring` *Unhealthy* in the health report | The API's account can't write to the files or key ring folder; the text names it | Step 23 **Do** (the `icacls` lines), step 24 **Verify** (`Storage.RootPath`), then run again |
@@ -1468,6 +1558,11 @@ Pop-Location
 ```
 
 **You should see:** `Bootstrap completed. AdministratorId=…`.
+
+Type the password at the hidden prompt of the box. **Don't put it on a command line** (for example
+`$env:Bootstrap__AdministratorPassword = "…"`): inside double quotes PowerShell replaces `$` signs, so a password such
+as `Pa$$word` is stored as something else and the sign-in fails. If that happened, use **Forgot password?** on the
+sign-in page: the reset link goes to the administrator's mailbox.
 
 **If not:** *bootstrap_already_completed* → it was done before: sign in with that account, or use **Forgot password?**
 on the sign-in page.
@@ -1899,7 +1994,9 @@ restored. Wabi Insight only ever **reads** it, through a login that can only rea
 ask for a backup from the same or an older version, or install the newer Express. *exceeds the license limit* → the
 database is larger than Express allows (50 GB on 2025).
 
-The nightly backup includes the new database by itself. To refresh the data later, restore a newer `.bak` with the same
+The nightly backup includes the new database by itself, unless you listed databases in step 5 (`BackupDatabases`,
+a shared SQL Server): then add the new name to the `$Only = @(…)` list at the top of `backup.ps1`
+(`notepad (Join-Path $WI.Backup 'backup.ps1')`) and to step 5's list, and check `backup.log` after the next run. To refresh the data later, restore a newer `.bak` with the same
 box: it replaces the database and keeps the reader working (with a new password: update it with **Replace connection**).
 
 ## 45. A new VPS from the backups (disaster, or moving to another server)
@@ -2029,7 +2126,7 @@ Not included: the AI provider's usage, your domain, your e-mail service.
 | Deploy: *Backup task finished with result …; nothing was migrated* | The backup failed; the previous API was put back | Step 30, **If not** table; then run the deployment again |
 | Deploy: *did not report Healthy* or *Migration failed* | The previous API was put back | The job log shows the startup error. Applied migrations stay: restore the backup to go back (step 43). |
 | Deploy: *The database is behind this release* | **migrate_database** was off | Run again with it ticked |
-| Deploy waits forever on *Waiting for a runner* | The runner service is stopped | `Get-Service 'actions.runner.*' \| Start-Service` |
+| Deploy waits forever on *Waiting for a runner* | The runner service is stopped | `Start-Service (Get-Content (Join-Path $WI.RunnerDir '.service') -Raw).Trim()` |
 | Deploy: *The API did not release its files within 120 seconds* | A long request was running. Nothing changed. | Run again in a few minutes |
 | `https://<domain>` works from your computer but times out on the VPS | The provider doesn't route the VPS to its own public address | Check from your own computer instead; the deploy script checks through `127.0.0.1` |
 | Certificate step: validation fails | DNS not pointing at the VPS yet, or port 80 closed | Steps 3, 6 and 2 |
