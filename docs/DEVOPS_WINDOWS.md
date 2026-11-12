@@ -274,7 +274,7 @@ Remove-Item 'C:\wabitex-apps\wabi-insight\web\api\app_offline.htm'
 robocopy 'C:\wabitex-apps\wabi-insight\releases\previous-web' 'C:\wabitex-apps\wabi-insight\web\app' /MIR /NFL /NDL /NJH /NJS
 ```
 
-- **Across a migration:** the old code may not work with the new schema. Restore the database backup taken by that deployment (deployment guide step 39), then deploy the old version.
+- **Across a migration:** the old code may not work with the new schema. Restore the database backup taken by that deployment (deployment guide step 43), then deploy the old version.
 
 ## 10. Keeping it up to date
 
