@@ -1,15 +1,26 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+
+import { LanguageService } from '../../core/i18n/language.service';
 
 /**
  * Wabi Insight brand mark (P11.1, specification §21): a lighthouse over data waves with connectivity marks.
  * The same drawing ships as static files under `public/brand/` (icon, light icon, dark and light wordmarks,
  * favicon); keep both in sync. `variant` 'dark' is for light backgrounds, 'light' for the navy/ocean gradient.
+ *
+ * The logo follows the interface language. With the tagline it is the wordmark file itself
+ * (`wabi-insight-wordmark-{dark,light}.svg` in English, `…_ar.svg` in Arabic: the mark on the right, the Arabic name
+ * and tagline on its left), so the platform shows exactly the designed logo. Without the tagline, and where a page
+ * hides the wordmark on small screens, it is the mark with the name as text in the same language.
  */
 @Component({
   selector: 'app-brand-logo',
   template: `
-    <span class="logo" [class.logo--light]="variant() === 'light'">
-      <svg viewBox="0 0 64 64" [attr.width]="size()" [attr.height]="size()" aria-hidden="true" focusable="false">
+    <span class="logo" [class.logo--light]="variant() === 'light'" [class.logo--ar]="arabic()" [class.logo--wordmark]="wordmark()" [attr.lang]="arabic() ? 'ar' : 'en'">
+      @if (wordmark(); as file) {
+        <img class="logo__wordmark" [src]="file.src" [alt]="name() + ' — ' + tagline()" [style.height.px]="file.height" [style.width.px]="file.width" data-testid="brand-wordmark" />
+      }
+      <span class="logo__inline">
+      <svg viewBox="0 0 64 64" [attr.width]="markSize()" [attr.height]="markSize()" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="wiWave" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#087DF2" /><stop offset="1" stop-color="#22B8CF" /></linearGradient>
           <linearGradient id="wiBeamR" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#22B8CF" stop-opacity=".85" /><stop offset="1" stop-color="#22B8CF" stop-opacity="0" /></linearGradient>
@@ -31,13 +42,18 @@ import { Component, input } from '@angular/core';
         <path d="M4 62c5-4 9-4 14 0s9 4 14 0 9-4 14 0 9 4 14 0" fill="none" stroke="url(#wiWave)" stroke-width="3.2" stroke-linecap="round" opacity=".32" />
       </svg>
       @if (showName()) {
-        <span class="logo__text"><span class="logo__name">Wabi Insight</span>@if (showTagline()) { <span class="logo__tagline">Ask Your Data. Trust the Answer.</span> }</span>
+        <span class="logo__text"><span class="logo__name" data-testid="brand-name">{{ name() }}</span>@if (showTagline()) { <span class="logo__tagline" data-testid="brand-tagline">{{ tagline() }}</span> }</span>
       }
+      </span>
     </span>
   `,
   styles: `
-    .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--wi-navy); }
-    .logo--light { color: var(--wi-white); }
+    .logo, .logo__inline { display: inline-flex; align-items: center; gap: 10px; color: var(--wi-navy); }
+    .logo--wordmark .logo__inline { display: none; }
+    /* The file's canvas is wider than its drawing: show the drawing only, from its own side. */
+    .logo__wordmark { display: block; object-fit: cover; object-position: left center; }
+    .logo--ar .logo__wordmark { object-position: right center; }
+    .logo--light, .logo--light .logo__inline { color: var(--wi-white); }
     .logo__tower { fill: currentColor; }
     .logo__band { fill: #087df2; }
     .logo--light .logo__band { fill: #22b8cf; }
@@ -47,6 +63,10 @@ import { Component, input } from '@angular/core';
     .logo__name { font-weight: 700; font-size: 18px; letter-spacing: -0.01em; white-space: nowrap; }
     .logo__tagline { font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: #087df2; white-space: nowrap; }
     .logo--light .logo__tagline { color: #22b8cf; }
+    .logo--ar .logo__text { line-height: 1.25; }
+    /* Arabic: same sizes as English; no capitals or letter spacing in this script. */
+    .logo--ar .logo__name { letter-spacing: 0; }
+    .logo--ar .logo__tagline { letter-spacing: 0; text-transform: none; }
   `,
 })
 export class BrandLogoComponent {
@@ -54,4 +74,20 @@ export class BrandLogoComponent {
   readonly showName = input(true);
   readonly showTagline = input(false);
   readonly variant = input<'dark' | 'light'>('dark');
+
+  private readonly language = inject(LanguageService);
+  protected readonly arabic = computed(() => this.language.current() === 'ar');
+  protected readonly name = computed(() => (this.arabic() ? 'وابي انسايت' : 'Wabi Insight'));
+  /** The wordmark file for this language and background, sized so that its mark is `size` high (canvas 340 x 72, mark 64). */
+  protected readonly wordmark = computed(() => {
+    if (!this.showName() || !this.showTagline()) {
+      return null;
+    }
+    const height = (this.size() * 72) / 64;
+    const drawn = this.arabic() ? 219 : 282;      // canvas units the drawing occupies (scripts/brand/build_wordmarks.py)
+    return { src: `brand/wabi-insight-wordmark-${this.variant()}${this.arabic() ? '_ar' : ''}.svg`, height, width: (height * drawn) / 72 };
+  });
+  /** The mark beside the name as text: never larger than the default, whatever the wordmark's size. */
+  protected readonly markSize = computed(() => (this.wordmark() ? Math.min(this.size(), 36) : this.size()));
+  protected readonly tagline = computed(() => (this.arabic() ? 'اسأل بياناتك، وثق بالإجابة' : 'Ask Your Data. Trust the Answer.'));
 }
