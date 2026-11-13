@@ -12,6 +12,32 @@ public static class InsightsSchema
 {
     public const string SchemaName = "insights";
 
+    /// <summary>
+    /// Gives the <c>insights</c> schema the owner of <c>dbo</c>, so the views and the tables they read have one owner
+    /// and a login with SELECT on the schema alone can read the views (migration AlignInsightsSchemaOwner).
+    /// Changing a schema's owner drops the permissions granted on it, so they are read first and granted again.
+    /// Does nothing when the owners already match. Safe to run again.
+    /// </summary>
+    public const string AlignOwnerSql = """
+        IF SCHEMA_ID(N'insights') IS NOT NULL
+           AND (SELECT principal_id FROM sys.schemas WHERE name = N'insights') <> (SELECT principal_id FROM sys.schemas WHERE name = N'dbo')
+        BEGIN
+            DECLARE @permissions nvarchar(max) = N'';
+            SELECT @permissions = @permissions
+                + CASE p.state WHEN 'D' THEN N'DENY ' ELSE N'GRANT ' END + p.permission_name
+                + N' ON SCHEMA::[insights] TO ' + QUOTENAME(u.name)
+                + CASE p.state WHEN 'W' THEN N' WITH GRANT OPTION' ELSE N'' END + N'; '
+            FROM sys.database_permissions p
+            JOIN sys.database_principals u ON u.principal_id = p.grantee_principal_id
+            WHERE p.class = 3 AND p.major_id = SCHEMA_ID(N'insights');
+
+            DECLARE @owner sysname = (SELECT USER_NAME(principal_id) FROM sys.schemas WHERE name = N'dbo');
+            DECLARE @transfer nvarchar(400) = N'ALTER AUTHORIZATION ON SCHEMA::[insights] TO ' + QUOTENAME(@owner) + N';';
+            EXEC sys.sp_executesql @transfer;
+            IF LEN(@permissions) > 0 EXEC sys.sp_executesql @permissions;
+        END
+        """;
+
     public static readonly IReadOnlyList<(string ViewName, string Sql)> Views =
     [
         ("Users", """

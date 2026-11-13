@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -58,5 +58,8 @@ export const COMPACT_SWITCHER_QUERY = '(max-width: 600px)';
 export class LanguageSwitcherComponent {
   readonly language = inject(LanguageService);
   readonly variant = input<'dark' | 'light'>('dark');
-  readonly compact = toSignal(inject(BreakpointObserver).observe(COMPACT_SWITCHER_QUERY).pipe(map((r) => r.matches)), { initialValue: false });
+  /** Always the labelled button, on any screen: for places with room where the bare globe would not say what it does (Profile). */
+  readonly full = input(false);
+  private readonly small = toSignal(inject(BreakpointObserver).observe(COMPACT_SWITCHER_QUERY).pipe(map((r) => r.matches)), { initialValue: false });
+  readonly compact = computed(() => this.small() && !this.full());
 }

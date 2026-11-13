@@ -12,6 +12,7 @@ import { LanguageService, SUPPORTED_LANGUAGES } from './core/i18n/language.servi
 import { LocalizedTranspiler } from './core/i18n/localized-transpiler';
 import { TranslocoPaginatorIntl } from './core/i18n/paginator-intl';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
+import { ResponsiveTablesService } from './core/ui/responsive-tables.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -36,6 +37,7 @@ export const appConfig: ApplicationConfig = {
       const auth = inject(AuthService);
       const transloco = inject(TranslocoService);
       language.initialize();
+      inject(ResponsiveTablesService).start();
       await auth.initialize();
       // Start only once the interface language's texts are loaded, so a message shown at once (an error answered
       // before the first render) is never the raw key.

@@ -1553,6 +1553,12 @@ journalctl -u wabi-insight-api --since "2 minutes ago" --no-pager | grep -c 'Ins
 
 **Platform → Platform Insights Configuration** shows *Confined to the insights schema*.
 
+**If not:** the organization dashboard or **Organization Insights** answers *The insights query failed* after this
+step → the server was first migrated by a release before P13.43, where the `insights` schema belonged to the
+application's login instead of the database owner, so the new login is refused on every view. Deploy the backend again
+with *migrate_database* on (the migration *AlignInsightsSchemaOwner* corrects the owner and keeps this login's grant); **Platform Insights Configuration** then no longer shows *The insights login cannot read
+the insights views*.
+
 ## 40. Files in Azure Blob Storage
 
 By default, the files are on this server's disk (`/var/lib/wabi-insight/artifacts`). You can keep them in a private

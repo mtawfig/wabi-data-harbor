@@ -221,6 +221,159 @@ a {
   }
 }
 
+// An icon keeps its size beside long text: in a flex row it must never be squeezed or overlapped by the text.
+.mat-icon {
+  flex-shrink: 0;
+}
+
+// A resting label stops before the field's trailing icon (and ends in "…") instead of running under it. Material
+// leaves room for a trailing icon only when the field also has a leading one; this gives the label's box the same
+// limit otherwise: the field less the label's inset (16px) and the icon with its padding (48px). A shorter label is
+// not touched, and a floated label sits on the outline, above the icon, and keeps Material's own width.
+.mat-mdc-form-field-has-icon-suffix .mdc-notched-outline:not(.mdc-notched-outline--notched) .mdc-notched-outline__notch {
+  --mat-form-field-notch-max-width: calc(100% - 64px);
+}
+
+// In a filter row above a list, the search box (the field with a trailing icon) takes the room the other filters
+// leave on its line, as it already did on My History, My Reports and the Shared pages, so its label is read in full
+// where there is room. It never asks for more room than before, so a row that fitted on one line still does.
+.filters .mat-mdc-form-field-has-icon-suffix {
+  flex: 1 1 240px;
+}
+
+// Phones: list tables become cards (P13.43). A row is a block, a cell is a line: the column's name in front (copied
+// from the header by ResponsiveTablesService as data-label), the value after it. The first named cell is the row's
+// heading; cells without a column name (row actions) sit at the end. Wider screens keep the table untouched.
+// Answer result tables (.ask__table) are not list tables and keep scrolling sideways; `wi-table-keep` opts out.
+// The layout properties are !important on purpose: they must win over each page's own table styles, whose
+// component-scoped selectors are more specific than anything written here.
+@media (max-width: 720px) {
+  .wi-card {
+    padding: 16px;
+  }
+
+  // A dialog uses the height the phone has: its content scrolls only once the screen is really full
+  // (Material stops at 65% of the height, which cut lists off with room to spare).
+  .mat-mdc-dialog-content.mat-mdc-dialog-content {
+    max-height: calc(100dvh - 190px);
+  }
+
+  // Filter rows above a list: a field grows to fill its row and may shrink to it, so none is wider than its card and
+  // a long placeholder never runs under the field's icon. One field per row on a phone, two or three on a wider one.
+  .filters .mat-mdc-form-field {
+    flex: 1 1 220px !important;
+    min-width: 0 !important;
+  }
+
+  table.mat-mdc-table:not(.wi-table-keep),
+  table.plain:not(.wi-table-keep),
+  table.matrix:not(.wi-table-keep) {
+    --wi-cell-label: clamp(92px, 32vw, 140px);
+
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    border: 0 !important;
+    background: transparent;
+
+    // Hidden from sight, still read by assistive technology (the cells also carry their column's name).
+    > thead {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      margin: -1px;
+      overflow: hidden !important;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    > tbody {
+      display: block !important;
+    }
+
+    > tbody > tr {
+      display: block !important;
+      height: auto !important;
+      padding: 10px 0 !important;
+      border: 0 !important;
+      border-bottom: 1px solid var(--wi-border) !important;
+
+      &:first-child {
+        padding-top: 0 !important;
+      }
+
+      &:last-child {
+        border-bottom: 0 !important;
+        padding-bottom: 0 !important;
+      }
+    }
+
+    > tbody > tr > td,
+    > tbody > tr > th {
+      display: flow-root !important;
+      width: auto !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      height: auto !important;
+      min-height: 0 !important;
+      padding: 3px 0 !important;
+      padding-inline-start: calc(var(--wi-cell-label) + 10px) !important;
+      border: 0 !important;
+      text-align: start !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere;
+
+      &::before {
+        content: attr(data-label);
+        float: inline-start;
+        width: var(--wi-cell-label);
+        margin-inline-start: calc(-1 * (var(--wi-cell-label) + 10px));
+        padding-top: 2px;
+        color: var(--wi-slate);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.5;
+        text-align: start;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      // The row's heading: full width, no column name.
+      &[data-cell='title'] {
+        padding-inline-start: 0 !important;
+        font-size: 15px;
+        font-weight: 600;
+
+        &::before {
+          content: none;
+        }
+      }
+
+      // No column name (row actions, a message across the row): full width, actions at the end.
+      &[data-label='']:not([data-cell='title']) {
+        display: flex !important;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        padding-inline-start: 0 !important;
+
+        &::before {
+          content: none;
+        }
+
+        &:empty {
+          display: none !important;
+        }
+
+        &[colspan] {
+          display: block !important;
+        }
+      }
+    }
+  }
+}
+
 /* Rows that open something can be reached with Tab and opened with Enter or Space (F3); show where the focus is. */
 tr[tabindex='0'] {
   cursor: pointer;

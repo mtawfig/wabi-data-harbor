@@ -928,6 +928,7 @@
       "insights_query_failed": "The insights query failed.",
       "insights_login_not_configured": "Dedicated insights login not configured.",
       "insights_login_not_confined": "The insights login can read raw tables.",
+      "insights_views_not_readable": "The insights login cannot read the insights views. Apply the database migrations, then check again.",
       "organization_admin_metrics_automatic": "Organization Administrators receive every approved metric automatically; their grants cannot be edited.",
       "ai_provider_not_found": "AI provider not found.",
       "ai_provider_not_approved": "The provider must be approved and active to be the default.",

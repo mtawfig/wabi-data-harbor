@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using WabiInsight.Core.Audit;
 using WabiInsight.Core.Entities.Insights;
 using WabiInsight.Core.Entities.Organizations;
@@ -21,15 +23,17 @@ namespace WabiInsight.Infrastructure.Insights;
 /// no request can widen or move the scope. Organization Administrators have every approved metric; other users
 /// only the metrics granted to their active roles (specification §12.2).
 /// </summary>
-public sealed class InsightsQueryService : IInsightsQueryService
+public sealed partial class InsightsQueryService : IInsightsQueryService
 {
     private readonly ConfigurationDbContext _context;
     private readonly ITenantContext _tenantContext;
     private readonly InsightsConnectionFactory _connections;
     private readonly IUsageEventWriter _usage;
+    private readonly ILogger<InsightsQueryService> _logger;
 
-    public InsightsQueryService(ConfigurationDbContext context, ITenantContext tenantContext, IInsightsConnectionFactory connections, IUsageEventWriter usage)
+    public InsightsQueryService(ConfigurationDbContext context, ITenantContext tenantContext, IInsightsConnectionFactory connections, IUsageEventWriter usage, ILogger<InsightsQueryService>? logger = null)
     {
+        _logger = logger ?? NullLogger<InsightsQueryService>.Instance;
         _context = context;
         _tenantContext = tenantContext;
         _connections = (InsightsConnectionFactory)connections;
@@ -109,8 +113,10 @@ public sealed class InsightsQueryService : IInsightsQueryService
                 rows.Add(new MetricRow(bucket, group, value));
             }
         }
-        catch (SqlException)
+        catch (SqlException ex)
         {
+            // The person sees a short message; the reason goes to the log, where an administrator can act on it.
+            LogQueryFailed(_logger, metric.MetricCode, ex.Number, ex.Message);
             await _usage.AppendAndSaveAsync(UsageEventTypes.InsightsQueried, "InsightsMetric", metric.MetricCode, succeeded: false, metadata: new { metric.MetricCode, request.Bucket, request.GroupBy }, cancellationToken: cancellationToken);
             throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "insights_query_failed");
         }
@@ -258,4 +264,7 @@ public sealed class InsightsQueryService : IInsightsQueryService
 
         return organizationId;
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Insights metric {MetricCode} could not be queried (SQL error {Number}: {Reason}).")]
+    private static partial void LogQueryFailed(ILogger logger, string metricCode, int number, string reason);
 }

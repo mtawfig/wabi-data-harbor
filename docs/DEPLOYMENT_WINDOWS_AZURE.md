@@ -1819,6 +1819,13 @@ Restart-WebAppPool 'WabiInsightApi'
 **Verify:** [Your computer] after a minute, refresh **System Health**: `deployment-settings` is **Healthy**. **Platform
 Insights Configuration** shows *Confined to the insights schema*.
 
+**If not:** the organization dashboard or **Organization Insights** answers *The insights query failed* after this
+step → the server was first migrated by a release before P13.43, where the `insights` schema belonged to the
+application's login instead of the database owner, so the new login is refused on every view. Deploy the backend again
+with **Apply database migrations** ticked (the migration *AlignInsightsSchemaOwner* corrects the owner and keeps this
+login's grant); **Platform Insights Configuration** then no longer shows *The insights login cannot read the insights
+views*.
+
 ---
 
 # Part I — The demo organizations (Gulf Aviation Services and Wabi Bank)

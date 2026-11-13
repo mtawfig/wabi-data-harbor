@@ -24,7 +24,7 @@
     @if (detail(); as d) {
       <div class="detail__actions">
         <button mat-icon-button type="button" (click)="toggleFavorite()" [attr.aria-label]="'history.favorite' | transloco" data-testid="history-favorite"><mat-icon [class.on]="d.summary.isFavorite" class="star">{{ d.summary.isFavorite ? 'star' : 'star_border' }}</mat-icon></button>
-        <button mat-stroked-button type="button" [matMenuTriggerFor]="collectionsMenu"><mat-icon>folder_special</mat-icon>{{ 'history.collections' | transloco }}</button>
+        <button mat-stroked-button type="button" class="detail__wide" [matMenuTriggerFor]="collectionsMenu"><mat-icon>folder_special</mat-icon>{{ 'history.collections' | transloco }}</button>
         <mat-menu #collectionsMenu="matMenu">
           @for (c of collections(); track c.collectionId) { <button mat-menu-item (click)="toggleCollection(c)"><mat-icon>{{ memberOf().has(c.collectionId) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>{{ c.name }}</button> } @empty { <button mat-menu-item disabled>{{ 'history.noCollections' | transloco }}</button> }
         </mat-menu>
@@ -36,10 +36,18 @@
           <button mat-menu-item (click)="openPrint()"><mat-icon>print</mat-icon>{{ 'history.print' | transloco }}</button>
         </mat-menu>
         <button mat-stroked-button type="button" (click)="openShare()" data-testid="history-share"><mat-icon>share</mat-icon>{{ 'sharing.share.button' | transloco }}</button>
-        <button mat-stroked-button type="button" (click)="openEmail()" [disabled]="!version()?.hasResult" data-testid="history-email"><mat-icon>outgoing_mail</mat-icon>{{ 'sharing.email.button' | transloco }}</button>
-        <button mat-stroked-button type="button" (click)="toggleArchive()"><mat-icon>{{ d.summary.isArchived ? 'unarchive' : 'archive' }}</mat-icon>{{ (d.summary.isArchived ? 'history.unarchive' : 'history.archive') | transloco }}</button>
-        <button mat-stroked-button type="button" (click)="remove()" class="danger" data-testid="history-delete"><mat-icon>delete</mat-icon>{{ 'common.delete' | transloco }}</button>
-        <button mat-flat-button type="button" (click)="rerun()" [disabled]="rerunning()" data-testid="history-rerun"><mat-icon>replay</mat-icon>{{ 'history.rerun' | transloco }}</button>
+        <button mat-stroked-button type="button" class="detail__wide" (click)="openEmail()" [disabled]="!version()?.hasResult" data-testid="history-email"><mat-icon>outgoing_mail</mat-icon>{{ 'sharing.email.button' | transloco }}</button>
+        <button mat-stroked-button type="button" class="detail__wide" (click)="toggleArchive()"><mat-icon>{{ d.summary.isArchived ? 'unarchive' : 'archive' }}</mat-icon>{{ (d.summary.isArchived ? 'history.unarchive' : 'history.archive') | transloco }}</button>
+        <button mat-stroked-button type="button" (click)="remove()" class="detail__wide danger" data-testid="history-delete"><mat-icon>delete</mat-icon>{{ 'common.delete' | transloco }}</button>
+        <!-- Phones: the less frequent actions are gathered in one menu, and Re-run takes the full row below (the buttons above are hidden there). -->
+        <button mat-icon-button type="button" class="detail__more" [matMenuTriggerFor]="moreMenu" [attr.aria-label]="'common.moreActions' | transloco" data-testid="history-more"><mat-icon>more_vert</mat-icon></button>
+        <mat-menu #moreMenu="matMenu">
+          <button mat-menu-item [matMenuTriggerFor]="collectionsMenu" data-testid="history-collections-menu"><mat-icon>folder_special</mat-icon>{{ 'history.collections' | transloco }}</button>
+          <button mat-menu-item (click)="openEmail()" [disabled]="!version()?.hasResult" data-testid="history-email-menu"><mat-icon>outgoing_mail</mat-icon>{{ 'sharing.email.button' | transloco }}</button>
+          <button mat-menu-item (click)="toggleArchive()" data-testid="history-archive-menu"><mat-icon>{{ d.summary.isArchived ? 'unarchive' : 'archive' }}</mat-icon>{{ (d.summary.isArchived ? 'history.unarchive' : 'history.archive') | transloco }}</button>
+          <button mat-menu-item (click)="remove()" class="danger" data-testid="history-delete-menu"><mat-icon>delete</mat-icon>{{ 'common.delete' | transloco }}</button>
+        </mat-menu>
+        <button mat-flat-button type="button" class="detail__rerun" (click)="rerun()" [disabled]="rerunning()" data-testid="history-rerun"><mat-icon>replay</mat-icon>{{ 'history.rerun' | transloco }}</button>
       </div>
     }
   </header>
