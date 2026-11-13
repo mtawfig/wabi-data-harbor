@@ -6,10 +6,9 @@
   .beam { position: absolute; inset: 0; z-index: 0; background: linear-gradient(100deg, transparent 40%, rgb(34 184 207 / 16%) 50%, transparent 60%); transform: translateX(120%); }
   body[data-step="0"] .beam, body[data-step="1"] .beam { animation: sweep 7s ease-in-out 1 forwards; }
   @keyframes sweep { to { transform: translateX(-120%); } }
-  .words { width: 520px; display: flex; flex-direction: column; align-items: flex-start; }
+  .words { width: 520px; display: flex; flex-direction: column; align-items: center; text-align: center; }
   .mark { width: 500px; filter: drop-shadow(0 20px 60px rgb(34 184 207 / 35%)); }
   .tag { font: 700 40px/1.45 sans-serif; margin-top: 28px; }
-  .tag small { display: block; font: 500 25px/1.5 Inter, sans-serif !important; color: var(--muted); direction: ltr; text-align: right; }
   .cta { margin-top: 34px; font: 600 32px/1.5 sans-serif; color: var(--muted); }
   .contact { width: 860px; background: #fff; color: #0b1f3a; border-radius: 34px; padding: 38px 42px; box-shadow: 0 50px 120px rgb(0 0 0 / 50%); display: flex; gap: 34px; align-items: stretch; }
   .rows { flex: 1; display: flex; flex-direction: column; gap: 17px; }
@@ -42,7 +41,7 @@
   <div class="stage">
     <div class="words">
       <img class="mark" data-beat="0" src="__WEB__/public/brand/wabi-insight-wordmark-light.svg" alt="Wabi Insight">
-      <div class="tag" data-beat="0" style="--i:2"><span class="grad">اسأل بياناتك. وثِق بالإجابة.</span><small>Ask Your Data. Trust the Answer.</small></div>
+      <div class="tag" data-beat="0" style="--i:2"><span class="grad">اسأل بياناتك. وثِق بالإجابة.</span></div>
       <div class="cta" data-beat="1">شاهدوها تعمل على بياناتكم</div>
     </div>
     <div class="contact" data-beat="1" style="--i:1">

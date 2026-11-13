@@ -40,9 +40,12 @@ const USERS = { admin: 'faisal.alshamsi@gulfaviation.example', manager: 'khalid.
 /** Everything the scenes type, choose or show in callouts, per language of the video. */
 const TEXT = {
   ar: {
-    qFlights: 'اعرض عدد المسافرين الشهري ومتوسط نسبة الإشغال لكل شركة طيران خلال عام 2025',
+    qFlights: 'اعرض عدد المسافرين ومتوسط نسبة الإشغال لكل شهر خلال عام 2025',
+    flightsRow: /المسافرين/,
+    qBoard: 'أعطني لوحة معلومات عن المشتريات في عام 2025: إجمالي الإنفاق حسب الشهر، وحسب فئة الأصناف، وأكبر عشرة موردين من حيث الإنفاق',
+    qEnglish: 'Show the number of active employees in each department',
     qPayroll: 'اعرض إجمالي تكلفة الرواتب لكل إدارة خلال عام 2025 مع رسم بياني',
-    payrollRow: /الرواتب/,
+    payrollRow: /تكلفة الرواتب/,
     colleague: 'Sara',
     colleagueEmail: 'sara.khoury@gulfaviation.example',
     shareMessage: 'للاطلاع قبل اجتماع الإدارة يوم الأحد.',
@@ -55,6 +58,7 @@ const TEXT = {
       checked: 'خطة مُتحقَّق منها · صلاحيات السائل · استعلام للقراءة فقط', scopes: 'المدير: المؤسسة كلها · رئيس القسم: قسمه · الموظف: سجلاته',
       always: 'تُطبَّق تلقائيًا، في كل مرة', anyScreen: 'الإجابة بلغة السؤال، وعلى أي شاشة', version: 'إصدار جديد مع الاحتفاظ بالسابق',
       recipient: 'يُتحقق مما يحق للمستلم أن يراه قبل الإرسال', noBypass: 'المشاركة لا تمنح أحدًا بيانات ليست من حقّه',
+      board: 'عدة استعلامات متحقَّق منها في لوحة واحدة', within: 'ضمن صلاحياتكم، كما في أي إجابة', revoke: 'إلغاء المشاركة متى شئتم · كل مشاركة مسجّلة', review: 'راجِعوا، ثم سجّلوا ملاحظتكم',
       owner: 'القاعدة تعمل بصلاحيات صاحبها ولا تتجاوزها', human: 'التنبيه يُعلِم فقط · القرار دائمًا بيد الإنسان', each: 'كل مستلم يتلقى نسخته وفق صلاحياته',
     },
   },
@@ -62,6 +66,13 @@ const TEXT = {
 const T = TEXT[LANG];
 if (!T) throw new Error(`No recorder texts for --lang ${LANG}`);
 
+/** Words that must never appear on screen in this video (owner's instruction), in a prompt, an answer or a list. */
+const NEVER = /iran|إيران|ايران|tehran|طهران/i;
+async function guard(page, where) {
+  const text = await page.evaluate(() => document.body.innerText).catch(() => '');
+  const hit = NEVER.exec(text);
+  if (hit) throw new Error(`${where}: the page shows a word that must not appear: "${text.slice(Math.max(0, hit.index - 40), hit.index + 40).replace(/\s+/g, ' ')}"`);
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => Date.now() / 1000;
 
@@ -187,6 +198,7 @@ class Director {
     this.cap.beats[n] = now(); this.current = n;
   }
   async end(tail = 0.8) {
+    if (this.scene.kind === 'app') await guard(this.page, this.scene.id);
     if (this.current >= 0) await this.cap.until(this.cap.beats[this.current], this.dur(this.current) + LEAD + tail);
     return this.cap.finish();
   }
@@ -276,7 +288,10 @@ class Director {
     await p.locator('[data-testid="ask-answer"], [data-testid="ask-rejected"], [data-testid="ask-error"]').first().waitFor({ timeout: 30000 });
     await p.waitForTimeout(1500);
     this.cut(false);
-    if (await p.getByTestId('ask-answer').count() === 0) throw new Error(`${this.scene.id}: no answer for "${question}"`);
+    if (await p.getByTestId('ask-answer').count() === 0) {
+      const why = await p.locator('[data-testid="ask-rejected"], [data-testid="ask-error"]').first().innerText().catch(() => '');
+      throw new Error(`${this.scene.id}: no answer for "${question}" (${why.replace(/\s+/g, ' ').slice(0, 300)})`);
+    }
   }
   /** Waits until `seconds` of the current narration line have been seen (to place an action inside a line). */
   async at(seconds) { await this.cap.until(this.cap.beats[this.current], seconds); }
@@ -320,6 +335,12 @@ const contextOptions = { viewport: SIZE, deviceScaleFactor: 1, locale: 'en-US', 
 async function newContext(options = {}) {
   const context = await browser.newContext({ ...contextOptions, ...options });
   await context.addInitScript(OVERLAY);
+  // Long requests (a dashboard takes over 30 s) are relayed unchanged by Playwright: some proxies between this recorder
+  // and the site drop a browser request after 30 s. Same request, same response.
+  await context.route(/\/api\/(ai\/ask|history\/[^/]+\/rerun|monitoring\/)/, async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    try { await route.fulfill({ response: await route.fetch({ timeout: 300000 }) }); } catch { await route.abort().catch(() => {}); }
+  });
   await context.addInitScript(PHONE_OVERLAY);
   await context.addInitScript((lang) => { try { if (!sessionStorage.getItem('wi.walkthrough')) { localStorage.setItem('wi.lang', lang); sessionStorage.setItem('wi.walkthrough', '1'); } } catch {} }, LANG);
   return context;
@@ -377,16 +398,31 @@ async function phoneShot(name, url, user, prepare) {
   await page.waitForLoadState('networkidle').catch(() => {});
   await page.waitForTimeout(2500);
   if (prepare) await prepare(page);
+  await guard(page, name);
   await page.screenshot({ path: file });
   await context.close();
   return file;
 }
 
 /** PNG pages of a PDF, Word or Excel file (LibreOffice converts Word and Excel to PDF first). */
-function renderFile(file, prefix) {
+function renderFile(source, prefix) {
+  let file = source;
   const dir = path.join(OUT, 'graphics', 'files');
   fs.mkdirSync(dir, { recursive: true });
   let pdf = file;
+  if (file.toLowerCase().endsWith('.xlsx')) {
+    // Preview only: one page wide, so a right-to-left sheet is not cut off (the downloaded file is not changed).
+    const fitted = file.replace(/\.xlsx$/, '-preview.xlsx');
+    execFileSync('python3', ['-c', `import sys, openpyxl
+from openpyxl.worksheet.properties import PageSetupProperties
+wb = openpyxl.load_workbook(sys.argv[1])
+for ws in wb:
+    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+wb.save(sys.argv[2])`, file, fitted], { stdio: 'ignore' });
+    file = fitted;
+  }
   if (!file.toLowerCase().endsWith('.pdf')) {
     execFileSync('soffice', ['--headless', '--convert-to', 'pdf', '--outdir', path.dirname(file), file], { stdio: 'ignore', timeout: 180000 });
     pdf = file.replace(/\.[^.]+$/, '.pdf');
@@ -489,31 +525,27 @@ const SCENES = {
     await open(p, '/app/admin/applications');
     await d.attach(p);
     await d.beat(0);
-    await d.spot(p.getByTestId('app-table'));
-    await d.at(4);
-    await d.unspot();
     await d.maybe(async () => {
       await d.click(p.getByTestId('app-test-stored-FLIGHT-OPS'), 300);
       await p.locator('mat-snack-bar-container').first().waitFor({ timeout: 30000 });
       await d.spot(p.getByTestId('app-row-FLIGHT-OPS'), 6);
     });
     await d.callout(T.c.encrypted, 'lock');
-    await d.at(10);
+    await d.at(5);
     await d.callout(null); await d.unspot();
     await d.nav('users');
     await d.spot(p.getByTestId('user-table'));
-    await d.at(14.5);
+    await d.at(8.5);
     await d.unspot();
     await d.nav('permissions');
     await d.spot(p.getByTestId('perm-matrix'));
+    await d.callout(T.c.yours, 'apartment');
 
     await d.beat(1);
-    await d.callout(T.c.yours, 'apartment');
-    await d.at(5);
-    await d.unspot();
+    await d.callout(null); await d.unspot();
     await d.nav('support-access');
     await d.callout(T.c.support, 'admin_panel_settings');
-    await d.at(13.5);
+    await d.at(7.5);
     await d.callout(null);
     return d.end();
   },
@@ -596,7 +628,7 @@ const SCENES = {
 
   async how(d) {
     const p = await userPage('manager');
-    await openAnswer(p, null);
+    await openAnswer(p, T.flightsRow);
     await d.attach(p);
     await d.beat(0);
     const how = p.getByTestId('ask-how').first();
@@ -630,6 +662,30 @@ const SCENES = {
     return d.end();
   },
 
+  async board(d) {
+    const p = await userPage('manager');
+    await open(p, '/app/ask');
+    await d.attach(p);
+    await d.beat(0);
+    await d.ask('PROCUREMENT', T.qBoard);
+    await d.scrollTo(p.getByTestId('ask-answer'));
+    await d.callout(T.c.board, 'dashboard');
+
+    await d.beat(1);
+    await d.maybe(async () => { await d.scrollTo(p.getByTestId('ask-kpis'), 'center'); await d.spot(p.getByTestId('ask-kpis')); });
+    await d.at(3.5);
+    await d.unspot();
+    await d.callout(T.c.within, 'verified_user');
+    await d.maybe(() => d.scrollTo(p.getByTestId('ask-charts').first(), 'start'));
+    await d.at(7);
+    await d.scrollBy(520);
+    await d.at(10.5);
+    await d.scrollBy(520);
+    await d.at(14.5);
+    await d.callout(null);
+    return d.end();
+  },
+
   async bilingual(d) {
     const p = await userPage('manager');
     const phone = await phoneShot('answer-mobile', '/app/history', 'manager', async (m) => {
@@ -639,17 +695,22 @@ const SCENES = {
       await m.getByTestId('ask-answer').evaluate((e) => e.scrollIntoView({ block: 'start' }));
       await m.waitForTimeout(800);
     });
-    await open(p, '/app/history');
+    await open(p, '/app/ask');
     await d.attach(p);
     try {
       await d.beat(0);
       await d.at(3.5);
       await d.click(p.getByTestId('language-switcher').first(), 1800);
-      await d.spot(p.getByTestId('history-table'));
+      await d.maybe(() => d.spot(p.getByTestId('ask-examples')));
       await d.at(11);
       await d.unspot();
 
       await d.beat(1);
+      await d.ask('HR-PAYROLL', T.qEnglish);
+      await d.scrollTo(p.getByTestId('ask-answer'));
+      await d.wait(1500);
+
+      await d.beat(2);
       await d.callout(T.c.anyScreen, 'translate');
       await d.at(3);
       await d.phone(phone, 5000);
@@ -675,7 +736,7 @@ const SCENES = {
     // The three files side by side, on screen while the line is still being read.
     await p.evaluate((srcs) => {
       window.__wi.gallery(srcs);
-      document.querySelectorAll('#wi-ov .gallery img').forEach((i) => Object.assign(i.style, { height: 'auto', maxHeight: '820px', maxWidth: '570px' }));
+      document.querySelectorAll('#wi-ov .gallery img').forEach((i) => Object.assign(i.style, { height: 'auto', maxHeight: '820px', maxWidth: '570px', background: '#fff', padding: '14px', boxSizing: 'border-box' }));
     }, files.map((f) => 'data:image/png;base64,' + fs.readFileSync(f).toString('base64')));
     await d.wait(4000);
     await d.at(13.6);
@@ -725,6 +786,14 @@ const SCENES = {
 
   async share(d) {
     const p = await userPage('manager');
+    // A share recorded earlier is revoked first, so the colleague can be chosen again.
+    await open(p, '/app/shared-by-me');
+    for (let i = 0; i < 5 && await p.locator('[data-testid^="by-me-revoke-"]').count(); i++) {
+      await p.locator('[data-testid^="by-me-revoke-"]').first().click();
+      await p.waitForTimeout(800);
+      await p.locator('mat-dialog-container button').last().click({ timeout: 2000 }).catch(() => {});
+      await p.waitForTimeout(1200);
+    }
     await openAnswer(p, T.payrollRow);
     await d.attach(p);
     await d.beat(0);
@@ -748,13 +817,16 @@ const SCENES = {
       await d.spot(p.getByTestId('email-classification'));
     });
     await d.callout(T.c.noBypass, 'gpp_good');
-    await d.at(5);
-    await d.unspot();
+    await d.at(8);
+    await d.callout(null); await d.unspot();
     await p.keyboard.press('Escape').catch(() => {});
     await d.wait(500);
+
+    await d.beat(3);
     await d.nav('shared-by-me');
     await d.maybe(() => d.spot(p.getByTestId('shared-by-me-table')));
-    await d.at(9.5);
+    await d.callout(T.c.revoke, 'undo');
+    await d.at(6.5);
     await d.callout(null); await d.unspot();
     return d.end();
   },
@@ -794,21 +866,28 @@ const SCENES = {
     d.cut(false);
     await d.scrollTo(p.getByTestId('rule-test-result'), 'center');
     await d.spot(p.getByTestId('rule-test-result'));
+    d.cut(true);
     const phone = await phoneShot('alerts-mobile', '/app/alerts', 'manager');
+    d.cut(false);
 
     await d.beat(2);
     await d.unspot();
     await d.nav('alerts');
-    await d.maybe(async () => {
-      const first = p.locator('[data-testid="alerts-list"] [data-testid^="alert-"]').first();
-      if (await first.count()) { await d.click(first, 1500); await d.spot(p.getByTestId('alert-detail')); }
-      else await d.spot(p.getByTestId('alerts-kpis'));
-    });
+    await d.maybe(() => d.spot(p.getByTestId('alerts-list')));
     await d.callout(T.c.human, 'front_hand');
     await d.at(7);
     await d.unspot();
     await d.phone(phone, 4000);
     await d.callout(null);
+
+    await d.beat(3);
+    await d.maybe(async () => {
+      await d.click(p.locator('[data-testid="alerts-list"] [data-testid^="alert-"]').first(), 1500);
+      await d.spot(p.getByTestId('alert-detail'));
+    });
+    await d.callout(T.c.review, 'rate_review');
+    await d.at(8.5);
+    await d.callout(null); await d.unspot();
     return d.end();
   },
 

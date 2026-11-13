@@ -3,10 +3,9 @@
 <link rel="stylesheet" href="base.css"><link rel="stylesheet" href="base-ar.css"><link rel="stylesheet" href="devices.css">
 <style>
   .stage { flex-direction: row; gap: 90px; padding: 70px 110px; }
-  .words { flex: 1; display: flex; flex-direction: column; align-items: flex-start; }
+  .words { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
   .mark { width: 620px; filter: drop-shadow(0 20px 60px rgb(34 184 207 / 35%)); }
   .tag { font: 700 50px/1.4 sans-serif; margin-top: 34px; }
-  .tag small { display: block; font: 500 30px/1.5 Inter, sans-serif !important; color: var(--muted); direction: ltr; text-align: right; }
   .live { margin-top: 40px; }
   .devices { position: relative; width: 900px; height: 760px; }
   .devices .laptop { position: absolute; right: 0; top: 60px; width: 800px; }
@@ -17,12 +16,12 @@
   <div class="stage">
     <div class="words">
       <img class="mark" data-beat="0" src="__WEB__/public/brand/wabi-insight-wordmark-light.svg" alt="Wabi Insight">
-      <div class="tag" data-beat="0" style="--i:2"><span class="grad">اسأل بياناتك. وثِق بالإجابة.</span><small>Ask Your Data. Trust the Answer.</small></div>
+      <div class="tag" data-beat="0" style="--i:2"><span class="grad">اسأل بياناتك. وثِق بالإجابة.</span></div>
       <div class="live chip ltr" data-beat="1" style="--i:1"><span class="material-icons">public</span>insight.wabitex.com</div>
     </div>
     <div class="devices">
-      <div class="laptop" data-beat="1" style="--i:2"><div class="lid"><img src="shots/landing-desktop.png" alt=""></div><div class="base"></div></div>
-      <div class="phone" data-beat="1" style="--i:5"><div class="screen"><img src="shots/landing-mobile.png" alt=""></div></div>
+      <div class="laptop" data-beat="0" style="--i:4"><div class="lid"><img src="shots/landing-desktop.png" alt=""></div><div class="base"></div></div>
+      <div class="phone" data-beat="0" style="--i:7"><div class="screen"><img src="shots/landing-mobile.png" alt=""></div></div>
     </div>
   </div>
   <script src="stage.js"></script>
