@@ -96,6 +96,8 @@ Required reviewers and branch rules for **private** repositories need GitHub Pro
 
 ## 2. Download the self-hosted runner
 
+> **Another GitHub runner already on this server** (for another project)? Don't reuse or replace it: install Wabi Insight's runner in its own folder, for example `C:\actions-runner-wabi-insight` (the deployment guides do this through `RunnerDir` in their step 5), and use that folder instead of `C:\actions-runner` in the commands below. Each runner has its own Windows service and only takes jobs of the repository it is registered to.
+
 **Check:**
 
 ```powershell
@@ -168,7 +170,7 @@ The runner runs `C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1`, ne
 **Check:**
 
 ```powershell
-if (Test-Path 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1') { & 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion } else { 'not installed' }   # 4 = current version installed
+if (Test-Path 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1') { & 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion } else { 'not installed' }   # 5 = current version installed
 ```
 
 **Do:** download the script of `main` with a GitHub token (*Contents: read*). If you have a checkout of the repository, copy the file instead.
@@ -191,7 +193,7 @@ Get-Content (Join-Path $deployDir 'Deploy-WabiInsight.ps1') -TotalCount 5   # re
 **Verify:**
 
 ```powershell
-& 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion          # 4
+& 'C:\wabitex-apps\wabi-insight\deploy\Deploy-WabiInsight.ps1' -ScriptVersion          # 5
 icacls 'C:\wabitex-apps\wabi-insight\deploy'                                            # SYSTEM and Administrators only
 Get-ExecutionPolicy -Scope LocalMachine                                   # RemoteSigned (default) or stricter-but-allowing local scripts
 ```

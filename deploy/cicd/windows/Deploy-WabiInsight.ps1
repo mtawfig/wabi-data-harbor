@@ -46,7 +46,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$DeployScriptVersion = 4
+$DeployScriptVersion = 5
 if ($ScriptVersion) { $DeployScriptVersion; return }
 if (-not $Component) { throw "-Component is required: backend, frontend or frontend+backend." }
 
@@ -168,6 +168,21 @@ if ($Migrate -eq 'yes' -and -not $deployBackend) {
 if ($deployBackend) {
     if (-not $ApiDir -or -not (Test-Path (Join-Path $ApiDir 'WabiInsight.Api.dll'))) { Stop-Deploy "-ApiDir must point at the published API (WabiInsight.Api.dll not found in '$ApiDir')." }
     if (-not (Test-Path $dotnet)) { Stop-Deploy "$dotnet not found: install the ASP.NET Core Hosting Bundle (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 13, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 19)." }
+    # A server that already runs other .NET sites has dotnet.exe from an older version: check for the runtime this
+    # release needs before anything is copied (otherwise the first failure is the migration, with the API offline).
+    $runtimeConfig = Join-Path $ApiDir 'WabiInsight.Api.runtimeconfig.json'
+    if (Test-Path $runtimeConfig) {
+        $runtimeOptions = (Get-Content $runtimeConfig -Raw | ConvertFrom-Json).runtimeOptions
+        $neededRuntimes = @($runtimeOptions.frameworks) + @($runtimeOptions.framework) | Where-Object { $_ -and $_.name }
+        $installedRuntimes = @(Invoke-Native { & $dotnet --list-runtimes })
+        $global:LASTEXITCODE = 0
+        foreach ($runtime in $neededRuntimes) {
+            $major = ([string]$runtime.version).Split('.')[0]
+            if (-not ($installedRuntimes -match ('^' + [regex]::Escape($runtime.name) + ' ' + $major + '\.'))) {
+                Stop-Deploy "The server has no .NET $major runtime ($($runtime.name) $major.x): install the ASP.NET Core $major Hosting Bundle (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 13, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 19), then run the deployment again. Nothing was changed."
+            }
+        }
+    }
     if (-not (Test-Path (Join-Path $apiTarget 'appsettings.Local.json'))) { Stop-Deploy "$apiTarget\appsettings.Local.json is missing: create it first (docs/DEPLOYMENT_WINDOWS_SERVER_2019.md step 24, or docs/DEPLOYMENT_WINDOWS_AZURE.md step 30)." }
 }
 if ($deployFrontend) {
