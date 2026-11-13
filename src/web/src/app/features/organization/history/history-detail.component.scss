@@ -11,4 +11,13 @@
 .small { font-size: 12px; }
 .error { display: flex; gap: 10px; align-items: flex-start; background: #fef2f2; color: #991b1b; ul { margin: 4px 0 0; padding-inline-start: 18px; } }
 .danger { color: #991b1b; }
+.detail__more { display: none; }
 @media (max-width: 960px) { .detail__layout { grid-template-columns: minmax(0, 1fr); } }
+// Phones: favourite, export, share and the "more" menu on one row; Re-run, the main action, on its own full row.
+@media (max-width: 720px) {
+  .detail__actions { width: 100%; }
+  .detail__wide { display: none; }
+  .detail__more { display: inline-flex; margin-inline-start: auto; }
+  .detail__rerun { flex: 1 1 100%; }
+  .detail__rename-field { min-width: 0; flex: 1 1 100%; }
+}

@@ -74,6 +74,11 @@ public sealed partial class InsightsConnectionFactory : IInsightsConnectionFacto
                 warnings.Add(DedicatedLoginConfigured ? "insights_login_not_confined" : "insights_login_not_configured");
             }
 
+            if (!await CanReadViewsAsync(connection, cancellationToken))
+            {
+                warnings.Add("insights_views_not_readable");
+            }
+
             return new ConnectionTestResult(true, connection.ServerVersion, connection.Database, confined, warnings, null, watch.Elapsed.TotalMilliseconds);
         }
         catch (SqlException ex)
@@ -99,6 +104,45 @@ public sealed partial class InsightsConnectionFactory : IInsightsConnectionFacto
         var value = await command.ExecuteScalarAsync(cancellationToken);
         return value is int i && i == 1;
     }
+
+    /// <summary>
+    /// True when every insights view can actually be read. Seeing the views is not enough: when the schema and the
+    /// tables have different owners, SQL Server lists the views to this login and then refuses to read them (P13.43).
+    /// </summary>
+    private async Task<bool> CanReadViewsAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        var views = new List<string>();
+        await using (var list = connection.CreateCommand())
+        {
+            list.CommandText = "SELECT QUOTENAME(name) FROM sys.views WHERE schema_id = SCHEMA_ID(N'insights') ORDER BY name";
+            await using var reader = await list.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                views.Add(reader.GetString(0));
+            }
+        }
+
+        foreach (var view in views)
+        {
+            try
+            {
+                await using var probe = connection.CreateCommand();
+                probe.CommandText = $"SELECT TOP (0) * FROM [insights].{view}";   // the name comes from sys.views through QUOTENAME
+                probe.CommandTimeout = CommandTimeoutSeconds;
+                await probe.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (SqlException ex)
+            {
+                LogViewNotReadable(_logger, view, ex.Number, ex.Message);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The insights login cannot read the view [insights].{View} (SQL error {Number}: {Reason}). If the reason is a permission on a dbo table, apply the database migrations: AlignInsightsSchemaOwner gives the insights schema the owner of dbo.")]
+    private static partial void LogViewNotReadable(ILogger logger, string view, int number, string reason);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Insights:ConnectionString is not configured; insights queries use the configuration-database login. Configure the dedicated read-only login before production (scripts/sql/create-insights-login.sql).")]
     private static partial void LogFallback(ILogger logger);

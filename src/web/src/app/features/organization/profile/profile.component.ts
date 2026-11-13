@@ -43,7 +43,7 @@ import { LanguageSwitcherComponent } from '../../../shared/ui/language-switcher.
             <div class="wi-card">
               <h3>{{ 'profile.language.title' | transloco }}</h3>
               <p class="wi-muted">{{ 'profile.language.text' | transloco }}</p>
-              <app-language-switcher />
+              <app-language-switcher [full]="true" />
             </div>
             <div class="wi-card">
               <h3>{{ 'profile.security.title' | transloco }}</h3>

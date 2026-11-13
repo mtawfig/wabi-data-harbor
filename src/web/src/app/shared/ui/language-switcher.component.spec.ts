@@ -33,6 +33,19 @@ describe('LanguageSwitcherComponent', () => {
     expect(button.textContent).toContain('Arabic');
   });
 
+  it('keeps the named button on small screens where a page asks for it (Profile)', () => {
+    TestBed.configureTestingModule({
+      imports: [LanguageSwitcherComponent],
+      providers: [provideTestTransloco(), { provide: BreakpointObserver, useValue: { observe: () => of<BreakpointState>({ matches: true, breakpoints: {} }) } }],
+    });
+    const fixture = TestBed.createComponent(LanguageSwitcherComponent);
+    fixture.componentRef.setInput('full', true);
+    fixture.detectChanges();
+    const button = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('[data-testid="language-switcher"]')!;
+    expect(button.hasAttribute('mat-stroked-button')).toBe(true);
+    expect(button.textContent).toContain('Arabic');
+  });
+
   it('switches the language either way', () => {
     const { fixture, button } = render(true);
     const language = TestBed.inject(LanguageService);

@@ -21,6 +21,8 @@
     padding-block: 6px;
   }
 }
+// The progress bar sits below the Ask button, never against it.
+.ask__composer mat-progress-bar { margin-top: 16px; }
 .ask__working { margin: 8px 0 0; }
 .ask__results { min-height: 220px; display: grid; place-items: center; }
 .ask__empty { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 520px; mat-icon { font-size: 40px; width: 40px; height: 40px; color: var(--wi-aqua); margin-bottom: 8px; } }

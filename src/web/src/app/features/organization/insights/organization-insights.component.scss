@@ -8,4 +8,9 @@
 .chart { height: 280px; width: 100%; }
 .small { font-size: 12px; }
 .plain { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 12px; th { text-align: start; font-size: 12px; color: var(--wi-muted); padding: 6px 8px; border-bottom: 1px solid var(--wi-border); } td { padding: 6px 8px; border-bottom: 1px solid var(--wi-border); } .num { text-align: end; } }
-@media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+// Phones: the period buttons wrap and the fields take the full row instead of pushing the card wider than the screen.
+@media (max-width: 720px) {
+  .controls__row { mat-button-toggle-group { flex-wrap: wrap; max-width: 100%; } mat-form-field, .group { flex: 1 1 100%; min-width: 0; } }
+  .metrics ul { max-height: 260px; }
+}

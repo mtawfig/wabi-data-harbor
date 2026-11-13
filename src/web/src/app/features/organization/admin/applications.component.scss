@@ -10,7 +10,7 @@
 .small { font-size: 12px; }
 .actions { white-space: nowrap; }
 @media (max-width: 760px) { .span2 { grid-column: 1 / -1; } }
-.code { margin-inline-start: 8px; font-size: 12px; }
+.code { margin-inline: 8px; font-size: 12px; }
 
 .examples {
   display: grid;

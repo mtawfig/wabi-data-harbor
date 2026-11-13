@@ -92,7 +92,7 @@ export class NotificationCenterComponent {
   text(n: AppNotification): string {
     const d = NotificationsService.data(n);
     const status = d.newStatus ? this.transloco.translate(`support.statuses.${d.newStatus}`) : '';
-    return this.transloco.translate(`notifications.types.${n.notificationType}`, { ...d, newStatus: status });
+    return this.transloco.translate(`notifications.types.${n.notificationType}`, isolated({ ...d, newStatus: status }));
   }
 
   organization(n: AppNotification): string | undefined {
@@ -123,4 +123,18 @@ export class NotificationCenterComponent {
       void this.router.navigate(['/app/periodic-reports']);
     }
   }
+}
+
+/**
+ * A name placed inside a sentence of the other direction (an English rule name in an Arabic notification) keeps its
+ * own direction and leaves the punctuation around it where the sentence put it: each text value is wrapped in the
+ * Unicode isolate marks (FSI … PDI), which take no space and are not shown.
+ */
+export function isolated<T extends object>(values: T): T {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(values)) {
+    result[key] = typeof value === 'string' && value !== '' ? `\u2068${value}\u2069` : value;
+  }
+
+  return result as T;
 }

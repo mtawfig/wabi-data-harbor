@@ -1017,6 +1017,13 @@ wabi-docker insights-login
 **Verify:** after a minute, **System Health** shows *deployment-settings* without the *Insights:ConnectionString*
 remark.
 
+**If not:** the organization dashboard or **Organization Insights** answers *The insights query failed* → the
+server was first migrated by a release before P13.43, where the `insights` schema belonged to the application's
+login instead of the database owner, so the new login is refused on every view. Run `sudo wabi-docker deploy` with
+the current release (it applies the migration *AlignInsightsSchemaOwner*, which corrects the owner and keeps this
+login's grant); **Platform Insights Configuration** then no longer shows *The insights login cannot read the
+insights views*.
+
 ## 30. The sample organizations (for testing)
 
 **Where:** [Server terminal], then [Your computer]'s browser.

@@ -943,6 +943,7 @@
       "insights_query_failed": "فشل استعلام الرؤى.",
       "insights_login_not_configured": "حساب الرؤى المخصص غير مضبوط.",
       "insights_login_not_confined": "يستطيع حساب الرؤى قراءة الجداول الخام.",
+      "insights_views_not_readable": "لا يستطيع حساب الرؤى قراءة عروض الرؤى. طبّق ترحيلات قاعدة البيانات ثم أعد الفحص.",
       "organization_admin_metrics_automatic": "يحصل مديرو المؤسسة على كل مقياس معتمد تلقائيًا؛ لا يمكن تعديل منحهم.",
       "ai_provider_not_found": "مزوّد الذكاء الاصطناعي غير موجود.",
       "ai_provider_not_approved": "يجب أن يكون المزوّد معتمدًا ونشطًا ليكون الافتراضي.",
