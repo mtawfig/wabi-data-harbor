@@ -7,14 +7,20 @@ import { LanguageService } from '../../core/i18n/language.service';
  * The same drawing ships as static files under `public/brand/` (icon, light icon, dark and light wordmarks,
  * favicon); keep both in sync. `variant` 'dark' is for light backgrounds, 'light' for the navy/ocean gradient.
  *
- * The name and tagline follow the interface language: in Arabic the mark sits on the right with the Arabic name and
- * tagline on its left (the page direction does the mirroring), as in `wabi-insight-wordmark-{dark,light}_ar.svg`.
+ * The logo follows the interface language. With the tagline it is the wordmark file itself
+ * (`wabi-insight-wordmark-{dark,light}.svg` in English, `…_ar.svg` in Arabic: the mark on the right, the Arabic name
+ * and tagline on its left), so the platform shows exactly the designed logo. Without the tagline, and where a page
+ * hides the wordmark on small screens, it is the mark with the name as text in the same language.
  */
 @Component({
   selector: 'app-brand-logo',
   template: `
-    <span class="logo" [class.logo--light]="variant() === 'light'" [class.logo--ar]="arabic()" [attr.lang]="arabic() ? 'ar' : 'en'">
-      <svg viewBox="0 0 64 64" [attr.width]="size()" [attr.height]="size()" aria-hidden="true" focusable="false">
+    <span class="logo" [class.logo--light]="variant() === 'light'" [class.logo--ar]="arabic()" [class.logo--wordmark]="wordmark()" [attr.lang]="arabic() ? 'ar' : 'en'">
+      @if (wordmark(); as file) {
+        <img class="logo__wordmark" [src]="file.src" [alt]="name() + ' — ' + tagline()" [style.height.px]="file.height" [style.width.px]="file.width" data-testid="brand-wordmark" />
+      }
+      <span class="logo__inline">
+      <svg viewBox="0 0 64 64" [attr.width]="markSize()" [attr.height]="markSize()" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="wiWave" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#087DF2" /><stop offset="1" stop-color="#22B8CF" /></linearGradient>
           <linearGradient id="wiBeamR" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#22B8CF" stop-opacity=".85" /><stop offset="1" stop-color="#22B8CF" stop-opacity="0" /></linearGradient>
@@ -38,11 +44,16 @@ import { LanguageService } from '../../core/i18n/language.service';
       @if (showName()) {
         <span class="logo__text"><span class="logo__name" data-testid="brand-name">{{ name() }}</span>@if (showTagline()) { <span class="logo__tagline" data-testid="brand-tagline">{{ tagline() }}</span> }</span>
       }
+      </span>
     </span>
   `,
   styles: `
-    .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--wi-navy); }
-    .logo--light { color: var(--wi-white); }
+    .logo, .logo__inline { display: inline-flex; align-items: center; gap: 10px; color: var(--wi-navy); }
+    .logo--wordmark .logo__inline { display: none; }
+    /* The file's canvas is wider than its drawing: show the drawing only, from its own side. */
+    .logo__wordmark { display: block; object-fit: cover; object-position: left center; }
+    .logo--ar .logo__wordmark { object-position: right center; }
+    .logo--light, .logo--light .logo__inline { color: var(--wi-white); }
     .logo__tower { fill: currentColor; }
     .logo__band { fill: #087df2; }
     .logo--light .logo__band { fill: #22b8cf; }
@@ -67,5 +78,16 @@ export class BrandLogoComponent {
   private readonly language = inject(LanguageService);
   protected readonly arabic = computed(() => this.language.current() === 'ar');
   protected readonly name = computed(() => (this.arabic() ? 'وابي انسايت' : 'Wabi Insight'));
+  /** The wordmark file for this language and background, sized so that its mark is `size` high (canvas 340 x 72, mark 64). */
+  protected readonly wordmark = computed(() => {
+    if (!this.showName() || !this.showTagline()) {
+      return null;
+    }
+    const height = (this.size() * 72) / 64;
+    const drawn = this.arabic() ? 219 : 282;      // canvas units the drawing occupies (scripts/brand/build_wordmarks.py)
+    return { src: `brand/wabi-insight-wordmark-${this.variant()}${this.arabic() ? '_ar' : ''}.svg`, height, width: (height * drawn) / 72 };
+  });
+  /** The mark beside the name as text: never larger than the default, whatever the wordmark's size. */
+  protected readonly markSize = computed(() => (this.wordmark() ? Math.min(this.size(), 36) : this.size()));
   protected readonly tagline = computed(() => (this.arabic() ? 'اسأل بياناتك، وثق بالإجابة' : 'Ask Your Data. Trust the Answer.'));
 }

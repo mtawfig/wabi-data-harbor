@@ -72,6 +72,8 @@
 }
 @media (max-width: 600px) {
   .site-header__inner { padding: 0 12px; gap: 8px; }
-  .site-header__brand ::ng-deep .logo__tagline { display: none; }
+  /* Small screens: the mark and the name only. */
+  .site-header__brand ::ng-deep .logo__tagline, .site-header__brand ::ng-deep .logo__wordmark { display: none; }
+  .site-header__brand ::ng-deep .logo.logo--wordmark .logo__inline { display: inline-flex !important; }
   .site-header__actions { gap: 6px; ::ng-deep .switcher .mdc-button__label { display: none; } ::ng-deep .switcher { min-width: 0; padding-inline: 10px; } }
   .section { padding: 44px 16px; } .section__title { font-size: 24px; } .demo__kpis { grid-template-columns: 1fr; } .demo__kpi-value { font-size: 22px; } .hero__title { font-size: 32px; } }
