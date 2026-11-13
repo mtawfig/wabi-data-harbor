@@ -463,7 +463,7 @@ async function prepareGraphics() {
   execFileSync('python3', [path.join(HERE, 'make_qr.py'), '--script', path.join(HERE, `script.${LANG}.json`), '--out', path.join(dir, 'qr.svg')], { stdio: 'ignore' });
   // The intro shows the live landing page on a laptop and on a phone.
   const shots = path.join(dir, 'shots');
-  if (!fs.existsSync(path.join(shots, 'landing-desktop.png'))) {
+  {   // taken again on every run: a kept screenshot would show the site as it was (an older logo, for example)
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
     await context.addInitScript((lang) => { try { localStorage.setItem('wi.lang', lang); } catch {} }, LANG);
     const page = await context.newPage();
@@ -473,7 +473,7 @@ async function prepareGraphics() {
     await page.screenshot({ path: path.join(shots, 'landing-desktop.png') });
     await context.close();
   }
-  if (!fs.existsSync(path.join(shots, 'landing-mobile.png'))) await phoneShot('landing-mobile', '/');
+  await phoneShot('landing-mobile', '/');
 }
 
 async function graphicScene(scene) {
