@@ -18,12 +18,12 @@ from fontTools.pens.transformPen import TransformPen
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 BRAND = os.path.join(ROOT, 'src', 'web', 'public', 'brand')
 FONTS = os.path.join(ROOT, 'src', 'web', 'node_modules', '@fontsource', 'ibm-plex-sans-arabic', 'files')
-NAME, TAGLINE = 'وابي تكس انسايت', 'اسأل بياناتك، وثق بالإجابة'
+NAME, TAGLINE = 'وابي انسايت', 'اسأل بياناتك، وثق بالإجابة'
 # Places where the tagline may take a kashida (ـ) so that it is as long as the name: after these letter pairs, in this order.
 KASHIDA = ['اس|أل', 'وث|ق', 'بالإج|ابة', 'بي|اناتك', 'بيان|اتك']
 MAX_KASHIDA = 5       # kashida glyphs per place (one is about 0.12 em in this typeface): lengthened, not stretched
 WIDTH, HEIGHT, MARK, MARGIN, GAP = 340, 72, 64, 4, 16      # the English wordmark: mark at x 4..68, text from x 84
-NAME_SIZE, NAME_BASE, TAG_SIZE, TAG_BASE = 26, 37, 14, 58      # the name is as wide as the English name (about 172)
+NAME_SIZE, NAME_BASE, TAG_SIZE, TAG_BASE = 28, 37.5, 13, 58      # the name is as wide as the English name (about 172)
 
 
 def outline(text, weight, size, right, baseline):

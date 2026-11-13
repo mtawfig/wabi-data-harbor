@@ -27,8 +27,8 @@ describe('BrandLogoComponent', () => {
     const language = TestBed.inject(LanguageService);
     language.use('ar', false);
     fixture.detectChanges();
-    expect(text('brand-name')).toBe('وابي تكس انسايت');
-    expect(text('brand-tagline')?.replaceAll('ـ', '')).toBe('اسأل بياناتك، وثق بالإجابة');   // kashidas only lengthen it
+    expect(text('brand-name')).toBe('وابي انسايت');
+    expect(text('brand-tagline')).toBe('اسأل بياناتك، وثق بالإجابة');
     expect(element.querySelector('.logo')!.getAttribute('lang')).toBe('ar');
     language.use('en', false);
     fixture.detectChanges();

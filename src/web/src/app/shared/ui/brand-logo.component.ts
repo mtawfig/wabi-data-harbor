@@ -53,9 +53,9 @@ import { LanguageService } from '../../core/i18n/language.service';
     .logo__tagline { font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: #087df2; white-space: nowrap; }
     .logo--light .logo__tagline { color: #22b8cf; }
     .logo--ar .logo__text { line-height: 1.25; }
-    /* Arabic: the name a little smaller (the script reads larger), the tagline lengthened with kashidas to the name's width, as in the wordmark files. */
-    .logo--ar .logo__name { font-size: 17px; letter-spacing: 0; }
-    .logo--ar .logo__tagline { font-size: 10px; letter-spacing: 0; text-transform: none; }
+    /* Arabic: same sizes as English; no capitals or letter spacing in this script. */
+    .logo--ar .logo__name { letter-spacing: 0; }
+    .logo--ar .logo__tagline { letter-spacing: 0; text-transform: none; }
   `,
 })
 export class BrandLogoComponent {
@@ -66,6 +66,6 @@ export class BrandLogoComponent {
 
   private readonly language = inject(LanguageService);
   protected readonly arabic = computed(() => this.language.current() === 'ar');
-  protected readonly name = computed(() => (this.arabic() ? 'وابي تكس انسايت' : 'Wabi Insight'));
-  protected readonly tagline = computed(() => (this.arabic() ? 'اســـــأل بيانـــــاتك، وثـــــق بالإجـــــابة' : 'Ask Your Data. Trust the Answer.'));
+  protected readonly name = computed(() => (this.arabic() ? 'وابي انسايت' : 'Wabi Insight'));
+  protected readonly tagline = computed(() => (this.arabic() ? 'اسأل بياناتك، وثق بالإجابة' : 'Ask Your Data. Trust the Answer.'));
 }
