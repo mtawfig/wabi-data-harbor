@@ -1,14 +1,19 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+
+import { LanguageService } from '../../core/i18n/language.service';
 
 /**
  * Wabi Insight brand mark (P11.1, specification §21): a lighthouse over data waves with connectivity marks.
  * The same drawing ships as static files under `public/brand/` (icon, light icon, dark and light wordmarks,
  * favicon); keep both in sync. `variant` 'dark' is for light backgrounds, 'light' for the navy/ocean gradient.
+ *
+ * The name and tagline follow the interface language: in Arabic the mark sits on the right with the Arabic name and
+ * tagline on its left (the page direction does the mirroring), as in `wabi-insight-wordmark-{dark,light}_ar.svg`.
  */
 @Component({
   selector: 'app-brand-logo',
   template: `
-    <span class="logo" [class.logo--light]="variant() === 'light'">
+    <span class="logo" [class.logo--light]="variant() === 'light'" [class.logo--ar]="arabic()" [attr.lang]="arabic() ? 'ar' : 'en'">
       <svg viewBox="0 0 64 64" [attr.width]="size()" [attr.height]="size()" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="wiWave" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#087DF2" /><stop offset="1" stop-color="#22B8CF" /></linearGradient>
@@ -31,7 +36,7 @@ import { Component, input } from '@angular/core';
         <path d="M4 62c5-4 9-4 14 0s9 4 14 0 9-4 14 0 9 4 14 0" fill="none" stroke="url(#wiWave)" stroke-width="3.2" stroke-linecap="round" opacity=".32" />
       </svg>
       @if (showName()) {
-        <span class="logo__text"><span class="logo__name">Wabi Insight</span>@if (showTagline()) { <span class="logo__tagline">Ask Your Data. Trust the Answer.</span> }</span>
+        <span class="logo__text"><span class="logo__name" data-testid="brand-name">{{ name() }}</span>@if (showTagline()) { <span class="logo__tagline" data-testid="brand-tagline">{{ tagline() }}</span> }</span>
       }
     </span>
   `,
@@ -47,6 +52,9 @@ import { Component, input } from '@angular/core';
     .logo__name { font-weight: 700; font-size: 18px; letter-spacing: -0.01em; white-space: nowrap; }
     .logo__tagline { font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: #087df2; white-space: nowrap; }
     .logo--light .logo__tagline { color: #22b8cf; }
+    .logo--ar .logo__text { line-height: 1.25; }
+    .logo--ar .logo__name { letter-spacing: 0; }
+    .logo--ar .logo__tagline { font-size: 11px; letter-spacing: 0; text-transform: none; }
   `,
 })
 export class BrandLogoComponent {
@@ -54,4 +62,9 @@ export class BrandLogoComponent {
   readonly showName = input(true);
   readonly showTagline = input(false);
   readonly variant = input<'dark' | 'light'>('dark');
+
+  private readonly language = inject(LanguageService);
+  protected readonly arabic = computed(() => this.language.current() === 'ar');
+  protected readonly name = computed(() => (this.arabic() ? 'وابي تكس انسايت' : 'Wabi Insight'));
+  protected readonly tagline = computed(() => (this.arabic() ? 'اسأل بياناتك، وثق بالإجابة' : 'Ask Your Data. Trust the Answer.'));
 }
