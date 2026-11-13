@@ -1,6 +1,6 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
-using System.Threading.Channels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -27,8 +27,9 @@ public sealed class FileLogOptions
 /// Writes the application's log to one file a day (<c>wabi-insight-yyyyMMdd.log</c>, UTC), for servers where nothing
 /// collects the console output: under IIS the process has no console, and only warnings reach the Windows Event Log,
 /// so e-mail deliveries, scheduled runs and start-up messages would be written nowhere (P13.33).
-/// Logging never gets in the application's way: lines are queued and written by one background task, a full queue
-/// drops lines instead of waiting, and a folder that cannot be written is retried quietly.
+/// Logging never gets in the application's way: lines are queued and written by one background thread of its own, a
+/// full queue drops lines instead of waiting, and a folder that cannot be written is retried quietly. The writer does
+/// not use the thread pool, so the log keeps being written (and is flushed at shutdown) even when the pool is busy.
 /// What is written follows the usual "Logging:LogLevel" settings ("Logging:File:LogLevel" overrides them for the file).
 /// </summary>
 [ProviderAlias("File")]
@@ -37,13 +38,14 @@ public sealed class FileLoggerProvider : ILoggerProvider
     internal const string FilePrefix = "wabi-insight-";
     private const int QueueCapacity = 20_000;
 
-    private readonly Channel<string> _queue = Channel.CreateBounded<string>(new BoundedChannelOptions(QueueCapacity) { FullMode = BoundedChannelFullMode.DropWrite, SingleReader = true });
+    private readonly BlockingCollection<string> _queue = new(QueueCapacity);
     private readonly string _directory;
     private readonly int _retentionDays;
     private readonly long _maxFileBytes;
     private readonly Func<DateTimeOffset> _now;
-    private readonly Task _writer;
+    private readonly Thread _writer;
     private readonly CancellationTokenSource _stop = new();
+    private int _disposed;
 
     public FileLoggerProvider(IOptions<FileLogOptions> options)
         : this(options.Value, () => DateTimeOffset.UtcNow)
@@ -62,7 +64,8 @@ public sealed class FileLoggerProvider : ILoggerProvider
         _retentionDays = Math.Max(1, options.RetentionDays);
         _maxFileBytes = Math.Max(1, options.MaxFileMegabytes) * 1024L * 1024L;
         _now = now;
-        _writer = Task.Run(WriteAsync);
+        _writer = new Thread(Write) { IsBackground = true, Name = "Wabi Insight log file" };
+        _writer.Start();
     }
 
     /// <summary>For tests: a size limit in bytes.</summary>
@@ -75,43 +78,54 @@ public sealed class FileLoggerProvider : ILoggerProvider
 
     public void Dispose()
     {
-        _queue.Writer.TryComplete();
-        try
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
         {
-            // What is queued gets written; a folder that cannot be written does not hold the shutdown up.
-            if (!_writer.Wait(TimeSpan.FromSeconds(5)))
-            {
-                _stop.Cancel();
-                _writer.Wait(TimeSpan.FromSeconds(2));
-            }
+            return;
         }
-        catch (AggregateException)
+
+        _queue.CompleteAdding();
+
+        // What is queued gets written; a folder that cannot be written does not hold the shutdown up.
+        if (!_writer.Join(TimeSpan.FromSeconds(5)))
         {
-            // The writer never throws by design; nothing useful can be done here if it did.
+            _stop.Cancel();
+            _writer.Join(TimeSpan.FromSeconds(2));
         }
 
         _stop.Dispose();
+        _queue.Dispose();
     }
 
-    internal void Enqueue(string line) => _queue.Writer.TryWrite(line);
+    /// <summary>Never waits: a full queue, or one that is closing, drops the line.</summary>
+    internal void Enqueue(string line)
+    {
+        try
+        {
+            _queue.TryAdd(line);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+        {
+            // Logged after the provider was closed: nowhere to write it.
+        }
+    }
 
     /// <summary>The single writer: drains the queue in batches, appends to the day's file, rolls it by day and size.</summary>
-    private async Task WriteAsync()
+    private void Write()
     {
-        var reader = _queue.Reader;
+        var stop = _stop.Token;
         var batch = new StringBuilder();
         string? purgedFor = null;
         try
         {
-            while (await reader.WaitToReadAsync(_stop.Token).ConfigureAwait(false))
+            while (_queue.TryTake(out var first, Timeout.Infinite, stop))
             {
-                batch.Clear();
-                while (batch.Length < 256 * 1024 && reader.TryRead(out var line))
+                batch.Clear().Append(first);
+                while (batch.Length < 256 * 1024 && _queue.TryTake(out var line))
                 {
                     batch.Append(line);
                 }
 
-                while (!_stop.IsCancellationRequested)
+                while (!stop.IsCancellationRequested)
                 {
                     try
                     {
@@ -123,23 +137,23 @@ public sealed class FileLoggerProvider : ILoggerProvider
                             purgedFor = day;
                         }
 
-                        await File.AppendAllTextAsync(CurrentFile(day), batch.ToString(), Encoding.UTF8, _stop.Token).ConfigureAwait(false);
+                        File.AppendAllText(CurrentFile(day), batch.ToString(), Encoding.UTF8);
                         break;
                     }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
                     {
                         // The folder is missing, full or not ours to write: keep the batch and try again shortly.
-                        if (reader.Completion.IsCompleted)
+                        if (_queue.IsAddingCompleted)
                         {
                             return; // shutting down: do not hold the process for a folder that does not work
                         }
 
-                        await Task.Delay(RetryAfterFailure, _stop.Token).ConfigureAwait(false);
+                        stop.WaitHandle.WaitOne(RetryAfterFailure);
                     }
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException)
         {
             // Stopped.
         }

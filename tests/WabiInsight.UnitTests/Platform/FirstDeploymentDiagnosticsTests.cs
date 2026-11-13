@@ -157,6 +157,38 @@ public sealed class FirstDeploymentDiagnosticsTests : IDisposable
     }
 
     [Fact]
+    public void LogFile_IsWrittenByItsOwnThread_SoABusyThreadPoolCannotDelayOrLoseIt()
+    {
+        // The writer asks the clock for the day's file name: note which threads ask.
+        var writerThreads = new System.Collections.Concurrent.ConcurrentBag<(string? Name, bool Pool)>();
+        var test = Environment.CurrentManagedThreadId;
+        var provider = new FileLoggerProvider(new FileLogOptions { Directory = _root }, () =>
+        {
+            if (Environment.CurrentManagedThreadId != test)
+            {
+                writerThreads.Add((Thread.CurrentThread.Name, Thread.CurrentThread.IsThreadPoolThread));
+            }
+
+            return new DateTimeOffset(2026, 11, 13, 9, 0, 0, TimeSpan.Zero);
+        });
+        Write(provider.CreateLogger("Test"), LogLevel.Information, "written at shutdown");
+
+        // Closing right away still writes the entry: nothing has to be scheduled on the thread pool first.
+        provider.Dispose();
+        provider.Dispose(); // closing twice is harmless
+
+        Assert.Contains("written at shutdown", File.ReadAllText(Path.Combine(_root, "wabi-insight-20261113.log")), StringComparison.Ordinal);
+        Assert.NotEmpty(writerThreads);
+        Assert.All(writerThreads, thread =>
+        {
+            Assert.Equal("Wabi Insight log file", thread.Name);
+            Assert.False(thread.Pool);
+        });
+        // Logging after the provider is closed is ignored, not an error.
+        Write(provider.CreateLogger("Test"), LogLevel.Information, "too late");
+    }
+
+    [Fact]
     public void LogFile_ThatCannotBeWritten_NeverGetsInTheApplicationsWay()
     {
         // A folder "inside" a file cannot be created, on any system.
