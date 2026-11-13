@@ -19,8 +19,11 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 BRAND = os.path.join(ROOT, 'src', 'web', 'public', 'brand')
 FONTS = os.path.join(ROOT, 'src', 'web', 'node_modules', '@fontsource', 'ibm-plex-sans-arabic', 'files')
 NAME, TAGLINE = 'وابي تكس انسايت', 'اسأل بياناتك، وثق بالإجابة'
+# Places where the tagline may take a kashida (ـ) so that it is as long as the name: after these letter pairs, in this order.
+KASHIDA = ['اس|أل', 'وث|ق', 'بالإج|ابة', 'بي|اناتك', 'بيان|اتك']
+MAX_KASHIDA = 5       # kashida glyphs per place (one is about 0.12 em in this typeface): lengthened, not stretched
 WIDTH, HEIGHT, MARK, MARGIN, GAP = 340, 72, 64, 4, 16      # the English wordmark: mark at x 4..68, text from x 84
-NAME_SIZE, NAME_BASE, TAG_SIZE, TAG_BASE = 30, 38, 15, 58
+NAME_SIZE, NAME_BASE, TAG_SIZE, TAG_BASE = 26, 37, 14, 58      # the name is as wide as the English name (about 172)
 
 
 def outline(text, weight, size, right, baseline):
@@ -49,6 +52,30 @@ def outline(text, weight, size, right, baseline):
     return pen.getCommands(), advance
 
 
+def tagline(target):
+    """The tagline with kashidas added one at a time until it is about as long as `target`; returns (text, size)."""
+    counts = [0] * len(KASHIDA)
+    def text():
+        words = TAGLINE.split(' ')
+        for i, word in enumerate(words):
+            # insert from the end of the word backwards, so earlier positions stay valid
+            for place, n in sorted(zip(KASHIDA, counts), key=lambda x: -len(x[0].split('|')[0])):
+                before, after = place.split('|')
+                if word.startswith(before + after):
+                    word = word[:len(before)] + 'ـ' * n + word[len(before):]
+            words[i] = word
+        return ' '.join(words)
+    width = lambda: outline(text(), 500, TAG_SIZE, 0, 0)[1]
+    step = 0
+    while width() < target and step < len(KASHIDA) * MAX_KASHIDA:
+        counts[step % len(KASHIDA)] += 1
+        if width() > target * 1.02:          # one too many: take it back and stop
+            counts[step % len(KASHIDA)] -= 1
+            break
+        step += 1
+    return text(), TAG_SIZE * target / width()   # the last few per cent by size
+
+
 def build(theme):
     english = open(os.path.join(BRAND, f'wabi-insight-wordmark-{theme}.svg'), encoding='utf-8').read()
     defs = re.search(r'<defs>.*?</defs>', english, re.S).group(0)
@@ -56,7 +83,9 @@ def build(theme):
     name_fill, tag_fill = re.findall(r'<text [^>]*fill="(#[0-9A-Fa-f]+)"', english)
     right = WIDTH - MARGIN - MARK - GAP
     name, name_width = outline(NAME, 700, NAME_SIZE, right, NAME_BASE)
-    tag, tag_width = outline(TAGLINE, 500, TAG_SIZE, right - 1, TAG_BASE)
+    tag_text, tag_size = tagline(name_width)
+    tag, tag_width = outline(tag_text, 500, tag_size, right, TAG_BASE)
+    print(f'{theme}: name {name_width:.1f} wide at {NAME_SIZE}; tagline "{tag_text}" {tag_width:.1f} wide at {tag_size:.2f}')
     assert max(name_width, tag_width) <= right - MARGIN, 'the text does not fit the canvas'
     return f'''<?xml version="1.0" encoding="UTF-8"?>
 <!-- Wabi Insight (AP-AIR) brand mark, Arabic wordmark: the mark on the right, the name and tagline (outlined, IBM Plex Sans Arabic) on its left.
