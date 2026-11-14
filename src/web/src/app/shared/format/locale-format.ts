@@ -3,7 +3,7 @@
  * Arabic month names and Arabic-Indic digits with the Arabic separators; English uses US conventions. Built on the
  * browser's Intl API, so switching language re-formats everything without reloading.
  */
-export type DateFormat = 'short' | 'medium' | 'mediumDate' | 'shortDate' | 'shortTime';
+export type DateFormat = 'short' | 'medium' | 'mediumDate' | 'shortDate' | 'shortTime' | 'monthYear';
 
 export function localeFor(language: string): string {
   return language === 'ar' ? 'ar-EG' : 'en-US';
@@ -17,6 +17,7 @@ const DATE_OPTIONS: Record<DateFormat, Intl.DateTimeFormatOptions> = {
   mediumDate: { year: 'numeric', month: 'short', day: 'numeric' },
   shortDate: { year: '2-digit', month: 'numeric', day: 'numeric' },
   shortTime: { hour: 'numeric', minute: '2-digit' },
+  monthYear: { year: 'numeric', month: 'short' },
 };
 
 const dateFormatters = new Map<string, Intl.DateTimeFormat>();

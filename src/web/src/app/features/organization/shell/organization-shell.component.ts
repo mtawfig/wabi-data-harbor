@@ -34,6 +34,7 @@ const ADMIN_NAV: NavSection = {
     { labelKey: 'nav.org.admin.metadata', icon: 'schema', link: '/app/admin/metadata' },
     { labelKey: 'nav.org.admin.permissions', icon: 'lock', link: '/app/admin/permissions' },
     { labelKey: 'nav.org.admin.insights', icon: 'query_stats', link: '/app/admin/insights' },
+    { labelKey: 'nav.org.admin.aiSpending', icon: 'payments', link: '/app/admin/ai-spending' },
     { labelKey: 'nav.org.admin.integrations', icon: 'hub', link: '/app/admin/integrations' },
     { labelKey: 'nav.org.admin.settings', icon: 'settings', link: '/app/admin/settings' },
   ],

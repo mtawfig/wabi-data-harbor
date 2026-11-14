@@ -8,17 +8,20 @@
   </header>
 
   @if (spending(); as sp) {
-    @if (sp.state === 'near' || sp.state === 'reached') {
+    @if (sp.monthlyAiSpendLimit && (sp.state === 'near' || sp.state === 'reached')) {
+      <!-- Organization Administrators: the plan's position with the amounts and a way to the details. -->
       <div class="wi-card ask__spending" [attr.data-state]="sp.state" role="status" data-testid="ask-spending">
         <mat-icon>{{ sp.state === 'reached' ? 'block' : 'warning_amber' }}</mat-icon>
         <div>
           <strong>{{ 'plans.band.' + sp.state | transloco }}</strong>
-          @if (sp.monthlyAiSpendLimit; as limit) {
-            <span class="ask__spending-figures"><span class="wi-ltr">{{ sp.monthSpend ?? 0 | wiNumber: '1.2-2' }} / {{ limit | wiNumber: '1.2-2' }} USD</span> · {{ 'plans.band.adminHint' | transloco }}</span>
-          } @else {
-            <span class="ask__spending-figures">{{ 'plans.band.userHint' | transloco }}</span>
-          }
+          <span class="ask__spending-figures"><span class="wi-ltr">{{ sp.monthSpend ?? 0 | wiNumber: '1.2-2' }} / {{ sp.monthlyAiSpendLimit | wiNumber: '1.2-2' }} USD</span> · <a routerLink="/app/admin/ai-spending" data-testid="ask-spending-details">{{ 'plans.band.details' | transloco }}</a></span>
         </div>
+      </div>
+    } @else if (sp.state === 'reached') {
+      <!-- Everyone else: one short line, no plan and no amounts (P13.47). -->
+      <div class="wi-card ask__spending" data-state="reached" role="status" data-testid="ask-spending">
+        <mat-icon>block</mat-icon>
+        <div><strong>{{ 'plans.band.user' | transloco }}</strong></div>
       </div>
     }
   }

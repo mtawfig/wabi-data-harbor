@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -49,6 +49,54 @@ export interface AiSpending {
   percentUsed?: number | null;
 }
 
+export interface AiSpendingFilter {
+  from?: string | null;
+  to?: string | null;
+  userId?: string | null;
+  minSpend?: number | null;
+  maxSpend?: number | null;
+  successfulOnly?: boolean;
+}
+
+export interface AiSpendingUserRow {
+  userId: string;
+  fullName: string;
+  employeeNumber?: string | null;
+  departmentNameEn?: string | null;
+  departmentNameAr?: string | null;
+  isActive: boolean;
+  requests: number;
+  spend: number;
+  sharePercent: number;
+}
+
+export interface AiSpendingMonthlyRow {
+  userId: string;
+  fullName: string;
+  spend: number[];
+  total: number;
+}
+
+/** The Organization Administrator's spending report: amounts and counts only. */
+export interface AiSpendingReport {
+  state: AiSpendingState;
+  planCode?: string | null;
+  planNameEn?: string | null;
+  planNameAr?: string | null;
+  monthlyAiSpendLimit?: number | null;
+  monthSpend: number;
+  percentUsed?: number | null;
+  from: string;
+  to: string;
+  totalRequests: number;
+  totalSpend: number;
+  rows: AiSpendingUserRow[];
+  months: string[];
+  monthly: AiSpendingMonthlyRow[];
+  monthlyTotals: number[];
+  users: { userId: string; fullName: string }[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PlansService {
   private readonly http = inject(HttpClient);
@@ -71,6 +119,17 @@ export class PlansService {
 
   assign(organizationId: string, planId: string | null): Observable<OrganizationPlan> {
     return this.http.put<OrganizationPlan>(`/api/platform/plans/organizations/${organizationId}`, { planId });
+  }
+
+  /** Per-employee AI spending of the signed-in administrator's organization; empty filters are not sent. */
+  report(filter: AiSpendingFilter = {}): Observable<AiSpendingReport> {
+    let params = new HttpParams();
+    for (const [key, value] of Object.entries(filter)) {
+      if (value !== null && value !== undefined && value !== '' && value !== false) {
+        params = params.set(key, String(value));
+      }
+    }
+    return this.http.get<AiSpendingReport>('/api/ai/spending/report', { params });
   }
 
   /** The signed-in user's organization against its plan's limit. */

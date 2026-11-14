@@ -71,3 +71,22 @@ public sealed class AiSpendingController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<AiSpendingDto>> Get(CancellationToken cancellationToken) => Ok(await _spending.GetCurrentAsync(cancellationToken));
 }
+
+/// <summary>The AI spending of each employee of the signed-in administrator's organization (P13.47): amounts and counts only.</summary>
+[ApiController]
+[Route("api/ai/spending/report")]
+[Authorize(Policy = Policies.OrganizationAdmin)]
+public sealed class AiSpendingReportController : ControllerBase
+{
+    private readonly IAiSpendingReportService _report;
+
+    public AiSpendingReportController(IAiSpendingReportService report)
+    {
+        _report = report;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<AiSpendingReportDto>> Get([FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] Guid? userId,
+        [FromQuery, Range(0, 1_000_000)] decimal? minSpend, [FromQuery, Range(0, 1_000_000)] decimal? maxSpend, [FromQuery] bool successfulOnly = false, CancellationToken cancellationToken = default)
+        => Ok(await _report.GetAsync(new AiSpendingReportFilter(from, to, userId, minSpend, maxSpend, successfulOnly), cancellationToken));
+}

@@ -1,0 +1,129 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'nav.org.admin.title' | transloco }}</p>
+      <h1>{{ 'aiSpending.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'aiSpending.subtitle' | transloco }}</p>
+    </div>
+  </header>
+
+  @if (error(); as e) { <div class="wi-card spend__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+
+  @if (report(); as r) {
+    <div class="spend__summary" data-testid="spend-summary">
+      <div class="wi-card spend__plan" [attr.data-state]="r.state">
+        <span class="spend__label">{{ 'aiSpending.plan' | transloco }}</span>
+        @if (r.planCode) {
+          <strong class="spend__value">{{ planName() }}</strong>
+          <span class="spend__meta">{{ 'aiSpending.limit' | transloco }}: @if (r.monthlyAiSpendLimit; as limit) { <span class="wi-ltr">{{ limit | wiNumber: '1.2-2' }} USD</span> } @else { {{ 'aiSpending.noLimit' | transloco }} }</span>
+        } @else {
+          <span class="spend__meta">{{ 'aiSpending.noPlan' | transloco }}</span>
+        }
+      </div>
+      <div class="wi-card spend__plan" [attr.data-state]="r.state">
+        <span class="spend__label">{{ 'aiSpending.monthSpend' | transloco }}</span>
+        <strong class="spend__value"><span class="wi-ltr">{{ r.monthSpend | wiNumber: '1.2-2' }} USD</span></strong>
+        @if (r.monthlyAiSpendLimit) {
+          <mat-progress-bar mode="determinate" [value]="percent()" [class.spend__bar--near]="r.state === 'near'" [class.spend__bar--reached]="r.state === 'reached'" />
+          <span class="spend__meta spend__state" data-testid="spend-used">{{ 'aiSpending.used' | transloco: { percent: (r.percentUsed ?? 0 | wiNumber: '1.0-1') } }}</span>
+        }
+      </div>
+      <div class="wi-card spend__plan">
+        <span class="spend__label">{{ 'aiSpending.periodSpend' | transloco }}</span>
+        <strong class="spend__value" data-testid="spend-total"><span class="wi-ltr">{{ r.totalSpend | wiNumber: '1.2-2' }} USD</span></strong>
+        <span class="spend__meta">{{ 'aiSpending.period' | transloco: { from: (dayDate(r.from) | wiDate: 'mediumDate'), to: (dayDate(r.to) | wiDate: 'mediumDate') } }}</span>
+      </div>
+      <div class="wi-card spend__plan">
+        <span class="spend__label">{{ 'aiSpending.requests' | transloco }}</span>
+        <strong class="spend__value" data-testid="spend-requests">{{ r.totalRequests | wiNumber }}</strong>
+      </div>
+    </div>
+
+    <div class="wi-card">
+      <div class="filters" data-testid="spend-filters">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'aiSpending.from' | transloco }}</mat-label><input matInput type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" data-testid="spend-from" /></mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'aiSpending.to' | transloco }}</mat-label><input matInput type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" data-testid="spend-to" /></mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'aiSpending.user' | transloco }}</mat-label>
+          <mat-select [value]="userId()" (valueChange)="userId.set($event)" data-testid="spend-user">
+            <mat-option [value]="null">{{ 'aiSpending.allUsers' | transloco }}</mat-option>
+            @for (u of r.users; track u.userId) { <mat-option [value]="u.userId">{{ u.fullName }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'aiSpending.minSpend' | transloco }}</mat-label><input matInput type="number" min="0" step="0.01" [ngModel]="minSpend()" (ngModelChange)="minSpend.set($event === '' ? null : $event)" data-testid="spend-min" /></mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'aiSpending.maxSpend' | transloco }}</mat-label><input matInput type="number" min="0" step="0.01" [ngModel]="maxSpend()" (ngModelChange)="maxSpend.set($event === '' ? null : $event)" data-testid="spend-max" /></mat-form-field>
+        <mat-slide-toggle [checked]="successfulOnly()" (change)="successfulOnly.set($event.checked)" data-testid="spend-successful">{{ 'aiSpending.successfulOnly' | transloco }}</mat-slide-toggle>
+        <button mat-flat-button type="button" (click)="apply()" [disabled]="busy()" data-testid="spend-apply">{{ 'aiSpending.apply' | transloco }}</button>
+        <button mat-button type="button" (click)="reset()" [disabled]="busy()" data-testid="spend-reset">{{ 'aiSpending.reset' | transloco }}</button>
+      </div>
+      @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+
+      <mat-button-toggle-group class="spend__views" [value]="view()" (change)="view.set($event.value)" hideSingleSelectionIndicator data-testid="spend-view">
+        <mat-button-toggle value="employee">{{ 'aiSpending.byEmployee' | transloco }}</mat-button-toggle>
+        <mat-button-toggle value="month">{{ 'aiSpending.byMonth' | transloco }}</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      @if (view() === 'employee') {
+        @if (r.rows.length === 0) {
+          <p class="wi-muted spend__empty" data-testid="spend-empty">{{ 'aiSpending.empty' | transloco }}</p>
+        } @else {
+          <table class="plain spend__table" data-testid="spend-table">
+            <thead><tr>
+              <th>{{ 'aiSpending.columns.employee' | transloco }}</th><th>{{ 'aiSpending.columns.number' | transloco }}</th><th>{{ 'aiSpending.columns.department' | transloco }}</th>
+              <th class="num">{{ 'aiSpending.columns.requests' | transloco }}</th><th class="num">{{ 'aiSpending.columns.spend' | transloco }}</th><th class="num">{{ 'aiSpending.columns.share' | transloco }}</th>
+            </tr></thead>
+            <tbody>
+              @for (row of r.rows; track row.userId) {
+                <tr [attr.data-testid]="'spend-row-' + row.userId">
+                  <td>{{ row.fullName }} @if (!row.isActive) { <span class="spend__chip">{{ 'aiSpending.inactive' | transloco }}</span> }</td>
+                  <td><span class="wi-ltr">{{ row.employeeNumber || '—' }}</span></td>
+                  <td>{{ department(row) }}</td>
+                  <td class="num">{{ row.requests | wiNumber }}</td>
+                  <td class="num"><span class="wi-ltr">{{ row.spend | wiNumber: '1.2-2' }}</span></td>
+                  <td class="num">{{ row.sharePercent | wiNumber: '1.0-1' }}%</td>
+                </tr>
+              }
+              <tr class="spend__total" data-testid="spend-total-row">
+                <td>{{ 'aiSpending.total' | transloco }}</td><td></td><td></td>
+                <td class="num">{{ r.totalRequests | wiNumber }}</td>
+                <td class="num"><span class="wi-ltr">{{ r.totalSpend | wiNumber: '1.2-2' }}</span></td>
+                <td class="num">@if (r.totalSpend > 0) { {{ 100 | wiNumber }}% }</td>
+              </tr>
+            </tbody>
+          </table>
+        }
+      } @else {
+        <p class="wi-muted spend__note">{{ 'aiSpending.monthlyNote' | transloco }}</p>
+        @if (r.monthly.length === 0) {
+          <p class="wi-muted spend__empty" data-testid="spend-empty">{{ 'aiSpending.empty' | transloco }}</p>
+        } @else {
+          <div class="spend__scroll">
+            <table class="plain spend__table" data-testid="spend-monthly">
+              <thead><tr>
+                <th>{{ 'aiSpending.columns.employee' | transloco }}</th>
+                @for (m of r.months; track m) { <th class="num">{{ monthDate(m) | wiDate: 'monthYear' }}</th> }
+                <th class="num">{{ 'aiSpending.total' | transloco }}</th>
+              </tr></thead>
+              <tbody>
+                @for (row of r.monthly; track row.userId) {
+                  <tr>
+                    <td>{{ row.fullName }}</td>
+                    @for (value of row.spend; track $index) { <td class="num"><span class="wi-ltr">{{ value | wiNumber: '1.2-2' }}</span></td> }
+                    <td class="num"><strong class="wi-ltr">{{ row.total | wiNumber: '1.2-2' }}</strong></td>
+                  </tr>
+                }
+                <tr class="spend__total">
+                  <td>{{ 'aiSpending.total' | transloco }}</td>
+                  @for (value of r.monthlyTotals; track $index) { <td class="num"><span class="wi-ltr">{{ value | wiNumber: '1.2-2' }}</span></td> }
+                  <td class="num"><span class="wi-ltr">{{ monthlyTotal() | wiNumber: '1.2-2' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  } @else if (busy()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+</section>

@@ -66,6 +66,8 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<ServicePlan> ServicePlans => Set<ServicePlan>();
 
+    public DbSet<AiSpendingNotice> AiSpendingNotices => Set<AiSpendingNotice>();
+
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();

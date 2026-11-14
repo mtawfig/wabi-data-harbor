@@ -49,4 +49,6 @@ public static class NotificationTypes
     public const string MonitoringAlert = "Monitoring.Alert";
     public const string MonitoringRulePaused = "Monitoring.RulePaused";
     public const string ReportSubscriptionPaused = "Reports.SubscriptionPaused";
+    public const string AiSpendingNear = "Ai.SpendingNear";
+    public const string AiSpendingReached = "Ai.SpendingReached";
 }

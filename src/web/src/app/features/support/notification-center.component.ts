@@ -22,6 +22,8 @@ const ICONS: Record<string, string> = {
   'Monitoring.Alert': 'notification_important',
   'Monitoring.RulePaused': 'pause_circle',
   'Reports.SubscriptionPaused': 'schedule_send',
+  'Ai.SpendingNear': 'warning_amber',
+  'Ai.SpendingReached': 'block',
 };
 
 /** Notification centre: localized from codes and parameters; clicking opens the related ticket and marks the item read. */
@@ -121,6 +123,8 @@ export class NotificationCenterComponent {
       void this.router.navigate(['/app/monitoring/rules']);
     } else if (n.notificationType === 'Reports.SubscriptionPaused') {
       void this.router.navigate(['/app/periodic-reports']);
+    } else if (n.notificationType === 'Ai.SpendingNear' || n.notificationType === 'Ai.SpendingReached') {
+      void this.router.navigate(['/app/admin/ai-spending']);
     }
   }
 }
