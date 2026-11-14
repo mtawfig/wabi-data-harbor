@@ -17,6 +17,16 @@ public interface ISqlDialectCompiler
     DatabaseType DatabaseType { get; }
 
     CompiledQuery Compile(AuthorizedPlan plan);
+
+    /// <summary>The same query with its order and without a row limit: every row of the list, for the Excel export (P13.50).</summary>
+    CompiledQuery CompileAll(AuthorizedPlan plan);
+
+    /// <summary>
+    /// One row about the whole list of a plan: its number of rows (<c>wi_rows</c>) and, for the i-th of
+    /// <paramref name="numericColumns"/>, its total, average, lowest and highest (<c>s{i}</c>, <c>a{i}</c>, <c>n{i}</c>, <c>x{i}</c>).
+    /// The plan's own query, with the same row predicates and parameters, is the source; nothing else is read.
+    /// </summary>
+    CompiledQuery CompileSummary(AuthorizedPlan plan, IReadOnlyList<string> numericColumns);
 }
 
 public interface ISqlDialectCompilerFactory

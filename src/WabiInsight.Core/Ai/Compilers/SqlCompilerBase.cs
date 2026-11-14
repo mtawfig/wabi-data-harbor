@@ -32,7 +32,61 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
     /// <summary>True when a column of this date type also stores a time of day (so "on that day" is a range, not an equality).</summary>
     protected virtual bool HasTimeOfDay(string dataType) => !string.Equals(dataType, "date", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>The operand of a total over a column of the whole list (<see cref="CompileSummary"/>).</summary>
+    protected virtual string SummaryOperand(string column) => column;
+
+    /// <summary>The count of the whole list (<see cref="CompileSummary"/>).</summary>
+    protected virtual string CountAll => "COUNT(*)";
+
     public CompiledQuery Compile(AuthorizedPlan plan)
+    {
+        var (core, orderBy, context) = Build(plan);
+        // One extra row lets the executor report truncation without reading past the cap.
+        var rowCap = plan.EffectiveLimit;
+        var text = ApplyLimit(WithOrder(core, orderBy), rowCap + 1, orderBy.Count > 0);
+        Guard(text);
+        return new CompiledQuery(text, context.Parameters, Redact(text, context), rowCap);
+    }
+
+    public CompiledQuery CompileAll(AuthorizedPlan plan)
+    {
+        var (core, orderBy, context) = Build(plan);
+        var text = WithOrder(core, orderBy);
+        Guard(text);
+        return new CompiledQuery(text, context.Parameters, Redact(text, context), int.MaxValue);
+    }
+
+    public CompiledQuery CompileSummary(AuthorizedPlan plan, IReadOnlyList<string> numericColumns)
+    {
+        ArgumentNullException.ThrowIfNull(numericColumns);
+        var (core, _, context) = Build(plan);
+        var all = Quote("wi_all");
+        var items = new List<string> { $"{CountAll} AS {Quote(SummaryRowsColumn)}" };
+        for (var i = 0; i < numericColumns.Count; i++)
+        {
+            // Only a column the plan itself selects is totalled, under the name the plan gave it.
+            var alias = plan.Plan.Select.FirstOrDefault(s => string.Equals(s.Alias, numericColumns[i], StringComparison.OrdinalIgnoreCase))?.Alias
+                ?? throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "column_not_permitted");
+            var operand = SummaryOperand($"{all}.{Quote(alias)}");
+            var n = i.ToString(CultureInfo.InvariantCulture);
+            items.Add($"SUM({operand}) AS {Quote("s" + n)}");
+            items.Add($"AVG({operand}) AS {Quote("a" + n)}");
+            items.Add($"MIN({operand}) AS {Quote("n" + n)}");
+            items.Add($"MAX({operand}) AS {Quote("x" + n)}");
+        }
+
+        var text = $"SELECT {string.Join(", ", items)} FROM ({core}) {all}";
+        Guard(text);
+        return new CompiledQuery(text, context.Parameters, Redact(text, context), 1);
+    }
+
+    /// <summary>Name of the count column of <see cref="CompileSummary"/>.</summary>
+    public const string SummaryRowsColumn = "wi_rows";
+
+    private static string WithOrder(string core, List<string> orderBy) => orderBy.Count > 0 ? core + " ORDER BY " + string.Join(", ", orderBy) : core;
+
+    /// <summary>The select of a plan without its order and without a row limit, the order terms, and the parameters.</summary>
+    private (string Core, List<string> OrderBy, CompileContext Context) Build(AuthorizedPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
         var context = new CompileContext(ParameterPrefix);
@@ -168,16 +222,7 @@ public abstract class SqlCompilerBase : ISqlDialectCompiler
             sql.Append(" HAVING ").Append(having);
         }
 
-        if (orderBy.Count > 0)
-        {
-            sql.Append(" ORDER BY ").Append(string.Join(", ", orderBy));
-        }
-
-        // One extra row lets the executor report truncation without reading past the cap.
-        var rowCap = plan.EffectiveLimit;
-        var text = ApplyLimit(sql.ToString(), rowCap + 1, orderBy.Count > 0);
-        Guard(text);
-        return new CompiledQuery(text, context.Parameters, Redact(text, context), rowCap);
+        return (sql.ToString(), orderBy, context);
     }
 
     private string Source(AuthorizedObject o, CompileContext context)
@@ -436,6 +481,11 @@ public sealed class SqlServerCompiler : SqlCompilerBase
         "year" => $"DATEFROMPARTS(YEAR({column}), 1, 1)",
         _ => throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "plan_date_trunc_invalid"),
     };
+
+    // Totals of a whole list are taken as float, whatever the column's own type (a bit column has no MIN or MAX, an int total overflows).
+    protected override string SummaryOperand(string column) => $"CAST({column} AS FLOAT)";
+
+    protected override string CountAll => "COUNT_BIG(*)";
 
     protected override string ApplyLimit(string selectWithoutLimit, int limit, bool hasOrderBy)
         => "SELECT TOP (" + limit.ToString(CultureInfo.InvariantCulture) + ") " + selectWithoutLimit["SELECT ".Length..];

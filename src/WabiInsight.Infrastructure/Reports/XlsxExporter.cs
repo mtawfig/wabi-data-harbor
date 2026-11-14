@@ -23,7 +23,7 @@ public sealed class XlsxExporter : IAnswerExporter
         var rtl = request.Language == "ar";
         var content = request.Content;
         using var workbook = new XLWorkbook();
-        var summary = workbook.AddWorksheet(rtl ? "الملخص" : "Summary");
+        var summary = workbook.AddWorksheet(SummarySheetName(rtl));
         summary.RightToLeft = rtl;
         summary.Column(1).Width = 110;
         var row = 1;
@@ -104,12 +104,12 @@ public sealed class XlsxExporter : IAnswerExporter
             }
         }
 
-        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { summary.Name };
+        var sheetNames = PanelSheetNames(request.Answer, rtl);
         var index = 0;
         foreach (var panel in request.Answer.Panels)
         {
             index++;
-            var sheet = workbook.AddWorksheet(SheetName(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective, index, used));
+            var sheet = workbook.AddWorksheet(sheetNames[index - 1]);
             sheet.RightToLeft = rtl;
             var columns = panel.Result.Columns;
             var names = ColumnHeaders.For(panel, rtl);
@@ -199,6 +199,16 @@ public sealed class XlsxExporter : IAnswerExporter
 
                 break;
         }
+    }
+
+    /// <summary>The name of the Summary sheet in the workbook's language.</summary>
+    internal static string SummarySheetName(bool rtl) => rtl ? "الملخص" : "Summary";
+
+    /// <summary>The sheet of each panel, in the answer's order.</summary>
+    internal static IReadOnlyList<string> PanelSheetNames(AskResponse answer, bool rtl)
+    {
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { SummarySheetName(rtl) };
+        return answer.Panels.Select((panel, i) => SheetName(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective, i + 1, used)).ToList();
     }
 
     /// <summary>Excel sheet names: at most 31 characters, none of []:*?/\, unique within the workbook.</summary>

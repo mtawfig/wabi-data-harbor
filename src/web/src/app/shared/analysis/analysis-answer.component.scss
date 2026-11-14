@@ -47,3 +47,7 @@
     flex: none;
   }
 }
+
+// A list longer than its table: one quiet line with the numbers, and the way to the whole list (P13.50).
+.ask__long { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin: 8px 0 0; color: var(--wi-muted); font-size: 13px; }
+.ask__long-error { display: flex; gap: 6px; align-items: center; margin: 4px 0 12px; color: #b91c1c; font-size: 13px; }

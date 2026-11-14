@@ -162,6 +162,11 @@ Ten sections: sticky header (wordmark with tagline, section links, language swit
 
 **P13.48:** the employee table has *Input tokens* and *Output tokens* columns (right-aligned numbers, totals in the last row); on a phone they are two more lines of each card. Screens: `docs/screenshots/p13-48-ai-spending-{en,ar}.png`, `p13-48-ai-spending-phone-{en,ar}.png`.
 
+## Long lists (P13.50)
+- A result table shows at most 100 rows. Under a longer list: one muted line with the numbers (*First 100 rows of 10,555.*, Arabic digits in Arabic) at the start and a stroked *View all in Excel* button (`table_view` icon) at the end; on a phone the button wraps under the line. No warning colour: the line states numbers, it does not warn.
+- PDF and Word: the same line under the table, in blue, as a link to the answer.
+- `docs/screenshots/p13-50-long-list-{en,ar}.png`, `p13-50-long-list-phone-en.png`, `p13-50-pdf-note-en.png`.
+
 ## Profile, dashboard and Integrations (P11.2)
 - *Profile*: avatar with initials, name, email, organization, role chips, account type, preferred language; side cards for the interface language (switcher), password (link to the change-password screen) and "managed by your administrator" (link to a new ticket).
 - User *Dashboard*: four count tiles (saved analyses, files in My Reports, shared with me, favorites) linking to their pages, a *Recent analyses* card and the support ticket widget — the "coming soon" card is gone.

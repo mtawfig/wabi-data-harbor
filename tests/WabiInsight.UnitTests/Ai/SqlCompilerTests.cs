@@ -64,6 +64,45 @@ public sealed class SqlCompilerTests
     }
 
     [Fact]
+    public void TheWholeList_IsCompiledWithoutARowLimit_AndItsCountAndTotalsReadThePlansOwnQuery_InBothDialects()
+    {
+        // P13.50: the Excel export reads every row, and a list that stopped at the size limit is counted and totalled by the database.
+        const string list = """
+            {"objective":"x","source":{"schema":"dbo","object":"Orders","alias":"o"},"joins":[],
+             "select":[{"alias":"status","column":"o.Status","aggregate":null,"dateTrunc":null},{"alias":"amount","column":"o.Amount","aggregate":null,"dateTrunc":null},{"alias":"paid","column":"o.IsPaid","aggregate":null,"dateTrunc":null}],
+             "filters":{"logic":"and","conditions":[{"column":"o.Status","operator":"neq","values":["Cancelled"],"compareTo":null}],"groups":[]},
+             "groupBy":[],"having":[],"orderBy":[{"alias":"amount","direction":"desc"}],"limit":null,"visualization":null,"assumptions":[]}
+            """;
+        var plan = Plan(list, [new RowPredicate("DeptCode", "@rs0", "FIN")]);
+        const string core = "SELECT [o].[Status] AS [status], [o].[Amount] AS [amount], [o].[IsPaid] AS [paid] FROM (SELECT * FROM [dbo].[Orders] WHERE [DeptCode] = @p0) [o] WHERE [o].[Status] <> @p1";
+
+        // Every row, in the plan's order, with the row predicate and the same parameters.
+        var all = new SqlServerCompiler().CompileAll(plan);
+        Assert.Equal(core + " ORDER BY [amount] DESC", all.Sql);
+        Assert.DoesNotContain("TOP", all.Sql, StringComparison.Ordinal);
+        Assert.Equal(new SqlServerCompiler().Compile(plan).Parameters.Select(p => p.Value), all.Parameters.Select(p => p.Value));
+
+        // One row about the whole list: the plan's own query is the only source; no order, no limit.
+        var summary = new SqlServerCompiler().CompileSummary(plan, ["amount", "PAID"]);
+        Assert.Equal(
+            "SELECT COUNT_BIG(*) AS [wi_rows], SUM(CAST([wi_all].[amount] AS FLOAT)) AS [s0], AVG(CAST([wi_all].[amount] AS FLOAT)) AS [a0], MIN(CAST([wi_all].[amount] AS FLOAT)) AS [n0], MAX(CAST([wi_all].[amount] AS FLOAT)) AS [x0], " +
+            "SUM(CAST([wi_all].[paid] AS FLOAT)) AS [s1], AVG(CAST([wi_all].[paid] AS FLOAT)) AS [a1], MIN(CAST([wi_all].[paid] AS FLOAT)) AS [n1], MAX(CAST([wi_all].[paid] AS FLOAT)) AS [x1] FROM (" + core + ") [wi_all]",
+            summary.Sql);
+        Assert.Equal("FIN", summary.Parameters[0].Value);
+        Assert.Equal(1, summary.RowCap);
+
+        var oracle = new OracleCompiler();
+        Assert.EndsWith("ORDER BY \"amount\" DESC", oracle.CompileAll(plan).Sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("FETCH FIRST", oracle.CompileAll(plan).Sql, StringComparison.Ordinal);
+        var oracleSummary = oracle.CompileSummary(plan, ["amount"]).Sql;
+        Assert.StartsWith("SELECT COUNT(*) AS \"wi_rows\", SUM(\"wi_all\".\"amount\") AS \"s0\", AVG(\"wi_all\".\"amount\") AS \"a0\", MIN(\"wi_all\".\"amount\") AS \"n0\", MAX(\"wi_all\".\"amount\") AS \"x0\" FROM (SELECT ", oracleSummary, StringComparison.Ordinal);
+        Assert.EndsWith(") \"wi_all\"", oracleSummary, StringComparison.Ordinal);
+
+        // A column the plan does not select is never totalled.
+        Assert.Equal("column_not_permitted", Assert.Throws<DomainException>(() => new SqlServerCompiler().CompileSummary(plan, ["Salary"])).Message);
+    }
+
+    [Fact]
     public void Having_FiltersAggregatedValues_WithTypedParameters_InBothDialects()
     {
         // "Customers with more than two orders, a total between 100 and 500.5 and a last order before March": conditions on totals.

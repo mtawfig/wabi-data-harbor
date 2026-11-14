@@ -54,7 +54,11 @@ public sealed record SharedAnalysisDto(
     DateTimeOffset? ExpiresAt);
 
 /// <summary>Read-only detail for a recipient: the analysis, its completed versions and the share terms. No re-run, export, rename or delete.</summary>
-public sealed record SharedAnalysisDetailDto(SharedAnalysisDto Share, string OriginalPrompt, string PromptLanguage, IReadOnlyList<HistoryVersionDto> Versions);
+/// <param name="CanViewAllInExcel">
+/// True when the recipient may read the data of this analysis themselves: "View all in Excel" is then offered, and the
+/// export runs under the recipient's own permissions and row scope (P13.50). Otherwise they have the rows shared with them.
+/// </param>
+public sealed record SharedAnalysisDetailDto(SharedAnalysisDto Share, string OriginalPrompt, string PromptLanguage, IReadOnlyList<HistoryVersionDto> Versions, bool CanViewAllInExcel = false);
 
 public sealed record CreateShareCommand(IReadOnlyList<Guid> RecipientUserIds, string? Message, DateTimeOffset? ExpiresAt);
 
@@ -91,6 +95,13 @@ public interface ISharingService
     Task<AskResponse?> GetSharedVersionResultAsync(Guid historyId, int versionNumber, CancellationToken cancellationToken = default);
 
     Task<ArtifactDownload?> OpenSharedVersionReportAsync(Guid historyId, int versionNumber, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// "View all in Excel" for a recipient (P13.50): the Excel workbook of a shared version with every row of its lists,
+    /// read under the recipient's own permissions and row scope. Null when the share is not theirs; refused with
+    /// <c>export_not_permitted</c> when they may not read that data themselves.
+    /// </summary>
+    Task<ArtifactDownload?> ExportSharedWholeListAsync(Guid historyId, int versionNumber, CancellationToken cancellationToken = default);
 
     /// <summary>Sends a version by email under the classification rules; records an EmailDraftEvent (Sent or Blocked) and an audit entry.</summary>
     Task<ShareEmailResult> SendEmailAsync(Guid historyId, SendShareEmailCommand command, CancellationToken cancellationToken = default);

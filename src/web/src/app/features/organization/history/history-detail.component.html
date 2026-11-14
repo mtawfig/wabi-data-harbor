@@ -69,7 +69,7 @@
         </div>
         @if (loadingAnswer()) { <mat-progress-bar mode="indeterminate" /> }
         @if (answer(); as a) {
-          <app-analysis-answer [answer]="a" [reportUrl]="reportUrl()" />
+          <app-analysis-answer [answer]="a" [reportUrl]="reportUrl()" [excelUrl]="excelUrl()" />
         } @else if (version(); as v) {
           @if (v.status === 'Failed') {
             <div class="wi-card error"><mat-icon>block</mat-icon><div><strong>{{ 'history.versionFailed' | transloco: { version: v.versionNumber } }}</strong><br />{{ (v.failureCode ? 'ask.codes.' + v.failureCode : 'history.statusFailed') | transloco }}</div></div>

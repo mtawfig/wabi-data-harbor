@@ -41,13 +41,15 @@ public sealed class PeriodicReportRenderer
     private readonly IQueryPlanner _planner;
     private readonly ISqlDialectCompilerFactory _compilers;
     private readonly IQueryExecutor _executor;
+    private readonly Ai.WholeListSummary? _wholeList;
     private readonly IReportRenderer _pdf;
     private readonly IEnumerable<IAnswerExporter> _exporters;
     private readonly IArtifactStorage _storage;
     private readonly IClock _clock;
 
-    public PeriodicReportRenderer(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IReportRenderer pdf, IEnumerable<IAnswerExporter> exporters, IArtifactStorage storage, IClock clock)
+    public PeriodicReportRenderer(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IReportRenderer pdf, IEnumerable<IAnswerExporter> exporters, IArtifactStorage storage, IClock clock, Ai.WholeListSummary? wholeList = null)
     {
+        _wholeList = wholeList;
         _context = context;
         _tenantContext = tenantContext;
         _planner = planner;
@@ -104,6 +106,11 @@ public sealed class PeriodicReportRenderer
             {
                 var compiled = compiler.Compile(query);
                 var result = (await _executor.ExecuteAsync(applicationId, compiled, query.Plan.Visualization, cancellationToken)).For(query.Plan);
+                if (_wholeList is not null && result.Truncated)
+                {
+                    (result, _) = await _wholeList.CompleteAsync(applicationId, compiler, query, result, cancellationToken);
+                }
+
                 panels.Add(new AnalysisPanel(query.Plan.Title, query.Plan, result, PanelAccess.From(query), PanelLabels.From(query)));
             }
         }

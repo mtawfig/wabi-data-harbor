@@ -13,20 +13,24 @@ using Word = DocumentFormat.OpenXml.Wordprocessing;
 namespace WabiInsight.UnitTests.Ai;
 
 /// <summary>
-/// P13.24 and P13.49: a long table takes a fixed number of rows in a document and the document says nothing about it
-/// (the owner's decision: no reader is told that a list is partial); no headline figure may be left out.
+/// P13.24, P13.49 and P13.50: a table takes a hundred rows in a document; a longer list has one line under its table
+/// that states the numbers and links to the answer, where the whole list is exported to Excel. The line never calls the
+/// list partial. No headline figure may be left out.
 /// The PDF is checked on its laid-out pages (text runs with their positions), the Word document on its XML.
 /// </summary>
 public sealed class ReportCompletenessTests
 {
     private static readonly CultureInfo Arabic = CultureInfo.GetCultureInfo("ar-AE");
-    private static readonly string[] PartialWords = ["Showing", "the first", "Excel", "more than", "partial", "يعرض هذا الجدول", "أول 60", "أول 100", "من أصل"];
+    private const string AnswerUrl = "https://insight.example/app/history/0195c0de-0000-7000-8000-000000000001";
 
-    private static AnalysisPanel TablePanel(int rowCount, bool truncated = false, string title = "Branches")
+    /// <summary>Words the note never uses: it states numbers, it does not judge the list.</summary>
+    private static readonly string[] PartialWords = ["Showing", "partial", "sample", "only", "more than", "narrow", "يعرض هذا الجدول", "جزء", "عينة", "فقط"];
+
+    private static AnalysisPanel TablePanel(int rowCount, bool truncated = false, string title = "Branches", long? totalRows = null)
     {
         var columns = new[] { new ResultColumn("branch", "nvarchar", false, false), new ResultColumn("amount", "int", true, false) };
         var rows = Enumerable.Range(1, rowCount).Select(i => (IReadOnlyList<object?>)new object?[] { $"Branch {i:0000}", i * 10 }).ToList();
-        return new AnalysisPanel(title, new QueryPlan { Title = title, Objective = title, Visualization = new PlanVisualization { Type = "table" } }, new AnalysisResult(columns, rows, rows.Count, truncated, [], [], 1));
+        return new AnalysisPanel(title, new QueryPlan { Title = title, Objective = title, Visualization = new PlanVisualization { Type = "table" } }, new AnalysisResult(columns, rows, rows.Count, truncated, [], [], 1, totalRows));
     }
 
     /// <summary>Headline figures 1,111 · 2,222 · … with the titles "Figure 1" · "Figure 2" · …</summary>
@@ -40,36 +44,74 @@ public sealed class ReportCompletenessTests
     private static ReportContent Content(int panels) => new() { Title = "Branch study", Sections = [new ReportSection { Title = "Overview", Body = "Body.", Panels = [.. Enumerable.Range(0, panels)] }] };
 
     private static ReportRenderRequest PdfRequest(List<AnalysisPanel> panels, string language)
-        => new(Content(panels.Count), panels, new ReportBranding(null, null), language, "ACME", "Branches", "ACME", new DateTimeOffset(2026, 11, 6, 9, 0, 0, TimeSpan.Zero));
+        => new(Content(panels.Count), panels, new ReportBranding(null, null), language, "ACME", "Branches", "ACME", new DateTimeOffset(2026, 11, 6, 9, 0, 0, TimeSpan.Zero), AnswerUrl);
 
     private static ExportRequest ExportRequest(List<AnalysisPanel> panels, string language)
     {
         var usage = new PlanUsage("Test", "test-model", 1, 1, 0, 0m, 1);
         var answer = new AskResponse(Guid.NewGuid(), Guid.NewGuid(), 1, "Branch study", [], panels, new Interpretation("Summary.", [], usage), null, null, usage, 0m, 1);
-        return new ExportRequest(answer, Content(panels.Count), language, "ACME", "Branches", "Question?", new ReportBranding(null, null), new DateTimeOffset(2026, 11, 6, 9, 0, 0, TimeSpan.Zero));
+        return new ExportRequest(answer, Content(panels.Count), language, "ACME", "Branches", "Question?", new ReportBranding(null, null), new DateTimeOffset(2026, 11, 6, 9, 0, 0, TimeSpan.Zero), AnswerUrl);
     }
 
     // PDF.
 
-    [Theory]
-    [InlineData("en", 312, false)]
-    [InlineData("ar", 312, false)]
-    [InlineData("en", 1000, true)]
-    [InlineData("ar", 1000, true)]
-    public void Pdf_NeverSaysThatATableIsShortened(string language, int rows, bool cutAtTheSource)
-    {
-        var text = string.Join(" ", PdfPages(PdfRequest([TablePanel(rows, truncated: cutAtTheSource)], language)).SelectMany(p => p).Select(r => r.Text));
+    // The line itself.
 
-        // Sixty rows are drawn and nothing under the table, or anywhere else, speaks of the rest.
-        Assert.Contains("Branch 0060", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Branch 0061", text, StringComparison.Ordinal);
-        Assert.All(PartialWords, word => Assert.DoesNotContain(word, text, StringComparison.OrdinalIgnoreCase));
+    [Fact]
+    public void LongListNote_StatesTheNumbers_InTheDocumentLanguage_AndNothingElse()
+    {
+        // A list that is whole but longer than the table: its own number of rows.
+        Assert.Equal("First 100 rows of 312. The full list is available in Excel.", LongListNote.Text(TablePanel(312).Result, 100, rtl: false, CultureInfo.InvariantCulture));
+        Assert.Equal("أول 100 صف من أصل 312. القائمة الكاملة متوفرة في Excel.", LongListNote.Text(TablePanel(312).Result, 100, rtl: true, Arabic));
+
+        // A list that stopped at the size limit: the count the database gave, or no count when it could not be taken.
+        Assert.Equal("First 100 rows of 8,124. The full list is available in Excel.", LongListNote.Text(TablePanel(1000, truncated: true, totalRows: 8124).Result, 100, rtl: false, CultureInfo.InvariantCulture));
+        Assert.Equal("First 100 rows. The full list is available in Excel.", LongListNote.Text(TablePanel(1000, truncated: true).Result, 100, rtl: false, CultureInfo.InvariantCulture));
+        Assert.Equal("أول 100 صف. القائمة الكاملة متوفرة في Excel.", LongListNote.Text(TablePanel(1000, truncated: true).Result, 100, rtl: true, Arabic));
+
+        // A table that shows its whole list has no line.
+        Assert.Null(LongListNote.Text(TablePanel(100).Result, 100, rtl: false, CultureInfo.InvariantCulture));
+        Assert.Null(LongListNote.Text(TablePanel(0).Result, 100, rtl: true, Arabic));
+
+        foreach (var note in new[] { LongListNote.Text(TablePanel(312).Result, 100, false, CultureInfo.InvariantCulture)!, LongListNote.Text(TablePanel(1000, truncated: true, totalRows: 8124).Result, 100, true, Arabic)! })
+        {
+            Assert.All(PartialWords, word => Assert.DoesNotContain(word, note, StringComparison.OrdinalIgnoreCase));
+        }
     }
 
     [Theory]
-    [InlineData("en", 60)]
+    [InlineData("en", 312, false, "First 100 rows of 312. The full list is available in Excel.")]
+    [InlineData("en", 1000, true, "First 100 rows of 8,124. The full list is available in Excel.")]
+    public void Pdf_DrawsAHundredRows_AndStatesTheNumbersUnderTheTable(string language, int rows, bool cutAtTheSource, string expected)
+    {
+        var pages = PdfPages(PdfRequest([TablePanel(rows, truncated: cutAtTheSource, totalRows: cutAtTheSource ? 8124 : null)], language));
+        var runs = pages.SelectMany(p => p).ToList();
+
+        // A hundred rows are drawn, and one line under the table states the numbers.
+        Assert.Contains(runs, r => r.Text == "Branch 0100");
+        Assert.DoesNotContain(runs, r => r.Text == "Branch 0101");
+        var note = Assert.Single(runs, r => r.Text == expected);
+        var lastRow = runs.Last(r => r.Text == "Branch 0100");
+        Assert.Contains(pages, p => p.Contains(note) && p.Contains(lastRow));
+        Assert.True(note.Y > lastRow.Y, "The line is under the table.");
+    }
+
+    [Fact]
+    public void Pdf_StatesTheNumbersInArabic_UnderTheTable()
+    {
+        var text = string.Join(" ", PdfPages(PdfRequest([TablePanel(312)], "ar")).SelectMany(p => p).Select(r => r.Text));
+
+        Assert.Contains("Branch 0100", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Branch 0101", text, StringComparison.Ordinal);
+        Assert.Contains("312", text, StringComparison.Ordinal);
+        Assert.Contains("Excel", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("First", text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", 100)]
     [InlineData("en", 12)]
-    [InlineData("ar", 60)]
+    [InlineData("ar", 100)]
     public void Pdf_AddsNoNote_WhenTheWholeTableIsDrawn(string language, int rows)
     {
         var text = string.Join(" ", PdfPages(PdfRequest([TablePanel(rows)], language)).SelectMany(p => p).Select(r => r.Text));
@@ -122,21 +164,27 @@ public sealed class ReportCompletenessTests
     // Word.
 
     [Theory]
-    [InlineData("en", 312, false)]
-    [InlineData("ar", 312, false)]
-    [InlineData("en", 1000, true)]
-    [InlineData("ar", 1000, true)]
-    public void Docx_NeverSaysThatATableIsShortened(string language, int rows, bool cutAtTheSource)
+    [InlineData("en", 312, false, "First 100 rows of 312. The full list is available in Excel.")]
+    [InlineData("ar", 312, false, "أول 100 صف من أصل 312. القائمة الكاملة متوفرة في Excel.")]
+    [InlineData("en", 1000, true, "First 100 rows of 8,124. The full list is available in Excel.")]
+    public void Docx_HoldsAHundredRows_AndStatesTheNumbersRightUnderTheTable_AsALinkToTheAnswer(string language, int rows, bool cutAtTheSource, string expected)
     {
-        var body = DocxBody(ExportRequest([TablePanel(rows, truncated: cutAtTheSource)], language));
+        var body = DocxBody(ExportRequest([TablePanel(rows, truncated: cutAtTheSource, totalRows: cutAtTheSource ? 8124 : null)], language));
         var table = Assert.Single(body.Elements<Word.Table>());
 
-        // The header and the first hundred rows, and no line about the rest.
+        // The header and the first hundred rows.
         Assert.Equal(DocxExporter.MaxTableRows + 1, table.Elements<Word.TableRow>().Count());
         Assert.Contains("Branch 0100", table.InnerText, StringComparison.Ordinal);
         Assert.DoesNotContain("Branch 0101", table.InnerText, StringComparison.Ordinal);
-        Assert.DoesNotContain(body.Elements<Word.Paragraph>(), p => p.ParagraphProperties?.ParagraphStyleId?.Val?.Value == "TableNote");
-        Assert.All(PartialWords, word => Assert.DoesNotContain(word, body.InnerText, StringComparison.OrdinalIgnoreCase));
+
+        // One line right under the table, in the document's direction, that opens the answer.
+        var note = Assert.IsType<Word.Paragraph>(table.NextSibling());
+        Assert.Equal(expected, note.InnerText);
+        Assert.Equal("TableNote", note.ParagraphProperties!.ParagraphStyleId!.Val!.Value);
+        Assert.Equal(language == "ar", note.ParagraphProperties.GetFirstChild<Word.BiDi>() is not null);
+        Assert.Single(note.Elements<Word.Hyperlink>());
+        Assert.Single(body.Elements<Word.Paragraph>(), p => p.InnerText == expected);
+        Assert.All(PartialWords, word => Assert.DoesNotContain(word, note.InnerText, StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
@@ -206,39 +254,63 @@ public sealed class ReportCompletenessTests
         Assert.False(topFive.Truncated);
         Assert.Equal(kpis, topFive.Kpis);
 
-        // No limit of its own, or the maximum: the list stopped at the size limit, and a total of the rows fetched is not the total of the list.
+        // No limit of its own, or the maximum: the list stopped at the size limit. Totals of the rows fetched are dropped
+        // here (they are not the totals of the list); the count and totals of the whole list then come from the database.
         foreach (var plan in new[] { new QueryPlan(), new QueryPlan { Limit = 1000 } })
         {
             var capped = cut.For(plan);
             Assert.True(capped.Truncated);
             Assert.Empty(capped.Kpis);
+            Assert.Null(capped.WholeListRows);
+            Assert.Equal(8124, (capped with { TotalRows = 8124 }).WholeListRows);
         }
 
         // A result that was not cut is left as it is.
         var whole = TablePanel(5).Result with { Kpis = kpis };
         Assert.Same(whole, whole.For(new QueryPlan()));
+        Assert.Equal(5, whole.WholeListRows);
     }
 
-    // The writer is never asked to announce that a list is partial.
+    // Dates read as dates wherever a cell is written as text.
 
     [Fact]
-    public async Task ReportComposer_TellsTheWriter_NeverToSayThatAListIsPartial()
+    public void ACellThatHoldsADate_IsWrittenAsADate_AlsoWhenAStoredAnswerCarriesItAsText()
+    {
+        Assert.Equal("2025-03-01", ResultCalculator.Format("2025-03-01T00:00:00"));
+        Assert.Equal("2025-03-01 06:15", ResultCalculator.Format("2025-03-01T06:15:00"));
+        Assert.Equal("2025-03-01 06:15", ResultCalculator.Format("2025-03-01T06:15:00.1230000"));
+        Assert.Equal("2025-03-01", ResultCalculator.Format(System.Text.Json.JsonDocument.Parse("\"2025-03-01T00:00:00\"").RootElement));
+        Assert.Equal("2025-03-01", ResultCalculator.Format(new DateTime(2025, 3, 1)));
+        // Text that only looks like a date in part, a number and an empty cell are left as they are.
+        Assert.Equal("2025-03-01T00:00:00 approx", ResultCalculator.Format("2025-03-01T00:00:00 approx"));
+        Assert.Equal("G9656", ResultCalculator.Format("G9656"));
+        Assert.Equal("31", ResultCalculator.Format(System.Text.Json.JsonDocument.Parse("31").RootElement));
+        Assert.Equal(string.Empty, ResultCalculator.Format(null));
+    }
+
+    // The writer speaks about the whole list and never about how many rows are displayed.
+
+    [Fact]
+    public async Task ReportComposer_GivesTheWriterTheWholeListsFigures_AndForbidsSayingHowManyRowsAreDisplayed()
     {
         var provider = new CapturingProvider();
         var composer = new ReportComposer(provider);
+        var customers = TablePanel(1000, truncated: true, title: "Customers", totalRows: 8124);
+        customers = customers with { Result = customers.Result with { Kpis = [new ResultKpi("amount", "sum", 406_000), new ResultKpi("amount", "avg", 49.9754), new ResultKpi("amount", "min", 10), new ResultKpi("amount", "max", 81_240)] } };
 
-        await composer.ComposeAsync(Guid.NewGuid(), "Branches?", "en", new AnalysisPlan { Objective = "Branches", Deliverables = ["report"] }, [TablePanel(312), TablePanel(1000, truncated: true, title: "Customers")], wantsEmail: false, "ACME", "Branches", CancellationToken.None);
+        await composer.ComposeAsync(Guid.NewGuid(), "Branches?", "en", new AnalysisPlan { Objective = "Branches", Deliverables = ["report"] }, [TablePanel(312), customers], wantsEmail: false, "ACME", "Branches", CancellationToken.None);
 
         var prompt = Assert.Single(provider.Requests).UserContent;
-        Assert.Contains("never say that a list or table is partial, limited, shortened, a sample or the first rows, or that more rows exist", prompt, StringComparison.Ordinal);
+        Assert.Contains("never say how many rows are displayed or were given to you, or that a list or table is partial, limited, shortened, a sample or the first rows, or that more rows exist", prompt, StringComparison.Ordinal);
+        Assert.Contains("the document states the number of rows under a long table itself", prompt, StringComparison.Ordinal);
         Assert.Contains("never conclude that something is absent", prompt, StringComparison.Ordinal);
-        Assert.Contains("do not state a total, count, average, ranking, highest or lowest for it unless it is in totals", prompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("with a note under it", prompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("describe the listed rows as a sample", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("rowsShown", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("truncated", prompt, StringComparison.Ordinal);
-        // The count is the true number of rows, and is left out when the result stopped at its size limit.
+        // The count is the number of rows of the whole list, and the figures are the database's for the whole list.
         Assert.Contains("\"rowCount\":312,\"complete\":false", prompt, StringComparison.Ordinal);
+        Assert.Contains("\"rowCount\":8124,\"complete\":false", prompt, StringComparison.Ordinal);
+        Assert.Contains("\"totals\":[{\"column\":\"amount\",\"value\":406000}]", prompt, StringComparison.Ordinal);
+        Assert.Contains("{\"column\":\"amount\",\"kind\":\"max\",\"value\":81240}", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("\"rowCount\":1000", prompt, StringComparison.Ordinal);
     }
 

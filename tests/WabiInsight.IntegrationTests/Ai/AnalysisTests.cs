@@ -411,7 +411,8 @@ public sealed class AnalysisTests : IDisposable
             await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
             {
                 var first = await context.AiCalls.IgnoreQueryFilters().FirstAsync(c => c.UserId == managerId);
-                first.TotalCost = 0m;
+                // Whichever row comes first (one of them cost nothing), the value is really changed.
+                first.TotalCost += 1m;
                 await Assert.ThrowsAsync<InvalidOperationException>(() => context.SaveChangesAsync());
             }
 
@@ -524,6 +525,9 @@ public sealed class AnalysisTests : IDisposable
     {
         public Task<Core.Ai.AnalysisResult> ExecuteAsync(Guid applicationId, Core.Ai.Compilers.CompiledQuery query, Core.Ai.PlanVisualization? visualization, CancellationToken cancellationToken = default)
             => throw new InvalidCastException("Specified cast is not valid.");
+
+        public Task<long> StreamAsync(Guid applicationId, Core.Ai.Compilers.CompiledQuery query, long maxRows, Func<IReadOnlyList<Core.Ai.ResultColumn>, ValueTask> onColumns, Func<object?[], ValueTask> onRow, CancellationToken cancellationToken = default)
+            => throw new InvalidCastException("Specified cast is not valid.");
     }
 
     private async Task RunAskFlowAsync()
@@ -598,10 +602,11 @@ public sealed class AnalysisTests : IDisposable
         // Management reads every row: the panel carries no row scope and the interpreter is told the result is unrestricted and complete.
         Assert.Equal(0, response.GetProperty("panels")[0].GetProperty("rowScopes").GetArrayLength());
         Assert.Contains("\"complete\":true,\"access\":\"unrestricted: every row of the queried objects\"", interpretRequest.UserContent, StringComparison.Ordinal);
-        Assert.Contains("When complete is false you were given the leading rows of a longer list.", interpretRequest.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("When complete is false you were given the leading rows of a longer list, and rowCount, totals and figures", interpretRequest.SystemPrompt, StringComparison.Ordinal);
         Assert.Contains("never conclude that something is absent or does not happen in the data", interpretRequest.SystemPrompt, StringComparison.Ordinal);
-        // No reader is told that a list is partial (P13.49): the explainer is forbidden to say so and is not handed the words to say it with.
-        Assert.Contains("Never tell the reader that a list is partial, limited, shortened, a sample or \"the first\" rows", interpretRequest.SystemPrompt, StringComparison.Ordinal);
+        // The page states the number of rows under a long table itself (P13.50): the explainer never says how many are displayed
+        // or that a list is partial, and is not handed the words to say it with.
+        Assert.Contains("Never say how many rows are displayed or were given to you, and never tell the reader that a list is partial", interpretRequest.SystemPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain("only part of the list is covered", interpretRequest.SystemPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain("rowsShown", interpretRequest.UserContent, StringComparison.Ordinal);
         Assert.DoesNotContain("truncated", interpretRequest.UserContent, StringComparison.Ordinal);

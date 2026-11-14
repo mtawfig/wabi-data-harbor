@@ -1,3 +1,4 @@
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,8 +9,10 @@ import type { EChartsOption } from 'echarts';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { LanguageService } from '../../core/i18n/language.service';
 import { AnalysisPanel, AskResponse, EmailDraft } from '../../core/platform/ai.models';
+import { problemMessage } from '../../core/problem-message';
 import { baseChartOption } from '../ui/chart-theme';
 import { answerAccess } from './answer-access';
+import { longList, shownRows } from './long-list';
 import { PlanDescription, describePanel } from './plan-description';
 import { WiNumberPipe } from '../format/locale-pipes';
 
@@ -43,6 +46,12 @@ export class AnalysisAnswerComponent {
   readonly answer = input.required<AskResponse>();
   /** Where the PDF of this answer is served from (differs between a fresh answer and a stored version). */
   readonly reportUrl = input.required<string>();
+  /** Where "View all in Excel" is asked for (P13.50); without it a long table has its note and no button. */
+  readonly excelUrl = input<string | null>(null);
+
+  private readonly http = inject(HttpClient);
+  readonly exportingAll = signal(false);
+  readonly exportError = signal<string | null>(null);
 
   readonly copied = signal(false);
   readonly panels = computed<AnalysisPanel[]>(() => this.answer().panels ?? []);
@@ -60,6 +69,60 @@ export class AnalysisAnswerComponent {
 
   /** Each panel's column headers in the interface language (the catalogue's Arabic names in Arabic). */
   private readonly headers = computed(() => new Map(this.panels().map((p, i) => [p, this.descriptions()[i]?.headers ?? {}])));
+
+  /** The rows a table shows: the first hundred. */
+  shown(panel: AnalysisPanel): AnalysisPanel['result']['rows'] {
+    return shownRows(panel.result);
+  }
+
+  /** For a list longer than its table: how many rows the table shows and how many the list has (null when not known). */
+  longList(panel: AnalysisPanel): { shown: number; total: number | null } | null {
+    return longList(panel.result);
+  }
+
+  /** "View all in Excel": the workbook with every row of the list, made by the server under the reader's own permissions. */
+  viewAll(): void {
+    const url = this.excelUrl();
+    if (!url || this.exportingAll()) {
+      return;
+    }
+    this.exportingAll.set(true);
+    this.exportError.set(null);
+    this.http.post(url, {}, { responseType: 'blob', observe: 'response' }).subscribe({
+      next: (response) => {
+        this.exportingAll.set(false);
+        const blob = response.body;
+        if (!blob) {
+          return;
+        }
+        const named = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(response.headers.get('Content-Disposition') ?? '');
+        const link = document.createElement('a');
+        const href = URL.createObjectURL(blob);
+        link.href = href;
+        link.download = named ? decodeURIComponent(named[1]) : 'analysis.xlsx';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(href), 10_000);
+      },
+      error: (e: HttpErrorResponse) => {
+        this.exportingAll.set(false);
+        // A failed download arrives as a blob: read the problem out of it so its code can be translated.
+        const body = e.error;
+        if (body instanceof Blob) {
+          void body.text().then((text) => {
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(text);
+            } catch {
+              parsed = null;
+            }
+            this.exportError.set(problemMessage(new HttpErrorResponse({ error: parsed, status: e.status, statusText: e.statusText, url: e.url ?? undefined }), this.transloco));
+          });
+        } else {
+          this.exportError.set(problemMessage(e, this.transloco));
+        }
+      },
+    });
+  }
 
   /** Single-number panels become headline cards: the first numeric cell of the first row. */
   readonly kpis = computed<KpiCard[]>(() =>

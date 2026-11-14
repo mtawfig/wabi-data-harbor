@@ -101,6 +101,11 @@ export class AskComponent {
     this.plans.spending().subscribe({ next: (spending) => this.spending.set(spending), error: () => this.spending.set(null) });
   }
 
+  /** "View all in Excel" of the answer just given: the export of its place in My History. */
+  excelUrl(historyId: string, versionNumber: number): string {
+    return `/api/history/${historyId}/versions/${versionNumber}/export/Xlsx`;
+  }
+
   reportUrl(analysisId: string): string {
     return this.ai.reportUrl(analysisId);
   }

@@ -31,7 +31,7 @@
           <p class="wi-muted small"><mat-icon>visibility</mat-icon>{{ 'sharing.view.readOnly' | transloco }}</p>
         </div>
         @if (loadingAnswer()) { <mat-progress-bar mode="indeterminate" /> }
-        @if (answer(); as a) { <app-analysis-answer [answer]="a" [reportUrl]="reportUrl()" /> }
+        @if (answer(); as a) { <app-analysis-answer [answer]="a" [reportUrl]="reportUrl()" [excelUrl]="excelUrl()" /> }
       </div>
       <aside class="wi-card shared__versions" data-testid="shared-versions">
         <h3>{{ 'history.versions' | transloco }}</h3>

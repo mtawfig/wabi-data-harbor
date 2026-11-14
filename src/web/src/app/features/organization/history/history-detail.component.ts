@@ -62,6 +62,8 @@ export class HistoryDetailComponent {
 
   readonly version = computed<HistoryVersion | null>(() => this.detail()?.versions.find((v) => v.versionNumber === this.versionNumber()) ?? null);
   readonly reportUrl = computed(() => this.history.versionReportUrl(this.historyId, this.versionNumber() ?? 0));
+  /** "View all in Excel" under a long table: the Excel export of the version on screen. */
+  readonly excelUrl = computed(() => (this.versionNumber() ? `/api/history/${this.historyId}/versions/${this.versionNumber()}/export/Xlsx` : null));
   readonly memberOf = computed(() => new Set(this.detail()?.collections.map((c) => c.collectionId) ?? []));
 
   constructor() {

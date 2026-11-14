@@ -236,6 +236,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQueryPlanner, QueryPlanner>();
         services.AddSingleton<Core.Ai.Compilers.ISqlDialectCompilerFactory, Core.Ai.Compilers.SqlDialectCompilerFactory>();
         services.AddScoped<IQueryExecutor, QueryExecutor>();
+        services.AddScoped<WholeListSummary>();
+        services.AddScoped<Reports.WholeListExcel>();
         services.AddScoped<Reports.ReportComposer>();
         services.AddSingleton<IReportRenderer, Reports.QuestPdfReportRenderer>();
         services.AddSingleton<IAnswerExporter, Reports.DocxExporter>();

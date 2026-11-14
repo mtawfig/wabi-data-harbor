@@ -24,8 +24,8 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
     private const string Blue = "#087DF2";
     private const string Muted = "#64748B";
     private const string Border = "#E2E8F0";
-    /// <summary>The most rows a table takes in the document. A longer result is in full in the Excel export; the document carries no note about it (P13.49).</summary>
-    internal const int MaxTableRows = 60;
+    /// <summary>The most rows a table takes in the document. A longer list has one line under its table (<see cref="LongListNote"/>) that opens the answer in the application, where the whole list is exported to Excel (P13.50).</summary>
+    internal const int MaxTableRows = AnalysisResult.DisplayRows;
 
     /// <summary>Headline figures sit side by side, at most this many in a row; further figures wrap onto more rows.</summary>
     internal const int MaxKpisPerRow = 5;
@@ -175,6 +175,11 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                                     else
                                     {
                                         figure.Item().Element(c => Table(c, panel, culture));
+                                        if (LongListNote.Text(panel.Result, MaxTableRows, rtl, culture) is { } note)
+                                        {
+                                            var line = figure.Item().PaddingTop(3);
+                                            (request.AnswerUrl is { Length: > 0 } url ? line.Hyperlink(url) : line).Text(note).FontSize(8.5f).FontColor(request.AnswerUrl is { Length: > 0 } ? Blue : Muted);
+                                        }
                                     }
 
                                 });
