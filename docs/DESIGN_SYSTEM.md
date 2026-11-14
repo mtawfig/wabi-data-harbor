@@ -109,7 +109,7 @@ Transloco with `public/i18n/en.json` and `public/i18n/ar.json`. Keys are grouped
 
 ## Ask Wabi Insight (P8.2)
 - `app-ask`: composer card (application selector showing the permitted-object count, answer language, question with Ctrl+Enter, example chips) with a progress bar and a status line while planning, running and interpreting.
-- Answer card: objective as the heading, narrative, highlight list with green check icons, an amber truncation band, a large KPI value for single-number answers, an ECharts bar/line/pie from the plan's visualization hint, a sticky-header rows table, and the *How this was computed* expansion panel (assumptions, dark redacted SQL block, model · tokens · cost · time · rows).
+- Answer card: objective as the heading, narrative, highlight list with green check icons, a large KPI value for single-number answers, an ECharts bar/line/pie from the plan's visualization hint, a sticky-header rows table, and the *How this was computed* expansion panel (assumptions, dark redacted SQL block, model · tokens · cost · time · rows).
 - Rejections and execution failures are red bands with the stage and localized reason codes.
 
 ## Screenshots (P8.2)

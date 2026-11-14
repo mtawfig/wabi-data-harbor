@@ -51,6 +51,10 @@ public sealed class PromptBuilderTests
         Assert.Contains("set compareTo to the other column", PromptBuilder.SystemPrompt, StringComparison.Ordinal);
         Assert.Contains("\"$asker.department\"", PromptBuilder.SystemPrompt, StringComparison.Ordinal);
         Assert.Contains("You never know the asker's own codes", PromptBuilder.SystemPrompt, StringComparison.Ordinal);
+        // P13.49: a limit only when the question asks for one, and no plan text that tells the reader a list is partial.
+        Assert.Contains("Set limit only when the question asks for a number of rows", PromptBuilder.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("never say that results are limited to a number of rows, that only some rows are returned, shown or listed, that a list is partial or a sample, or that more may exist", PromptBuilder.SystemPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("100 rows by default", PromptBuilder.SystemPrompt, StringComparison.Ordinal);
     }
 
     [Fact]

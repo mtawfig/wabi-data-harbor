@@ -411,7 +411,6 @@
     "scope": "Answers use only the data you are allowed to see.",
     "working": "Preparing your answer…",
     "answer": "Answer",
-    "truncated": "Only the first {{count}} results are listed; narrow your question to see the rest.",
     "noRows": "No data matches this question.",
     "how": "How this was computed",
     "assumptions": "Assumptions",

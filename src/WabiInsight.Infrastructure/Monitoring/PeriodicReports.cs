@@ -103,7 +103,7 @@ public sealed class PeriodicReportRenderer
             foreach (var query in authorized)
             {
                 var compiled = compiler.Compile(query);
-                var result = await _executor.ExecuteAsync(applicationId, compiled, query.Plan.Visualization, cancellationToken);
+                var result = (await _executor.ExecuteAsync(applicationId, compiled, query.Plan.Visualization, cancellationToken)).For(query.Plan);
                 panels.Add(new AnalysisPanel(query.Plan.Title, query.Plan, result, PanelAccess.From(query), PanelLabels.From(query)));
             }
         }

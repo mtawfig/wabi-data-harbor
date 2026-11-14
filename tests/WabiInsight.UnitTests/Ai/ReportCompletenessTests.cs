@@ -13,15 +13,14 @@ using Word = DocumentFormat.OpenXml.Wordprocessing;
 namespace WabiInsight.UnitTests.Ai;
 
 /// <summary>
-/// P13.24: a reader must never take a shortened table for the whole list, and no headline figure may be left out.
+/// P13.24 and P13.49: a long table takes a fixed number of rows in a document and the document says nothing about it
+/// (the owner's decision: no reader is told that a list is partial); no headline figure may be left out.
 /// The PDF is checked on its laid-out pages (text runs with their positions), the Word document on its XML.
 /// </summary>
 public sealed class ReportCompletenessTests
 {
-    private const string EnglishNote = "Showing the first 60 of 312. The Excel export has the full list.";
-    private const string ArabicNote = "يعرض هذا الجدول أول 60 من أصل 312. القائمة الكاملة متوفرة في ملف Excel.";
     private static readonly CultureInfo Arabic = CultureInfo.GetCultureInfo("ar-AE");
-    private static readonly string[] TechnicalWords = ["row", "query", "queries", "SQL", "fetch", "limit", "truncat", "صف", "صفوف", "استعلام", "سجل"];
+    private static readonly string[] PartialWords = ["Showing", "the first", "Excel", "more than", "partial", "يعرض هذا الجدول", "أول 60", "أول 100", "من أصل"];
 
     private static AnalysisPanel TablePanel(int rowCount, bool truncated = false, string title = "Branches")
     {
@@ -50,97 +49,21 @@ public sealed class ReportCompletenessTests
         return new ExportRequest(answer, Content(panels.Count), language, "ACME", "Branches", "Question?", new ReportBranding(null, null), new DateTimeOffset(2026, 11, 6, 9, 0, 0, TimeSpan.Zero));
     }
 
-    // The sentence itself.
-
-    [Fact]
-    public void ShortenedTableNote_GivesTheRealNumbers_InTheDocumentLanguage()
-    {
-        var long312 = TablePanel(312).Result;
-        Assert.Equal(EnglishNote, QuestPdfReportRenderer.ShortenedTableNote(long312, QuestPdfReportRenderer.MaxTableRows, rtl: false, CultureInfo.InvariantCulture));
-        Assert.Equal(ArabicNote, QuestPdfReportRenderer.ShortenedTableNote(long312, QuestPdfReportRenderer.MaxTableRows, rtl: true, Arabic));
-        Assert.Equal("Showing the first 100 of 312. The Excel export has the full list.", QuestPdfReportRenderer.ShortenedTableNote(long312, DocxExporter.MaxTableRows, rtl: false, CultureInfo.InvariantCulture));
-        Assert.Equal("يعرض هذا الجدول أول 100 من أصل 312. القائمة الكاملة متوفرة في ملف Excel.", QuestPdfReportRenderer.ShortenedTableNote(long312, DocxExporter.MaxTableRows, rtl: true, Arabic));
-
-        // Numbers are written the way the tables write them.
-        Assert.Equal("Showing the first 60 of 2,500. The Excel export has the full list.", QuestPdfReportRenderer.ShortenedTableNote(TablePanel(2500).Result, 60, rtl: false, CultureInfo.InvariantCulture));
-        Assert.Equal("2,500", QuestPdfReportRenderer.FormatValue(2500, isNumeric: true, Arabic));
-        Assert.Contains("من أصل 2,500.", QuestPdfReportRenderer.ShortenedTableNote(TablePanel(2500).Result, 60, rtl: true, Arabic), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void ShortenedTableNote_StaysTrue_WhenTheResultItselfStoppedAtItsSizeLimit()
-    {
-        var capped = TablePanel(1000, truncated: true).Result;
-
-        // More exists than was counted, and the Excel file holds what was counted, not "the full list".
-        Assert.Equal("Showing the first 60 of more than 1,000. The Excel export has the first 1,000.", QuestPdfReportRenderer.ShortenedTableNote(capped, 60, rtl: false, CultureInfo.InvariantCulture));
-        Assert.Equal("يعرض هذا الجدول أول 60 من أصل أكثر من 1,000. ملف Excel يتضمن أول 1,000.", QuestPdfReportRenderer.ShortenedTableNote(capped, 60, rtl: true, Arabic));
-        Assert.Equal("Showing the first 100 of more than 1,000. The Excel export has the first 1,000.", QuestPdfReportRenderer.ShortenedTableNote(capped, 100, rtl: false, CultureInfo.InvariantCulture));
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
-    [InlineData(59)]
-    [InlineData(60)]
-    public void ShortenedTableNote_IsAbsent_WhenTheTableShowsEverything(int rows)
-    {
-        Assert.Null(QuestPdfReportRenderer.ShortenedTableNote(TablePanel(rows).Result, 60, rtl: false, CultureInfo.InvariantCulture));
-        Assert.Null(QuestPdfReportRenderer.ShortenedTableNote(TablePanel(rows).Result, 60, rtl: true, Arabic));
-        Assert.NotNull(QuestPdfReportRenderer.ShortenedTableNote(TablePanel(61).Result, 60, rtl: false, CultureInfo.InvariantCulture));
-    }
-
-    [Fact]
-    public void ShortenedTableNote_UsesBusinessWordsOnly()
-    {
-        foreach (var result in new[] { TablePanel(312).Result, TablePanel(1000, truncated: true).Result })
-        {
-            foreach (var note in new[] { QuestPdfReportRenderer.ShortenedTableNote(result, 60, false, CultureInfo.InvariantCulture)!, QuestPdfReportRenderer.ShortenedTableNote(result, 60, true, Arabic)! })
-            {
-                Assert.All(TechnicalWords, word => Assert.DoesNotContain(word, note, StringComparison.OrdinalIgnoreCase));
-            }
-        }
-    }
-
     // PDF.
 
-    [Fact]
-    public void Pdf_NotesAShortenedTable_UnderTheTable_InEnglish()
+    [Theory]
+    [InlineData("en", 312, false)]
+    [InlineData("ar", 312, false)]
+    [InlineData("en", 1000, true)]
+    [InlineData("ar", 1000, true)]
+    public void Pdf_NeverSaysThatATableIsShortened(string language, int rows, bool cutAtTheSource)
     {
-        var pages = PdfPages(PdfRequest([TablePanel(312)], "en"));
-        var runs = pages.SelectMany(p => p).ToList();
+        var text = string.Join(" ", PdfPages(PdfRequest([TablePanel(rows, truncated: cutAtTheSource)], language)).SelectMany(p => p).Select(r => r.Text));
 
-        // Sixty of the 312 are drawn, and the line under the table says so, starting at the left margin.
-        Assert.Contains(runs, r => r.Text == "Branch 0060");
-        Assert.DoesNotContain(runs, r => r.Text == "Branch 0061");
-        var note = Assert.Single(runs, r => r.Text == EnglishNote);
-        var lastRow = runs.Last(r => r.Text == "Branch 0060");
-        Assert.Contains(pages, p => p.Contains(note) && p.Contains(lastRow));
-        Assert.True(note.Y > lastRow.Y, "The note is under the table.");
-        Assert.InRange(note.Left, 47, 50);
-    }
-
-    [Fact]
-    public void Pdf_NotesAShortenedTable_UnderTheTable_InArabic_RightToLeft()
-    {
-        var pages = PdfPages(PdfRequest([TablePanel(312)], "ar"));
-        var runs = pages.SelectMany(p => p).ToList();
-        var start = Assert.Single(runs, r => r.Text.StartsWith("يعرض هذا الجدول", StringComparison.Ordinal));
-        var line = runs.Where(r => Math.Abs(r.Y - start.Y) < 0.01 && pages.Single(p => p.Contains(start)).Contains(r)).ToList();
-
-        // Read from the right, the runs of the line give the sentence, with its Latin word and numbers in place.
-        var read = string.Concat(line.OrderByDescending(r => r.Right).Select(r => r.Text));
-        Assert.Equal(WithoutSpaces(ArabicNote), WithoutSpaces(read));
-        Assert.Contains(line, r => r.Text == "60");
-        Assert.Contains(line, r => r.Text == "312");
-        Assert.Contains(line, r => r.Text == "Excel");
-
-        // Right-aligned: the sentence starts at the right margin (A4 is 595 points wide, the margins 48) and it is under the table.
-        Assert.InRange(line.Max(r => r.Right), 535, 548);
-        Assert.True(line.Min(r => r.Left) > 200);
-        Assert.True(start.Y > runs.Last(r => r.Text == "Branch 0060").Y);
-        Assert.DoesNotContain(runs, r => r.Text == "Branch 0061");
-        Assert.DoesNotContain(runs, r => r.Text.Contains("Showing", StringComparison.Ordinal));
+        // Sixty rows are drawn and nothing under the table, or anywhere else, speaks of the rest.
+        Assert.Contains("Branch 0060", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Branch 0061", text, StringComparison.Ordinal);
+        Assert.All(PartialWords, word => Assert.DoesNotContain(word, text, StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
@@ -155,14 +78,6 @@ public sealed class ReportCompletenessTests
         Assert.DoesNotContain("Showing", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Excel", text, StringComparison.Ordinal);
         Assert.DoesNotContain("الجدول", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Pdf_SaysMoreThan_WhenTheResultItselfWasCutAtTheSource()
-    {
-        var runs = PdfPages(PdfRequest([TablePanel(1000, truncated: true)], "en")).SelectMany(p => p).ToList();
-
-        Assert.Single(runs, r => r.Text == "Showing the first 60 of more than 1,000. The Excel export has the first 1,000.");
     }
 
     [Theory]
@@ -207,29 +122,22 @@ public sealed class ReportCompletenessTests
     // Word.
 
     [Theory]
-    [InlineData("en", EnglishWordNote)]
-    [InlineData("ar", ArabicWordNote)]
-    public void Docx_NotesAShortenedTable_RightUnderTheTable(string language, string expected)
+    [InlineData("en", 312, false)]
+    [InlineData("ar", 312, false)]
+    [InlineData("en", 1000, true)]
+    [InlineData("ar", 1000, true)]
+    public void Docx_NeverSaysThatATableIsShortened(string language, int rows, bool cutAtTheSource)
     {
-        var body = DocxBody(ExportRequest([TablePanel(312)], language));
+        var body = DocxBody(ExportRequest([TablePanel(rows, truncated: cutAtTheSource)], language));
         var table = Assert.Single(body.Elements<Word.Table>());
 
-        // The header and the first hundred of the 312.
+        // The header and the first hundred rows, and no line about the rest.
         Assert.Equal(DocxExporter.MaxTableRows + 1, table.Elements<Word.TableRow>().Count());
         Assert.Contains("Branch 0100", table.InnerText, StringComparison.Ordinal);
         Assert.DoesNotContain("Branch 0101", table.InnerText, StringComparison.Ordinal);
-
-        var note = Assert.IsType<Word.Paragraph>(table.NextSibling());
-        Assert.Equal(expected, note.InnerText);
-        Assert.Equal("TableNote", note.ParagraphProperties!.ParagraphStyleId!.Val!.Value);
-        Assert.Equal(language == "ar", note.ParagraphProperties.GetFirstChild<Word.BiDi>() is not null);
-        Assert.Equal(language == "ar", note.Descendants<Word.RightToLeftText>().Any());
-        Assert.Single(body.Elements<Word.Paragraph>(), p => p.InnerText == expected);
-        Assert.All(TechnicalWords, word => Assert.DoesNotContain(word, note.InnerText, StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(body.Elements<Word.Paragraph>(), p => p.ParagraphProperties?.ParagraphStyleId?.Val?.Value == "TableNote");
+        Assert.All(PartialWords, word => Assert.DoesNotContain(word, body.InnerText, StringComparison.OrdinalIgnoreCase));
     }
-
-    private const string EnglishWordNote = "Showing the first 100 of 312. The Excel export has the full list.";
-    private const string ArabicWordNote = "يعرض هذا الجدول أول 100 من أصل 312. القائمة الكاملة متوفرة في ملف Excel.";
 
     [Theory]
     [InlineData("en", 100)]
@@ -244,14 +152,6 @@ public sealed class ReportCompletenessTests
         Assert.DoesNotContain(body.Elements<Word.Paragraph>(), p => p.ParagraphProperties?.ParagraphStyleId?.Val?.Value == "TableNote");
         Assert.DoesNotContain("Showing", body.InnerText, StringComparison.Ordinal);
         Assert.DoesNotContain("Excel", body.InnerText, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Docx_SaysMoreThan_WhenTheResultItselfWasCutAtTheSource()
-    {
-        var body = DocxBody(ExportRequest([TablePanel(1000, truncated: true)], "en"));
-
-        Assert.Equal("Showing the first 100 of more than 1,000. The Excel export has the first 1,000.", body.Elements<Word.Table>().Single().NextSibling()!.InnerText);
     }
 
     [Theory]
@@ -293,22 +193,53 @@ public sealed class ReportCompletenessTests
         Assert.True(sheet.Cell(314, 1).IsEmpty());
     }
 
-    // The writer is told the truth about what the documents contain.
+    // What "cut" means.
 
     [Fact]
-    public async Task ReportComposer_TellsTheWriter_ThatLongTablesAreShortenedInTheDocuments()
+    public void ARequestedNumberOfRows_IsAComplete_Answer_AndAListCutAtTheSizeLimit_KeepsNoTotals()
+    {
+        var kpis = new List<ResultKpi> { new("Amount", "sum", 500) };
+        var cut = TablePanel(5, truncated: true).Result with { Kpis = kpis };
+
+        // "Top five": the five rows are the answer, with their totals.
+        var topFive = cut.For(new QueryPlan { Limit = 5 });
+        Assert.False(topFive.Truncated);
+        Assert.Equal(kpis, topFive.Kpis);
+
+        // No limit of its own, or the maximum: the list stopped at the size limit, and a total of the rows fetched is not the total of the list.
+        foreach (var plan in new[] { new QueryPlan(), new QueryPlan { Limit = 1000 } })
+        {
+            var capped = cut.For(plan);
+            Assert.True(capped.Truncated);
+            Assert.Empty(capped.Kpis);
+        }
+
+        // A result that was not cut is left as it is.
+        var whole = TablePanel(5).Result with { Kpis = kpis };
+        Assert.Same(whole, whole.For(new QueryPlan()));
+    }
+
+    // The writer is never asked to announce that a list is partial.
+
+    [Fact]
+    public async Task ReportComposer_TellsTheWriter_NeverToSayThatAListIsPartial()
     {
         var provider = new CapturingProvider();
         var composer = new ReportComposer(provider);
 
-        await composer.ComposeAsync(Guid.NewGuid(), "Branches?", "en", new AnalysisPlan { Objective = "Branches", Deliverables = ["report"] }, [TablePanel(312)], wantsEmail: false, "ACME", "Branches", CancellationToken.None);
+        await composer.ComposeAsync(Guid.NewGuid(), "Branches?", "en", new AnalysisPlan { Objective = "Branches", Deliverables = ["report"] }, [TablePanel(312), TablePanel(1000, truncated: true, title: "Customers")], wantsEmail: false, "ACME", "Branches", CancellationToken.None);
 
         var prompt = Assert.Single(provider.Requests).UserContent;
-        Assert.DoesNotContain("still draws every row", prompt, StringComparison.Ordinal);
-        Assert.Contains("in the PDF and Word documents a long table is shortened too, with a note under it, and the Excel export has every row", prompt, StringComparison.Ordinal);
-        Assert.Contains("a panel is complete when rowsShown equals rowCount", prompt, StringComparison.Ordinal);
-        Assert.Contains("describe the listed rows as a sample and do not claim the rest is missing", prompt, StringComparison.Ordinal);
-        Assert.Contains("\"rowsShown\":60,\"rowCount\":312,\"truncated\":false", prompt, StringComparison.Ordinal);
+        Assert.Contains("never say that a list or table is partial, limited, shortened, a sample or the first rows, or that more rows exist", prompt, StringComparison.Ordinal);
+        Assert.Contains("never conclude that something is absent", prompt, StringComparison.Ordinal);
+        Assert.Contains("do not state a total, count, average, ranking, highest or lowest for it unless it is in totals", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("with a note under it", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("describe the listed rows as a sample", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("rowsShown", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("truncated", prompt, StringComparison.Ordinal);
+        // The count is the true number of rows, and is left out when the result stopped at its size limit.
+        Assert.Contains("\"rowCount\":312,\"complete\":false", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"rowCount\":1000", prompt, StringComparison.Ordinal);
     }
 
     private sealed class CapturingProvider : IAiProvider, IAiProviderResolver
@@ -386,5 +317,4 @@ public sealed class ReportCompletenessTests
 
     private static bool IsArabic(char c) => c is (>= '؀' and <= 'ۿ') or (>= 'ﭐ' and <= '﷿') or (>= 'ﹰ' and <= 'ﻼ');
 
-    private static string WithoutSpaces(string text) => new(text.Where(c => !char.IsWhiteSpace(c)).ToArray());
 }

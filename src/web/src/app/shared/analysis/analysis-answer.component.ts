@@ -48,7 +48,6 @@ export class AnalysisAnswerComponent {
   readonly panels = computed<AnalysisPanel[]>(() => this.answer().panels ?? []);
   /** Row scopes that limited this answer to what the asker may see (shown so it is never read as the whole organization). */
   readonly access = computed(() => answerAccess(this.panels()));
-  readonly truncatedRows = computed(() => this.panels().filter((p) => p.result.truncated).reduce((n, p) => n + p.result.rowCount, 0));
   readonly totalRows = computed(() => this.panels().reduce((n, p) => n + p.result.rowCount, 0));
   /** Re-evaluates once the active language's translations have loaded, so the plain-language text never shows keys. */
   private readonly translation = toSignal(this.transloco.selectTranslation());
