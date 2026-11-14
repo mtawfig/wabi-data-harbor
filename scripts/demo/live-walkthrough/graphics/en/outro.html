@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Get in touch</title>
+<link rel="stylesheet" href="base.css"><link rel="stylesheet" href="devices.css">
+<style>
+  body, body * { font-family: Inter, system-ui, sans-serif !important; }
+  .material-icons { font-family: 'Material Icons' !important; }
+  .stage { flex-direction: row; gap: 56px; padding: 60px 90px; align-items: center; }
+  .beam { position: absolute; inset: 0; z-index: 0; background: linear-gradient(100deg, transparent 40%, rgb(34 184 207 / 16%) 50%, transparent 60%); transform: translateX(-120%); }
+  body[data-step="0"] .beam, body[data-step="1"] .beam { animation: sweep 7s ease-in-out 1 forwards; }
+  @keyframes sweep { to { transform: translateX(120%); } }
+  .words { width: 520px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .mark { width: 500px; filter: drop-shadow(0 20px 60px rgb(34 184 207 / 35%)); }
+  .tag { font: 700 32px/1.45 sans-serif; margin-top: 28px; white-space: nowrap; }
+  .cta { margin-top: 34px; font: 600 32px/1.5 sans-serif; color: var(--muted); }
+  .contact { width: 860px; background: #fff; color: #0b1f3a; border-radius: 34px; padding: 38px 42px; box-shadow: 0 50px 120px rgb(0 0 0 / 50%); display: flex; gap: 34px; align-items: stretch; }
+  .rows { flex: 1; display: flex; flex-direction: column; gap: 17px; }
+  .company b { display: block; font: 700 34px/1.3 sans-serif; }
+  .company span { display: block; font: 700 25px/1.4 Inter, sans-serif !important; color: #087df2; direction: ltr; text-align: right; }
+  .row { display: flex; align-items: center; gap: 16px; font: 600 27px/1.35 sans-serif; opacity: 0; transform: translateY(14px); transition: all .6s var(--ease); transition-delay: calc(var(--r) * 140ms + 500ms); }
+  .contact.in .row { opacity: 1; transform: none; }
+  .row .material-icons { font-size: 34px; color: #087df2; flex: none; }
+  .row .v { direction: ltr; unicode-bidi: isolate; font-family: Inter, sans-serif !important; font-weight: 700; }
+  .row.loc { font-size: 23px; font-weight: 500; align-items: flex-start; }
+  .qr { width: 270px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border-inline-start: 2px solid #e6ecf4; padding-inline-start: 30px; }
+  .qr img { width: 240px; height: 240px; border-radius: 14px; outline: 4px solid transparent; }
+  .contact.in .qr img { animation: pulse 1.6s ease-out 2.2s 1; }
+  @keyframes pulse { 0% { outline-color: rgb(34 184 207 / 90%); outline-offset: 0; } 100% { outline-color: transparent; outline-offset: 16px; } }
+  .qr span { font: 700 22px/1.4 sans-serif; text-align: center; color: #0b1f3a; }
+  .phone { width: 250px; flex: none; }
+  .addc { height: 100%; background: #f2f4f8; color: #0b1f3a; display: flex; flex-direction: column; align-items: center; padding: 58px 14px 14px; gap: 9px; direction: ltr; font-family: Inter, sans-serif !important; }
+  .addc * { font-family: Inter, sans-serif !important; }
+  .addc .bar { align-self: stretch; display: flex; justify-content: space-between; font: 600 12px/1 Inter; color: #087df2; }
+  .addc .bar b { color: #0b1f3a; }
+  .addc .av { width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, #087df2, #22b8cf); display: grid; place-items: center; color: #fff; font: 800 30px/1 Inter; margin-top: 8px; }
+  .addc .nm { font: 700 14px/1.3 Inter; text-align: center; }
+  .addc .f { align-self: stretch; background: #fff; border-radius: 12px; padding: 9px 11px; }
+  .addc .f small { display: block; font: 500 9px/1 Inter; color: #087df2; margin-bottom: 4px; }
+  .addc .f span { font: 600 11.5px/1.2 Inter; }
+  .addc .save { margin-top: auto; align-self: stretch; text-align: center; background: #087df2; color: #fff; border-radius: 12px; padding: 10px; font: 700 13px/1 Inter; }
+</style></head>
+<body>
+  <div class="aurora"><i></i><i></i><i></i></div><div class="grid"></div><div class="beam"></div>
+  <div class="stage">
+    <div class="words">
+      <img class="mark" data-beat="0" src="__WEB__/public/brand/wabi-insight-wordmark-light.svg" alt="Wabi Insight">
+      <div class="tag" data-beat="0" style="--i:2"><span class="grad">Ask your data. Trust the answer.</span></div>
+      <div class="cta" data-beat="1">See it working on your own data</div>
+    </div>
+    <div class="contact" data-beat="1" style="--i:1">
+      <div class="rows">
+        <div class="company"><b>__COMPANY__</b></div>
+        <div class="row" style="--r:1"><span class="material-icons">language</span><span class="v">__WEBSITE__</span></div>
+        <div class="row" style="--r:2"><span class="material-icons">mail</span><span class="v">__EMAIL__</span></div>
+        <div class="row" style="--r:3"><span class="material-icons">smartphone</span><span class="v">__MOBILE__</span></div>
+        <div class="row" style="--r:4"><span class="material-icons">call</span><span class="v">__PHONE__</span></div>
+        <div class="row loc" style="--r:5"><span class="material-icons">location_on</span><span>__LOCATION__</span></div>
+      </div>
+      <div class="qr"><img src="qr.svg" alt="QR"><span>Scan to save<br>our contact</span></div>
+    </div>
+    <div class="phone" data-beat="1" style="--i:6"><div class="screen"><div class="addc">
+      <div class="bar"><span>Cancel</span><b>New Contact</b><span>Done</span></div>
+      <div class="av">W</div><div class="nm">__COMPANY__</div>
+      <div class="f"><small>mobile</small><span>__MOBILE__</span></div>
+      <div class="f"><small>email</small><span>__EMAIL__</span></div>
+      <div class="save">Save contact</div>
+    </div></div></div>
+  </div>
+  <script src="stage.js"></script>
+</body></html>

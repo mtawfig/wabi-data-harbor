@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Your data, your choice</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  body, body * { font-family: Inter, system-ui, sans-serif !important; }
+  .material-icons { font-family: 'Material Icons' !important; }
+  h2 { margin-bottom: 46px; }
+  .choices { display: flex; gap: 40px; }
+  .choice { width: 620px; padding: 40px 44px; display: flex; gap: 28px; align-items: center; }
+  .choice .material-icons { font-size: 92px; color: var(--aqua); }
+  .choice b { display: block; font: 700 44px/1.3 sans-serif; }
+  .choice span.t { display: block; font: 400 28px/1.5 sans-serif; color: var(--muted); margin-top: 8px; }
+  .or { align-self: center; font: 700 40px/1 sans-serif; color: var(--muted); }
+  .with { margin-top: 64px; font: 700 40px/1.3 sans-serif; }
+  .steps { display: flex; align-items: center; gap: 18px; margin-top: 34px; }
+  .step { display: flex; align-items: center; gap: 16px; padding: 22px 30px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); font: 600 27px/1 sans-serif; white-space: nowrap; }
+  .step i { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--ocean), var(--aqua)); font: 800 26px/1 Inter, sans-serif !important; font-style: normal; }
+  .arrow { font-size: 44px; color: var(--aqua); }
+</style></head>
+<body>
+  <div class="aurora"><i></i><i></i><i></i></div><div class="grid"></div>
+  <div class="stage">
+    <h2 data-beat="0">Your data, <span class="grad">your choice</span></h2>
+    <div class="choices">
+      <div class="card choice" data-beat="0" style="--i:2"><span class="material-icons">cloud_done</span><div><b>In the cloud</b><span class="t">Ready to use, and we run it for you</span></div></div>
+      <div class="or" data-beat="0" style="--i:3">or</div>
+      <div class="card choice" data-beat="0" style="--i:4"><span class="material-icons">domain</span><div><b>On your servers</b><span class="t">At your premises; we help you install and run it</span></div></div>
+    </div>
+    <div class="with" data-beat="1">Our team is with you <span class="grad">from day one</span></div>
+    <div class="steps">
+      <div class="step" data-beat="1" style="--i:2"><i>1</i>Installation</div><span class="material-icons arrow" data-beat="1" style="--i:3">arrow_forward</span>
+      <div class="step" data-beat="1" style="--i:4"><i>2</i>Connecting your systems</div><span class="material-icons arrow" data-beat="1" style="--i:5">arrow_forward</span>
+      <div class="step" data-beat="1" style="--i:6"><i>3</i>Roles and permissions</div><span class="material-icons arrow" data-beat="1" style="--i:7">arrow_forward</span>
+      <div class="step" data-beat="1" style="--i:8"><i>4</i>Training and go-live</div>
+    </div>
+  </div>
+  <script src="stage.js"></script>
+</body></html>

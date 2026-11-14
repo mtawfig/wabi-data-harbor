@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Security at every step</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  body, body * { font-family: Inter, system-ui, sans-serif !important; }
+  .material-icons { font-family: 'Material Icons' !important; }
+  h2 { margin-bottom: 54px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 520px); gap: 30px; }
+  .g { padding: 34px 36px; display: flex; gap: 22px; align-items: flex-start; min-height: 210px; }
+  .g .material-icons { font-size: 60px; color: var(--aqua); flex: none; }
+  .g b { display: block; font: 700 34px/1.35 sans-serif; }
+  .g span.t { display: block; font: 400 25px/1.55 sans-serif; color: var(--muted); margin-top: 8px; }
+</style></head>
+<body>
+  <div class="aurora"><i></i><i></i><i></i></div><div class="grid"></div>
+  <div class="stage">
+    <h2 data-beat="0">Security <span class="grad">at every step</span></h2>
+    <div class="cards">
+      <div class="card g" data-beat="0" style="--i:3"><span class="material-icons">domain</span><div><b>Complete isolation</b><span class="t">Your organization's data never mixes with anyone else's</span></div></div>
+      <div class="card g" data-beat="0" style="--i:6"><span class="material-icons">rule</span><div><b>Fine-grained permissions</b><span class="t">Down to the table, the column and the row</span></div></div>
+      <div class="card g" data-beat="0" style="--i:9"><span class="material-icons">groups</span><div><b>Everyone sees their own</b><span class="t">The organization, the department, the section, or only their records</span></div></div>
+      <div class="card g" data-beat="1" style="--i:1"><span class="material-icons">verified_user</span><div><b>Read-only</b><span class="t">The AI proposes a plan; the platform checks it and runs it</span></div></div>
+      <div class="card g" data-beat="1" style="--i:4"><span class="material-icons">lock</span><div><b>Encryption</b><span class="t">Connection details and keys are encrypted and never reach the browser</span></div></div>
+      <div class="card g" data-beat="1" style="--i:7"><span class="material-icons">fact_check</span><div><b>Audit log</b><span class="t">Every action is recorded, and the log cannot be altered</span></div></div>
+    </div>
+  </div>
+  <script src="stage.js"></script>
+</body></html>

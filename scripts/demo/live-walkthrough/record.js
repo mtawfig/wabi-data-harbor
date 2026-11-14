@@ -62,6 +62,30 @@ const TEXT = {
       owner: 'القاعدة تعمل بصلاحيات صاحبها ولا تتجاوزها', human: 'التنبيه يُعلِم فقط · القرار دائمًا بيد الإنسان', each: 'كل مستلم يتلقى نسخته وفق صلاحياته',
     },
   },
+  en: {
+    pace: 0.7,   // English says the same in about two thirds of the time: the on-screen cues inside a line come sooner
+    qFlights: 'Show the number of passengers and the average load factor for each month of 2025',
+    flightsRow: /number of passengers/i,
+    qBoard: 'Give me a dashboard of procurement in 2025: total spend by month, by item category, and the top ten suppliers by spend',
+    qEnglish: 'اعرض عدد الموظفين النشطين في كل إدارة',   // the question in the other language (the bilingual scene)
+    qPayroll: 'Show the total payroll cost for each department in 2025 with a chart',
+    payrollRow: /total payroll cost/i,
+    colleague: 'Sara',
+    colleagueEmail: 'sara.khoury@gulfaviation.example',
+    shareMessage: 'For review before Sunday\'s management meeting.',
+    collection: 'Management meeting',
+    ticketSubject: 'Connecting a new system',
+    c: {
+      readOnly: 'Read-only · everyone sees only what they are permitted to', encrypted: 'Encrypted, tested, read-only connection', yours: 'The setup belongs to your organization alone',
+      support: 'Support enters only with your approval, and never sees your data', signin: 'Encrypted connection · secure session · protection against repeated attempts', reset: 'The reset link is valid for thirty minutes',
+      own: 'Everything here belongs to this user alone', plan: 'The AI only proposes a plan; it never writes a query',
+      checked: 'Verified plan · the asker\'s permissions · read-only query', scopes: 'Manager: the whole organization · Section head: their section · Employee: their records',
+      always: 'Applied automatically, every time', anyScreen: 'The answer in the language of the question, on any screen', version: 'A new version; the earlier one is kept',
+      recipient: 'What the recipient may see is checked before sending', noBypass: 'Sharing never gives anyone data they are not entitled to',
+      board: 'Several verified queries in one view', within: 'Within your permissions, as with any answer', revoke: 'Revoke a share at any time · every share is recorded', review: 'Review, then record your note',
+      owner: 'A rule runs with its owner\'s permissions and never exceeds them', human: 'An alert only informs · the decision always stays with a person', each: 'Each recipient gets their own copy, under their own permissions',
+    },
+  },
 };
 const T = TEXT[LANG];
 if (!T) throw new Error(`No recorder texts for --lang ${LANG}`);
@@ -294,7 +318,7 @@ class Director {
     }
   }
   /** Waits until `seconds` of the current narration line have been seen (to place an action inside a line). */
-  async at(seconds) { await this.cap.until(this.cap.beats[this.current], seconds); }
+  async at(seconds) { await this.cap.until(this.cap.beats[this.current], seconds * (T.pace ?? 1)); }
   /** Optional step: the scene goes on when the element is not there. */
   async maybe(step) { this.patience = 5000; try { await step(); } catch (e) { console.warn(`  ${this.scene.id}: skipped a step (${String(e.message).split('\n')[0]})`); } finally { this.patience = undefined; } }
   async phone(file, ms = 4200) {
@@ -457,7 +481,9 @@ async function prepareGraphics() {
     .replaceAll('__COMPANY_AR__', c.companyAr).replaceAll('__COMPANY__', c.company).replaceAll('__MOBILE__', c.mobile)
     .replaceAll('__PHONE__', c.phone).replaceAll('__LOCATION__', c.location);
   for (const f of [path.join(SHARED, 'base.css'), path.join(SHARED, 'stage.js'), path.join(SHARED, 'ar', 'base-ar.css'),
-    ...fs.readdirSync(path.join(HERE, 'graphics')).map((f) => path.join(HERE, 'graphics', f))]) {
+    ...fs.readdirSync(path.join(HERE, 'graphics')).map((f) => path.join(HERE, 'graphics', f)).filter((f) => fs.statSync(f).isFile()),
+    // The cards are written in Arabic; another language keeps its own versions in graphics/<language>, copied over them.
+    ...(fs.existsSync(path.join(HERE, 'graphics', LANG)) ? fs.readdirSync(path.join(HERE, 'graphics', LANG)).map((f) => path.join(HERE, 'graphics', LANG, f)) : [])]) {
     fs.writeFileSync(path.join(dir, path.basename(f)), fill(fs.readFileSync(f, 'utf-8')));
   }
   execFileSync('python3', [path.join(HERE, 'make_qr.py'), '--script', path.join(HERE, `script.${LANG}.json`), '--out', path.join(dir, 'qr.svg')], { stdio: 'ignore' });
