@@ -1,0 +1,459 @@
+1
+00:00:00,787 --> 00:00:05,192
+Welcome to Wabi Insight,
+from WabiTex Solutions.
+
+2
+00:00:06,043 --> 00:00:07,702
+Over the next ten minutes,
+
+3
+00:00:07,752 --> 00:00:12,564
+we will take you through the platform
+exactly as it runs on the live site,
+
+4
+00:00:12,614 --> 00:00:15,784
+and as your employees will
+use it: on a computer,
+
+5
+00:00:15,834 --> 00:00:18,084
+and just as comfortably on a phone.
+
+6
+00:00:19,434 --> 00:00:21,154
+This is the landing page.
+
+7
+00:00:21,204 --> 00:00:26,676
+Wabi Insight lets your employees ask
+questions about your organization's data,
+
+8
+00:00:26,726 --> 00:00:31,419
+in English or Arabic, and get
+verified answers, charts and reports.
+
+9
+00:00:32,681 --> 00:00:35,610
+The platform works with most database systems.
+
+10
+00:00:36,498 --> 00:00:42,248
+Every query is read-only, and every person
+sees what they are permitted to see,
+
+11
+00:00:42,298 --> 00:00:43,496
+and nothing more.
+
+12
+00:00:44,318 --> 00:00:49,965
+Before the first question, your organization's
+administrator sets everything up:
+
+13
+00:00:50,015 --> 00:00:55,306
+applications, users and permissions,
+over encrypted, read-only connections.
+
+14
+00:00:56,188 --> 00:01:01,047
+Our support team is ready to help, with
+your approval and in your presence,
+
+15
+00:01:01,097 --> 00:01:02,880
+and it never sees your data.
+
+16
+00:01:03,700 --> 00:01:06,436
+Now we sign in as one of the managers.
+
+17
+00:01:06,486 --> 00:01:11,128
+Sign-in is protected: an encrypted
+connection, a secure session,
+
+18
+00:01:11,178 --> 00:01:14,794
+and protection against
+repeated password attempts.
+
+19
+00:01:15,661 --> 00:01:20,398
+And if a password is forgotten,
+a reset link is sent by email,
+
+20
+00:01:20,448 --> 00:01:22,329
+valid for thirty minutes.
+
+21
+00:01:23,991 --> 00:01:29,499
+This is the manager's dashboard: the
+latest questions, saved reports and alerts,
+
+22
+00:01:29,549 --> 00:01:32,348
+and all of it belongs to this user alone.
+
+23
+00:01:33,170 --> 00:01:35,216
+This is the heart of the platform.
+
+24
+00:01:35,266 --> 00:01:39,223
+Choose the application, then ask.
+You can type your own question,
+
+25
+00:01:39,273 --> 00:01:41,690
+or start from one of the suggested ones.
+
+26
+00:01:44,603 --> 00:01:50,099
+Within seconds, Wabi Insight gives you
+a written explanation, the key figures,
+
+27
+00:01:50,149 --> 00:01:51,734
+and a table of results.
+
+28
+00:01:52,600 --> 00:01:57,484
+Behind the scenes, the AI never
+writes a query against the database.
+
+29
+00:01:57,534 --> 00:01:59,226
+It only proposes a plan.
+
+30
+00:02:00,107 --> 00:02:05,029
+The platform then checks that plan against
+the permissions of the person asking,
+
+31
+00:02:05,079 --> 00:02:08,821
+builds a safe, read-only query,
+and runs it on your database.
+
+32
+00:02:08,871 --> 00:02:11,680
+Every number you see comes from your own data.
+
+33
+00:02:12,504 --> 00:02:15,939
+And you do not have to take
+the answer on trust alone.
+
+34
+00:02:15,989 --> 00:02:21,166
+This section explains in plain language
+which data was used, how it was filtered,
+
+35
+00:02:21,216 --> 00:02:23,295
+and how the calculation was made.
+
+36
+00:02:24,119 --> 00:02:28,425
+Now let's ask about another
+system: payroll cost by department.
+
+37
+00:02:28,475 --> 00:02:32,849
+The question is just as simple,
+the database is a different one,
+
+38
+00:02:32,899 --> 00:02:35,200
+and the answer comes with a chart.
+
+39
+00:02:36,067 --> 00:02:38,866
+The manager sees the whole organization.
+
+40
+00:02:38,916 --> 00:02:44,065
+A section head asking the same question
+would see only their own section,
+
+41
+00:02:44,115 --> 00:02:46,842
+and an employee only their own records.
+
+42
+00:02:47,710 --> 00:02:51,692
+The platform applies these
+rules automatically, every time.
+
+43
+00:02:52,513 --> 00:02:56,264
+And when you need the full
+picture, ask for a dashboard.
+
+44
+00:02:56,314 --> 00:02:57,825
+From a single question,
+
+45
+00:02:57,875 --> 00:03:02,304
+Wabi Insight brings several verified
+queries together in one view.
+
+46
+00:03:03,793 --> 00:03:06,022
+Key indicators, charts and tables,
+
+47
+00:03:06,072 --> 00:03:09,508
+with a written explanation
+of what the numbers show.
+
+48
+00:03:09,558 --> 00:03:13,531
+All of it within your permissions,
+as with any other answer.
+
+49
+00:03:14,353 --> 00:03:20,106
+Wabi Insight is fully bilingual. One
+click switches the interface to Arabic,
+
+50
+00:03:20,156 --> 00:03:22,244
+laid out from right to left.
+
+51
+00:03:23,119 --> 00:03:27,124
+Let's ask in Arabic this time.
+The question is just as simple,
+
+52
+00:03:27,174 --> 00:03:29,479
+and the answer comes back in Arabic.
+
+53
+00:03:31,988 --> 00:03:34,347
+Ask in either language, and the answer,
+
+54
+00:03:34,397 --> 00:03:38,920
+the table and the report come in the
+language you asked in, on any screen.
+
+55
+00:03:41,714 --> 00:03:45,357
+You can take any answer
+with you: as a PDF report,
+
+56
+00:03:45,407 --> 00:03:51,119
+a Word document or an Excel sheet,
+carrying your organization's name and logo.
+
+57
+00:03:53,665 --> 00:03:59,081
+Nothing is lost. Every answer is saved
+in your history, with its versions.
+
+58
+00:03:59,950 --> 00:04:04,659
+Run it again later, and the new
+result is added beside the old one.
+
+59
+00:04:04,709 --> 00:04:06,150
+It never replaces it.
+
+60
+00:04:07,005 --> 00:04:09,636
+Keep what matters most in your favorites,
+
+61
+00:04:09,686 --> 00:04:12,447
+and group related answers into collections.
+
+62
+00:04:14,759 --> 00:04:17,253
+Sharing is handled with the same care.
+
+63
+00:04:17,303 --> 00:04:20,868
+Share an answer with a
+colleague, or send it by email.
+
+64
+00:04:22,443 --> 00:04:27,739
+The platform checks what the recipient is
+entitled to see before anything is sent.
+
+65
+00:04:28,811 --> 00:04:34,440
+So no one can obtain through sharing any
+data they could not have obtained by asking
+
+66
+00:04:34,490 --> 00:04:35,184
+themselves.
+
+67
+00:04:36,035 --> 00:04:38,903
+You can revoke any share whenever you wish,
+
+68
+00:04:38,953 --> 00:04:41,958
+and every share is recorded in the audit log.
+
+69
+00:04:42,780 --> 00:04:46,569
+The reports page gathers the
+documents you have generated,
+
+70
+00:04:46,619 --> 00:04:48,688
+ready to open or download again.
+
+71
+00:04:49,512 --> 00:04:53,118
+Wabi Insight keeps working
+even when you are not asking.
+
+72
+00:04:53,168 --> 00:04:56,971
+With monitoring rules, you
+describe what should be watched,
+
+73
+00:04:57,021 --> 00:05:00,367
+such as one account being
+used from several devices.
+
+74
+00:05:01,236 --> 00:05:03,679
+The platform checks on the schedule you set,
+
+75
+00:05:03,729 --> 00:05:06,853
+and raises an alert when
+something needs your attention.
+
+76
+00:05:07,736 --> 00:05:12,449
+Every rule runs with its owner's
+permissions and never exceeds them.
+
+77
+00:05:12,499 --> 00:05:17,913
+Alerts only inform you; the decision and
+the action always stay with a person.
+
+78
+00:05:18,778 --> 00:05:23,518
+Open the alert to see what was detected
+and why, then record your note,
+
+79
+00:05:23,568 --> 00:05:25,340
+and close it once reviewed.
+
+80
+00:05:26,162 --> 00:05:31,696
+Periodic reports reach you on a regular
+schedule: daily, weekly or monthly.
+
+81
+00:05:31,746 --> 00:05:37,429
+Each recipient receives their own copy,
+prepared under their own permissions.
+
+82
+00:05:38,250 --> 00:05:43,005
+Notifications keep you informed, the
+support desk connects you with our team,
+
+83
+00:05:43,055 --> 00:05:46,687
+and your profile holds your
+language and password settings.
+
+84
+00:05:49,769 --> 00:05:55,495
+Because trust is the foundation of
+everything, here is what protects your data.
+
+85
+00:05:55,545 --> 00:05:59,735
+Your organization is completely
+isolated from every other.
+
+86
+00:05:59,785 --> 00:06:04,707
+Permissions apply at the level of
+the table, the column and the row.
+
+87
+00:06:05,581 --> 00:06:10,708
+The AI never runs a query it has
+written, and every query is read-only.
+
+88
+00:06:10,758 --> 00:06:13,114
+Connection details are encrypted,
+
+89
+00:06:13,164 --> 00:06:18,072
+and every action is recorded in an
+audit log that cannot be altered.
+
+90
+00:06:19,841 --> 00:06:22,245
+Your data stays under your control.
+
+91
+00:06:22,295 --> 00:06:27,573
+Wabi Insight can run in the cloud, or
+on your own servers, at your premises,
+
+92
+00:06:27,623 --> 00:06:28,555
+if you prefer.
+
+93
+00:06:29,406 --> 00:06:34,686
+Either way, our team is with you from day
+one: we install the platform with you,
+
+94
+00:06:34,736 --> 00:06:38,084
+connect your systems, set
+up roles and permissions,
+
+95
+00:06:38,134 --> 00:06:42,681
+and stay by your side until your
+employees work with full confidence.
+
+96
+00:06:44,425 --> 00:06:48,341
+Wabi Insight. Ask your data. Trust the answer.
+
+97
+00:06:49,221 --> 00:06:51,921
+To see the platform working on your own data,
+
+98
+00:06:51,971 --> 00:06:56,260
+scan the code to save our contact
+details, or get in touch at any time.
+
+99
+00:06:56,310 --> 00:06:58,338
+We would be glad to hear from you.
+
+100
+00:06:58,388 --> 00:06:59,744
+Thank you for watching.

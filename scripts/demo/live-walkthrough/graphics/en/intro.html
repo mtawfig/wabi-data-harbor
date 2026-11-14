@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Wabi Insight</title>
+<link rel="stylesheet" href="base.css"><link rel="stylesheet" href="devices.css">
+<style>
+  body, body * { font-family: Inter, system-ui, sans-serif !important; }
+  .material-icons { font-family: 'Material Icons' !important; }
+  .stage { flex-direction: row; gap: 90px; padding: 70px 110px; }
+  .words { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .mark { width: 620px; filter: drop-shadow(0 20px 60px rgb(34 184 207 / 35%)); }
+  .tag { font: 700 40px/1.4 sans-serif; margin-top: 34px; white-space: nowrap; }
+  .live { margin-top: 40px; }
+  .devices { position: relative; width: 900px; height: 760px; }
+  .devices .laptop { position: absolute; left: 0; top: 60px; width: 800px; }
+  .devices .phone { position: absolute; right: 0; bottom: 0; width: 250px; }
+</style></head>
+<body>
+  <div class="aurora"><i></i><i></i><i></i></div><div class="grid"></div>
+  <div class="stage">
+    <div class="words">
+      <img class="mark" data-beat="0" src="__WEB__/public/brand/wabi-insight-wordmark-light.svg" alt="Wabi Insight">
+      <div class="tag" data-beat="0" style="--i:2"><span class="grad">Ask your data. Trust the answer.</span></div>
+      <div class="live chip ltr" data-beat="1" style="--i:1"><span class="material-icons">public</span>insight.wabitex.com</div>
+    </div>
+    <div class="devices">
+      <div class="laptop" data-beat="0" style="--i:4"><div class="lid"><img src="shots/landing-desktop.png" alt=""></div><div class="base"></div></div>
+      <div class="phone" data-beat="0" style="--i:7"><div class="screen"><img src="shots/landing-mobile.png" alt=""></div></div>
+    </div>
+  </div>
+  <script src="stage.js"></script>
+</body></html>

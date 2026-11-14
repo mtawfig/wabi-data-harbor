@@ -11,8 +11,9 @@ script format, `tts.py` (Azure Speech) and `compose.py`. Only the recorder and t
 | File | Purpose |
 |---|---|
 | `script.ar.json` | Scenes, narration lines, voice (`ar-AE-FatimaNeural`), contact details of the closing frame |
+| `script.en.json` | The same scenes in English, voice `en-US-AndrewMultilingualNeural` (video `docs/demo/wabi-insight-live-en.mp4`, about seven minutes: English says the same in less time) |
 | `record.js` | Drives the live site with Playwright and records every scene (frames + timeline) |
-| `graphics/` | Opening frame (laptop + phone), security summary, hosting and assistance card, closing contact card |
+| `graphics/` | Opening frame (laptop + phone), security summary, hosting and assistance card, closing contact card (Arabic); `graphics/en/` holds the English versions, copied over them for `--lang en` |
 | `make_qr.py` | The QR code: a vCard with the company name, mobile and e-mail (`pip install segno`) |
 
 ```bash
@@ -23,6 +24,7 @@ WI_DEMO_PASSWORD='<password of the two sample accounts>' node record.js --out $O
 python3 ../walkthrough/compose.py --script script.ar.json --work $OUT --video ../../../docs/demo/wabi-insight-live-ar.mp4
 ```
 
+- For the English video use `script.en.json`, `--lang en` and `wabi-insight-live-en.mp4` in the three commands. The recorder's texts for each language (questions, callouts, pace) are in `TEXT` in `record.js`.
 - `WI_BASE_URL` points the recorder at another deployment (default `https://insight.wabitex.com`); the sample
   organization GAS must be loaded there, with its applications connected.
 - The recording leaves a few demo records in that organization: new answers, one more version of an answer, a
