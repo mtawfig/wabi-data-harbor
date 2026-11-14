@@ -31,8 +31,11 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
     private readonly IAiProviderResolver _providers;
     private readonly Core.Usage.IUsageEventWriter _usage;
 
-    public MonitoringRuleService(ConfigurationDbContext context, ITenantContext tenantContext, IPermissionResolver permissions, RuleRunner runner, IAuditWriter audit, IClock clock, IOptions<MonitoringOptions> options, IAiProviderResolver providers, Core.Usage.IUsageEventWriter usage)
+    private readonly Core.Plans.IAiSpendingGuard? _spending;
+
+    public MonitoringRuleService(ConfigurationDbContext context, ITenantContext tenantContext, IPermissionResolver permissions, RuleRunner runner, IAuditWriter audit, IClock clock, IOptions<MonitoringOptions> options, IAiProviderResolver providers, Core.Usage.IUsageEventWriter usage, Core.Plans.IAiSpendingGuard? spending = null)
     {
+        _spending = spending;
         _providers = providers;
         _usage = usage;
         _context = context;
@@ -334,6 +337,11 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
             catalogue.Select(o => new DraftCatalogueObject(o.Access.SchemaName, o.Access.ObjectName, arabic ? o.Access.DisplayNameAr ?? o.Access.DisplayNameEn : o.Access.DisplayNameEn,
                 o.Columns.Select(c => new DraftCatalogueColumn(c.ColumnName, c.DataType, arabic ? c.DisplayNameAr ?? c.DisplayNameEn : c.DisplayNameEn, c.SemanticRole)).ToList())).ToList(),
             description, today, organization.TimeZone);
+
+        if (_spending is not null && await _spending.IsReachedAsync(organizationId, cancellationToken))
+        {
+            throw Invalid(Core.Plans.AiSpendingState.ReachedCode);
+        }
 
         var resolved = await _providers.ResolveForOrganizationAsync(organizationId, cancellationToken);
         var watch = System.Diagnostics.Stopwatch.StartNew();

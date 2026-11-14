@@ -70,3 +70,27 @@ internal sealed class DefaultRoleTemplateConfiguration : IEntityTypeConfiguratio
             new DefaultRoleTemplate { TemplateId = Guid.Parse("4f6a1a10-0000-7000-8000-000000000003"), RoleCode = SystemRoles.Analyst, NameEn = "Analyst", NameAr = "محلّل", Description = "Default business-data role; permissions are granted explicitly.", IsSystem = false, IsActive = true, SortOrder = 3, Version = 1, UpdatedAt = seeded });
     }
 }
+
+internal sealed class ServicePlanConfiguration : IEntityTypeConfiguration<ServicePlan>
+{
+    public void Configure(EntityTypeBuilder<ServicePlan> builder)
+    {
+        builder.ToTable("ServicePlans", t => t.HasCheckConstraint("CK_ServicePlans_Limit", "[MonthlyAiSpendLimit] IS NULL OR [MonthlyAiSpendLimit] > 0"));
+        builder.HasKey(p => p.PlanId);
+        builder.Property(p => p.PlanId).ValueGeneratedNever();
+        builder.Property(p => p.PlanCode).HasMaxLength(32).IsRequired();
+        builder.HasIndex(p => p.PlanCode).IsUnique();
+        builder.Property(p => p.NameEn).HasMaxLength(100).IsRequired();
+        builder.Property(p => p.NameAr).HasMaxLength(100).IsRequired();
+        builder.Property(p => p.MonthlyAiSpendLimit).HasPrecision(14, 2);
+        builder.Property(p => p.RowVersion).IsRowVersion();
+
+        // Three starting plans with stable ids; the Platform Administrator changes the limits or adds plans.
+        // Existing organizations keep no plan (no limit) until one is chosen for them.
+        var seeded = new DateTimeOffset(2026, 11, 14, 0, 0, 0, TimeSpan.Zero);
+        builder.HasData(
+            new ServicePlan { PlanId = Guid.Parse("5a7b2c10-0000-7000-8000-000000000001"), PlanCode = "STARTER", NameEn = "Starter", NameAr = "الأساسية", MonthlyAiSpendLimit = 50m, IsActive = true, SortOrder = 10, UpdatedAt = seeded },
+            new ServicePlan { PlanId = Guid.Parse("5a7b2c10-0000-7000-8000-000000000002"), PlanCode = "BUSINESS", NameEn = "Business", NameAr = "الأعمال", MonthlyAiSpendLimit = 250m, IsActive = true, SortOrder = 20, UpdatedAt = seeded },
+            new ServicePlan { PlanId = Guid.Parse("5a7b2c10-0000-7000-8000-000000000003"), PlanCode = "ENTERPRISE", NameEn = "Enterprise", NameAr = "المؤسسات", MonthlyAiSpendLimit = 1000m, IsActive = true, SortOrder = 30, UpdatedAt = seeded });
+    }
+}

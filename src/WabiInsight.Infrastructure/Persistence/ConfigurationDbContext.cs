@@ -64,6 +64,8 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
 
+    public DbSet<ServicePlan> ServicePlans => Set<ServicePlan>();
+
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();

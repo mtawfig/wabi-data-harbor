@@ -1,0 +1,48 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'common.platform' | transloco }}</p>
+      <h1>{{ 'plans.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'plans.subtitle' | transloco }}</p>
+    </div>
+    <button mat-flat-button type="button" (click)="startCreate()" data-testid="plan-new"><mat-icon>add</mat-icon>{{ 'plans.new' | transloco }}</button>
+  </header>
+
+  @if (showForm()) {
+    <form class="wi-card catalog-form" [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="plan-form">
+      <h3>{{ (editing() ? 'plans.edit' : 'plans.new') | transloco }}</h3>
+      @if (error(); as e) { <div class="catalog-form__error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+      <div class="catalog-form__grid">
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.code' | transloco }}</mat-label><input matInput formControlName="planCode" data-testid="plan-code" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameEn' | transloco }}</mat-label><input matInput formControlName="nameEn" data-testid="plan-name-en" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.fields.nameAr' | transloco }}</mat-label><input matInput formControlName="nameAr" dir="rtl" data-testid="plan-name-ar" /></mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'plans.limit' | transloco }}</mat-label>
+          <input matInput type="number" min="0.01" step="0.01" formControlName="monthlyAiSpendLimit" data-testid="plan-limit" />
+          <mat-hint>{{ 'plans.limitHint' | transloco }}</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>{{ 'admin.templates.order' | transloco }}</mat-label><input matInput type="number" formControlName="sortOrder" /></mat-form-field>
+        <mat-checkbox formControlName="isActive">{{ 'admin.fields.active' | transloco }}</mat-checkbox>
+      </div>
+      <div class="catalog-form__actions">
+        <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
+        <button mat-flat-button type="submit" [disabled]="busy()" data-testid="plan-save">{{ 'common.save' | transloco }}</button>
+      </div>
+    </form>
+  }
+
+  <div class="wi-card">
+    @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+    <table mat-table [dataSource]="items()" class="catalog-table" data-testid="plan-table">
+      <ng-container matColumnDef="code"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.code' | transloco }}</th><td mat-cell *matCellDef="let p"><span class="wi-ltr">{{ p.planCode }}</span></td></ng-container>
+      <ng-container matColumnDef="nameEn"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.nameEn' | transloco }}</th><td mat-cell *matCellDef="let p">{{ p.nameEn }}</td></ng-container>
+      <ng-container matColumnDef="nameAr"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.nameAr' | transloco }}</th><td mat-cell *matCellDef="let p">{{ p.nameAr }}</td></ng-container>
+      <ng-container matColumnDef="limit"><th mat-header-cell *matHeaderCellDef class="num">{{ 'plans.limit' | transloco }}</th><td mat-cell *matCellDef="let p" class="num">@if (p.monthlyAiSpendLimit; as limit) { <span class="wi-ltr">{{ limit | wiNumber: '1.2-2' }}</span> } @else { {{ 'plans.noLimit' | transloco }} }</td></ng-container>
+      <ng-container matColumnDef="organizations"><th mat-header-cell *matHeaderCellDef class="num">{{ 'plans.organizations' | transloco }}</th><td mat-cell *matCellDef="let p" class="num">{{ p.organizationCount | wiNumber }}</td></ng-container>
+      <ng-container matColumnDef="active"><th mat-header-cell *matHeaderCellDef>{{ 'admin.fields.status' | transloco }}</th><td mat-cell *matCellDef="let p"><span class="chip" [attr.data-on]="p.isActive">{{ (p.isActive ? 'admin.active' : 'admin.inactive') | transloco }}</span></td></ng-container>
+      <ng-container matColumnDef="actions"><th mat-header-cell *matHeaderCellDef></th><td mat-cell *matCellDef="let p"><button mat-icon-button type="button" (click)="startEdit(p)" [attr.aria-label]="'plans.edit' | transloco" data-testid="plan-edit"><mat-icon>edit</mat-icon></button></td></ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+  </div>
+</section>

@@ -33,6 +33,8 @@ public static class AuditEvents
     public const string RoleSaved = "Role.Saved";
     public const string RoleDeleted = "Role.Deleted";
     public const string RoleTemplateSaved = "RoleTemplate.Saved";
+    public const string ServicePlanSaved = "ServicePlan.Saved";
+    public const string OrganizationPlanChanged = "Organization.PlanChanged";
     public const string EmailQueued = "Email.Queued";
     public const string EmailFailed = "Email.Failed";
     public const string TicketCreated = "SupportTicket.Created";
