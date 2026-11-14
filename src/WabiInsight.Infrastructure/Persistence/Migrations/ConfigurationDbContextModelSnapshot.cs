@@ -2912,6 +2912,9 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<Guid?>("ServicePlanId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -2943,6 +2946,8 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrganizationCode")
                         .IsUnique();
+
+                    b.HasIndex("ServicePlanId");
 
                     b.HasIndex("Status");
 
@@ -3043,6 +3048,97 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.HasKey("Key");
 
                     b.ToTable("PlatformSettings", (string)null);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.ServicePlan", b =>
+                {
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MonthlyAiSpendLimit")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PlanCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PlanId");
+
+                    b.HasIndex("PlanCode")
+                        .IsUnique();
+
+                    b.ToTable("ServicePlans", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ServicePlans_Limit", "[MonthlyAiSpendLimit] IS NULL OR [MonthlyAiSpendLimit] > 0");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            PlanId = new Guid("5a7b2c10-0000-7000-8000-000000000001"),
+                            IsActive = true,
+                            MonthlyAiSpendLimit = 50m,
+                            NameAr = "الأساسية",
+                            NameEn = "Starter",
+                            PlanCode = "STARTER",
+                            RowVersion = new byte[0],
+                            SortOrder = 10,
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            PlanId = new Guid("5a7b2c10-0000-7000-8000-000000000002"),
+                            IsActive = true,
+                            MonthlyAiSpendLimit = 250m,
+                            NameAr = "الأعمال",
+                            NameEn = "Business",
+                            PlanCode = "BUSINESS",
+                            RowVersion = new byte[0],
+                            SortOrder = 20,
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            PlanId = new Guid("5a7b2c10-0000-7000-8000-000000000003"),
+                            IsActive = true,
+                            MonthlyAiSpendLimit = 1000m,
+                            NameAr = "المؤسسات",
+                            NameEn = "Enterprise",
+                            PlanCode = "ENTERPRISE",
+                            RowVersion = new byte[0],
+                            SortOrder = 30,
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        });
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Platform.SystemInitialization", b =>
@@ -4189,6 +4285,14 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.Organization", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.ServicePlan", null)
+                        .WithMany()
+                        .HasForeignKey("ServicePlanId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 

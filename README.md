@@ -28,7 +28,22 @@ Sample data: `scripts/sql/samples` creates three realistic source databases (fli
 
 A narrated walkthrough of the application on the Wabi Bank sample, with subtitles and chapters, in English ([`docs/demo/wabi-insight-walkthrough-en.mp4`](docs/demo/wabi-insight-walkthrough-en.mp4), script [`…-en.md`](docs/demo/wabi-insight-walkthrough-en.md)) and Arabic ([`docs/demo/wabi-insight-walkthrough-ar.mp4`](docs/demo/wabi-insight-walkthrough-ar.mp4), script [`…-ar.md`](docs/demo/wabi-insight-walkthrough-ar.md)); generator in [`scripts/demo/walkthrough`](scripts/demo/walkthrough/README.md).
 
-A walkthrough of the **deployed site** in Arabic, with the sample organization GAS and the company's contact card at the end: [`docs/demo/wabi-insight-live-ar.mp4`](docs/demo/wabi-insight-live-ar.mp4) (script [`…-ar.md`](docs/demo/wabi-insight-live-ar.md)); generator in [`scripts/demo/live-walkthrough`](scripts/demo/live-walkthrough/README.md).
+A walkthrough of the **deployed site**, with the sample organization GAS and the company's contact card at the end, in Arabic ([`docs/demo/wabi-insight-live-ar.mp4`](docs/demo/wabi-insight-live-ar.mp4), about ten minutes, script [`…-ar.md`](docs/demo/wabi-insight-live-ar.md)) and English ([`docs/demo/wabi-insight-live-en.mp4`](docs/demo/wabi-insight-live-en.mp4), about seven minutes, script [`…-en.md`](docs/demo/wabi-insight-live-en.md)); generator in [`scripts/demo/live-walkthrough`](scripts/demo/live-walkthrough/README.md).
+
+## Current version
+
+Version 1, as of 14 November 2026 (latest pull request: P13.46). The most recent additions, newest first:
+
+| Pull request | What it added |
+|---|---|
+| P13.46 | **Plans with a monthly AI spending limit.** The Platform Administrator defines plans and gives one to each organization; when the month's AI spending reaches the plan's limit, new AI questions are refused until the next month or a plan change, and saved answers stay available. The Ask page warns from 80% of the limit. |
+| P13.45 | English walkthrough video of the deployed site. |
+| P13.44 | Arabic walkthrough video recorded again with the Arabic logo. |
+| P13.43 | Phone layout: every list table is shown as cards on a phone; Organization Insights readable again on servers whose application login is a member of `db_owner`. |
+| P13.42 | The log file is written by its own thread. |
+| P13.41 | Arabic logo, shown according to the interface language. |
+
+A deployment of this version needs **Apply database migrations** (migration `AddServicePlans`). Existing organizations start with no plan, so nothing is limited until a plan is chosen for them. The full history is in [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
 ## Status
 

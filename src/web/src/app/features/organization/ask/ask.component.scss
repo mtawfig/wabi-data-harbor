@@ -30,3 +30,6 @@
 .small { font-size: 12px; }
 @media (max-width: 760px) { .ask__controls { grid-template-columns: 1fr; } }
 .ask__saved { display: flex; gap: 6px; align-items: center; margin: -8px 0 0; mat-icon { font-size: 18px; width: 18px; height: 18px; } a { color: var(--wi-ocean); font-weight: 600; } }
+// The plan's monthly AI spending limit is near or reached (P13.46).
+.ask__spending { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; background: #fffbeb; color: #92400e; border-color: #fde68a; strong { display: block; } &[data-state='reached'] { background: #fef2f2; color: #991b1b; border-color: #fecaca; } }
+.ask__spending-figures { display: block; font-size: 13px; margin-top: 2px; }

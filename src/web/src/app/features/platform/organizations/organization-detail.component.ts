@@ -14,12 +14,13 @@ import { CreateOrganizationRequest, OrganizationDetail, OrganizationStatus, Upda
 import { OrganizationsService } from '../../../core/organizations/organizations.service';
 import { OrganizationFormComponent } from './organization-form.component';
 import { OrganizationStatusChipComponent } from './organization-status-chip.component';
+import { OrganizationPlanComponent } from '../plans/organization-plan.component';
 import { WiDatePipe, WiNumberPipe } from '../../../shared/format/locale-pipes';
 
 /** Platform view of one organization: identity, counts, onboarding state and lifecycle actions. No application names. */
 @Component({
   selector: 'app-organization-detail',
-  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, RouterLink, TranslocoModule, OrganizationFormComponent, OrganizationStatusChipComponent, WiDatePipe, WiNumberPipe],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, RouterLink, TranslocoModule, OrganizationFormComponent, OrganizationStatusChipComponent, OrganizationPlanComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './organization-detail.component.html',
   styleUrl: './organization-detail.component.scss',
 })

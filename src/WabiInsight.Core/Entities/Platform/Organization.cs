@@ -53,6 +53,9 @@ public class Organization : AuditableEntity
     /// <summary>Monthly AI spend budget in the providers' price currency (USD); null when the organization sets none. Read by the "AI budget" system rule.</summary>
     public decimal? MonthlyAiBudget { get; set; }
 
+    /// <summary>The service plan that sets this organization's monthly AI spending limit (P13.46); null means no plan and no limit.</summary>
+    public Guid? ServicePlanId { get; set; }
+
     /// <summary>Working days as ISO day digits (1 = Monday … 7 = Sunday), e.g. "12345".</summary>
     public string WorkingDays { get; set; } = "12345";
 

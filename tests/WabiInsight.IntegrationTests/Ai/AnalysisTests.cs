@@ -55,6 +55,98 @@ public sealed class AnalysisTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task PlanSpendingLimit_StopsNewAiRequestsOfThatOrganizationOnly_AndFiguresAreForAdministrators()
+    {
+        FakeAiProvider.Script = null;
+        try
+        {
+            using var alice = await LoginAsync(TestData.AliceEmail);
+            var (applicationId, _) = await PrepareApplicationAsync(alice, "aispend");
+            var roles = (await (await alice.GetAsync("/api/roles")).ReadJsonAsync()).EnumerateArray().ToList();
+            var managementId = roles.Single(r => r.GetProperty("roleCode").GetString() == "Management").GetProperty("roleId").GetGuid();
+            var (managerId, managerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId);
+            using var manager = await LoginAsync(managerEmail);
+            using var bob = await LoginAsync(TestData.BobEmail);
+            using var platform = await LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
+
+            // Organization users cannot reach the plans; a Platform Administrator creates one with a 5.00 limit.
+            Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync("/api/platform/plans")).StatusCode);
+            var tag = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+            var created = await platform.PostJsonAsync("/api/platform/plans", new { planCode = "T" + tag, nameEn = "Test plan", nameAr = "خطة اختبار", monthlyAiSpendLimit = 5.00m, isActive = true, sortOrder = 500 });
+            Assert.True(created.StatusCode == HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+            var planId = (await created.ReadJsonAsync()).GetProperty("planId").GetGuid();
+            Assert.Equal(HttpStatusCode.Conflict, (await platform.PostJsonAsync("/api/platform/plans", new { planCode = "T" + tag, nameEn = "Again", nameAr = "مرة أخرى", monthlyAiSpendLimit = 1m })).StatusCode);
+
+            // Both organizations get the plan. Organization A has spent 6.00 this month, organization B nothing.
+            foreach (var organizationId in new[] { _db.Data.OrganizationAId, _db.Data.OrganizationBId })
+            {
+                Assert.Equal(HttpStatusCode.OK, (await platform.PutJsonAsync($"/api/platform/plans/organizations/{organizationId}", new { planId })).StatusCode);
+            }
+
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                context.AnalysisExecutionMetrics.Add(new Core.Entities.Ai.AnalysisExecutionMetric { MetricId = Guid.CreateVersion7(), OrganizationId = _db.Data.OrganizationAId, UserId = managerId, ApplicationId = applicationId,
+                    Status = Core.Entities.Ai.AnalysisStatus.Completed, EstimatedCost = 6.00m, CreatedAt = DateTimeOffset.UtcNow });
+                await context.SaveChangesAsync();
+            }
+
+            // A: refused before any model is called, with a stable code; the refusal is recorded and costs nothing.
+            var calls = 0;
+            FakeAiProvider.Script = _ => { calls++; return TicketsByStatusPlan("Critical"); };
+            var refused = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Tickets per status", language = "en" });
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, refused.StatusCode);
+            Assert.Contains("ai_spending_limit_reached", await refused.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+            Assert.Equal(0, calls);
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                var metric = await context.AnalysisExecutionMetrics.IgnoreQueryFilters().Where(m => m.UserId == managerId).OrderByDescending(m => m.CreatedAt).FirstAsync();
+                Assert.Equal(Core.Entities.Ai.AnalysisStatus.Rejected, metric.Status);
+                Assert.Equal("ai_spending_limit_reached", metric.FailureCode);
+                Assert.Equal(0m, metric.EstimatedCost);
+            }
+
+            // Everyone is told the state; only the Organization Administrator sees the plan and the amounts.
+            var forManager = await (await manager.GetAsync("/api/ai/spending")).ReadJsonAsync();
+            Assert.Equal("reached", forManager.GetProperty("state").GetString());
+            Assert.False(forManager.TryGetProperty("monthSpend", out var hiddenSpend) && hiddenSpend.ValueKind != JsonValueKind.Null);
+            Assert.False(forManager.TryGetProperty("monthlyAiSpendLimit", out var hiddenLimit) && hiddenLimit.ValueKind != JsonValueKind.Null);
+            Assert.False(forManager.TryGetProperty("planCode", out var hiddenPlan) && hiddenPlan.ValueKind != JsonValueKind.Null);
+            var forAlice = await (await alice.GetAsync("/api/ai/spending")).ReadJsonAsync();
+            Assert.Equal("reached", forAlice.GetProperty("state").GetString());
+            Assert.Equal(5.00m, forAlice.GetProperty("monthlyAiSpendLimit").GetDecimal());
+            Assert.True(forAlice.GetProperty("monthSpend").GetDecimal() >= 6.00m);
+
+            // B has the same plan and is untouched by A's spending.
+            var forBob = await (await bob.GetAsync("/api/ai/spending")).ReadJsonAsync();
+            Assert.Equal("within", forBob.GetProperty("state").GetString());
+            var platformViewOfB = await (await platform.GetAsync($"/api/platform/plans/organizations/{_db.Data.OrganizationBId}")).ReadJsonAsync();
+            Assert.Equal(0m, platformViewOfB.GetProperty("monthSpend").GetDecimal());
+
+            // Raising the plan's limit lets A ask again; taking the plan away removes the limit.
+            Assert.Equal(HttpStatusCode.OK, (await platform.PutJsonAsync($"/api/platform/plans/{planId}", new { planCode = "T" + tag, nameEn = "Test plan", nameAr = "خطة اختبار", monthlyAiSpendLimit = 100m, isActive = true, sortOrder = 500 })).StatusCode);
+            var allowed = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Tickets per status", language = "en" });
+            Assert.True(allowed.StatusCode == HttpStatusCode.OK, await allowed.Content.ReadAsStringAsync());
+            Assert.True(calls > 0);
+            Assert.Equal("within", (await (await alice.GetAsync("/api/ai/spending")).ReadJsonAsync()).GetProperty("state").GetString());
+            foreach (var organizationId in new[] { _db.Data.OrganizationAId, _db.Data.OrganizationBId })
+            {
+                Assert.Equal(HttpStatusCode.OK, (await platform.PutJsonAsync($"/api/platform/plans/organizations/{organizationId}", new { planId = (Guid?)null })).StatusCode);
+            }
+
+            Assert.Equal("unlimited", (await (await alice.GetAsync("/api/ai/spending")).ReadJsonAsync()).GetProperty("state").GetString());
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                Assert.True(await context.AuditLogs.IgnoreQueryFilters().AnyAsync(l => l.EventType == Core.Audit.AuditEvents.OrganizationPlanChanged && l.EntityId == _db.Data.OrganizationAId.ToString()));
+                Assert.True(await context.AuditLogs.IgnoreQueryFilters().AnyAsync(l => l.EventType == Core.Audit.AuditEvents.ServicePlanSaved && l.EntityId == planId.ToString()));
+            }
+        }
+        finally
+        {
+            FakeAiProvider.Script = null;
+        }
+    }
+
     /// <summary>A plan with the study deliverable: the tickets query, then a written report.</summary>
     private static string StudyPlan() => $$"""{"objective":"Ticket study","deliverables":["report"],"assumptions":[],"queries":[{{TicketsByStatusPlan("Critical")}}]}""";
 

@@ -75,6 +75,7 @@ export const routes: Routes = [
       { path: 'notifications', loadComponent: () => import('./features/support/notification-center.component').then((m) => m.NotificationCenterComponent), data: { area: 'platform' } },
       { path: 'support-access', loadComponent: () => import('./features/support/grant-list.component').then((m) => m.GrantListComponent), data: { area: 'platform' } },
       { path: 'role-templates', loadComponent: () => import('./features/platform/role-templates/role-templates.component').then((m) => m.RoleTemplatesComponent) },
+      { path: 'plans', loadComponent: () => import('./features/platform/plans/plans.component').then((m) => m.PlansComponent) },
       { path: 'insights', loadComponent: () => import('./features/platform/insights/insights-config.component').then((m) => m.InsightsConfigComponent) },
       { path: 'audit', loadComponent: () => import('./features/platform/audit/audit-logs.component').then((m) => m.AuditLogsComponent) },
     ],

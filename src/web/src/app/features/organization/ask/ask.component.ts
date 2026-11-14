@@ -15,6 +15,8 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { AskResponse, AskableApplication } from '../../../core/platform/ai.models';
 import { AiService } from '../../../core/platform/ai.service';
 import { problemMessage } from '../../../core/problem-message';
+import { AiSpending, PlansService } from '../../../core/plans/plans.service';
+import { WiNumberPipe } from '../../../shared/format/locale-pipes';
 import { AnalysisAnswerComponent } from '../../../shared/analysis/analysis-answer.component';
 
 interface Rejection {
@@ -36,7 +38,7 @@ interface ExampleChip {
 
 @Component({
   selector: 'app-ask',
-  imports: [FormsModule, RouterLink, MatButtonModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, AnalysisAnswerComponent],
+  imports: [WiNumberPipe, FormsModule, RouterLink, MatButtonModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, AnalysisAnswerComponent],
   templateUrl: './ask.component.html',
   styleUrl: './ask.component.scss',
 })
@@ -46,6 +48,9 @@ export class AskComponent {
   private readonly transloco = inject(TranslocoService);
   readonly language = inject(LanguageService);
 
+  private readonly plans = inject(PlansService);
+  /** The organization against its plan's monthly AI spending limit: shown when it is near or reached. */
+  readonly spending = signal<AiSpending | null>(null);
   readonly applications = signal<AskableApplication[]>([]);
   readonly applicationsLoaded = signal(false);
   readonly selectedApplication = signal<string | null>(null);
@@ -88,6 +93,12 @@ export class AskComponent {
       },
       error: () => this.applicationsLoaded.set(true),
     });
+    this.loadSpending();
+  }
+
+  private loadSpending(): void {
+    // The band is extra information: the page works without it.
+    this.plans.spending().subscribe({ next: (spending) => this.spending.set(spending), error: () => this.spending.set(null) });
   }
 
   reportUrl(analysisId: string): string {

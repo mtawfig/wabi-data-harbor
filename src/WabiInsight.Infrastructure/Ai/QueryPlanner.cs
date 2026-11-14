@@ -27,8 +27,11 @@ public sealed class QueryPlanner : IQueryPlanner
     private readonly IAiProviderResolver _providers;
     private readonly IUsageEventWriter _usage;
 
-    public QueryPlanner(ConfigurationDbContext context, ITenantContext tenantContext, IPermissionResolver permissions, IAiProviderResolver providers, IUsageEventWriter usage)
+    private readonly Core.Plans.IAiSpendingGuard? _spending;
+
+    public QueryPlanner(ConfigurationDbContext context, ITenantContext tenantContext, IPermissionResolver permissions, IAiProviderResolver providers, IUsageEventWriter usage, Core.Plans.IAiSpendingGuard? spending = null)
     {
+        _spending = spending;
         _context = context;
         _tenantContext = tenantContext;
         _permissions = permissions;
@@ -74,6 +77,12 @@ public sealed class QueryPlanner : IQueryPlanner
         if (snapshot.Objects.Count == 0)
         {
             throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "ai_no_permitted_objects");
+        }
+
+        // The plan's monthly AI spending limit (P13.46) is checked before anything is sent to a model.
+        if (_spending is not null && await _spending.IsReachedAsync(organizationId, cancellationToken))
+        {
+            throw new PlanRejectedException("limit", [new PlanError(Core.Plans.AiSpendingState.ReachedCode, "The organization's plan has reached its AI spending limit for this month.")]);
         }
 
         var language = request.Language == "ar" ? "ar" : "en";

@@ -31,6 +31,9 @@ public static class ApiClientExtensions
     public static Task<HttpResponseMessage> PostJsonAsync<T>(this HttpClient client, string path, T body)
         => client.PostAsJsonAsync(new Uri(path, UriKind.Relative), body);
 
+    public static Task<HttpResponseMessage> PutJsonAsync<T>(this HttpClient client, string path, T body)
+        => client.PutAsJsonAsync(new Uri(path, UriKind.Relative), body);
+
     public static Task<HttpResponseMessage> GetAsync(this HttpClient client, string path)
         => client.GetAsync(new Uri(path, UriKind.Relative));
 

@@ -148,6 +148,12 @@ Ten sections: sticky header (wordmark with tagline, section links, language swit
 ## Screenshots (P13.43)
 `docs/screenshots/p13-43-*.png` from the sample organization: My History as cards on a phone (EN), an analysis with the **More** menu open on a phone (EN), Organization Users and Applications as cards on a phone (AR), and the Users filter row on a desktop (EN: the search label ends before its icon and the box takes the room the other filters leave).
 
+## Plans and AI spending (P13.46)
+- *Plans* (platform): the catalogue table and form of the role templates page (code, names, monthly AI limit with *No limit* when empty, number of organizations, status).
+- An organization's platform page has a *Plan and AI spending* card: plan select, the month's spending and the limit, a progress bar that turns amber from 80% and red at the limit, and a one-line state.
+- *Ask Wabi Insight* shows a band above the composer: amber when the organization is close to the limit, red when it is reached; Organization Administrators also see the amounts.
+- `docs/screenshots/p13-46-*.png`: the Plans page (EN, AR, phone), the organization's plan card, the Ask band near the limit (EN) and at the limit (AR, desktop and phone).
+
 ## Profile, dashboard and Integrations (P11.2)
 - *Profile*: avatar with initials, name, email, organization, role chips, account type, preferred language; side cards for the interface language (switcher), password (link to the change-password screen) and "managed by your administrator" (link to a new ticket).
 - User *Dashboard*: four count tiles (saved analyses, files in My Reports, shared with me, favorites) linking to their pages, a *Recent analyses* card and the support ticket widget — the "coming soon" card is gone.
