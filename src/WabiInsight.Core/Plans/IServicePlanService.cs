@@ -58,4 +58,35 @@ public interface IAiSpendingGuard
 
     /// <summary>True when the organization's plan limit for this month is reached.</summary>
     Task<bool> IsReachedAsync(Guid organizationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Tells the organization's administrators, once per threshold per month, that spending is near the limit or has
+    /// reached it (in-app notification and e-mail). Called after a request that cost something.
+    /// </summary>
+    Task AlertAdministratorsAsync(Guid organizationId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>What the spending report covers. Dates are days in the organization's time zone, both included.</summary>
+public sealed record AiSpendingReportFilter(DateOnly? From, DateOnly? To, Guid? UserId, decimal? MinSpend, decimal? MaxSpend, bool SuccessfulOnly);
+
+public sealed record AiSpendingUserRow(Guid UserId, string FullName, string? EmployeeNumber, string? DepartmentNameEn, string? DepartmentNameAr, bool IsActive, int Requests, decimal Spend, decimal SharePercent);
+
+public sealed record AiSpendingMonthlyRow(Guid UserId, string FullName, IReadOnlyList<decimal> Spend, decimal Total);
+
+public sealed record AiSpendingUserOption(Guid UserId, string FullName);
+
+/// <summary>
+/// The Organization Administrator's spending report (P13.47): the plan and the month's position, the period's totals,
+/// one row per employee, and the same spending month by month. Amounts and counts only.
+/// </summary>
+public sealed record AiSpendingReportDto(
+    string State, string? PlanCode, string? PlanNameEn, string? PlanNameAr, decimal? MonthlyAiSpendLimit, decimal MonthSpend, decimal? PercentUsed,
+    DateOnly From, DateOnly To, int TotalRequests, decimal TotalSpend, IReadOnlyList<AiSpendingUserRow> Rows,
+    IReadOnlyList<string> Months, IReadOnlyList<AiSpendingMonthlyRow> Monthly, IReadOnlyList<decimal> MonthlyTotals,
+    IReadOnlyList<AiSpendingUserOption> Users);
+
+/// <summary>Per-employee AI spending of the signed-in administrator's own organization.</summary>
+public interface IAiSpendingReportService
+{
+    Task<AiSpendingReportDto> GetAsync(AiSpendingReportFilter filter, CancellationToken cancellationToken = default);
 }

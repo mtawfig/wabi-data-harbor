@@ -366,7 +366,8 @@
         "insights": "Organization Insights",
         "integrations": "Integrations",
         "settings": "Organization Settings",
-        "supportAccess": "Support Access"
+        "supportAccess": "Support Access",
+        "aiSpending": "AI Spending"
       },
       "alerts": "Alerts",
       "monitoringRules": "Monitoring Rules",
@@ -420,7 +421,7 @@
       "authorization": "This question needs data you don't have access to.",
       "compile": "We couldn't answer this question safely. Try rephrasing it.",
       "provider": "The answer service isn't available right now. Try again in a few minutes, or contact your administrator.",
-      "limit": "Your plan's AI limit is reached"
+      "limit": "Monthly AI limit reached"
     },
     "codes": {
       "plan_json_invalid": "We couldn't prepare an answer for this question. Try rephrasing it more simply.",
@@ -466,7 +467,7 @@
       "plan_asker_value_invalid": "Try rephrasing how the question refers to your own records.",
       "plan_relative_date_invalid": "Try rephrasing the period the question asks about, for example: this month, or from 1 to 31 March 2026.",
       "asker_value_missing": "The question refers to your own records, department or section, but your profile doesn't include them. Ask your organization administrator to complete your profile.",
-      "ai_spending_limit_reached": "Your organization has reached its plan's AI limit for this month. New questions will be available next month; saved answers stay available."
+      "ai_spending_limit_reached": "Your organization has reached its monthly AI limit. Contact your Wabi Insight administrator."
     },
     "kpis": "Headline numbers",
     "charts": "Charts",
@@ -1076,7 +1077,9 @@
       "plan_sort_invalid": "The order must be between 0 and 1000.",
       "plan_not_found": "The plan was not found.",
       "plan_inactive": "This plan is inactive and cannot be given to an organization.",
-      "ai_spending_limit_reached": "Your organization has reached its plan's AI limit for this month. New questions will be available next month; saved answers stay available."
+      "ai_spending_limit_reached": "Your organization has reached its monthly AI limit. Contact your Wabi Insight administrator.",
+      "spending_range_invalid": "The minimum spend cannot be above the maximum.",
+      "spending_dates_invalid": "The start date cannot be after the end date."
     },
     "applications": {
       "title": "Applications",
@@ -1549,7 +1552,9 @@
       "Analysis.ShareRevoked": "{{actorName}} stopped sharing \"{{title}}\" with you",
       "Monitoring.Alert": "High-severity alert from \"{{ruleName}}\" ({{alerts}})",
       "Monitoring.RulePaused": "Monitoring rule \"{{ruleName}}\" was paused and needs attention",
-      "Reports.SubscriptionPaused": "Periodic report \"{{name}}\" was paused after three failed runs"
+      "Reports.SubscriptionPaused": "Periodic report \"{{name}}\" was paused after three failed runs",
+      "Ai.SpendingNear": "AI spending is at {{percent}}% of the plan's monthly limit ({{spend}} of {{limit}} USD)",
+      "Ai.SpendingReached": "The plan's monthly AI limit is reached ({{spend}} of {{limit}} USD): new AI questions are refused"
     }
   },
   "supportAccess": {
@@ -2562,8 +2567,44 @@
     "band": {
       "near": "Your organization is close to its plan's AI limit for this month.",
       "reached": "Your organization has reached its plan's AI limit for this month. New questions will be available next month.",
-      "adminHint": "Contact the platform team to change the plan.",
-      "userHint": "Saved answers and reports stay available. Your organization administrator can ask for a plan change."
+      "user": "Your organization has reached its monthly AI limit. Contact your Wabi Insight administrator.",
+      "details": "See the spending of each employee"
     }
+  },
+  "aiSpending": {
+    "title": "AI Spending",
+    "subtitle": "What your organization's AI requests cost, by employee. Amounts are estimated costs in USD; questions and data are never shown here.",
+    "plan": "Plan",
+    "limit": "Monthly limit",
+    "monthSpend": "Spent this month",
+    "used": "{{percent}}% of the limit used",
+    "noPlan": "No plan: no monthly limit applies.",
+    "noLimit": "No limit",
+    "periodSpend": "Spent in the period",
+    "requests": "Requests",
+    "from": "From",
+    "to": "To",
+    "user": "Employee",
+    "allUsers": "All employees",
+    "minSpend": "Minimum spend (USD)",
+    "maxSpend": "Maximum spend (USD)",
+    "successfulOnly": "Successful requests only",
+    "apply": "Apply",
+    "reset": "Reset",
+    "byEmployee": "By employee",
+    "byMonth": "Month by month",
+    "columns": {
+      "employee": "Employee",
+      "number": "Employee number",
+      "department": "Department",
+      "requests": "Requests",
+      "spend": "Spend (USD)",
+      "share": "Share"
+    },
+    "total": "Total",
+    "inactive": "Inactive",
+    "empty": "No AI spending in this period.",
+    "period": "{{from}} to {{to}}",
+    "monthlyNote": "The last six months, or the months of the dates you choose (up to 24)."
   }
 }

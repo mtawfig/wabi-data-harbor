@@ -94,3 +94,20 @@ internal sealed class ServicePlanConfiguration : IEntityTypeConfiguration<Servic
             new ServicePlan { PlanId = Guid.Parse("5a7b2c10-0000-7000-8000-000000000003"), PlanCode = "ENTERPRISE", NameEn = "Enterprise", NameAr = "المؤسسات", MonthlyAiSpendLimit = 1000m, IsActive = true, SortOrder = 30, UpdatedAt = seeded });
     }
 }
+
+internal sealed class AiSpendingNoticeConfiguration : IEntityTypeConfiguration<AiSpendingNotice>
+{
+    public void Configure(EntityTypeBuilder<AiSpendingNotice> builder)
+    {
+        builder.ToTable("AiSpendingNotices");
+        builder.HasKey(n => n.NoticeId);
+        builder.Property(n => n.NoticeId).ValueGeneratedNever();
+        builder.Property(n => n.Month).HasMaxLength(7).IsRequired();
+        builder.Property(n => n.Threshold).HasMaxLength(16).IsRequired();
+        builder.Property(n => n.MonthlyAiSpendLimit).HasPrecision(14, 2);
+        builder.Property(n => n.MonthSpend).HasPrecision(14, 2);
+        // One alert per threshold per month: the index is what makes two simultaneous requests send it once.
+        builder.HasIndex(n => new { n.OrganizationId, n.Month, n.Threshold }).IsUnique();
+        builder.HasOne<Organization>().WithMany().HasForeignKey(n => n.OrganizationId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

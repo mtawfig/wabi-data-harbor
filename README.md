@@ -32,10 +32,11 @@ A walkthrough of the **deployed site**, with the sample organization GAS and the
 
 ## Current version
 
-Version 1, as of 14 November 2026 (latest pull request: P13.46). The most recent additions, newest first:
+Version 1, as of 14 November 2026 (latest pull request: P13.47). The most recent additions, newest first:
 
 | Pull request | What it added |
 |---|---|
+| P13.47 | **AI spending for the Organization Administrator.** Ordinary users see one short line when the monthly AI limit is reached, with no amounts. The organization's administrators are alerted by e-mail and in the application at 80% of the limit and at the limit, once each per month, and get an *AI Spending* page: spending and requests per employee with filters, and the same month by month. |
 | P13.46 | **Plans with a monthly AI spending limit.** The Platform Administrator defines plans and gives one to each organization; when the month's AI spending reaches the plan's limit, new AI questions are refused until the next month or a plan change, and saved answers stay available. The Ask page warns from 80% of the limit. |
 | P13.45 | English walkthrough video of the deployed site. |
 | P13.44 | Arabic walkthrough video recorded again with the Arabic logo. |
@@ -43,7 +44,7 @@ Version 1, as of 14 November 2026 (latest pull request: P13.46). The most recent
 | P13.42 | The log file is written by its own thread. |
 | P13.41 | Arabic logo, shown according to the interface language. |
 
-A deployment of this version needs **Apply database migrations** (migration `AddServicePlans`). Existing organizations start with no plan, so nothing is limited until a plan is chosen for them. The full history is in [`docs/PROGRESS.md`](docs/PROGRESS.md).
+A deployment of this version needs **Apply database migrations** (migrations `AddServicePlans` and `AddAiSpendingNotices`). Existing organizations start with no plan, so nothing is limited until a plan is chosen for them. The full history is in [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
 ## Status
 

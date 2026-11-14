@@ -2701,6 +2701,43 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.ToTable("Administrators", (string)null);
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.AiSpendingNotice", b =>
+                {
+                    b.Property<Guid>("NoticeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Month")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<decimal>("MonthSpend")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<decimal>("MonthlyAiSpendLimit")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Threshold")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("NoticeId");
+
+                    b.HasIndex("OrganizationId", "Month", "Threshold")
+                        .IsUnique();
+
+                    b.ToTable("AiSpendingNotices", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Platform.DefaultRoleTemplate", b =>
                 {
                     b.Property<Guid>("TemplateId")
@@ -4278,6 +4315,15 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("CreatedByAdministratorId")
                         .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.AiSpendingNotice", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("WabiInsight.Core.Entities.Platform.LoginIdentity", b =>

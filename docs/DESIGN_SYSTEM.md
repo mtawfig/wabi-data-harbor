@@ -154,6 +154,12 @@ Ten sections: sticky header (wordmark with tagline, section links, language swit
 - *Ask Wabi Insight* shows a band above the composer: amber when the organization is close to the limit, red when it is reached; Organization Administrators also see the amounts.
 - `docs/screenshots/p13-46-*.png`: the Plans page (EN, AR, phone), the organization's plan card, the Ask band near the limit (EN) and at the limit (AR, desktop and phone).
 
+## AI Spending (P13.47)
+- *Ask Wabi Insight*: an ordinary user sees a red band with one short line when the limit is reached and nothing before that; an Organization Administrator keeps the amber and red bands with the amounts and a link to *AI Spending*.
+- *AI Spending* (Organization Administration): four summary cards (plan and limit, spent this month with a bar that turns amber from 80% and red at the limit, spent in the period, requests), a filter row (from, to, employee, minimum and maximum spend, *Successful requests only*, Apply, Reset), a toggle between *By employee* and *Month by month*, and a plain table with a bold total row. On a phone the tables become cards like every list table.
+- Notifications: `Ai.SpendingNear` (amber warning icon) and `Ai.SpendingReached` (block icon) open *AI Spending*.
+- `docs/screenshots/p13-47-*.png`: the page by employee, filtered and month by month (EN), in Arabic on desktop and phone, the Ask band for a user (EN, and Arabic on a phone) and for an administrator, and the notification centre.
+
 ## Profile, dashboard and Integrations (P11.2)
 - *Profile*: avatar with initials, name, email, organization, role chips, account type, preferred language; side cards for the interface language (switcher), password (link to the change-password screen) and "managed by your administrator" (link to a new ticket).
 - User *Dashboard*: four count tiles (saved analyses, files in My Reports, shared with me, favorites) linking to their pages, a *Recent analyses* card and the support ticket widget — the "coming soon" card is gone.

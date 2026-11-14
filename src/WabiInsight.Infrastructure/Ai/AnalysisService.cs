@@ -51,9 +51,11 @@ public sealed partial class AnalysisService : IAnalysisService
     private readonly IReportRenderer _renderer;
     private readonly IArtifactStorage _storage;
     private readonly IAccessFactRecorder _accessFacts;
+    private readonly Core.Plans.IAiSpendingGuard? _spending;
 
-    public AnalysisService(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IAiProviderResolver providers, IUsageEventWriter usage, IClock clock, ILogger<AnalysisService> logger, ReportComposer reports, IReportRenderer renderer, IArtifactStorage storage, IAccessFactRecorder accessFacts)
+    public AnalysisService(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IAiProviderResolver providers, IUsageEventWriter usage, IClock clock, ILogger<AnalysisService> logger, ReportComposer reports, IReportRenderer renderer, IArtifactStorage storage, IAccessFactRecorder accessFacts, Core.Plans.IAiSpendingGuard? spending = null)
     {
+        _spending = spending;
         _accessFacts = accessFacts;
         _reports = reports;
         _renderer = renderer;
@@ -253,6 +255,20 @@ public sealed partial class AnalysisService : IAnalysisService
         // Phase 14 ledger: one fact per object touched, in the same unit of work as the analysis.
         await _accessFacts.RecordAsync(new AccessFactRecording(request.ApplicationId, panels.Select(p => new PlanExecution(p.Plan, p.Result.RowCount)).ToList(), AccessOutcome.Succeeded, version.VersionId, metric.MetricId), cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
+        if (_spending is not null)
+        {
+            // This answer may have taken the month's spending past 80% of the plan's limit, or to the limit: the
+            // organization's administrators are told once (P13.47). A failure here never costs the user their answer.
+            try
+            {
+                await _spending.AlertAdministratorsAsync(organizationId, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                LogSpendingAlertFailed(_logger, ex);
+            }
+        }
+
         return response;
     }
 
@@ -561,6 +577,9 @@ public sealed partial class AnalysisService : IAnalysisService
     }
 
     private sealed record InterpretationJson(string? Narrative, List<string>? Highlights);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The AI spending alert could not be sent.")]
+    private static partial void LogSpendingAlertFailed(ILogger logger, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Analysis execution failed with code {Code}.")]
     private static partial void LogExecutionFailed(ILogger logger, string code, Exception exception);

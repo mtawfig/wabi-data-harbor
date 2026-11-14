@@ -4,6 +4,8 @@ using WabiInsight.Core.Audit;
 using WabiInsight.Core.Common;
 using WabiInsight.Core.Entities.Organizations;
 using WabiInsight.Core.Entities.Platform;
+using WabiInsight.Core.Entities.Support;
+using WabiInsight.Core.Notifications;
 using WabiInsight.Core.Organizations;
 using WabiInsight.Core.Plans;
 using WabiInsight.Core.Tenancy;
@@ -25,8 +27,11 @@ public sealed partial class ServicePlanService : IServicePlanService, IAiSpendin
     private readonly ITenantContext _tenantContext;
     private readonly IClock _clock;
 
-    public ServicePlanService(ConfigurationDbContext context, IAuditWriter audit, ITenantContext tenantContext, IClock clock)
+    private readonly INotificationDispatcher? _notifications;
+
+    public ServicePlanService(ConfigurationDbContext context, IAuditWriter audit, ITenantContext tenantContext, IClock clock, INotificationDispatcher? notifications = null)
     {
+        _notifications = notifications;
         _context = context;
         _audit = audit;
         _tenantContext = tenantContext;
@@ -75,6 +80,13 @@ public sealed partial class ServicePlanService : IServicePlanService, IAiSpendin
 
         var before = plan.MonthlyAiSpendLimit;
         Apply(plan, command);
+        if (before != plan.MonthlyAiSpendLimit)
+        {
+            // A new limit starts the month's alerts again for the organizations on this plan.
+            var affected = await _context.Organizations.AsNoTracking().Where(o => o.ServicePlanId == planId).Select(o => o.OrganizationId).ToListAsync(cancellationToken);
+            _context.AiSpendingNotices.RemoveRange(await _context.AiSpendingNotices.IgnoreQueryFilters().Where(n => affected.Contains(n.OrganizationId)).ToListAsync(cancellationToken));
+        }
+
         _audit.Append(AuditEvents.ServicePlanSaved, "ServicePlan", planId.ToString(), new { code, limit = plan.MonthlyAiSpendLimit, previousLimit = before, active = plan.IsActive });
         await _context.SaveChangesAsync(cancellationToken);
         return ToDto(plan, await _context.Organizations.CountAsync(o => o.ServicePlanId == planId, cancellationToken));
@@ -111,6 +123,8 @@ public sealed partial class ServicePlanService : IServicePlanService, IAiSpendin
             organization.UpdatedAt = _clock.UtcNow;
             organization.UpdatedByAdministratorId = _tenantContext.Principal.AdministratorId;
             _audit.Append(AuditEvents.OrganizationPlanChanged, "Organization", organizationId.ToString(), new { plan = plan?.PlanCode, limit = plan?.MonthlyAiSpendLimit, previousPlanId = previous });
+            // A plan change starts the month's alerts again.
+            _context.AiSpendingNotices.RemoveRange(await _context.AiSpendingNotices.IgnoreQueryFilters().Where(n => n.OrganizationId == organizationId).ToListAsync(cancellationToken));
             await _context.SaveChangesAsync(cancellationToken);
         }
 
@@ -124,7 +138,9 @@ public sealed partial class ServicePlanService : IServicePlanService, IAiSpendin
         var described = await DescribeAsync(organization, cancellationToken);
         if (!_tenantContext.Principal.Roles.Contains(SystemRoles.OrganizationAdmin))
         {
-            return new AiSpendingDto(described.State, null, null, null, null, null, null);
+            // Other users are told one thing only: whether new AI requests are refused (P13.47). Not the plan, not
+            // the amounts, and not that the limit is getting close.
+            return new AiSpendingDto(described.State == AiSpendingState.Reached ? AiSpendingState.Reached : AiSpendingState.Within, null, null, null, null, null, null);
         }
 
         decimal? percent = described.MonthlyAiSpendLimit is { } limit && limit > 0 ? Math.Round(described.MonthSpend / limit * 100m, 1) : null;
@@ -139,8 +155,84 @@ public sealed partial class ServicePlanService : IServicePlanService, IAiSpendin
             return false;
         }
 
-        return (await DescribeAsync(organization, cancellationToken)).State == AiSpendingState.Reached;
+        var described = await DescribeAsync(organization, cancellationToken);
+        await AlertAsync(organization, described, cancellationToken);
+        return described.State == AiSpendingState.Reached;
     }
+
+    public async Task AlertAdministratorsAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        var organization = await _context.Organizations.AsNoTracking().IgnoreQueryFilters().SingleOrDefaultAsync(o => o.OrganizationId == organizationId, cancellationToken);
+        if (organization?.ServicePlanId is not null)
+        {
+            await AlertAsync(organization, await DescribeAsync(organization, cancellationToken), cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Sends the "near" or "reached" alert to the organization's active administrators if this month has not had it
+    /// yet. The unique index on (organization, month, threshold) settles two requests arriving together: the second
+    /// insert fails and sends nothing.
+    /// </summary>
+    private async Task AlertAsync(Organization organization, OrganizationPlanDto described, CancellationToken cancellationToken)
+    {
+        if (_notifications is null || described.MonthlyAiSpendLimit is not { } limit || described.State is not (AiSpendingState.Near or AiSpendingState.Reached))
+        {
+            return;
+        }
+
+        var month = MonthKey(organization, _clock.UtcNow);
+        var threshold = described.State;
+        var organizationId = organization.OrganizationId;
+        if (await _context.AiSpendingNotices.IgnoreQueryFilters().AnyAsync(n => n.OrganizationId == organizationId && n.Month == month && n.Threshold == threshold, cancellationToken))
+        {
+            return;
+        }
+
+        var administrators = await _context.OrganizationUsers.AsNoTracking().IgnoreQueryFilters()
+            .Where(u => u.OrganizationId == organizationId && u.Status == OrganizationUserStatus.Active
+                && _context.UserRoles.IgnoreQueryFilters().Any(ur => ur.UserId == u.UserId && _context.Roles.IgnoreQueryFilters().Any(r => r.RoleId == ur.RoleId && r.OrganizationId == organizationId && r.RoleCode == SystemRoles.OrganizationAdmin)))
+            .ToListAsync(cancellationToken);
+        var recipients = administrators.Select(u => new NotificationRecipient(PrincipalType.OrganizationUser, u.UserId, organizationId, u.Email, u.FullName, u.PreferredLanguage)).ToList();
+        var percent = limit > 0 ? Math.Round(described.MonthSpend / limit * 100m, 1) : 0m;
+        var notice = new AiSpendingNotice { NoticeId = Ids.New(), OrganizationId = organizationId, Month = month, Threshold = threshold, MonthlyAiSpendLimit = limit, MonthSpend = described.MonthSpend, CreatedAt = _clock.UtcNow };
+        _context.AiSpendingNotices.Add(notice);
+        var reached = threshold == AiSpendingState.Reached;
+        _notifications.Notify(recipients, reached ? NotificationTypes.AiSpendingReached : NotificationTypes.AiSpendingNear, "AiSpending", month,
+            new { month, planCode = described.PlanCode, planNameEn = described.NameEn, planNameAr = described.NameAr, limit = Money(limit), spend = Money(described.MonthSpend), percent = percent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) }, organizationId);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // Another request recorded this month's alert first: it sends it, this one does not.
+            foreach (var entry in _context.ChangeTracker.Entries().Where(e => e.State == EntityState.Added && (e.Entity is AiSpendingNotice || e.Entity is Notification)).ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            return;
+        }
+
+        var figuresEn = $"Plan: {described.NameEn}. Spent this month: {Money(described.MonthSpend)} USD of {Money(limit)} USD ({percent:0.#}%).";
+        var figuresAr = $"الخطة: {described.NameAr}. الإنفاق هذا الشهر: {Money(described.MonthSpend)} دولار من {Money(limit)} دولار ({percent:0.#}%).";
+        await _notifications.EmailAsync(recipients, reached ? "AiSpendingReached" : "AiSpendingNear",
+            reached ? "Wabi Insight: the monthly AI limit is reached" : "Wabi Insight: close to the monthly AI limit",
+            reached ? "وابي إنسايت: تم بلوغ الحد الشهري للذكاء الاصطناعي" : "وابي إنسايت: اقتراب من الحد الشهري للذكاء الاصطناعي",
+            reached
+                ? $"Your organization has reached its plan's AI limit for this month. New AI questions are refused until next month or a plan change; saved answers and reports stay available. {figuresEn} Open AI Spending to see the spending of each employee."
+                : $"Your organization has used {percent:0.#}% of its plan's AI limit for this month. {figuresEn} Open AI Spending to see the spending of each employee.",
+            reached
+                ? $"بلغت مؤسستكم حد الذكاء الاصطناعي في خطتها لهذا الشهر. تُرفض أسئلة الذكاء الاصطناعي الجديدة حتى الشهر التالي أو تغيير الخطة، وتبقى الإجابات والتقارير المحفوظة متاحة. {figuresAr} افتحوا صفحة إنفاق الذكاء الاصطناعي لمعرفة إنفاق كل موظف."
+                : $"استخدمت مؤسستكم {percent:0.#}% من حد الذكاء الاصطناعي في خطتها لهذا الشهر. {figuresAr} افتحوا صفحة إنفاق الذكاء الاصطناعي لمعرفة إنفاق كل موظف.",
+            "/app/admin/ai-spending", organizationId, cancellationToken);
+    }
+
+    private static string Money(decimal value) => value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+
+    internal static string MonthKey(Organization organization, DateTimeOffset now)
+        => TimeZoneInfo.ConvertTime(now, Core.Monitoring.JobRecurrence.ResolveTimeZone(organization.TimeZone)).ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
 
     private async Task<OrganizationPlanDto> DescribeAsync(Organization organization, CancellationToken cancellationToken)
     {
