@@ -43,7 +43,6 @@
       <p class="ask__incomplete" role="status" data-testid="ask-interpretation-incomplete"><mat-icon>info</mat-icon><span>{{ 'ask.interpretationIncomplete' | transloco }}</span></p>
     }
     @if (a.interpretation?.highlights?.length) { <ul class="ask__highlights">@for (h of a.interpretation!.highlights; track h) { <li><mat-icon>check_circle</mat-icon>{{ h }}</li> }</ul> }
-    @if (truncatedRows() > 0) { <p class="ask__truncated"><mat-icon>warning_amber</mat-icon>{{ 'ask.truncated' | transloco: { count: truncatedRows() } }}</p> }
 
     @if (kpis().length > 0) {
       <div class="ask__kpis" data-testid="ask-kpis">

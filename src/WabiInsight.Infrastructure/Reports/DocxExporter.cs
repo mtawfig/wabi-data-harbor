@@ -15,11 +15,11 @@ namespace WabiInsight.Infrastructure.Reports;
 /// numbered sections with KPI tables, chart images (server-rendered PNG) and row tables, and recommendations;
 /// bidirectional paragraphs and right-to-left tables for Arabic; logo and page numbers in the header and footer.
 /// Every number comes from the panel data. Business content only: no methodology, query or row-count details.
-/// A table longer than <see cref="MaxTableRows"/> rows shows its first rows and says so in one line under it.
+/// A table takes at most <see cref="MaxTableRows"/> rows; the document carries no note about a longer result (P13.49).
 /// </summary>
 public sealed class DocxExporter : IAnswerExporter
 {
-    /// <summary>A longer table shows its first rows only, with a line under it saying so.</summary>
+    /// <summary>The most rows a table takes in the document.</summary>
     internal const int MaxTableRows = 100;
     private const string LatinFont = "Inter";
     private const string ArabicFont = "IBM Plex Sans Arabic";
@@ -99,10 +99,6 @@ public sealed class DocxExporter : IAnswerExporter
                     else
                     {
                         body.Append(RowsTable(panel, rtl, culture));
-                        if (QuestPdfReportRenderer.ShortenedTableNote(panel.Result, MaxTableRows, rtl, culture) is { } note)
-                        {
-                            body.Append(Paragraph(note, rtl, "TableNote"));
-                        }
                     }
                 }
             }

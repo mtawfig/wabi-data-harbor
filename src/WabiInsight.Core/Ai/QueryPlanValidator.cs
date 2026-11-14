@@ -11,7 +11,7 @@ public readonly record struct ColumnRef(string Alias, string Column)
     public override string ToString() => $"{Alias}.{Column}";
 }
 
-public sealed record PlanLimits(int MaxRows = 1000, int DefaultRows = 100, int MaxJoins = 5, int MaxSelect = 30, int MaxConditions = 20, int MaxValueLength = 200);
+public sealed record PlanLimits(int MaxRows = 1000, int DefaultRows = 1000, int MaxJoins = 5, int MaxSelect = 30, int MaxConditions = 20, int MaxValueLength = 200);
 
 /// <summary>
 /// Shape validation (specification §19 step 8): identifiers, operators, aggregate functions, join forms,

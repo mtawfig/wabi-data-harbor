@@ -9,7 +9,26 @@ public sealed record ResultKpi(string Column, string Kind, double Value);
 public sealed record ResultSeries(string Name, IReadOnlyList<string> Categories, IReadOnlyList<double> Values);
 
 /// <summary>Structured result (specification §19 step 14): the table as returned, plus deterministic calculations made in code, never by the model.</summary>
-public sealed record AnalysisResult(IReadOnlyList<ResultColumn> Columns, IReadOnlyList<IReadOnlyList<object?>> Rows, int RowCount, bool Truncated, IReadOnlyList<ResultKpi> Kpis, IReadOnlyList<ResultSeries> Series, double DurationMs);
+public sealed record AnalysisResult(IReadOnlyList<ResultColumn> Columns, IReadOnlyList<IReadOnlyList<object?>> Rows, int RowCount, bool Truncated, IReadOnlyList<ResultKpi> Kpis, IReadOnlyList<ResultSeries> Series, double DurationMs)
+{
+    /// <summary>
+    /// What a result means for the plan it answers (P13.49). A plan that asked for a number of rows ("top five") is
+    /// complete with that number: it was not cut. A list with no limit of its own that stopped at the platform's
+    /// size limit was cut: its totals, averages and ranges would be those of the rows fetched and not of the whole
+    /// list, and no reader is told that a list is partial, so they are left out instead of being shown as if whole.
+    /// </summary>
+    public AnalysisResult For(QueryPlan plan, PlanLimits? limits = null)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (!Truncated)
+        {
+            return this;
+        }
+
+        var askedFor = plan.Limit is { } limit && limit < (limits ?? new PlanLimits()).MaxRows;
+        return askedFor ? this with { Truncated = false } : this with { Kpis = [] };
+    }
+}
 
 /// <summary>Deterministic calculations over the executed rows: totals, averages, ranges and chart series from the plan's visualization hint.</summary>
 public static class ResultCalculator

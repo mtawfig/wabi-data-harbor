@@ -252,7 +252,7 @@ public sealed class AiProviderTests : IDisposable
         var predicate = ticketsBinding.GetProperty("rowPredicates").EnumerateArray().Single();
         Assert.Equal("OrganizationId", predicate.GetProperty("column").GetString());
         Assert.Equal(department.GetProperty("departmentCode").GetString(), predicate.GetProperty("value").GetString());
-        Assert.Equal(100, authorized.GetProperty("effectiveLimit").GetInt32());
+        Assert.Equal(1000, authorized.GetProperty("effectiveLimit").GetInt32()); // no limit asked for: every matching row, up to the maximum (P13.49)
         // The usage is recorded on the server (checked below) but never sent to a business user (F5).
         Assert.False(response.TryGetProperty("usage", out _));
         Assert.Contains("ar (Arabic)", FakeAiProvider.LastRequest!.UserContent, StringComparison.Ordinal);

@@ -24,7 +24,7 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
     private const string Blue = "#087DF2";
     private const string Muted = "#64748B";
     private const string Border = "#E2E8F0";
-    /// <summary>A longer table shows its first rows only, with a line under it saying so (<see cref="ShortenedTableNote"/>).</summary>
+    /// <summary>The most rows a table takes in the document. A longer result is in full in the Excel export; the document carries no note about it (P13.49).</summary>
     internal const int MaxTableRows = 60;
 
     /// <summary>Headline figures sit side by side, at most this many in a row; further figures wrap onto more rows.</summary>
@@ -175,10 +175,6 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                                     else
                                     {
                                         figure.Item().Element(c => Table(c, panel, culture));
-                                        if (ShortenedTableNote(panel.Result, MaxTableRows, rtl, culture) is { } note)
-                                        {
-                                            figure.Item().PaddingTop(3).Text(note).FontSize(8.5f).FontColor(Muted);
-                                        }
                                     }
 
                                 });
@@ -319,35 +315,6 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
                 }
             }
         });
-    }
-
-    /// <summary>
-    /// The line under a table that shows only its first rows, in the reader's words and the document's language; null
-    /// when the table shows everything it was given. A reader must never take the first rows for the whole list. When
-    /// the result itself stopped at its size limit, more exists than was counted, and the sentence says "more than".
-    /// </summary>
-    internal static string? ShortenedTableNote(AnalysisResult result, int maxRows, bool rtl, CultureInfo culture)
-    {
-        ArgumentNullException.ThrowIfNull(result);
-        var available = result.Rows.Count;
-        if (available <= maxRows)
-        {
-            return null;
-        }
-
-        var shown = maxRows.ToString("#,0", culture);
-        var total = Math.Max(available, result.RowCount).ToString("#,0", culture);
-        var inExcel = available.ToString("#,0", culture);
-        if (result.Truncated)
-        {
-            return rtl
-                ? $"يعرض هذا الجدول أول {shown} من أصل أكثر من {total}. ملف Excel يتضمن أول {inExcel}."
-                : $"Showing the first {shown} of more than {total}. The Excel export has the first {inExcel}.";
-        }
-
-        return rtl
-            ? $"يعرض هذا الجدول أول {shown} من أصل {total}. القائمة الكاملة متوفرة في ملف Excel."
-            : $"Showing the first {shown} of {total}. The Excel export has the full list.";
     }
 
     /// <summary>

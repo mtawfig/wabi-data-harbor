@@ -42,7 +42,7 @@ public sealed class QueryPlanAuthorizerTests
         Assert.Contains(orders.RowPredicates, p => p.Column == "DeptCode" && p.Value == "FIN" && p.Scope == RowScope.Department);
         Assert.Contains(orders.RowPredicates, p => p.Column == "EmpNo" && p.Value == "E-1" && p.Scope == RowScope.Self);
         Assert.Empty(plan.Objects.Single(o => o.Alias == "c").RowPredicates);
-        Assert.Equal(100, plan.EffectiveLimit);
+        Assert.Equal(1000, plan.EffectiveLimit); // no limit asked for: every matching row, up to the maximum (P13.49)
 
         // The answer keeps which scopes limited it, so the interpretation and the page can say so.
         Assert.Equal([new PanelRowScope("Department", "FIN"), new PanelRowScope("Self", "E-1")], PanelAccess.From(plan));

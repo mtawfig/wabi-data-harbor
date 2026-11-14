@@ -572,7 +572,7 @@ public sealed class AnalysisTests : IDisposable
         // The SQL is kept for reference and accuracy checks in AnalysisQueryLogs, never sent to the browser.
         var preview = await LoggedSqlAsync(response);
         Assert.Equal(JsonValueKind.Object, response.GetProperty("panels")[0].GetProperty("labels").ValueKind);
-        Assert.StartsWith("SELECT TOP (101) [t].[Status] AS [status], COUNT(*) AS [tickets] FROM [dbo].[SupportTickets] [t] WHERE [t].[Impact] <> ?", preview, StringComparison.Ordinal);
+        Assert.StartsWith("SELECT TOP (1001) [t].[Status] AS [status], COUNT(*) AS [tickets] FROM [dbo].[SupportTickets] [t] WHERE [t].[Impact] <> ?", preview, StringComparison.Ordinal);
         Assert.DoesNotContain("Critical", preview, StringComparison.Ordinal);
         Assert.False(response.GetProperty("panels")[0].GetProperty("result").GetProperty("truncated").GetBoolean());
         Assert.Contains(response.GetProperty("panels")[0].GetProperty("result").GetProperty("kpis").EnumerateArray(), k => k.GetProperty("column").GetString() == "tickets" && k.GetProperty("kind").GetString() == "sum");
@@ -598,7 +598,13 @@ public sealed class AnalysisTests : IDisposable
         // Management reads every row: the panel carries no row scope and the interpreter is told the result is unrestricted and complete.
         Assert.Equal(0, response.GetProperty("panels")[0].GetProperty("rowScopes").GetArrayLength());
         Assert.Contains("\"complete\":true,\"access\":\"unrestricted: every row of the queried objects\"", interpretRequest.UserContent, StringComparison.Ordinal);
-        Assert.Contains("When complete is false, describe only the rows shown", interpretRequest.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("When complete is false you were given the leading rows of a longer list.", interpretRequest.SystemPrompt, StringComparison.Ordinal);
+        Assert.Contains("never conclude that something is absent or does not happen in the data", interpretRequest.SystemPrompt, StringComparison.Ordinal);
+        // No reader is told that a list is partial (P13.49): the explainer is forbidden to say so and is not handed the words to say it with.
+        Assert.Contains("Never tell the reader that a list is partial, limited, shortened, a sample or \"the first\" rows", interpretRequest.SystemPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("only part of the list is covered", interpretRequest.SystemPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("rowsShown", interpretRequest.UserContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("truncated", interpretRequest.UserContent, StringComparison.Ordinal);
 
         // Row predicates: an analyst scoped to a department column sees only matching rows, enforced inside the SQL.
         var analystId = roles.Single(r => r.GetProperty("roleCode").GetString() == "Analyst").GetProperty("roleId").GetGuid();
@@ -651,7 +657,7 @@ public sealed class AnalysisTests : IDisposable
             Assert.Equal(_db.Data.OrganizationAId, rejectedLog.OrganizationId);
         }
 
-        // Truncation: a limit of 1 on a multi-row (non-aggregated) result flags truncated and returns one row.
+        // A limit the plan asked for: one row comes back and the answer is complete with it; it is not a cut list (P13.49).
         FakeAiProvider.Script = (_) => """
             {"objective":"List tickets","source":{"schema":"dbo","object":"SupportTickets","alias":"t"},"joins":[],
              "select":[{"alias":"id","column":"t.TicketId","aggregate":null,"dateTrunc":null},{"alias":"status","column":"t.Status","aggregate":null,"dateTrunc":null}],
@@ -659,7 +665,7 @@ public sealed class AnalysisTests : IDisposable
             """;
         var truncated = await (await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "x", interpret = false })).ReadJsonAsync();
         Assert.Equal(1, truncated.GetProperty("panels")[0].GetProperty("result").GetProperty("rowCount").GetInt32());
-        Assert.True(truncated.GetProperty("panels")[0].GetProperty("result").GetProperty("truncated").GetBoolean());
+        Assert.False(truncated.GetProperty("panels")[0].GetProperty("result").GetProperty("truncated").GetBoolean());
 
         // A dashboard answer: several queries, each executed on its own, one interpretation over all of them.
         FakeAiProvider.Script = (request) => request.SchemaName == "wabi_interpretation" ? """{"narrative":"Dashboard narrative.","highlights":["h1","h2"]}""" : """

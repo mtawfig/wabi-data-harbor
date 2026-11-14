@@ -32,10 +32,11 @@ A walkthrough of the **deployed site**, with the sample organization GAS and the
 
 ## Current version
 
-Version 1, as of 14 November 2026 (latest pull request: P13.48). The most recent additions, newest first:
+Version 1, as of 14 November 2026 (latest pull request: P13.49). The most recent additions, newest first:
 
 | Pull request | What it added |
 |---|---|
+| P13.49 | **No "partial list" wording.** Answers, reports and exported documents no longer tell the reader that a list is partial. A "top five" is a complete answer; a list without a requested number is fetched up to 1,000 rows (was 100); a list that still stops there carries no totals. |
 | P13.48 | **AI usage ledger.** Every request sent to a model is recorded once, where it leaves the application, in the append-only table `AiCalls`: tokens, input, output and total cost, the prices used and what the call was for. The month's AI spending is the sum of that table, so rule drafts and provider tests count as well as questions. The *AI Spending* page shows input and output tokens per employee. Migration `AddAiCalls`. |
 | P13.47 | **AI spending for the Organization Administrator.** Ordinary users see one short line when the monthly AI limit is reached, with no amounts. The organization's administrators are alerted by e-mail and in the application at 80% of the limit and at the limit, once each per month, and get an *AI Spending* page: spending and requests per employee with filters, and the same month by month. |
 | P13.46 | **Plans with a monthly AI spending limit.** The Platform Administrator defines plans and gives one to each organization; when the month's AI spending reaches the plan's limit, new AI questions are refused until the next month or a plan change, and saved answers stay available. The Ask page warns from 80% of the limit. |
