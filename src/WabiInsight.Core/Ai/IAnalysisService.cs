@@ -6,6 +6,12 @@ namespace WabiInsight.Core.Ai;
 public interface IQueryExecutor
 {
     Task<AnalysisResult> ExecuteAsync(Guid applicationId, CompiledQuery query, PlanVisualization? visualization, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads a compiled query row by row without keeping the rows (the Excel export of a whole list, P13.50): the
+    /// columns first, then each row, at most <paramref name="maxRows"/>. Returns the number of rows read.
+    /// </summary>
+    Task<long> StreamAsync(Guid applicationId, CompiledQuery query, long maxRows, Func<IReadOnlyList<ResultColumn>, ValueTask> onColumns, Func<object?[], ValueTask> onRow, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

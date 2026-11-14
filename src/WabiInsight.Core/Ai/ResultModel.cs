@@ -9,13 +9,30 @@ public sealed record ResultKpi(string Column, string Kind, double Value);
 public sealed record ResultSeries(string Name, IReadOnlyList<string> Categories, IReadOnlyList<double> Values);
 
 /// <summary>Structured result (specification §19 step 14): the table as returned, plus deterministic calculations made in code, never by the model.</summary>
-public sealed record AnalysisResult(IReadOnlyList<ResultColumn> Columns, IReadOnlyList<IReadOnlyList<object?>> Rows, int RowCount, bool Truncated, IReadOnlyList<ResultKpi> Kpis, IReadOnlyList<ResultSeries> Series, double DurationMs)
+public sealed record AnalysisResult(IReadOnlyList<ResultColumn> Columns, IReadOnlyList<IReadOnlyList<object?>> Rows, int RowCount, bool Truncated, IReadOnlyList<ResultKpi> Kpis, IReadOnlyList<ResultSeries> Series, double DurationMs, long? TotalRows = null)
 {
+    /// <summary>The most rows a table shows on the page and in a PDF or Word document; a longer list says so in one line and is whole in Excel (P13.50).</summary>
+    public const int DisplayRows = 100;
+
+    /// <summary>The most rows one Excel sheet holds besides its header row.</summary>
+    public const long ExcelRows = 1_048_575;
+
+    /// <summary>
+    /// How many rows the whole list has: the rows fetched when the list is whole, the count the database gave for a
+    /// list that stopped at the size limit (<see cref="TotalRows"/>), and null when that count could not be taken.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public long? WholeListRows => Truncated ? TotalRows : RowCount;
+
+    /// <summary>True when the list is longer than the rows a table shows.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsLongList => Truncated || Rows.Count > DisplayRows;
+
     /// <summary>
     /// What a result means for the plan it answers (P13.49). A plan that asked for a number of rows ("top five") is
     /// complete with that number: it was not cut. A list with no limit of its own that stopped at the platform's
-    /// size limit was cut: its totals, averages and ranges would be those of the rows fetched and not of the whole
-    /// list, and no reader is told that a list is partial, so they are left out instead of being shown as if whole.
+    /// size limit was cut: totals, averages and ranges of the rows fetched are not those of the whole list, so they
+    /// are dropped here; the count and the totals of the whole list are then asked from the database (P13.50).
     /// </summary>
     public AnalysisResult For(QueryPlan plan, PlanLimits? limits = null)
     {
@@ -153,9 +170,24 @@ public static class ResultCalculator
         _ => double.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) ? parsed : null,
     };
 
+    private static readonly string[] IsoDateTimes = ["yyyy-MM-ddTHH:mm:ss", "yyyy-MM-ddTHH:mm:ss.FFFFFFF"];
+
+    /// <summary>
+    /// A cell as text. Dates read as dates: a stored answer carries them as ISO text ("2025-03-01T00:00:00"), which is
+    /// written the way a date value is (2025-03-01, or 2025-03-01 06:15 when it has a time of day).
+    /// </summary>
     public static string Format(object? value) => value switch
     {
         null => string.Empty,
+        System.Text.Json.JsonElement element => element.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.String => Format(element.GetString()),
+            System.Text.Json.JsonValueKind.Null or System.Text.Json.JsonValueKind.Undefined => string.Empty,
+            System.Text.Json.JsonValueKind.True => "True",
+            System.Text.Json.JsonValueKind.False => "False",
+            _ => element.GetRawText(),
+        },
+        string s when s.Length is >= 19 and <= 27 && s[10] == 'T' && DateTime.TryParseExact(s, IsoDateTimes, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed) => Format(parsed),
         DateTime dt => dt.TimeOfDay == TimeSpan.Zero ? dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : dt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
         DateTimeOffset dto => dto.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
         DateOnly d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),

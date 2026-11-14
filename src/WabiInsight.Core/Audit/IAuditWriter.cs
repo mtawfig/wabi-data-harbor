@@ -78,6 +78,9 @@ public static class AuditEvents
     public const string ShareRevoked = "Share.Revoked";
     public const string ShareEmailSent = "Share.EmailSent";
     public const string ShareEmailBlocked = "Share.EmailBlocked";
+
+    /// <summary>A recipient exported the whole list of a shared answer to Excel under their own permissions (P13.50).</summary>
+    public const string ShareExported = "Share.Exported";
     public const string MonitoringRuleSaved = "Monitoring.RuleSaved";
     public const string MonitoringRuleDeleted = "Monitoring.RuleDeleted";
     public const string MonitoringRuleActivation = "Monitoring.RuleActivation";

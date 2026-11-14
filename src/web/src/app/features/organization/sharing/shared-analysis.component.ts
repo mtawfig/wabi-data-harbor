@@ -40,6 +40,8 @@ export class SharedAnalysisComponent {
 
   readonly version = computed<HistoryVersion | null>(() => this.detail()?.versions.find((v) => v.versionNumber === this.versionNumber()) ?? null);
   readonly reportUrl = computed(() => this.sharing.sharedReportUrl(this.historyId, this.versionNumber() ?? 0));
+  /** "View all in Excel" is offered only to a recipient who may read this data themselves; the server exports under their permissions. */
+  readonly excelUrl = computed(() => (this.detail()?.canViewAllInExcel && this.versionNumber() ? `/api/shares/with-me/${this.historyId}/versions/${this.versionNumber()}/export/xlsx` : null));
 
   constructor() {
     this.sharing.shared(this.historyId).subscribe({

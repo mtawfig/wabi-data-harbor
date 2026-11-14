@@ -32,9 +32,13 @@ public sealed class AnalysisHistoryService : IAnalysisHistoryService
     private readonly IReportRenderer _pdf;
     private readonly Dictionary<ExportFormat, IAnswerExporter> _exporters;
     private readonly Core.Monitoring.IAccessFactRecorder _accessFacts;
+    private readonly Reports.WholeListExcel? _wholeLists;
+    private readonly Authentication.PlatformUrlOptions? _urls;
 
-    public AnalysisHistoryService(ConfigurationDbContext context, ITenantContext tenantContext, IAnalysisService analysis, IArtifactStorage storage, IAuditWriter audit, IClock clock, IReportRenderer pdf, IEnumerable<IAnswerExporter> exporters, Core.Monitoring.IAccessFactRecorder accessFacts)
+    public AnalysisHistoryService(ConfigurationDbContext context, ITenantContext tenantContext, IAnalysisService analysis, IArtifactStorage storage, IAuditWriter audit, IClock clock, IReportRenderer pdf, IEnumerable<IAnswerExporter> exporters, Core.Monitoring.IAccessFactRecorder accessFacts, Reports.WholeListExcel? wholeLists = null, Microsoft.Extensions.Options.IOptions<Authentication.PlatformUrlOptions>? urls = null)
     {
+        _wholeLists = wholeLists;
+        _urls = urls?.Value;
         _accessFacts = accessFacts;
         _pdf = pdf;
         _exporters = exporters.ToDictionary(e => e.Format);
@@ -226,12 +230,14 @@ public sealed class AnalysisHistoryService : IAnalysisHistoryService
             var branding = await LoadBrandingAsync(organization, cancellationToken);
             var organizationName = rtl ? organization.OrganizationNameAr : organization.OrganizationName;
             var applicationName = rtl ? application.ApplicationNameAr : application.ApplicationName;
+            // Under a long table a document says how many rows it shows and links to the answer, where the whole list is exported (P13.50).
+            var answerUrl = _urls is null ? null : $"{_urls.BaseUrl.TrimEnd('/')}/app/history/{historyId}";
             byte[] bytes;
             string contentType;
             string extension;
             if (format == ExportFormat.Pdf)
             {
-                bytes = _pdf.RenderPdf(new ReportRenderRequest(content, answer.Panels, branding, entry.OutputLanguage, organizationName, applicationName, organizationName, _clock.UtcNow));
+                bytes = _pdf.RenderPdf(new ReportRenderRequest(content, answer.Panels, branding, entry.OutputLanguage, organizationName, applicationName, organizationName, _clock.UtcNow, answerUrl));
                 contentType = "application/pdf";
                 extension = "pdf";
             }
@@ -242,44 +248,67 @@ public sealed class AnalysisHistoryService : IAnalysisHistoryService
                     throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "export_format_unsupported");
                 }
 
-                bytes = exporter.Export(new ExportRequest(answer, content, entry.OutputLanguage, organizationName, applicationName, entry.OriginalPrompt, branding, _clock.UtcNow));
+                bytes = exporter.Export(new ExportRequest(answer, content, entry.OutputLanguage, organizationName, applicationName, entry.OriginalPrompt, branding, _clock.UtcNow, answerUrl));
                 contentType = exporter.ContentType;
                 extension = exporter.Extension;
             }
 
-            string key;
-            await using (var stream = new MemoryStream(bytes, writable: false))
+            // Excel holds the whole list: a list that stopped at the size limit is read again from the source, under
+            // the permissions of the person exporting, straight into its sheet (P13.50).
+            IReadOnlyList<long> panelRows = answer.Panels.Select(p => (long)p.Result.RowCount).ToList();
+            Stream file;
+            if (format == ExportFormat.Xlsx && _wholeLists is not null && Reports.WholeListExcel.Needed(answer))
             {
-                key = await _storage.SaveAsync("analysis-exports", stream, cancellationToken);
+                var whole = await _wholeLists.BuildAsync(bytes, answer, application, version.QueryPlanJson, rtl, cancellationToken);
+                file = whole.Content;
+                panelRows = whole.PanelRows;
+            }
+            else
+            {
+                file = new MemoryStream(bytes, writable: false);
             }
 
-            var fileName = $"{Slug(entry.Title)}-v{version.VersionNumber}-{_clock.UtcNow:yyyyMMdd-HHmm}.{extension}";
-            var artifact = new AnalysisArtifact
+            try
             {
-                ArtifactId = Ids.New(),
-                OrganizationId = entry.OrganizationId,
-                HistoryId = historyId,
-                VersionId = version.VersionId,
-                Kind = format switch { ExportFormat.Pdf => AnalysisArtifactKind.ExportPdf, ExportFormat.Docx => AnalysisArtifactKind.ExportDocx, _ => AnalysisArtifactKind.ExportXlsx },
-                StorageKey = key,
-                ContentType = contentType,
-                FileName = fileName,
-                SizeBytes = bytes.LongLength,
-                Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)),
-                CreatedAt = _clock.UtcNow,
-            };
-            _context.AnalysisArtifacts.Add(artifact);
-            generation.ArtifactId = artifact.ArtifactId;
-            generation.Status = ReportGenerationStatus.Completed;
-            generation.SizeBytes = bytes.LongLength;
-            generation.DurationMs = watch.Elapsed.TotalMilliseconds;
-            _context.ReportGenerationEvents.Add(generation);
-            // Phase 14 ledger: an export is an access with the rows that left the platform as a file.
-            await _accessFacts.RecordAsync(new Core.Monitoring.AccessFactRecording(entry.ApplicationId,
-                answer.Panels.Select(p => new Core.Monitoring.PlanExecution(p.Plan, p.Result.RowCount)).ToList(),
-                Core.Entities.Monitoring.AccessOutcome.Succeeded, version.VersionId, version.MetricId, IsExport: true, ExportFormat: format), cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
-            return new ArtifactDownload(new MemoryStream(bytes, writable: false), fileName, contentType);
+                var size = file.Length;
+                var sha = Convert.ToHexStringLower(await System.Security.Cryptography.SHA256.HashDataAsync(file, cancellationToken));
+                file.Position = 0;
+                var key = await _storage.SaveAsync("analysis-exports", file, cancellationToken);
+                file.Position = 0;
+
+                var fileName = $"{Slug(entry.Title)}-v{version.VersionNumber}-{_clock.UtcNow:yyyyMMdd-HHmm}.{extension}";
+                var artifact = new AnalysisArtifact
+                {
+                    ArtifactId = Ids.New(),
+                    OrganizationId = entry.OrganizationId,
+                    HistoryId = historyId,
+                    VersionId = version.VersionId,
+                    Kind = format switch { ExportFormat.Pdf => AnalysisArtifactKind.ExportPdf, ExportFormat.Docx => AnalysisArtifactKind.ExportDocx, _ => AnalysisArtifactKind.ExportXlsx },
+                    StorageKey = key,
+                    ContentType = contentType,
+                    FileName = fileName,
+                    SizeBytes = size,
+                    Sha256 = sha,
+                    CreatedAt = _clock.UtcNow,
+                };
+                _context.AnalysisArtifacts.Add(artifact);
+                generation.ArtifactId = artifact.ArtifactId;
+                generation.Status = ReportGenerationStatus.Completed;
+                generation.SizeBytes = size;
+                generation.DurationMs = watch.Elapsed.TotalMilliseconds;
+                _context.ReportGenerationEvents.Add(generation);
+                // Phase 14 ledger: an export is an access with the rows that left the platform as a file.
+                await _accessFacts.RecordAsync(new Core.Monitoring.AccessFactRecording(entry.ApplicationId,
+                    answer.Panels.Select((p, i) => new Core.Monitoring.PlanExecution(p.Plan, (int)Math.Min(int.MaxValue, panelRows[i]))).ToList(),
+                    Core.Entities.Monitoring.AccessOutcome.Succeeded, version.VersionId, version.MetricId, IsExport: true, ExportFormat: format), cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+                return new ArtifactDownload(file, fileName, contentType);
+            }
+            catch
+            {
+                await file.DisposeAsync();
+                throw;
+            }
         }
         catch (Exception ex) when (ex is not DomainException and not OperationCanceledException)
         {

@@ -412,6 +412,12 @@
     "working": "جارٍ إعداد إجابتك…",
     "answer": "الإجابة",
     "noRows": "لا توجد بيانات تطابق هذا السؤال.",
+    "longList": {
+      "note": "أول {{shown}} صف من أصل {{total}}.",
+      "noteNoTotal": "أول {{shown}} صف.",
+      "viewAll": "عرض الكل في Excel",
+      "preparing": "جارٍ تجهيز ملف Excel…"
+    },
     "how": "كيف حُسبت هذه الإجابة",
     "assumptions": "الافتراضات",
     "rejected": {
@@ -987,6 +993,8 @@
       "history_version_has_no_result": "لا توجد نتيجة مخزّنة لهذا الإصدار لتصديرها.",
       "export_format_unsupported": "صيغة تصدير غير مدعومة.",
       "export_failed": "تعذّر إنشاء الملف.",
+      "export_not_permitted": "لا تملك صلاحية قراءة هذه البيانات بنفسك، لذا لا يمكن تصدير القائمة كاملة.",
+      "export_plan_changed": "تغيّر هذا التحليل منذ حفظه. أعد تشغيله ثم صدّره مجددًا.",
       "share_recipients_required": "اختر مستلمًا واحدًا على الأقل.",
       "share_too_many_recipients": "عدد المستلمين كبير جدًا لمشاركة واحدة.",
       "share_expiry_in_past": "يجب أن يكون تاريخ الانتهاء في المستقبل.",

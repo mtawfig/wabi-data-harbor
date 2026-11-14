@@ -92,6 +92,8 @@ export interface AnalysisResult {
   rows: (string | number | boolean | null)[][];
   rowCount: number;
   truncated: boolean;
+  /** How many rows the whole list has when it is longer than the rows fetched (P13.50); absent when the list is whole or the count is unknown. */
+  totalRows?: number | null;
   kpis: { column: string; kind: string; value: number }[];
   series: { name: string; categories: string[]; values: number[] }[];
   durationMs: number;

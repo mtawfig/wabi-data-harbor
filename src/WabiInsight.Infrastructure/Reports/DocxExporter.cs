@@ -15,12 +15,13 @@ namespace WabiInsight.Infrastructure.Reports;
 /// numbered sections with KPI tables, chart images (server-rendered PNG) and row tables, and recommendations;
 /// bidirectional paragraphs and right-to-left tables for Arabic; logo and page numbers in the header and footer.
 /// Every number comes from the panel data. Business content only: no methodology, query or row-count details.
-/// A table takes at most <see cref="MaxTableRows"/> rows; the document carries no note about a longer result (P13.49).
+/// A table takes at most <see cref="MaxTableRows"/> rows; a longer list has one line under its table (<see cref="LongListNote"/>),
+/// a link to the answer in the application where the whole list is exported to Excel (P13.50).
 /// </summary>
 public sealed class DocxExporter : IAnswerExporter
 {
     /// <summary>The most rows a table takes in the document.</summary>
-    internal const int MaxTableRows = 100;
+    internal const int MaxTableRows = AnalysisResult.DisplayRows;
     private const string LatinFont = "Inter";
     private const string ArabicFont = "IBM Plex Sans Arabic";
 
@@ -99,6 +100,10 @@ public sealed class DocxExporter : IAnswerExporter
                     else
                     {
                         body.Append(RowsTable(panel, rtl, culture));
+                        if (LongListNote.Text(panel.Result, MaxTableRows, rtl, culture) is { } note)
+                        {
+                            body.Append(NoteParagraph(main, note, request.AnswerUrl, rtl));
+                        }
                     }
                 }
             }
@@ -129,6 +134,31 @@ public sealed class DocxExporter : IAnswerExporter
         {
             body.Append(Paragraph(paragraph, rtl, "Normal"));
         }
+    }
+
+    /// <summary>The line under a long table; a link to the answer in the application when its address is known.</summary>
+    private static Paragraph NoteParagraph(MainDocumentPart main, string text, string? url, bool rtl)
+    {
+        var paragraph = Paragraph(text, rtl, "TableNote");
+        if (string.IsNullOrEmpty(url) || !Uri.TryCreate(url, UriKind.Absolute, out var address))
+        {
+            return paragraph;
+        }
+
+        var relationship = main.AddHyperlinkRelationship(address, true);
+        var link = new Hyperlink { Id = relationship.Id, History = true };
+        foreach (var run in paragraph.Elements<Run>().ToList())
+        {
+            run.Remove();
+            // In the order the format asks for: colour, underline, then the right-to-left mark.
+            run.RunProperties = rtl
+                ? new RunProperties(new Color { Val = "087DF2" }, new Underline { Val = UnderlineValues.Single }, new RightToLeftText())
+                : new RunProperties(new Color { Val = "087DF2" }, new Underline { Val = UnderlineValues.Single });
+            link.Append(run);
+        }
+
+        paragraph.Append(link);
+        return paragraph;
     }
 
     private static Paragraph Paragraph(string text, bool rtl, string style)

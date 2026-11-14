@@ -52,6 +52,20 @@ public sealed class SharesController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
+    /// <summary>"View all in Excel" for a recipient: every row of the lists, under the recipient's own permissions (P13.50).</summary>
+    [HttpPost("with-me/{historyId:guid}/versions/{versionNumber:int}/export/xlsx")]
+    public async Task<IActionResult> SharedWholeList(Guid historyId, int versionNumber, CancellationToken cancellationToken)
+    {
+        var download = await _sharing.ExportSharedWholeListAsync(historyId, versionNumber, cancellationToken);
+        if (download is null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        return File(download.Content, download.ContentType, download.FileName);
+    }
+
     [HttpGet("with-me/{historyId:guid}/versions/{versionNumber:int}/report")]
     public async Task<IActionResult> SharedReport(Guid historyId, int versionNumber, CancellationToken cancellationToken)
     {

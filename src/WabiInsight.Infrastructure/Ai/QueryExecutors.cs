@@ -142,6 +142,100 @@ public sealed class QueryExecutor : IQueryExecutor
         }
     }
 
+    public async Task<long> StreamAsync(Guid applicationId, CompiledQuery query, long maxRows, Func<IReadOnlyList<ResultColumn>, ValueTask> onColumns, Func<object?[], ValueTask> onRow, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(onColumns);
+        ArgumentNullException.ThrowIfNull(onRow);
+        var application = await _context.Applications.AsNoTracking().SingleOrDefaultAsync(a => a.ApplicationId == applicationId, cancellationToken)
+            ?? throw new DomainException(OrganizationOperationOutcome.NotFound, "application_not_found");
+
+        await using var connection = await OpenAsync(application, cancellationToken);
+        DbTransaction? transaction = null;
+        try
+        {
+            if (connection is OracleConnection)
+            {
+                transaction = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+                await using var readOnly = connection.CreateCommand();
+                readOnly.Transaction = transaction;
+                readOnly.CommandText = "SET TRANSACTION READ ONLY";
+                await readOnly.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = query.Sql;
+            // The whole list of a long answer takes longer to read than the first rows of it.
+            command.CommandTimeout = Math.Clamp(_options.ExportTimeoutSeconds, 30, 7200);
+            if (command is OracleCommand oracle)
+            {
+                oracle.BindByName = true;
+            }
+
+            foreach (var parameter in query.Parameters)
+            {
+                var p = command.CreateParameter();
+                p.ParameterName = parameter.Name;
+                p.Value = parameter.Value ?? DBNull.Value;
+                command.Parameters.Add(p);
+            }
+
+            long count = 0;
+            await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult, cancellationToken);
+            if (reader is OracleDataReader oracleReader)
+            {
+                oracleReader.SuppressGetDecimalInvalidCastException = true;
+            }
+
+            await onColumns(Columns(reader));
+            while (count < maxRows && await reader.ReadAsync(cancellationToken))
+            {
+                var values = new object?[reader.FieldCount];
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    values[i] = await reader.IsDBNullAsync(i, cancellationToken) ? null : Normalize(reader.GetValue(i));
+                }
+
+                await onRow(values);
+                count++;
+            }
+
+            return count;
+        }
+        catch (DbException ex)
+        {
+            throw new AnalysisExecutionException(MapError(ex), ex.Message);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException and not AnalysisExecutionException and not DomainException)
+        {
+            throw new AnalysisExecutionException("query_failed", $"{ex.GetType().Name}: {ex.Message}");
+        }
+        finally
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                await transaction.DisposeAsync();
+            }
+        }
+    }
+
+    private static List<ResultColumn> Columns(DbDataReader reader)
+    {
+        var columns = new List<ResultColumn>(reader.FieldCount);
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            var typeName = reader.GetDataTypeName(i).ToLowerInvariant();
+            var clr = reader.GetFieldType(i);
+            var numeric = NumericTypes.Any(t => typeName.StartsWith(t, StringComparison.Ordinal)) || clr == typeof(decimal) || clr == typeof(double) || clr == typeof(float) || clr == typeof(int) || clr == typeof(long) || clr == typeof(short);
+            var temporal = clr == typeof(DateTime) || clr == typeof(DateTimeOffset) || clr == typeof(DateOnly);
+            columns.Add(new ResultColumn(reader.GetName(i), typeName, numeric, temporal));
+        }
+
+        return columns;
+    }
+
     private async Task<DbConnection> OpenAsync(Application application, CancellationToken cancellationToken)
     {
         if (application.DatabaseType == DatabaseType.PlatformInsights)

@@ -16,6 +16,9 @@ public sealed class AiOptions
     /// <summary>Statement timeout for analysis queries on organization sources.</summary>
     public int QueryTimeoutSeconds { get; set; } = 30;
 
+    /// <summary>Statement timeout for reading the whole list of a long answer into its Excel export (P13.50).</summary>
+    public int ExportTimeoutSeconds { get; set; } = 1800;
+
     /// <summary>Default allow-list of provider types organizations may configure themselves.</summary>
     public string[] AllowedProviderTypes { get; set; } = ["Anthropic", "OpenAiCompatible", "Gemini"];
 

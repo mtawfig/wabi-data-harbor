@@ -56,6 +56,8 @@ export interface SharedAnalysisDetail {
   originalPrompt: string;
   promptLanguage: 'en' | 'ar';
   versions: HistoryVersion[];
+  /** True when the recipient may read this data themselves, so "View all in Excel" is offered (P13.50). */
+  canViewAllInExcel?: boolean;
 }
 
 export interface SendEmailRequest {

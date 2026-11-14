@@ -50,9 +50,15 @@ public sealed class SharingService : ISharingService
     private readonly IClock _clock;
     private readonly PlatformUrlOptions _urls;
     private readonly EmailOptions _email;
+    private readonly Reports.WholeListExcel? _wholeLists;
+    private readonly Core.Ai.IAnswerExporter? _excel;
+    private readonly Core.Monitoring.IAccessFactRecorder? _accessFacts;
 
-    public SharingService(ConfigurationDbContext context, ITenantContext tenantContext, IAnalysisHistoryService history, IArtifactStorage storage, INotificationDispatcher notifications, IEmailOutbox outbox, IAuditWriter audit, IUsageEventWriter usage, IClock clock, IOptions<PlatformUrlOptions> urls, IOptions<EmailOptions> email)
+    public SharingService(ConfigurationDbContext context, ITenantContext tenantContext, IAnalysisHistoryService history, IArtifactStorage storage, INotificationDispatcher notifications, IEmailOutbox outbox, IAuditWriter audit, IUsageEventWriter usage, IClock clock, IOptions<PlatformUrlOptions> urls, IOptions<EmailOptions> email, Reports.WholeListExcel? wholeLists = null, IEnumerable<Core.Ai.IAnswerExporter>? exporters = null, Core.Monitoring.IAccessFactRecorder? accessFacts = null)
     {
+        _wholeLists = wholeLists;
+        _excel = exporters?.FirstOrDefault(e => e.Format == ExportFormat.Xlsx);
+        _accessFacts = accessFacts;
         _context = context;
         _tenantContext = tenantContext;
         _history = history;
@@ -248,9 +254,11 @@ public sealed class SharingService : ISharingService
         var entry = await _context.AnalysisHistories.AsNoTracking().SingleAsync(h => h.HistoryId == historyId, cancellationToken);
         var versions = await _context.AnalysisHistoryVersions.AsNoTracking().Where(v => v.HistoryId == historyId && v.Status == AnalysisHistoryStatus.Completed).OrderByDescending(v => v.VersionNumber).ToListAsync(cancellationToken);
         var reportNames = await _context.AnalysisArtifacts.AsNoTracking().Where(a => a.HistoryId == historyId && a.Kind == AnalysisArtifactKind.ReportPdf).ToDictionaryAsync(a => a.VersionId, a => a.FileName, cancellationToken);
+        // "View all in Excel" is offered to a recipient who may read this data themselves; nothing is queried to find out.
+        var canViewAll = _wholeLists is not null && versions.Count > 0 && await _wholeLists.PermittedAsync(entry.ApplicationId, versions[0].QueryPlanJson, cancellationToken);
         return new SharedAnalysisDetailDto(summary, entry.OriginalPrompt, entry.PromptLanguage,
             // A recipient never sees the sharer's model, tokens or cost (F5).
-            versions.Select(v => new HistoryVersionDto(v.VersionId, v.VersionNumber, v.Status, v.FailureStage, v.FailureCode, null, null, null, null, v.DurationMs, v.PanelCount, v.RowCount, v.ResultArtifactId != null, v.ReportArtifactId != null, reportNames.GetValueOrDefault(v.VersionId), v.CreatedAt)).ToList());
+            versions.Select(v => new HistoryVersionDto(v.VersionId, v.VersionNumber, v.Status, v.FailureStage, v.FailureCode, null, null, null, null, v.DurationMs, v.PanelCount, v.RowCount, v.ResultArtifactId != null, v.ReportArtifactId != null, reportNames.GetValueOrDefault(v.VersionId), v.CreatedAt)).ToList(), canViewAll);
     }
 
     public async Task<AskResponse?> GetSharedVersionResultAsync(Guid historyId, int versionNumber, CancellationToken cancellationToken = default)
@@ -263,6 +271,56 @@ public sealed class SharingService : ISharingService
 
         await using var stream = await _storage.OpenReadAsync(artifact.StorageKey, cancellationToken);
         return stream is null ? null : (await JsonSerializer.DeserializeAsync<AskResponse>(stream, JsonOptions, cancellationToken))?.WithoutTechnicalFields();
+    }
+
+    public async Task<ArtifactDownload?> ExportSharedWholeListAsync(Guid historyId, int versionNumber, CancellationToken cancellationToken = default)
+    {
+        var answer = await GetSharedVersionResultAsync(historyId, versionNumber, cancellationToken);
+        if (answer is null || _wholeLists is null || _excel is null)
+        {
+            return null;
+        }
+
+        var entry = await _context.AnalysisHistories.AsNoTracking().SingleAsync(h => h.HistoryId == historyId, cancellationToken);
+        var version = await _context.AnalysisHistoryVersions.AsNoTracking().SingleAsync(v => v.HistoryId == historyId && v.VersionNumber == versionNumber, cancellationToken);
+        // The recipient's own permissions decide, for every answer: one they may not read themselves is not exported.
+        if (!await _wholeLists.PermittedAsync(entry.ApplicationId, version.QueryPlanJson, cancellationToken))
+        {
+            throw new DomainException(OrganizationOperationOutcome.ValidationFailed, "export_not_permitted");
+        }
+
+        var organization = await _context.Organizations.AsNoTracking().SingleAsync(o => o.OrganizationId == entry.OrganizationId, cancellationToken);
+        var application = await _context.Applications.AsNoTracking().SingleAsync(a => a.ApplicationId == entry.ApplicationId, cancellationToken);
+        var rtl = entry.OutputLanguage == "ar";
+        var content = Reports.AnswerReportBuilder.Build(answer, entry.Title, entry.OriginalPrompt, entry.OutputLanguage);
+        var workbook = _excel.Export(new Core.Ai.ExportRequest(answer, content, entry.OutputLanguage, rtl ? organization.OrganizationNameAr : organization.OrganizationName,
+            rtl ? application.ApplicationNameAr : application.ApplicationName, entry.OriginalPrompt, new Core.Ai.ReportBranding(null, null), _clock.UtcNow));
+        var file = await _wholeLists.BuildAsync(workbook, answer, application, version.QueryPlanJson, rtl, cancellationToken);
+        try
+        {
+            if (_accessFacts is not null)
+            {
+                // Phase 14 ledger: the rows that left the platform as a file, under the recipient's name.
+                await _accessFacts.RecordAsync(new Core.Monitoring.AccessFactRecording(entry.ApplicationId,
+                    answer.Panels.Select((p, i) => new Core.Monitoring.PlanExecution(p.Plan, (int)Math.Min(int.MaxValue, file.PanelRows[i]))).ToList(),
+                    Core.Entities.Monitoring.AccessOutcome.Succeeded, version.VersionId, version.MetricId, IsExport: true, ExportFormat: ExportFormat.Xlsx), cancellationToken);
+            }
+
+            _audit.Append(AuditEvents.ShareExported, "AnalysisHistory", historyId.ToString(), new { versionNumber, format = "Xlsx", shared = true, rows = file.PanelRows.Sum() }, entry.OrganizationId);
+            await _context.SaveChangesAsync(cancellationToken);
+            return new ArtifactDownload(file.Content, $"{Slug(entry.Title)}-v{versionNumber}-{_clock.UtcNow:yyyyMMdd-HHmm}.xlsx", _excel.ContentType);
+        }
+        catch
+        {
+            await file.Content.DisposeAsync();
+            throw;
+        }
+    }
+
+    private static string Slug(string title)
+    {
+        var slug = new string(title.Where(c => char.IsLetterOrDigit(c) || c is ' ' or '-').ToArray()).Trim().Replace(' ', '-');
+        return slug.Length == 0 ? "analysis" : slug.Length > 60 ? slug[..60] : slug;
     }
 
     public async Task<ArtifactDownload?> OpenSharedVersionReportAsync(Guid historyId, int versionNumber, CancellationToken cancellationToken = default)

@@ -69,13 +69,24 @@
         <div class="ask__table-wrap">
           <table class="ask__table" data-testid="ask-table">
             <thead><tr>@for (col of p.result.columns; track col.name) { <th [class.num]="col.isNumeric">{{ header(p, col.name) }}</th> }</tr></thead>
-            <tbody>@for (row of p.result.rows; track $index) { <tr>@for (col of p.result.columns; track col.name; let i = $index) { <td [class.num]="col.isNumeric">{{ format(row[i], col.isNumeric) }}</td> }</tr> }</tbody>
+            <tbody>@for (row of shown(p); track $index) { <tr>@for (col of p.result.columns; track col.name; let i = $index) { <td [class.num]="col.isNumeric">{{ format(row[i], col.isNumeric) }}</td> }</tr> }</tbody>
           </table>
         </div>
+        @if (longList(p); as long) {
+          <p class="ask__long" data-testid="ask-long-list">
+            <span data-testid="ask-long-list-note">@if (long.total !== null) { {{ 'ask.longList.note' | transloco: { shown: (long.shown | wiNumber), total: (long.total | wiNumber) } }} } @else { {{ 'ask.longList.noteNoTotal' | transloco: { shown: (long.shown | wiNumber) } }} }</span>
+            @if (excelUrl()) {
+              <button mat-stroked-button type="button" (click)="viewAll()" [disabled]="exportingAll()" data-testid="ask-view-all">
+                <mat-icon>table_view</mat-icon>{{ (exportingAll() ? 'ask.longList.preparing' : 'ask.longList.viewAll') | transloco }}
+              </button>
+            }
+          </p>
+        }
       </div>
     } @empty {
       @if (totalRows() === 0) { <p class="wi-muted">{{ 'ask.noRows' | transloco }}</p> }
     }
+    @if (exportError(); as failed) { <p class="ask__long-error" role="alert" data-testid="ask-view-all-error"><mat-icon>error_outline</mat-icon>{{ failed }}</p> }
 
     <mat-expansion-panel class="ask__how" data-testid="ask-how">
       <mat-expansion-panel-header><mat-panel-title>{{ 'ask.how' | transloco }}</mat-panel-title></mat-expansion-panel-header>
