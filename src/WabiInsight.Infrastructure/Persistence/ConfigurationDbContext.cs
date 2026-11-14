@@ -68,6 +68,8 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<AiSpendingNotice> AiSpendingNotices => Set<AiSpendingNotice>();
 
+    public DbSet<AiCall> AiCalls => Set<AiCall>();
+
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
@@ -165,6 +167,10 @@ public class ConfigurationDbContext : DbContext
 
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
+        // The AI usage ledger is read inside one organization like any tenant table. Its organization is nullable (a
+        // Platform Administrator's provider test belongs to none), so it cannot be ITenantOwned and gets the filter here.
+        modelBuilder.Entity<AiCall>().HasQueryFilter(call => call.OrganizationId == CurrentOrganizationId);
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (typeof(ITenantOwned).IsAssignableFrom(entityType.ClrType))
@@ -212,7 +218,7 @@ public class ConfigurationDbContext : DbContext
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent or ReportGenerationEvent or EmailDraftEvent or AnalysisAccessFact or AnalysisQueryLog or RuleEvaluation or AlertEvent or ReportDelivery && entry.State is EntityState.Modified or EntityState.Deleted)
+            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent or ReportGenerationEvent or EmailDraftEvent or AnalysisAccessFact or AnalysisQueryLog or RuleEvaluation or AlertEvent or ReportDelivery or AiCall && entry.State is EntityState.Modified or EntityState.Deleted)
             {
                 throw new InvalidOperationException($"{entry.Metadata.ClrType.Name} rows are append-only.");
             }

@@ -10,6 +10,12 @@ namespace WabiInsight.Core.Ai;
 /// </summary>
 public sealed record AiRequest(string SystemPrompt, string UserContent, string? JsonSchema, string SchemaName, int MaxOutputTokens, string? Effort, string? SharedContext = null)
 {
+    /// <summary>What the call is for (<see cref="AiCallPurposes"/>): written to the AI usage ledger with the call.</summary>
+    public string Purpose { get; init; } = AiCallPurposes.Other;
+
+    /// <summary>The organization the call is made for and charged to; null only for a Platform Administrator's provider test.</summary>
+    public Guid? OrganizationId { get; init; }
+
     public string FullUserContent => string.IsNullOrEmpty(SharedContext) ? UserContent : SharedContext + UserContent;
 }
 
@@ -33,14 +39,22 @@ public sealed record AiProviderDescriptor(Guid ProviderId, AiProviderType Provid
     /// </summary>
     public bool PublicAddressesOnly { get; init; }
 
-    public decimal EstimateCost(AiUsage usage)
+    public decimal EstimateCost(AiUsage usage) => EstimateInputCost(usage) + EstimateOutputCost(usage);
+
+    /// <summary>Cost of the input side: uncached tokens, cache writes and cache reads, each at its own price.</summary>
+    public decimal EstimateInputCost(AiUsage usage)
     {
         ArgumentNullException.ThrowIfNull(usage);
         var uncached = Math.Max(0, usage.InputTokens - usage.CachedInputTokens - usage.CacheWriteTokens);
         return (uncached * InputPricePerMillion
             + usage.CacheWriteTokens * InputPricePerMillion * CacheWritePriceFactor
-            + usage.CachedInputTokens * CachedInputPricePerMillion
-            + usage.OutputTokens * OutputPricePerMillion) / 1_000_000m;
+            + usage.CachedInputTokens * CachedInputPricePerMillion) / 1_000_000m;
+    }
+
+    public decimal EstimateOutputCost(AiUsage usage)
+    {
+        ArgumentNullException.ThrowIfNull(usage);
+        return usage.OutputTokens * OutputPricePerMillion / 1_000_000m;
     }
 }
 
@@ -81,6 +95,25 @@ public interface IAiProvider
     Task<AiCompletion> CompleteAsync(AiProviderDescriptor descriptor, AiRequest request, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// The question run the current scope's AI calls belong to. The analysis service sets it before it plans, so the plan,
+/// interpretation and report calls of one question carry the same run in the AI usage ledger.
+/// </summary>
+public interface IAiCallScope
+{
+    Guid? RunId { get; set; }
+}
+
+/// <summary>Writes one row of the AI usage ledger. Only the provider wrapper calls it.</summary>
+public interface IAiCallRecorder
+{
+    Task RecordAsync(AiProviderDescriptor descriptor, AiRequest request, AiCompletion? completion, string? failureCode, double durationMs);
+}
+
+/// <summary>
+/// Resolves the adapter of a provider type. Every adapter it returns records its calls in the AI usage ledger
+/// (<see cref="AiCall"/>): this is the only way the application reaches a model.
+/// </summary>
 public interface IAiProviderFactory
 {
     IAiProvider Resolve(AiProviderType providerType);

@@ -294,7 +294,7 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
     private async Task<MonitoringSettingsDto> ToSettingsAsync(Core.Entities.Platform.Organization organization, CancellationToken cancellationToken) => new(
         organization.MonitoringDigestTime, organization.WorkingHoursStart, organization.WorkingHoursEnd, organization.WorkingDays,
         RetentionPurgeJob.EffectiveRetentionMonths(organization, _options), Math.Max(1, _options.MaxRetentionMonths), organization.TimeZone,
-        organization.MonthlyAiBudget, await AiSpend.MonthToDateAsync(_context.AnalysisExecutionMetrics, organization, _clock.UtcNow, cancellationToken));
+        organization.MonthlyAiBudget, await AiSpend.MonthToDateAsync(_context.AiCalls, organization, _clock.UtcNow, cancellationToken));
 
     public async Task<RuleDraftDto> DraftAsync(RuleDraftRequest request, CancellationToken cancellationToken = default)
     {
@@ -346,7 +346,7 @@ public sealed class MonitoringRuleService : IMonitoringRuleService
         var resolved = await _providers.ResolveForOrganizationAsync(organizationId, cancellationToken);
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var completion = await resolved.Provider.CompleteAsync(resolved.Descriptor,
-            new AiRequest(RuleDraftSchema.SystemPrompt, userContent, RuleDraftSchema.Json, RuleDraftSchema.Name, Math.Max(resolved.Descriptor.MaxOutputTokens, 2048), resolved.Descriptor.Effort), cancellationToken);
+            new AiRequest(RuleDraftSchema.SystemPrompt, userContent, RuleDraftSchema.Json, RuleDraftSchema.Name, Math.Max(resolved.Descriptor.MaxOutputTokens, 2048), resolved.Descriptor.Effort) { Purpose = Core.Entities.Ai.AiCallPurposes.RuleDraft, OrganizationId = organizationId }, cancellationToken);
         _usage.Append(Core.Entities.Usage.UsageEventTypes.RuleDrafted, "MonitoringRule", null, quantity: completion.Usage.InputTokens + completion.Usage.OutputTokens,
             metadata: new { provider = resolved.Descriptor.ProviderType.ToString(), completion.Model, completion.Usage.InputTokens, completion.Usage.OutputTokens, cost = resolved.Descriptor.EstimateCost(completion.Usage), ms = watch.Elapsed.TotalMilliseconds, objects = catalogue.Count }, organizationId: organizationId);
         await _context.SaveChangesAsync(cancellationToken);

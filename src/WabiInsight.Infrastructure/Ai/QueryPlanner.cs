@@ -93,7 +93,7 @@ public sealed class QueryPlanner : IQueryPlanner
         AiCompletion completion;
         try
         {
-            completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(PromptBuilder.SystemPrompt, prompt.Request, AnalysisPlanSchema.Json, AnalysisPlanSchema.Name, Math.Max(resolved.Descriptor.MaxOutputTokens, AnalysisPlanSchema.MinPlanOutputTokens), resolved.Descriptor.Effort, SharedContext: prompt.Catalogue), cancellationToken);
+            completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(PromptBuilder.SystemPrompt, prompt.Request, AnalysisPlanSchema.Json, AnalysisPlanSchema.Name, Math.Max(resolved.Descriptor.MaxOutputTokens, AnalysisPlanSchema.MinPlanOutputTokens), resolved.Descriptor.Effort, SharedContext: prompt.Catalogue) { Purpose = Core.Entities.Ai.AiCallPurposes.Plan, OrganizationId = organizationId }, cancellationToken);
         }
         catch (AiProviderException ex)
         {

@@ -160,6 +160,8 @@ Ten sections: sticky header (wordmark with tagline, section links, language swit
 - Notifications: `Ai.SpendingNear` (amber warning icon) and `Ai.SpendingReached` (block icon) open *AI Spending*.
 - `docs/screenshots/p13-47-*.png`: the page by employee, filtered and month by month (EN), in Arabic on desktop and phone, the Ask band for a user (EN, and Arabic on a phone) and for an administrator, and the notification centre.
 
+**P13.48:** the employee table has *Input tokens* and *Output tokens* columns (right-aligned numbers, totals in the last row); on a phone they are two more lines of each card. Screens: `docs/screenshots/p13-48-ai-spending-{en,ar}.png`, `p13-48-ai-spending-phone-{en,ar}.png`.
+
 ## Profile, dashboard and Integrations (P11.2)
 - *Profile*: avatar with initials, name, email, organization, role chips, account type, preferred language; side cards for the interface language (switcher), password (link to the change-password screen) and "managed by your administrator" (link to a new ticket).
 - User *Dashboard*: four count tiles (saved analyses, files in My Reports, shared with me, favorites) linking to their pages, a *Recent analyses* card and the support ticket widget — the "coming soon" card is gone.

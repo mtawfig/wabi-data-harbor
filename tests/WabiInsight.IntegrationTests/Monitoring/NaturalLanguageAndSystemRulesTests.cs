@@ -65,6 +65,15 @@ public sealed class NaturalLanguageAndSystemRulesTests : IDisposable
         var response = await manager.PostJsonAsync("/api/monitoring/rules/draft", new { description = ArabicDescription, language = "ar" });
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         var draft = await response.ReadJsonAsync();
+        // Drafting a rule reaches a model like a question does: it is on the AI usage ledger and counts as spending (P13.48).
+        await using (var ledger = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var drafted = await ledger.AiCalls.IgnoreQueryFilters().Where(c => c.Purpose == AiCallPurposes.RuleDraft && c.OrganizationId == _db.Data.OrganizationAId).OrderByDescending(c => c.CreatedAt).FirstAsync();
+            Assert.True(drafted.Succeeded);
+            Assert.Null(drafted.RunId);
+            Assert.True(drafted.InputTokens > 0 && drafted.TotalCost > 0);
+        }
+
         var rule = draft.GetProperty("rule");
         var data = rule.GetProperty("definition").GetProperty("data");
         Assert.Equal("Data", rule.GetProperty("kind").GetString());
@@ -232,9 +241,16 @@ public sealed class NaturalLanguageAndSystemRulesTests : IDisposable
 
             for (var i = 0; i < 2; i++)
             {
+                var runId = Ids.New();
+                // The month's AI spending is read from the AI usage ledger (P13.48).
+                context.AiCalls.Add(new AiCall
+                {
+                    CallId = Ids.New(), OrganizationId = _db.Data.OrganizationAId, UserId = _db.Data.UserA1Id, RunId = runId, Purpose = AiCallPurposes.Plan, ProviderType = "Anthropic", Model = "test-model",
+                    InputCost = 40m, OutputCost = 5m, TotalCost = 45m, Succeeded = true, CreatedAt = now.AddMinutes(-3 - i),
+                });
                 context.AnalysisExecutionMetrics.Add(new AnalysisExecutionMetric
                 {
-                    MetricId = Ids.New(), OrganizationId = _db.Data.OrganizationAId, UserId = _db.Data.UserA1Id, ApplicationId = applicationId, Status = AnalysisStatus.Failed,
+                    MetricId = runId, OrganizationId = _db.Data.OrganizationAId, UserId = _db.Data.UserA1Id, ApplicationId = applicationId, Status = AnalysisStatus.Failed,
                     FailureStage = "execute", FailureCode = "source_unreachable", EstimatedCost = 45m, CreatedAt = now.AddMinutes(-3 - i),
                 });
             }

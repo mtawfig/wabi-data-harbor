@@ -52,10 +52,12 @@ public sealed partial class AnalysisService : IAnalysisService
     private readonly IArtifactStorage _storage;
     private readonly IAccessFactRecorder _accessFacts;
     private readonly Core.Plans.IAiSpendingGuard? _spending;
+    private readonly IAiCallScope? _calls;
 
-    public AnalysisService(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IAiProviderResolver providers, IUsageEventWriter usage, IClock clock, ILogger<AnalysisService> logger, ReportComposer reports, IReportRenderer renderer, IArtifactStorage storage, IAccessFactRecorder accessFacts, Core.Plans.IAiSpendingGuard? spending = null)
+    public AnalysisService(ConfigurationDbContext context, ITenantContext tenantContext, IQueryPlanner planner, ISqlDialectCompilerFactory compilers, IQueryExecutor executor, IAiProviderResolver providers, IUsageEventWriter usage, IClock clock, ILogger<AnalysisService> logger, ReportComposer reports, IReportRenderer renderer, IArtifactStorage storage, IAccessFactRecorder accessFacts, Core.Plans.IAiSpendingGuard? spending = null, IAiCallScope? calls = null)
     {
         _spending = spending;
+        _calls = calls;
         _accessFacts = accessFacts;
         _reports = reports;
         _renderer = renderer;
@@ -90,6 +92,11 @@ public sealed partial class AnalysisService : IAnalysisService
         var language = request.Language == "ar" ? "ar" : "en";
         var total = Stopwatch.StartNew();
         var metric = new AnalysisExecutionMetric { MetricId = Ids.New(), OrganizationId = organizationId, UserId = userId, ApplicationId = request.ApplicationId, Language = language, CreatedAt = _clock.UtcNow };
+        if (_calls is not null)
+        {
+            // The plan, interpretation and report calls of this question carry its run in the AI usage ledger.
+            _calls.RunId = metric.MetricId;
+        }
 
         PlanResponse planned;
         try
@@ -467,7 +474,7 @@ public sealed partial class AnalysisService : IAnalysisService
             """ + PromptBuilder.BusinessReaderRule;
         var watch = Stopwatch.StartNew();
         // Low effort keeps the explanation quick; the budget leaves room for the model's reasoning on large multi-panel answers.
-        var completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(system, user, InterpretationSchema, "wabi_interpretation", Math.Max(resolved.Descriptor.MaxOutputTokens, MinInterpretOutputTokens), "low"), cancellationToken);
+        var completion = await resolved.Provider.CompleteAsync(resolved.Descriptor, new AiRequest(system, user, InterpretationSchema, "wabi_interpretation", Math.Max(resolved.Descriptor.MaxOutputTokens, MinInterpretOutputTokens), "low") { Purpose = AiCallPurposes.Interpret, OrganizationId = organizationId }, cancellationToken);
         var usage = new PlanUsage(resolved.Descriptor.ProviderType.ToString(), completion.Model, completion.Usage.InputTokens, completion.Usage.OutputTokens, completion.Usage.CachedInputTokens, resolved.Descriptor.EstimateCost(completion.Usage), watch.Elapsed.TotalMilliseconds);
         var interpretation = ParseInterpretation(completion.Text, CutOff(completion.StopReason), usage);
         if (interpretation.Incomplete)

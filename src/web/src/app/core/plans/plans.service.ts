@@ -68,6 +68,9 @@ export interface AiSpendingUserRow {
   requests: number;
   spend: number;
   sharePercent: number;
+  /** Tokens sent to and written by the model for this employee's requests (P13.48). */
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export interface AiSpendingMonthlyRow {
@@ -95,6 +98,8 @@ export interface AiSpendingReport {
   monthly: AiSpendingMonthlyRow[];
   monthlyTotals: number[];
   users: { userId: string; fullName: string }[];
+  totalInputTokens: number;
+  totalOutputTokens: number;
 }
 
 @Injectable({ providedIn: 'root' })
