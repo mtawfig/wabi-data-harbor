@@ -162,6 +162,9 @@ Ten sections: sticky header (wordmark with tagline, section links, language swit
 
 **P13.48:** the employee table has *Input tokens* and *Output tokens* columns (right-aligned numbers, totals in the last row); on a phone they are two more lines of each card. Screens: `docs/screenshots/p13-48-ai-spending-{en,ar}.png`, `p13-48-ai-spending-phone-{en,ar}.png`.
 
+## Numbers in documents (P13.51)
+- PDF, Word and the chart images of Excel write numbers through `DocumentCulture`: Western digits, a comma between thousands and a point before decimals, in English and in Arabic (the same digits as the text the model writes). Month names follow the document's language. The web page is different on purpose: it writes Arabic digits in Arabic (`wiNumber`, `LocalizedTranspiler`).
+
 ## Long lists (P13.50)
 - A result table shows at most 100 rows. Under a longer list: one muted line with the numbers (*First 100 rows of 10,555.*, Arabic digits in Arabic) at the start and a stroked *View all in Excel* button (`table_view` icon) at the end; on a phone the button wraps under the line. No warning colour: the line states numbers, it does not warn.
 - PDF and Word: the same line under the table, in blue, as a link to the answer.

@@ -20,7 +20,7 @@ namespace WabiInsight.UnitTests.Ai;
 /// </summary>
 public sealed class ReportCompletenessTests
 {
-    private static readonly CultureInfo Arabic = CultureInfo.GetCultureInfo("ar-AE");
+    private static readonly CultureInfo Arabic = DocumentCulture.For(rtl: true);
     private const string AnswerUrl = "https://insight.example/app/history/0195c0de-0000-7000-8000-000000000001";
 
     /// <summary>Words the note never uses: it states numbers, it does not judge the list.</summary>
@@ -269,6 +269,32 @@ public sealed class ReportCompletenessTests
         var whole = TablePanel(5).Result with { Kpis = kpis };
         Assert.Same(whole, whole.For(new QueryPlan()));
         Assert.Equal(5, whole.WholeListRows);
+    }
+
+    // Numbers in Arabic documents are written the same way on every server.
+
+    [Fact]
+    public void ArabicDocuments_WriteNumbersWithWesternDigitsAndAComma_WhateverTheOperatingSystemsOwnFormatIs()
+    {
+        var arabic = DocumentCulture.For(rtl: true);
+
+        // P13.51: on Windows the system's Arabic format gave 8٬094 (the Arabic thousands mark between Western digits).
+        Assert.Equal(",", arabic.NumberFormat.NumberGroupSeparator);
+        Assert.Equal(".", arabic.NumberFormat.NumberDecimalSeparator);
+        Assert.Equal("-", arabic.NumberFormat.NegativeSign);
+        Assert.Equal("8,094", QuestPdfReportRenderer.FormatValue(8094, isNumeric: true, arabic));
+        Assert.Equal("1,234.5", QuestPdfReportRenderer.FormatValue(1234.5, isNumeric: true, arabic));
+        Assert.Equal("-1,250", QuestPdfReportRenderer.FormatValue(-1250, isNumeric: true, arabic));
+        Assert.Equal("أول 100 صف من أصل 8,094. القائمة الكاملة متوفرة في Excel.", LongListNote.Text(TablePanel(1000, truncated: true, totalRows: 8094).Result, 100, rtl: true, arabic));
+        foreach (var text in new[] { QuestPdfReportRenderer.FormatValue(1234567.25, true, arabic), LongListNote.Text(TablePanel(1000, truncated: true, totalRows: 8094).Result, 100, true, arabic)! })
+        {
+            Assert.DoesNotContain('\u066C', text);
+            Assert.DoesNotContain('\u066B', text);
+        }
+
+        // Month names stay Arabic, and English documents are unchanged.
+        Assert.Equal("ar-AE", arabic.Name);
+        Assert.Same(CultureInfo.InvariantCulture, DocumentCulture.For(rtl: false));
     }
 
     // Dates read as dates wherever a cell is written as text.

@@ -95,7 +95,7 @@ public sealed class XlsxExporter : IAnswerExporter
             {
                 row++;
                 summary.Cell(row++, 1).SetValue(panel.Title.Length > 0 ? panel.Title : panel.Plan.Objective).Style.Font.SetBold();
-                var chart = ChartImageRenderer.RenderImage(type, ColumnHeaders.Series(panel, rtl), culture: rtl ? CultureInfo.GetCultureInfo("ar-AE") : CultureInfo.InvariantCulture);
+                var chart = ChartImageRenderer.RenderImage(type, ColumnHeaders.Series(panel, rtl), culture: DocumentCulture.For(rtl));
                 using var png = new MemoryStream(chart.Png);
                 // Rows above may be taller than the default because of wrapped text; anchor one row lower and leave room below the
                 // image (default rows are 20 px; a chart with angled labels is taller than 340 px).

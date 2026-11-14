@@ -46,7 +46,7 @@ public sealed class QuestPdfReportRenderer : IReportRenderer
         EnsureFonts();
         var rtl = request.Language == "ar";
         var font = rtl ? ArabicFont : LatinFont;
-        var culture = rtl ? CultureInfo.GetCultureInfo("ar-AE") : CultureInfo.InvariantCulture;
+        var culture = DocumentCulture.For(rtl);
         var content = request.Content;
         var generatedOn = request.GeneratedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + " UTC";
         var document = Document.Create(container =>

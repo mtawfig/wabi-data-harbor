@@ -37,7 +37,7 @@ public sealed class DocxExporter : IAnswerExporter
         var rtl = request.Language == "ar";
         var font = rtl ? ArabicFont : LatinFont;
         var content = request.Content;
-        var culture = rtl ? CultureInfo.GetCultureInfo("ar-AE") : CultureInfo.InvariantCulture;
+        var culture = DocumentCulture.For(rtl);
         using var stream = new MemoryStream();
         using (var document = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
         {
