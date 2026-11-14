@@ -12,6 +12,7 @@ Wabi Insight (platform code AP-AIR) is a bilingual (EN/AR), multi-organization e
 - Platform Administrators access organization configuration only through an approved, unexpired, scoped `SupportAccessGrant` in support mode, and never business data.
 - Secrets (connection strings, provider keys, OAuth tokens) are encrypted with ASP.NET Core Data Protection and never returned to the browser. The key ring lives under `DataProtection:KeyRingPath` (default `.artifacts/keys`, git-ignored); point it at a persistent directory in deployment or encrypted values become unreadable.
 - `AuditLogs`, `UsageEvents`, `SupportTicketEvents` are append-only.
+- Every request to a model goes through an adapter from `IAiProviderFactory`, which records it in the append-only AI usage ledger `AiCalls` (P13.48). Never call a provider adapter obtained any other way; the month's AI spending is the sum of that ledger.
 - Status/type values are stable codes; labels are localized (EN + AR) in resources.
 - Phase 14 (proactive agent, `docs/PROACTIVE_AGENT.md`): monitoring rules evaluate under their **owner's** permissions and never widen them; periodic reports render **per recipient under the recipient's permissions**; alerts never suspend users automatically (human action only); the engine holds no business-domain logic — rules bind to the organization's catalogued objects/columns and templates are offered only when the required field roles exist; `AnalysisAccessFacts`, `RuleEvaluations`, `AlertEvents` are append-only.
 

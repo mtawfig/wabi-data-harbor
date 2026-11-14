@@ -22,6 +22,100 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Ai.AiCall", b =>
+                {
+                    b.Property<Guid>("CallId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("CacheWriteTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("CachedInputPricePerMillion")
+                        .HasPrecision(14, 6)
+                        .HasColumnType("decimal(14,6)");
+
+                    b.Property<long>("CachedInputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<double>("DurationMs")
+                        .HasColumnType("float");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("InputCost")
+                        .HasPrecision(14, 6)
+                        .HasColumnType("decimal(14,6)");
+
+                    b.Property<decimal?>("InputPricePerMillion")
+                        .HasPrecision(14, 6)
+                        .HasColumnType("decimal(14,6)");
+
+                    b.Property<long>("InputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("OutputCost")
+                        .HasPrecision(14, 6)
+                        .HasColumnType("decimal(14,6)");
+
+                    b.Property<decimal?>("OutputPricePerMillion")
+                        .HasPrecision(14, 6)
+                        .HasColumnType("decimal(14,6)");
+
+                    b.Property<long>("OutputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("ProviderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProviderType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid?>("RunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("StopReason")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("TotalCost")
+                        .HasPrecision(14, 6)
+                        .HasColumnType("decimal(14,6)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("CallId");
+
+                    b.HasIndex("RunId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.ToTable("AiCalls", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Ai.AiProviderConfiguration", b =>
                 {
                     b.Property<Guid>("ProviderId")

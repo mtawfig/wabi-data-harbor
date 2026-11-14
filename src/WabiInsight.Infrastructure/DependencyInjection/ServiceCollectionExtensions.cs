@@ -225,7 +225,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAiProvider, AnthropicProvider>();
         services.AddSingleton<IAiProvider, OpenAiCompatibleProvider>();
         services.AddSingleton<IAiProvider, GeminiProvider>();
-        services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
+        // Every adapter the application gets is wrapped so that each call is written to the AI usage ledger (P13.48).
+        services.AddSingleton<AiProviderFactory>();
+        services.AddScoped<IAiCallScope, AiCallScope>();
+        services.AddScoped<IAiCallRecorder, AiCallRecorder>();
+        services.AddScoped<IAiProviderFactory, RecordingAiProviderFactory>();
         services.AddScoped<AiProviderService>();
         services.AddScoped<IAiProviderService>(sp => sp.GetRequiredService<AiProviderService>());
         services.AddScoped<IAiProviderResolver>(sp => sp.GetRequiredService<AiProviderService>());

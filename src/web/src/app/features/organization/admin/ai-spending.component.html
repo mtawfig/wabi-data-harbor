@@ -70,7 +70,7 @@
           <table class="plain spend__table" data-testid="spend-table">
             <thead><tr>
               <th>{{ 'aiSpending.columns.employee' | transloco }}</th><th>{{ 'aiSpending.columns.number' | transloco }}</th><th>{{ 'aiSpending.columns.department' | transloco }}</th>
-              <th class="num">{{ 'aiSpending.columns.requests' | transloco }}</th><th class="num">{{ 'aiSpending.columns.spend' | transloco }}</th><th class="num">{{ 'aiSpending.columns.share' | transloco }}</th>
+              <th class="num">{{ 'aiSpending.columns.requests' | transloco }}</th><th class="num">{{ 'aiSpending.columns.inputTokens' | transloco }}</th><th class="num">{{ 'aiSpending.columns.outputTokens' | transloco }}</th><th class="num">{{ 'aiSpending.columns.spend' | transloco }}</th><th class="num">{{ 'aiSpending.columns.share' | transloco }}</th>
             </tr></thead>
             <tbody>
               @for (row of r.rows; track row.userId) {
@@ -79,6 +79,8 @@
                   <td><span class="wi-ltr">{{ row.employeeNumber || '—' }}</span></td>
                   <td>{{ department(row) }}</td>
                   <td class="num">{{ row.requests | wiNumber }}</td>
+                  <td class="num" [attr.data-testid]="'spend-input-' + row.userId">{{ row.inputTokens | wiNumber }}</td>
+                  <td class="num" [attr.data-testid]="'spend-output-' + row.userId">{{ row.outputTokens | wiNumber }}</td>
                   <td class="num"><span class="wi-ltr">{{ row.spend | wiNumber: '1.2-2' }}</span></td>
                   <td class="num">{{ row.sharePercent | wiNumber: '1.0-1' }}%</td>
                 </tr>
@@ -86,6 +88,8 @@
               <tr class="spend__total" data-testid="spend-total-row">
                 <td>{{ 'aiSpending.total' | transloco }}</td><td></td><td></td>
                 <td class="num">{{ r.totalRequests | wiNumber }}</td>
+                <td class="num" data-testid="spend-total-input">{{ r.totalInputTokens | wiNumber }}</td>
+                <td class="num" data-testid="spend-total-output">{{ r.totalOutputTokens | wiNumber }}</td>
                 <td class="num"><span class="wi-ltr">{{ r.totalSpend | wiNumber: '1.2-2' }}</span></td>
                 <td class="num">@if (r.totalSpend > 0) { {{ 100 | wiNumber }}% }</td>
               </tr>

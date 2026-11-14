@@ -238,7 +238,7 @@ public sealed partial class ServicePlanService : IServicePlanService, IAiSpendin
     {
         var plan = organization.ServicePlanId is { } id ? await _context.ServicePlans.AsNoTracking().SingleOrDefaultAsync(p => p.PlanId == id, cancellationToken) : null;
         // The organization is named explicitly: this also runs for a Platform Administrator, who has no tenant filter.
-        var spend = await AiSpend.MonthToDateAsync(_context.AnalysisExecutionMetrics.IgnoreQueryFilters(), organization, _clock.UtcNow, cancellationToken);
+        var spend = await AiSpend.MonthToDateAsync(_context.AiCalls.IgnoreQueryFilters(), organization, _clock.UtcNow, cancellationToken);
         return new OrganizationPlanDto(organization.OrganizationId, plan?.PlanId, plan?.PlanCode, plan?.NameEn, plan?.NameAr, plan?.MonthlyAiSpendLimit, Math.Round(spend, 2),
             AiSpendingState.Of(plan?.MonthlyAiSpendLimit, spend));
     }

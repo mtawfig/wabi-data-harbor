@@ -243,7 +243,7 @@ public sealed class RuleEvaluator
                     return new RuleRunResult(RuleEvaluationOutcome.Skipped, [], 0, "ai_budget_not_set", false);
                 }
 
-                var spend = await AiSpend.MonthToDateAsync(_context.AnalysisExecutionMetrics, organization, now, cancellationToken);
+                var spend = await AiSpend.MonthToDateAsync(_context.AiCalls, organization, now, cancellationToken);
                 var percent = Math.Round(spend / budget * 100m, 1);
                 examined = 1;
                 if (percent >= rule.Threshold)
@@ -554,15 +554,19 @@ public sealed class RuleEvaluator
 /// <summary>The organization's AI spend this calendar month (organization time zone), from the analysis metrics.</summary>
 public static class AiSpend
 {
-    public static async Task<decimal> MonthToDateAsync(IQueryable<Core.Entities.Ai.AnalysisExecutionMetric> metrics, Organization organization, DateTimeOffset now, CancellationToken cancellationToken)
+    /// <summary>
+    /// The organization's AI spending since the start of the month in its time zone: the sum of the AI usage ledger
+    /// (P13.48), so every call that reached a model counts, whatever feature made it.
+    /// </summary>
+    public static async Task<decimal> MonthToDateAsync(IQueryable<Core.Entities.Ai.AiCall> calls, Organization organization, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(metrics);
+        ArgumentNullException.ThrowIfNull(calls);
         ArgumentNullException.ThrowIfNull(organization);
         var zone = JobRecurrence.ResolveTimeZone(organization.TimeZone);
         var local = TimeZoneInfo.ConvertTime(now, zone);
         var monthStart = new DateTime(local.Year, local.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
         var startUtc = new DateTimeOffset(monthStart, zone.GetUtcOffset(monthStart));
         var organizationId = organization.OrganizationId;
-        return await metrics.AsNoTracking().Where(m => m.OrganizationId == organizationId && m.CreatedAt >= startUtc).SumAsync(m => (decimal?)m.EstimatedCost, cancellationToken) ?? 0m;
+        return await calls.AsNoTracking().Where(c => c.OrganizationId == organizationId && c.CreatedAt >= startUtc).SumAsync(c => (decimal?)c.TotalCost, cancellationToken) ?? 0m;
     }
 }

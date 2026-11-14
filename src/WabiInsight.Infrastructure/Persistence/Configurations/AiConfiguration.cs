@@ -50,3 +50,27 @@ internal sealed class AnalysisExecutionMetricConfiguration : IEntityTypeConfigur
         builder.HasIndex(m => new { m.OrganizationId, m.UserId });
     }
 }
+
+internal sealed class AiCallConfiguration : IEntityTypeConfiguration<AiCall>
+{
+    public void Configure(EntityTypeBuilder<AiCall> builder)
+    {
+        builder.ToTable("AiCalls");
+        builder.HasKey(c => c.CallId);
+        builder.Property(c => c.CallId).ValueGeneratedNever();
+        builder.Property(c => c.Purpose).HasMaxLength(32).IsRequired();
+        builder.Property(c => c.ProviderType).HasMaxLength(32).IsRequired();
+        builder.Property(c => c.Model).HasMaxLength(200).IsRequired();
+        builder.Property(c => c.FailureCode).HasMaxLength(100);
+        builder.Property(c => c.StopReason).HasMaxLength(50);
+        builder.Property(c => c.InputCost).HasPrecision(14, 6);
+        builder.Property(c => c.OutputCost).HasPrecision(14, 6);
+        builder.Property(c => c.TotalCost).HasPrecision(14, 6);
+        builder.Property(c => c.InputPricePerMillion).HasPrecision(14, 6);
+        builder.Property(c => c.OutputPricePerMillion).HasPrecision(14, 6);
+        builder.Property(c => c.CachedInputPricePerMillion).HasPrecision(14, 6);
+        // The month's spending of an organization is one range read of this index.
+        builder.HasIndex(c => new { c.OrganizationId, c.CreatedAt });
+        builder.HasIndex(c => c.RunId);
+    }
+}

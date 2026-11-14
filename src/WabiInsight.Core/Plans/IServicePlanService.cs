@@ -69,7 +69,7 @@ public interface IAiSpendingGuard
 /// <summary>What the spending report covers. Dates are days in the organization's time zone, both included.</summary>
 public sealed record AiSpendingReportFilter(DateOnly? From, DateOnly? To, Guid? UserId, decimal? MinSpend, decimal? MaxSpend, bool SuccessfulOnly);
 
-public sealed record AiSpendingUserRow(Guid UserId, string FullName, string? EmployeeNumber, string? DepartmentNameEn, string? DepartmentNameAr, bool IsActive, int Requests, decimal Spend, decimal SharePercent);
+public sealed record AiSpendingUserRow(Guid UserId, string FullName, string? EmployeeNumber, string? DepartmentNameEn, string? DepartmentNameAr, bool IsActive, int Requests, decimal Spend, decimal SharePercent, long InputTokens = 0, long OutputTokens = 0);
 
 public sealed record AiSpendingMonthlyRow(Guid UserId, string FullName, IReadOnlyList<decimal> Spend, decimal Total);
 
@@ -83,7 +83,7 @@ public sealed record AiSpendingReportDto(
     string State, string? PlanCode, string? PlanNameEn, string? PlanNameAr, decimal? MonthlyAiSpendLimit, decimal MonthSpend, decimal? PercentUsed,
     DateOnly From, DateOnly To, int TotalRequests, decimal TotalSpend, IReadOnlyList<AiSpendingUserRow> Rows,
     IReadOnlyList<string> Months, IReadOnlyList<AiSpendingMonthlyRow> Monthly, IReadOnlyList<decimal> MonthlyTotals,
-    IReadOnlyList<AiSpendingUserOption> Users);
+    IReadOnlyList<AiSpendingUserOption> Users, long TotalInputTokens = 0, long TotalOutputTokens = 0);
 
 /// <summary>Per-employee AI spending of the signed-in administrator's own organization.</summary>
 public interface IAiSpendingReportService

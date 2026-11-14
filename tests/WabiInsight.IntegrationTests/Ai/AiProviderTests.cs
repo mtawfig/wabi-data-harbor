@@ -125,6 +125,16 @@ public sealed class AiProviderTests : IDisposable
         var test = await (await platform.PostJsonAsync($"/api/platform/ai-providers/{localId}/test", new { })).ReadJsonAsync();
         Assert.True(test.GetProperty("succeeded").GetBoolean());
         Assert.Equal("local-key", FakeAiProvider.LastDescriptor!.ApiKey);
+        // A Platform Administrator's test is on the AI usage ledger and belongs to no organization (P13.48).
+        await using (var ledger = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            var tested = await ledger.AiCalls.IgnoreQueryFilters().Where(c => c.ProviderId == localId).ToListAsync();
+            var call = Assert.Single(tested);
+            Assert.Equal(AiCallPurposes.ProviderTest, call.Purpose);
+            Assert.Null(call.OrganizationId);
+            Assert.Null(call.UserId);
+            Assert.True(call.Succeeded);
+        }
         Assert.Equal(HttpStatusCode.BadRequest, (await platform.PostJsonAsync("/api/platform/ai-providers", new { providerType = "Gemini", name = "Bad endpoint", endpoint = "ftp://x", model = "m", apiKey = "k" })).StatusCode);
 
         Assert.Equal(HttpStatusCode.OK, (await platform.PostJsonAsync($"/api/platform/ai-providers/{localId}/default", new { })).StatusCode);

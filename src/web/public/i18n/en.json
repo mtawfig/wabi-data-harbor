@@ -2573,7 +2573,7 @@
   },
   "aiSpending": {
     "title": "AI Spending",
-    "subtitle": "What your organization's AI requests cost, by employee. Amounts are estimated costs in USD; questions and data are never shown here.",
+    "subtitle": "What your organization's AI requests cost, by employee. Every request sent to the AI is counted. Amounts are estimated costs in USD; questions and data are never shown here.",
     "plan": "Plan",
     "limit": "Monthly limit",
     "monthSpend": "Spent this month",
@@ -2598,6 +2598,8 @@
       "number": "Employee number",
       "department": "Department",
       "requests": "Requests",
+      "inputTokens": "Input tokens",
+      "outputTokens": "Output tokens",
       "spend": "Spend (USD)",
       "share": "Share"
     },

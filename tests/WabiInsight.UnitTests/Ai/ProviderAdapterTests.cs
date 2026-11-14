@@ -175,6 +175,9 @@ public sealed class ProviderAdapterTests
         Assert.Equal(1000, completion.Usage.CachedInputTokens);
         Assert.Equal(300, completion.Usage.OutputTokens);
         Assert.Equal(0.011m, Descriptor(AiProviderType.Anthropic).EstimateCost(completion.Usage)); // 1200 × $4 + 1000 × $0.20 + 300 × $20 per million
+        // The AI usage ledger keeps the two sides apart (P13.48): they add up to the total.
+        Assert.Equal(0.005m, Descriptor(AiProviderType.Anthropic).EstimateInputCost(completion.Usage));
+        Assert.Equal(0.006m, Descriptor(AiProviderType.Anthropic).EstimateOutputCost(completion.Usage));
     }
 
     [Fact]

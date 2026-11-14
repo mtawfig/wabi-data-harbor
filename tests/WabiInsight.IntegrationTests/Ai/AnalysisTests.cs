@@ -86,8 +86,10 @@ public sealed class AnalysisTests : IDisposable
 
             await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
             {
-                context.AnalysisExecutionMetrics.Add(new Core.Entities.Ai.AnalysisExecutionMetric { MetricId = Guid.CreateVersion7(), OrganizationId = _db.Data.OrganizationAId, UserId = managerId, ApplicationId = applicationId,
+                var runId = Guid.CreateVersion7();
+                context.AnalysisExecutionMetrics.Add(new Core.Entities.Ai.AnalysisExecutionMetric { MetricId = runId, OrganizationId = _db.Data.OrganizationAId, UserId = managerId, ApplicationId = applicationId,
                     Status = Core.Entities.Ai.AnalysisStatus.Completed, EstimatedCost = 6.00m, CreatedAt = DateTimeOffset.UtcNow });
+                context.AiCalls.Add(LedgerRow(_db.Data.OrganizationAId, managerId, runId, 6.00m));
                 await context.SaveChangesAsync();
             }
 
@@ -177,8 +179,10 @@ public sealed class AnalysisTests : IDisposable
             async Task SpendAsync(Guid userId, decimal cost, Core.Entities.Ai.AnalysisStatus status = Core.Entities.Ai.AnalysisStatus.Completed)
             {
                 await using var context = _db.CreateContext(_db.Data.PlatformAdministrator);
-                context.AnalysisExecutionMetrics.Add(new Core.Entities.Ai.AnalysisExecutionMetric { MetricId = Guid.CreateVersion7(), OrganizationId = _db.Data.OrganizationAId, UserId = userId, ApplicationId = applicationId,
+                var runId = Guid.CreateVersion7();
+                context.AnalysisExecutionMetrics.Add(new Core.Entities.Ai.AnalysisExecutionMetric { MetricId = runId, OrganizationId = _db.Data.OrganizationAId, UserId = userId, ApplicationId = applicationId,
                     Status = status, EstimatedCost = cost, CreatedAt = DateTimeOffset.UtcNow });
+                context.AiCalls.Add(LedgerRow(_db.Data.OrganizationAId, userId, runId, cost));
                 await context.SaveChangesAsync();
             }
 
@@ -291,6 +295,145 @@ public sealed class AnalysisTests : IDisposable
             await RemovePlansAsync();
         }
     }
+
+    [Fact]
+    public async Task EveryAiCallIsWrittenToTheLedger_AndTheMonthsSpendingIsItsSum()
+    {
+        FakeAiProvider.Script = null;
+        FakeAiProvider.StopReason = null;
+        try
+        {
+            using var alice = await LoginAsync(TestData.AliceEmail);
+            var (applicationId, _) = await PrepareApplicationAsync(alice, "ailedger");
+            var roles = (await (await alice.GetAsync("/api/roles")).ReadJsonAsync()).EnumerateArray().ToList();
+            var managementId = roles.Single(r => r.GetProperty("roleCode").GetString() == "Management").GetProperty("roleId").GetGuid();
+            var (managerId, managerEmail) = await InsertUserAsync(_db.Data.OrganizationAId, managementId);
+            using var manager = await LoginAsync(managerEmail);
+            using var platform = await LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
+
+            async Task<decimal> MonthSpendAsync(Guid organizationId)
+                => (await (await platform.GetAsync($"/api/platform/plans/organizations/{organizationId}")).ReadJsonAsync()).GetProperty("monthSpend").GetDecimal();
+
+            async Task<List<Core.Entities.Ai.AiCall>> CallsOfManagerAsync()
+            {
+                await using var context = _db.CreateContext(_db.Data.PlatformAdministrator);
+                return await context.AiCalls.IgnoreQueryFilters().Where(c => c.UserId == managerId).OrderBy(c => c.CreatedAt).ToListAsync();
+            }
+
+            var spendABefore = await MonthSpendAsync(_db.Data.OrganizationAId);
+            var spendBBefore = await MonthSpendAsync(_db.Data.OrganizationBId);
+
+            // 1. A question with an explanation: one row for the plan and one for the interpretation, both carrying the
+            //    question's run, the asker, the tokens, the prices they were charged at and the cost split.
+            FakeAiProvider.Script = request => request.SchemaName == "wabi_interpretation" ? """{"narrative":"ok","highlights":[]}""" : TicketsByStatusPlan("Critical");
+            var answered = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Tickets per status", language = "en", interpret = true });
+            Assert.True(answered.StatusCode == HttpStatusCode.OK, await answered.Content.ReadAsStringAsync());
+            var analysisId = (await answered.ReadJsonAsync()).GetProperty("analysisId").GetGuid();
+            var calls = await CallsOfManagerAsync();
+            Assert.Equal([Core.Entities.Ai.AiCallPurposes.Plan, Core.Entities.Ai.AiCallPurposes.Interpret], calls.Select(c => c.Purpose).ToArray());
+            Assert.All(calls, c =>
+            {
+                Assert.Equal(_db.Data.OrganizationAId, c.OrganizationId);
+                Assert.Equal(analysisId, c.RunId);
+                Assert.True(c.Succeeded);
+                Assert.Equal(1500, c.InputTokens);
+                Assert.Equal(400, c.OutputTokens);
+                Assert.Equal(1000, c.CachedInputTokens);
+                Assert.NotNull(c.InputPricePerMillion);
+                Assert.NotNull(c.OutputPricePerMillion);
+                Assert.True(c.TotalCost > 0);
+                Assert.Equal(c.TotalCost, c.InputCost!.Value + c.OutputCost!.Value);
+                Assert.Equal(c.OutputCost!.Value, Math.Round(400 * c.OutputPricePerMillion!.Value / 1_000_000m, 6));
+            });
+
+            // The question's own record and the ledger agree on what it cost.
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                var metric = await context.AnalysisExecutionMetrics.IgnoreQueryFilters().SingleAsync(m => m.MetricId == analysisId);
+                Assert.InRange(Math.Abs(metric.EstimatedCost - calls.Sum(c => c.TotalCost)), 0m, 0.000005m);
+            }
+
+            // 2. A study: its plan and its written report are two more rows.
+            FakeAiProvider.Script = request => request.SchemaName == Core.Ai.ReportSchema.Name ? """{"title":"Ticket study","summary":"Most tickets are open."}""" : StudyPlan();
+            var study = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Write a ticket study", language = "en" });
+            Assert.True(study.StatusCode == HttpStatusCode.OK, await study.Content.ReadAsStringAsync());
+            calls = await CallsOfManagerAsync();
+            Assert.Equal(4, calls.Count);
+            Assert.Equal(Core.Entities.Ai.AiCallPurposes.Report, calls[3].Purpose);
+            Assert.Equal(calls[2].RunId, calls[3].RunId);
+            Assert.NotEqual(analysisId, calls[3].RunId);
+
+            // 3. A plan the validator refuses was still written by the model and is still paid for.
+            FakeAiProvider.Script = _ => "this is not a plan";
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, (await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Tickets per status", language = "en" })).StatusCode);
+            calls = await CallsOfManagerAsync();
+            Assert.Equal(5, calls.Count);
+            Assert.True(calls[4].Succeeded);
+            Assert.True(calls[4].TotalCost > 0);
+
+            // 4. A provider that does not answer leaves a row with no tokens and no cost.
+            FakeAiProvider.Script = _ => throw new Core.Ai.AiProviderException("ai_provider_unavailable", "down");
+            var failed = await manager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Tickets per status", language = "en" });
+            Assert.False(failed.IsSuccessStatusCode);
+            calls = await CallsOfManagerAsync();
+            Assert.Equal(6, calls.Count);
+            Assert.False(calls[5].Succeeded);
+            Assert.Equal("ai_provider_unavailable", calls[5].FailureCode);
+            Assert.Equal(0, calls[5].InputTokens + calls[5].OutputTokens);
+            Assert.Equal(0m, calls[5].TotalCost);
+
+            // 5. The month's spending is the sum of the ledger: organization A's rose by exactly these rows,
+            //    organization B's did not move.
+            Assert.Equal(Math.Round(spendABefore + calls.Sum(c => c.TotalCost), 2), Math.Round(await MonthSpendAsync(_db.Data.OrganizationAId), 2), 2);
+            Assert.Equal(spendBBefore, await MonthSpendAsync(_db.Data.OrganizationBId));
+
+            // 6. The administrator's report shows the tokens next to the money; the refused and the failed question
+            //    are requests too.
+            var report = await (await alice.GetAsync("/api/ai/spending/report")).ReadJsonAsync();
+            var row = report.GetProperty("rows").EnumerateArray().Single(r => r.GetProperty("userId").GetGuid() == managerId);
+            Assert.Equal(calls.Sum(c => c.InputTokens), row.GetProperty("inputTokens").GetInt64());
+            Assert.Equal(calls.Sum(c => c.OutputTokens), row.GetProperty("outputTokens").GetInt64());
+            Assert.Equal(4, row.GetProperty("requests").GetInt32());
+            Assert.Equal(Math.Round(calls.Sum(c => c.TotalCost), 2), row.GetProperty("spend").GetDecimal());
+            Assert.Equal(report.GetProperty("rows").EnumerateArray().Sum(r => r.GetProperty("inputTokens").GetInt64()), report.GetProperty("totalInputTokens").GetInt64());
+            Assert.Equal(report.GetProperty("rows").EnumerateArray().Sum(r => r.GetProperty("outputTokens").GetInt64()), report.GetProperty("totalOutputTokens").GetInt64());
+            var successful = await (await alice.GetAsync($"/api/ai/spending/report?successfulOnly=true&userId={managerId}")).ReadJsonAsync();
+            var successfulRow = successful.GetProperty("rows").EnumerateArray().Single();
+            Assert.Equal(2, successfulRow.GetProperty("requests").GetInt32());
+            Assert.Equal(calls.Take(4).Sum(c => c.InputTokens), successfulRow.GetProperty("inputTokens").GetInt64());
+
+            // 7. Another organization's context does not see these rows, and nobody can change or remove one.
+            await using (var contextB = _db.CreateContext(_db.Data.OrganizationBUser))
+            {
+                Assert.False(await contextB.AiCalls.AnyAsync(c => c.UserId == managerId));
+            }
+
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                var first = await context.AiCalls.IgnoreQueryFilters().FirstAsync(c => c.UserId == managerId);
+                first.TotalCost = 0m;
+                await Assert.ThrowsAsync<InvalidOperationException>(() => context.SaveChangesAsync());
+            }
+
+            await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+            {
+                context.AiCalls.Remove(await context.AiCalls.IgnoreQueryFilters().FirstAsync(c => c.UserId == managerId));
+                await Assert.ThrowsAsync<InvalidOperationException>(() => context.SaveChangesAsync());
+            }
+        }
+        finally
+        {
+            FakeAiProvider.Script = null;
+            FakeAiProvider.StopReason = null;
+        }
+    }
+
+    /// <summary>A ledger row as a question's AI calls would have left it: the month's spending is the sum of these (P13.48).</summary>
+    private static Core.Entities.Ai.AiCall LedgerRow(Guid organizationId, Guid userId, Guid? runId, decimal cost) => new()
+    {
+        CallId = Guid.CreateVersion7(), OrganizationId = organizationId, UserId = userId, RunId = runId, Purpose = Core.Entities.Ai.AiCallPurposes.Plan, ProviderType = "Anthropic", Model = "test-model",
+        InputTokens = 1000, OutputTokens = 200, InputCost = cost / 2, OutputCost = cost / 2, TotalCost = cost, Succeeded = true, CreatedAt = DateTimeOffset.UtcNow,
+    };
 
     /// <summary>Leaves both organizations without a plan, whatever happened in the test: a limit left behind would refuse the questions of every later test.</summary>
     private async Task RemovePlansAsync()

@@ -238,7 +238,7 @@ public sealed class AiProviderService : IAiProviderService, IAiProviderResolver
         try
         {
             var descriptor = Describe(entity);
-            var completion = await _factory.Resolve(entity.ProviderType).CompleteAsync(descriptor, new AiRequest("You are a connectivity check. Reply with the single word OK.", "Reply with OK.", null, "none", 16, "low"), cancellationToken);
+            var completion = await _factory.Resolve(entity.ProviderType).CompleteAsync(descriptor, new AiRequest("You are a connectivity check. Reply with the single word OK.", "Reply with OK.", null, "none", 16, "low") { Purpose = AiCallPurposes.ProviderTest, OrganizationId = entity.OrganizationId }, cancellationToken);
             result = new AiProviderTestResult(true, completion.Model, completion.Usage.InputTokens, completion.Usage.OutputTokens, watch.Elapsed.TotalMilliseconds, null);
         }
         catch (AiProviderException ex)
