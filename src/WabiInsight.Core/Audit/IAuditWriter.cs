@@ -15,6 +15,11 @@ public static class AuditEvents
     public const string PasswordResetIgnored = "Auth.PasswordResetIgnored";
     public const string PasswordResetCompleted = "Auth.PasswordResetCompleted";
     public const string AdministratorPasswordReset = "Administrator.PasswordReset";
+    public const string DemoRequestSubmitted = "DemoRequest.Submitted";
+    public const string DemoRequestRepeated = "DemoRequest.Repeated";
+    public const string DemoRequestDropped = "DemoRequest.Dropped";
+    public const string DemoRequestUpdated = "DemoRequest.Updated";
+    public const string DemoRequestsErased = "DemoRequest.Erased";
     public const string AdministratorCreated = "Administrator.Created";
     public const string AdministratorActivated = "Administrator.Activated";
     public const string AdministratorDeactivated = "Administrator.Deactivated";

@@ -18,6 +18,7 @@ public static class RateLimitingSetup
     public const string BootstrapPolicy = "bootstrap";
     public const string AiPolicy = "ai";
     public const string PasswordResetPolicy = "password-reset";
+    public const string DemoRequestPolicy = "demo-request";
 
     public static IServiceCollection AddWabiRateLimiting(this IServiceCollection services)
     {
@@ -28,6 +29,7 @@ public static class RateLimitingSetup
                 options.AddPolicy(LoginPolicy, context => PerClient(context, security.Value.LoginRateLimitPerMinute));
                 options.AddPolicy(BootstrapPolicy, context => PerClient(context, security.Value.BootstrapRateLimitPerMinute));
                 options.AddPolicy(PasswordResetPolicy, context => PerClient(context, security.Value.PasswordResetRateLimitPerMinute));
+                options.AddPolicy(DemoRequestPolicy, context => PerClient(context, security.Value.DemoRequestRateLimitPerMinute));
                 options.AddPolicy(AiPolicy, context => PerPrincipal(context, security.Value.AiRateLimitPerMinute));
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => PerPrincipal(context, security.Value.ApiRateLimitPerMinute));
             });

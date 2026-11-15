@@ -1,0 +1,161 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow"><a routerLink="/platform/demo-requests">{{ 'demoRequests.title' | transloco }}</a></p>
+      @if (request(); as r) {
+        <h1>{{ r.organizationName }}</h1>
+        <p class="wi-muted">
+          <span class="status" [class]="'status status--' + r.status" data-testid="demo-status">{{ 'demoRequests.statuses.' + r.status | transloco }}</span>
+          · {{ 'demoRequests.receivedOn' | transloco: { date: (r.createdAt | wiDate: 'medium') } }}
+        </p>
+      }
+    </div>
+  </header>
+
+  @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (notFound()) { <p class="banner banner--error" role="alert"><mat-icon>error_outline</mat-icon>{{ 'demoRequests.notFound' | transloco }}</p> }
+
+  @if (request(); as r) {
+    @if (r.erasedAt) {
+      <p class="banner banner--note" data-testid="demo-erased"><mat-icon>delete_sweep</mat-icon>{{ 'demoRequests.erased' | transloco: { date: (r.erasedAt | wiDate: 'mediumDate') } }}</p>
+    }
+
+    <div class="detail">
+      <div class="wi-card" data-testid="demo-submission">
+        <h2>{{ 'demoRequests.sections.request' | transloco }}</h2>
+        <dl class="facts">
+          <dt>{{ 'requestDemo.fields.fullName' | transloco }}</dt><dd>{{ r.fullName }}</dd>
+          <dt>{{ 'requestDemo.fields.email' | transloco }}</dt><dd><a class="wi-ltr" [href]="'mailto:' + r.email">{{ r.email }}</a></dd>
+          <dt>{{ 'requestDemo.fields.organizationName' | transloco }}</dt><dd>{{ r.organizationName }}</dd>
+          <dt>{{ 'requestDemo.fields.country' | transloco }}</dt><dd>{{ countryLabel(r.countryCode) }}</dd>
+          @if (r.jobTitle) { <dt>{{ 'requestDemo.fields.jobTitle' | transloco }}</dt><dd>{{ r.jobTitle }}</dd> }
+          @if (r.phone) { <dt>{{ 'requestDemo.fields.phone' | transloco }}</dt><dd><span class="wi-ltr">{{ r.phone }}</span></dd> }
+          @if (r.industry) { <dt>{{ 'requestDemo.fields.industry' | transloco }}</dt><dd>{{ 'requestDemo.industries.' + r.industry | transloco }}</dd> }
+          @if (r.organizationSize) { <dt>{{ 'requestDemo.fields.organizationSize' | transloco }}</dt><dd><span class="wi-ltr">{{ r.organizationSize }}</span></dd> }
+          @if (r.databaseSystems) { <dt>{{ 'requestDemo.fields.databaseSystems' | transloco }}</dt><dd>{{ r.databaseSystems }}</dd> }
+          <dt>{{ 'requestDemo.fields.demoLanguage' | transloco }}</dt><dd>{{ 'requestDemo.languages.' + r.demoLanguage | transloco }}</dd>
+          @if (r.preferredTime) { <dt>{{ 'requestDemo.fields.preferredTime' | transloco }}</dt><dd>{{ r.preferredTime }}</dd> }
+          @if (r.message) { <dt>{{ 'requestDemo.fields.message' | transloco }}</dt><dd class="message">{{ r.message }}</dd> }
+          <dt>{{ 'demoRequests.fields.consent' | transloco }}</dt><dd>{{ r.consentAt | wiDate: 'medium' }}</dd>
+          @if (r.ipAddress) { <dt>{{ 'demoRequests.fields.ipAddress' | transloco }}</dt><dd><span class="wi-ltr">{{ r.ipAddress }}</span></dd> }
+          @if (r.userAgent) { <dt>{{ 'demoRequests.fields.userAgent' | transloco }}</dt><dd><span class="wi-ltr wi-muted">{{ r.userAgent }}</span></dd> }
+          @if (r.repeatCount > 0) { <dt>{{ 'demoRequests.fields.repeats' | transloco }}</dt><dd>{{ 'demoRequests.repeated' | transloco: { count: r.repeatCount, date: (r.lastRepeatedAt | wiDate: 'medium') } }}</dd> }
+        </dl>
+
+        <h2 style="margin-top: 24px">{{ 'demoRequests.sections.history' | transloco }}</h2>
+        <ul class="history" data-testid="demo-history">
+          @for (event of r.events; track event.eventId) {
+            <li>
+              <strong>
+                @if (event.eventType === 'StatusChanged') {
+                  {{ 'demoRequests.events.StatusChanged' | transloco: { from: ('demoRequests.statuses.' + event.previousStatus | transloco), to: ('demoRequests.statuses.' + event.newStatus | transloco) } }}
+                } @else {
+                  {{ 'demoRequests.events.' + event.eventType | transloco }}
+                }
+              </strong>
+              <div class="history__meta">{{ event.createdAt | wiDate: 'medium' }} · {{ event.actorDisplayName || ('demoRequests.visitor' | transloco) }}</div>
+              @if (event.note) { <p class="history__note">{{ event.note }}</p> }
+            </li>
+          }
+        </ul>
+      </div>
+
+      <form class="wi-card" [formGroup]="form" (ngSubmit)="save()" novalidate data-testid="demo-follow-up">
+        <h2>{{ 'demoRequests.sections.followUp' | transloco }}</h2>
+        @if (error(); as message) { <p class="banner banner--error" role="alert" data-testid="demo-error"><mat-icon>error_outline</mat-icon>{{ message }}</p> }
+        @if (saved()) { <p class="banner banner--ok" role="status" data-testid="demo-saved"><mat-icon>check_circle</mat-icon>{{ 'demoRequests.saved' | transloco }}</p> }
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.status' | transloco }}</mat-label>
+            <mat-select formControlName="status" data-testid="demo-status-select">
+              @for (s of statuses; track s) { <mat-option [value]="s">{{ 'demoRequests.statuses.' + s | transloco }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.assigned' | transloco }}</mat-label>
+            <mat-select formControlName="assignedAdministratorId">
+              <mat-option value="">{{ 'demoRequests.unassigned' | transloco }}</mat-option>
+              @for (a of assignees(); track a.administratorId) { <mat-option [value]="a.administratorId">{{ a.fullName }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.scheduledAt' | transloco }}</mat-label>
+            <input matInput type="datetime-local" formControlName="scheduledAt" data-testid="demo-scheduled-at" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.meetingLocation' | transloco }}</mat-label>
+            <input matInput formControlName="meetingLocation" maxlength="400" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="form-grid__wide">
+            <mat-label>{{ 'demoRequests.fields.remark' | transloco }}</mat-label>
+            <textarea matInput formControlName="remark" rows="2" maxlength="2000"></textarea>
+          </mat-form-field>
+        </div>
+
+        <p class="section-title">{{ 'demoRequests.sections.performed' | transloco }}</p>
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.performedAt' | transloco }}</mat-label>
+            <input matInput type="datetime-local" formControlName="performedAt" data-testid="demo-performed-at" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.presentedBy' | transloco }}</mat-label>
+            <input matInput formControlName="presentedBy" maxlength="150" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.attendeeName' | transloco }}</mat-label>
+            <input matInput formControlName="attendeeName" maxlength="150" data-testid="demo-attendee-name" />
+            <mat-hint>{{ 'demoRequests.hints.attendee' | transloco }}</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.attendeePosition' | transloco }}</mat-label>
+            <input matInput formControlName="attendeePosition" maxlength="150" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.attendeeEmail' | transloco }}</mat-label>
+            <input matInput type="email" formControlName="attendeeEmail" maxlength="254" dir="ltr" />
+            @if (form.controls.attendeeEmail.errors) { <mat-error>{{ 'common.invalidEmail' | transloco }}</mat-error> }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.impression' | transloco }}</mat-label>
+            <mat-select formControlName="impression">
+              <mat-option value="">{{ 'requestDemo.notSpecified' | transloco }}</mat-option>
+              @for (i of impressions; track i) { <mat-option [value]="i">{{ 'demoRequests.impressions.' + i | transloco }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.attendeePhone' | transloco }}</mat-label>
+            <input matInput type="tel" formControlName="attendeePhone" maxlength="40" dir="ltr" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.attendeeMobile' | transloco }}</mat-label>
+            <input matInput type="tel" formControlName="attendeeMobile" maxlength="40" dir="ltr" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="form-grid__wide">
+            <mat-label>{{ 'demoRequests.fields.performedRemark' | transloco }}</mat-label>
+            <textarea matInput formControlName="performedRemark" rows="2" maxlength="2000"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.nextStep' | transloco }}</mat-label>
+            <input matInput formControlName="nextStep" maxlength="500" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'demoRequests.fields.followUpDate' | transloco }}</mat-label>
+            <input matInput type="date" formControlName="followUpDate" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="form-grid__wide">
+            <mat-label>{{ 'demoRequests.fields.note' | transloco }}</mat-label>
+            <textarea matInput formControlName="note" rows="2" maxlength="2000" data-testid="demo-note"></textarea>
+            <mat-hint>{{ 'demoRequests.hints.note' | transloco }}</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="saving() || !!r.erasedAt" data-testid="demo-save">{{ (saving() ? 'demoRequests.saving' : 'demoRequests.save') | transloco }}</button>
+          <a mat-button routerLink="/platform/demo-requests">{{ 'demoRequests.back' | transloco }}</a>
+        </div>
+      </form>
+    </div>
+  }
+</section>

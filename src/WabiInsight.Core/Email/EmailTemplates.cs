@@ -160,6 +160,37 @@ public static class EmailTemplates
         return new EmailMessage(toEmail, toName, subject, html, text, ar ? "ar" : "en") { ReplyTo = string.IsNullOrWhiteSpace(replyTo) ? null : replyTo };
     }
 
+    /// <summary>
+    /// Tells the team's mailbox about a new demo request (P13.52), in English, with what the visitor sent. A reply goes
+    /// to the visitor. The values are the visitor's own words: they are encoded like any other text.
+    /// </summary>
+    public static EmailMessage DemoRequestReceived(string toEmail, string fullName, string organizationName, IReadOnlyList<(string Label, string Value)> details, string openUrl, string visitorEmail)
+    {
+        var subject = $"New demo request: {organizationName}";
+        var greeting = "A demo was requested from the Wabi Insight landing page.";
+        var lines = details.Where(d => !string.IsNullOrWhiteSpace(d.Value)).Select(d => $"{d.Label}: {d.Value}").ToArray();
+        var closing = "Reply to this message to answer the person who asked.";
+        var text = $"{greeting}\n\n{string.Join("\n", lines)}\n\n{openUrl}\n\n{closing}\n";
+        return Compose(toEmail, "Wabi Insight", subject, "en", visitorEmail, text, greeting, lines, ("Open the request", openUrl), [], null, closing);
+    }
+
+    /// <summary>Confirms to the visitor that the demo request arrived, in the language of the page they used (P13.52).</summary>
+    public static EmailMessage DemoRequestConfirmation(string toEmail, string toName, string language, string homeUrl, string replyTo = "")
+    {
+        var ar = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase);
+        var subject = ar ? "وصلنا طلبك لعرض وابي إنسايت" : "We received your Wabi Insight demo request";
+        var greeting = ar ? $"مرحبًا {toName}،" : $"Hello {toName},";
+        var intro = ar
+            ? "شكرًا لاهتمامك بوابي إنسايت. وصلنا طلبك لعرض توضيحي، وسيتواصل معك أحد أفراد فريقنا خلال يومي عمل لتحديد الموعد المناسب."
+            : "Thank you for your interest in Wabi Insight. We received your request for a demo, and a member of our team will contact you within two working days to agree a time.";
+        var button = ar ? "زيارة وابي إنسايت" : "Visit Wabi Insight";
+        var ignore = ar
+            ? "إذا لم تطلب ذلك فتجاهل هذه الرسالة، أو ردّ عليها لنحذف بياناتك."
+            : "If you did not ask for this, ignore this message, or reply to it and we will delete your details.";
+        var text = $"{greeting}\n\n{intro}\n\n{homeUrl}\n\n{ignore}\n";
+        return Compose(toEmail, toName, subject, language, replyTo, text, greeting, [intro], (button, homeUrl), [], null, ignore);
+    }
+
     /// <summary>Generic bilingual notification (support desk events). Bodies are plain sentences; links go to the app.</summary>
     public static EmailMessage Notification(string toEmail, string toName, string language, string subjectEn, string subjectAr, string bodyEn, string bodyAr, string linkUrl, string replyTo = "")
     {

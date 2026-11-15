@@ -1,0 +1,15 @@
+.demo-card { width: min(680px, 100%); }
+.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+// A field with a hint keeps the hint clear of the next field's label.
+.demo-grid mat-form-field:has(mat-hint) { margin-bottom: 10px; }
+.demo-grid__wide { grid-column: 1 / -1; }
+.demo-section { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--wi-ocean); margin: 12px 0 8px; }
+.demo-consent { display: block; margin: 4px 0 8px; font-size: 14px; }
+.demo-consent__error { color: #b91c1c; font-size: 12px; margin: -4px 0 8px; }
+.demo-privacy { font-size: 12px; margin: 8px 0 0; }
+.demo-points { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 12px; font-size: 16px; li { display: flex; gap: 10px; align-items: center; } }
+// The trap field: off the page for people (and for screen readers), in the markup for robots.
+.demo-trap { position: absolute; inset-inline-start: -9999px; width: 1px; height: 1px; overflow: hidden; }
+@media (max-width: 640px) {
+  .demo-grid { grid-template-columns: 1fr; }
+}

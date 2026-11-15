@@ -77,3 +77,19 @@
   .site-header__brand ::ng-deep .logo.logo--wordmark .logo__inline { display: inline-flex !important; }
   .site-header__actions { gap: 6px; ::ng-deep .switcher .mdc-button__label { display: none; } ::ng-deep .switcher { min-width: 0; padding-inline: 10px; } }
   .section { padding: 44px 16px; } .section__title { font-size: 24px; } .demo__kpis { grid-template-columns: 1fr; } .demo__kpi-value { font-size: 22px; } .hero__title { font-size: 32px; } }
+
+/* P13.52: "Request a demo" beside the sign-in buttons. */
+.hero__tertiary { color: #fff !important; }
+.cta__actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.cta .hero__secondary { color: #fff !important; border-color: rgba(255, 255, 255, 0.7) !important; }
+@media (max-width: 600px) {
+  /* The header keeps the sign-in button only; the hero and the closing section carry the demo button. */
+  .site-header__demo { display: none !important; }
+}
+/* A third button in the header: nothing wraps, and the section links give way first on narrower screens. */
+.site-header__inner { gap: 16px; }
+.site-header__nav { gap: 14px; min-width: 0; a { white-space: nowrap; } }
+.site-header__actions { flex-shrink: 0; a { white-space: nowrap; } }
+@media (max-width: 1240px) {
+  .site-header__nav { display: none; }
+}

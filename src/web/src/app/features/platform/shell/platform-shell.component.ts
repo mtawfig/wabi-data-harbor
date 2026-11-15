@@ -9,6 +9,7 @@ const PLATFORM_NAV: NavSection[] = [
       { labelKey: 'nav.platform.administrators', icon: 'manage_accounts', link: '/platform/administrators' },
       { labelKey: 'nav.platform.health', icon: 'monitor_heart', link: '/platform/health' },
       { labelKey: 'nav.platform.support', icon: 'support_agent', link: '/platform/support' },
+      { labelKey: 'nav.platform.demoRequests', icon: 'co_present', link: '/platform/demo-requests' },
       { labelKey: 'nav.platform.supportAccess', icon: 'key', link: '/platform/support-access' },
       { labelKey: 'nav.platform.roleTemplates', icon: 'rule', link: '/platform/role-templates' },
       { labelKey: 'nav.platform.plans', icon: 'workspace_premium', link: '/platform/plans' },

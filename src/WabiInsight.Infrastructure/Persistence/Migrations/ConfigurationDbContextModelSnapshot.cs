@@ -2932,6 +2932,238 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.DemoRequest", b =>
+                {
+                    b.Property<Guid>("DemoRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AssignedAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AttendeeEmail")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<string>("AttendeeMobile")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("AttendeeName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("AttendeePhone")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("AttendeePosition")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTimeOffset>("ConsentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DatabaseSystems")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DemoLanguage")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<DateTimeOffset?>("ErasedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateOnly?>("FollowUpDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Impression")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Industry")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("JobTitle")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTimeOffset?>("LastRepeatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("MeetingLocation")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("NextStep")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<string>("OrganizationName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OrganizationSize")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("PageLanguage")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<DateTimeOffset?>("PerformedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PerformedRemark")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("PreferredTime")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PresentedBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Remark")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("RepeatCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("ScheduledAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.HasKey("DemoRequestId");
+
+                    b.HasIndex("AssignedAdministratorId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("UpdatedByAdministratorId");
+
+                    b.HasIndex("IpAddress", "CreatedAt");
+
+                    b.HasIndex("NormalizedEmail", "CreatedAt");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("DemoRequests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DemoRequests_Impression", "[Impression] IS NULL OR [Impression] IN ('VeryPositive','Positive','Neutral','Negative')");
+
+                            t.HasCheckConstraint("CK_DemoRequests_Status", "[Status] IN ('New','Contacted','Scheduled','Performed','Converted','NotInterested','Cancelled','Spam')");
+                        });
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.DemoRequestEvent", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActorAdministratorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorDisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("DemoRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("NewStatus")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("EventId");
+
+                    b.HasIndex("DemoRequestId", "CreatedAt");
+
+                    b.ToTable("DemoRequestEvents", (string)null);
+                });
+
             modelBuilder.Entity("WabiInsight.Core.Entities.Platform.LoginIdentity", b =>
                 {
                     b.Property<string>("NormalizedEmail")
@@ -4416,6 +4648,28 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.HasOne("WabiInsight.Core.Entities.Platform.Organization", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.DemoRequest", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Administrator", null)
+                        .WithMany()
+                        .HasForeignKey("AssignedAdministratorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WabiInsight.Core.Entities.Platform.Administrator", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByAdministratorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("WabiInsight.Core.Entities.Platform.DemoRequestEvent", b =>
+                {
+                    b.HasOne("WabiInsight.Core.Entities.Platform.DemoRequest", null)
+                        .WithMany()
+                        .HasForeignKey("DemoRequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

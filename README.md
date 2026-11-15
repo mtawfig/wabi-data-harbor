@@ -32,10 +32,11 @@ A walkthrough of the **deployed site**, with the sample organization GAS and the
 
 ## Current version
 
-Version 1, as of 14 November 2026 (latest pull request: P13.51). The most recent additions, newest first:
+Version 1, as of 15 November 2026 (latest pull request: P13.52). The most recent additions, newest first:
 
 | Pull request | What it added |
 |---|---|
+| P13.52 | **Request a demo.** The landing page has a *Request a demo* form (EN/AR). A request is stored with the visitor's consent, e-mailed to the team and confirmed to the visitor, and shown to Platform Administrators, who follow it from first contact to the demo as performed. |
 | P13.51 | **Numbers in Arabic documents.** Arabic PDF and Word documents write numbers the same way on every server: Western digits with a comma between thousands. |
 | P13.50 | **Long lists.** A table shows its first 100 rows on the page, in PDF and in Word; a longer list says *First 100 rows of N* and offers **View all in Excel**, which reads every row again from the source under the permissions of the person exporting. The count and totals of a long list are calculated by the database over the whole list. |
 | P13.49 | **No "partial list" wording.** Answers, reports and exported documents no longer tell the reader that a list is partial. A "top five" is a complete answer; a list without a requested number is fetched up to 1,000 rows (was 100); a list that still stops there carries no totals. |
