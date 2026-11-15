@@ -54,6 +54,8 @@ public static class EmailTemplateCodes
     public const string AnalysisEmailed = "Analysis.Emailed";
     public const string MonitoringDigest = "Monitoring.Digest";
     public const string PeriodicReport = "Reports.Periodic";
+    public const string DemoRequestReceived = "Demo.RequestReceived";
+    public const string DemoRequestConfirmation = "Demo.RequestConfirmation";
 }
 
 /// <summary>Stable reason codes written to <c>EmailMessages.LastError</c> when no delivery error text exists.</summary>

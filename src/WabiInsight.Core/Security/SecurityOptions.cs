@@ -47,6 +47,10 @@ public sealed class SecurityOptions
     [Range(1, 100000)]
     public int PasswordResetRateLimitPerMinute { get; set; } = 10;
 
+    /// <summary>Requests per minute per client address on the public demo-request form.</summary>
+    [Range(1, 100000)]
+    public int DemoRequestRateLimitPerMinute { get; set; } = 5;
+
     /// <summary>Requests per minute per signed-in principal (or client address when anonymous) across the whole API.</summary>
     [Range(1, 1000000)]
     public int ApiRateLimitPerMinute { get; set; } = 600;

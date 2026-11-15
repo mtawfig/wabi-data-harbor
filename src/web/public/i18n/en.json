@@ -230,7 +230,8 @@
       "title": "Ready to ask your data?",
       "text": "Sign in with the account your organization administrator provided.",
       "button": "Sign in",
-      "hint": "No account yet? Your organization administrator creates users and sends the temporary password by email."
+      "hint": "No account yet? Your organization administrator creates users and sends the temporary password by email.",
+      "demoHint": "Not a customer yet? Ask for a demo with your own kind of data."
     },
     "footer": {
       "about": "Wabi Insight (AP-AIR) is the bilingual enterprise AI intelligence platform by Wabitex: ask your data, trust the answer.",
@@ -238,7 +239,8 @@
       "demo": "Demonstration content uses fictional data."
     },
     "navLabel": "Sections",
-    "footerLabel": "Footer"
+    "footerLabel": "Footer",
+    "requestDemo": "Request a demo"
   },
   "login": {
     "title": "Sign in",
@@ -385,7 +387,8 @@
       "settings": "General Settings",
       "audit": "Audit Logs",
       "aiProviders": "AI Providers",
-      "plans": "Plans"
+      "plans": "Plans",
+      "demoRequests": "Demo Requests"
     }
   },
   "ask": {
@@ -1086,7 +1089,15 @@
       "plan_inactive": "This plan is inactive and cannot be given to an organization.",
       "ai_spending_limit_reached": "Your organization has reached its monthly AI limit. Contact your Wabi Insight administrator.",
       "spending_range_invalid": "The minimum spend cannot be above the maximum.",
-      "spending_dates_invalid": "The start date cannot be after the end date."
+      "spending_dates_invalid": "The start date cannot be after the end date.",
+      "demo_request_not_found": "This demo request no longer exists.",
+      "demo_request_erased": "The personal details of this request were erased: it can no longer be changed.",
+      "demo_status_invalid": "Choose a status from the list.",
+      "demo_impression_invalid": "Choose an impression from the list.",
+      "demo_scheduled_date_required": "A scheduled demo needs its date and time.",
+      "demo_performed_details_required": "A performed demo needs when it took place and the name of the key person who attended.",
+      "demo_attendee_email_invalid": "The attendee's e-mail address is not valid.",
+      "demo_assignee_invalid": "Choose an active Platform Administrator."
     },
     "applications": {
       "title": "Applications",
@@ -1561,7 +1572,8 @@
       "Monitoring.RulePaused": "Monitoring rule \"{{ruleName}}\" was paused and needs attention",
       "Reports.SubscriptionPaused": "Periodic report \"{{name}}\" was paused after three failed runs",
       "Ai.SpendingNear": "AI spending is at {{percent}}% of the plan's monthly limit ({{spend}} of {{limit}} USD)",
-      "Ai.SpendingReached": "The plan's monthly AI limit is reached ({{spend}} of {{limit}} USD): new AI questions are refused"
+      "Ai.SpendingReached": "The plan's monthly AI limit is reached ({{spend}} of {{limit}} USD): new AI questions are refused",
+      "DemoRequest.Created": "{{fullName}} of {{organizationName}} asked for a demo"
     }
   },
   "supportAccess": {
@@ -2615,5 +2627,160 @@
     "empty": "No AI spending in this period.",
     "period": "{{from}} to {{to}}",
     "monthlyNote": "The last six months, or the months of the dates you choose (up to 24)."
+  },
+  "requestDemo": {
+    "title": "Request a demo",
+    "subtitle": "Tell us who you are and we will show you Wabi Insight answering questions like yours.",
+    "asideTitle": "See it with your own kind of questions",
+    "asideBody": "A short session with our team, in English or Arabic.",
+    "points": {
+      "ask": "Ask in plain language, get a verified answer",
+      "trust": "Every figure computed from your own data",
+      "time": "About 30 minutes, at a time that suits you"
+    },
+    "sections": {
+      "you": "About you",
+      "demo": "About the demo"
+    },
+    "fields": {
+      "fullName": "Full name",
+      "email": "Work e-mail",
+      "organizationName": "Organization",
+      "country": "Country",
+      "jobTitle": "Job title",
+      "phone": "Phone",
+      "industry": "Industry",
+      "organizationSize": "Number of employees",
+      "databaseSystems": "Database systems in use",
+      "demoLanguage": "Demo language",
+      "preferredTime": "Preferred day or time",
+      "message": "Anything we should prepare?"
+    },
+    "hints": {
+      "databaseSystems": "For example SQL Server or Oracle",
+      "preferredTime": "For example: mornings, Gulf time"
+    },
+    "languages": {
+      "en": "English",
+      "ar": "Arabic"
+    },
+    "industries": {
+      "Aviation": "Aviation",
+      "Banking": "Banking and finance",
+      "Government": "Government",
+      "Healthcare": "Healthcare",
+      "Education": "Education",
+      "Energy": "Energy and utilities",
+      "Retail": "Retail",
+      "Logistics": "Logistics and transport",
+      "Telecom": "Telecommunications",
+      "Manufacturing": "Manufacturing",
+      "RealEstate": "Real estate",
+      "Hospitality": "Hospitality",
+      "Technology": "Technology",
+      "Other": "Other"
+    },
+    "notSpecified": "Not specified",
+    "consent": "I agree that WabiTex contacts me about this request and keeps these details for that purpose.",
+    "privacy": "We use your details only to arrange and follow up the demo. Reply to our confirmation e-mail at any time to have them deleted.",
+    "submit": "Request a demo",
+    "sending": "Sending…",
+    "backHome": "Back to the home page",
+    "sentTitle": "Thank you. Your request is with us.",
+    "sentBody": "A member of our team will contact you within two working days to agree a time.",
+    "sentNote": "We also sent a confirmation to your e-mail address.",
+    "errors": {
+      "rate_limited": "Too many attempts. Please wait a minute and try again.",
+      "invalid": "Please check the marked fields.",
+      "unknown": "The request could not be sent. Please try again.",
+      "field": "This value is not accepted. Shorten it or remove unusual characters.",
+      "phone": "Use digits, spaces and + ( ) - only.",
+      "consent": "Please agree to be contacted so we can answer your request."
+    }
+  },
+  "demoRequests": {
+    "title": "Demo Requests",
+    "subtitle": "Requests sent from the landing page. Only Platform Administrators see them.",
+    "counts": {
+      "new": "New",
+      "open": "Waiting for the demo",
+      "total": "All requests"
+    },
+    "search": "Search name, e-mail or organization",
+    "allStatuses": "All statuses",
+    "allCountries": "All countries",
+    "from": "Received from",
+    "to": "Received to",
+    "empty": "No demo requests match.",
+    "repeatHint": "The same address sent the form more than once",
+    "statuses": {
+      "New": "New",
+      "Contacted": "Contacted",
+      "Scheduled": "Scheduled",
+      "Performed": "Performed",
+      "Converted": "Became a customer",
+      "NotInterested": "Not interested",
+      "Cancelled": "Cancelled",
+      "Spam": "Spam"
+    },
+    "impressions": {
+      "VeryPositive": "Very positive",
+      "Positive": "Positive",
+      "Neutral": "Neutral",
+      "Negative": "Negative"
+    },
+    "fields": {
+      "received": "Received",
+      "person": "Person",
+      "organization": "Organization",
+      "country": "Country",
+      "status": "Status",
+      "scheduledAt": "Demo date",
+      "assigned": "Handled by",
+      "meetingLocation": "Meeting link or place",
+      "remark": "Remark",
+      "performedAt": "Performed on",
+      "presentedBy": "Presented by",
+      "attendeeName": "Key person who attended",
+      "attendeePosition": "Position",
+      "attendeeEmail": "E-mail",
+      "attendeePhone": "Phone",
+      "attendeeMobile": "Mobile",
+      "impression": "Impression",
+      "performedRemark": "Remark after the demo",
+      "nextStep": "Next step",
+      "followUpDate": "Follow up on",
+      "note": "Note for the history",
+      "consent": "Agreed to be contacted",
+      "ipAddress": "Sent from",
+      "userAgent": "Browser",
+      "repeats": "Sent again"
+    },
+    "hints": {
+      "attendee": "Usually the decision maker",
+      "note": "Kept with this change; earlier notes are never overwritten"
+    },
+    "sections": {
+      "request": "The request",
+      "followUp": "Follow-up",
+      "performed": "The demo as performed",
+      "history": "History"
+    },
+    "receivedOn": "Received {{date}}",
+    "unassigned": "Not assigned",
+    "visitor": "Visitor",
+    "repeated": "{{count}} more time(s), last on {{date}}",
+    "events": {
+      "Submitted": "Request received",
+      "Repeated": "The form was sent again",
+      "StatusChanged": "{{from}} → {{to}}",
+      "Updated": "Details updated"
+    },
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "back": "Back to the list",
+    "notFound": "This demo request no longer exists.",
+    "erased": "The personal details of this request were erased on {{date}}, at the end of the retention period."
   }
 }

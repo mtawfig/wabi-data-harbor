@@ -1,0 +1,141 @@
+<div class="auth-layout">
+  <aside class="auth-layout__aside wi-gradient">
+    <a routerLink="/" class="auth-layout__brand"><app-brand-logo variant="light" [size]="40" /></a>
+    <div class="auth-layout__aside-body">
+      <h2>{{ 'requestDemo.asideTitle' | transloco }}</h2>
+      <p>{{ 'requestDemo.asideBody' | transloco }}</p>
+      <ul class="demo-points">
+        <li><mat-icon>forum</mat-icon>{{ 'requestDemo.points.ask' | transloco }}</li>
+        <li><mat-icon>verified</mat-icon>{{ 'requestDemo.points.trust' | transloco }}</li>
+        <li><mat-icon>schedule</mat-icon>{{ 'requestDemo.points.time' | transloco }}</li>
+      </ul>
+    </div>
+    <span class="auth-layout__code">{{ 'common.platformCode' | transloco }}</span>
+  </aside>
+
+  <main class="auth-layout__main">
+    <div class="auth-layout__topbar">
+      <app-language-switcher />
+    </div>
+
+    @if (sent()) {
+      <section class="auth-card wi-card" data-testid="request-demo-sent" role="status">
+        <mat-icon class="auth-card__state-icon">event_available</mat-icon>
+        <h1>{{ 'requestDemo.sentTitle' | transloco }}</h1>
+        <p class="wi-muted">{{ 'requestDemo.sentBody' | transloco }}</p>
+        <p class="wi-muted">{{ 'requestDemo.sentNote' | transloco }}</p>
+        <a mat-flat-button routerLink="/" class="wi-full-width auth-card__submit">{{ 'requestDemo.backHome' | transloco }}</a>
+      </section>
+    } @else {
+      <form class="auth-card demo-card wi-card" [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="request-demo-form">
+        <h1>{{ 'requestDemo.title' | transloco }}</h1>
+        <p class="wi-muted">{{ 'requestDemo.subtitle' | transloco }}</p>
+
+        @if (busy()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+
+        @if (error(); as code) {
+          <div class="auth-card__error" role="alert" data-testid="request-demo-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ 'requestDemo.errors.' + code | transloco }}</span>
+          </div>
+        }
+
+        <p class="demo-section">{{ 'requestDemo.sections.you' | transloco }}</p>
+        <div class="demo-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.fullName' | transloco }}</mat-label>
+            <input matInput formControlName="fullName" autocomplete="name" maxlength="150" data-testid="request-demo-name" />
+            @if (form.controls.fullName.hasError('required')) { <mat-error>{{ 'common.requiredField' | transloco }}</mat-error> }
+            @else if (form.controls.fullName.errors) { <mat-error>{{ 'requestDemo.errors.field' | transloco }}</mat-error> }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.email' | transloco }}</mat-label>
+            <input matInput type="email" formControlName="email" autocomplete="email" maxlength="254" dir="ltr" data-testid="request-demo-email" />
+            @if (form.controls.email.hasError('required')) { <mat-error>{{ 'common.requiredField' | transloco }}</mat-error> }
+            @else if (form.controls.email.errors) { <mat-error>{{ 'common.invalidEmail' | transloco }}</mat-error> }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.organizationName' | transloco }}</mat-label>
+            <input matInput formControlName="organizationName" autocomplete="organization" maxlength="200" data-testid="request-demo-organization" />
+            @if (form.controls.organizationName.hasError('required')) { <mat-error>{{ 'common.requiredField' | transloco }}</mat-error> }
+            @else if (form.controls.organizationName.errors) { <mat-error>{{ 'requestDemo.errors.field' | transloco }}</mat-error> }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.country' | transloco }}</mat-label>
+            <mat-select formControlName="countryCode" data-testid="request-demo-country">
+              @for (country of countries(); track country.code) { <mat-option [value]="country.code">{{ country.name }}</mat-option> }
+            </mat-select>
+            @if (form.controls.countryCode.errors) { <mat-error>{{ 'common.requiredField' | transloco }}</mat-error> }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.jobTitle' | transloco }}</mat-label>
+            <input matInput formControlName="jobTitle" autocomplete="organization-title" maxlength="150" />
+            @if (form.controls.jobTitle.errors) { <mat-error>{{ 'requestDemo.errors.field' | transloco }}</mat-error> }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.phone' | transloco }}</mat-label>
+            <input matInput type="tel" formControlName="phone" autocomplete="tel" maxlength="40" dir="ltr" />
+            @if (form.controls.phone.errors) { <mat-error>{{ 'requestDemo.errors.phone' | transloco }}</mat-error> }
+          </mat-form-field>
+        </div>
+
+        <p class="demo-section">{{ 'requestDemo.sections.demo' | transloco }}</p>
+        <div class="demo-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.industry' | transloco }}</mat-label>
+            <mat-select formControlName="industry">
+              <mat-option value="">{{ 'requestDemo.notSpecified' | transloco }}</mat-option>
+              @for (industry of industries; track industry) { <mat-option [value]="industry">{{ 'requestDemo.industries.' + industry | transloco }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.organizationSize' | transloco }}</mat-label>
+            <mat-select formControlName="organizationSize">
+              <mat-option value="">{{ 'requestDemo.notSpecified' | transloco }}</mat-option>
+              @for (size of sizes; track size) { <mat-option [value]="size"><span dir="ltr">{{ size }}</span></mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.databaseSystems' | transloco }}</mat-label>
+            <input matInput formControlName="databaseSystems" maxlength="200" />
+            <mat-hint>{{ 'requestDemo.hints.databaseSystems' | transloco }}</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'requestDemo.fields.demoLanguage' | transloco }}</mat-label>
+            <mat-select formControlName="demoLanguage">
+              <mat-option value="en">{{ 'requestDemo.languages.en' | transloco }}</mat-option>
+              <mat-option value="ar">{{ 'requestDemo.languages.ar' | transloco }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="demo-grid__wide">
+            <mat-label>{{ 'requestDemo.fields.preferredTime' | transloco }}</mat-label>
+            <input matInput formControlName="preferredTime" maxlength="200" />
+            <mat-hint>{{ 'requestDemo.hints.preferredTime' | transloco }}</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="demo-grid__wide">
+            <mat-label>{{ 'requestDemo.fields.message' | transloco }}</mat-label>
+            <textarea matInput formControlName="message" rows="3" maxlength="2000"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="demo-trap" aria-hidden="true">
+          <label for="demo-website">Website</label>
+          <input id="demo-website" type="text" formControlName="website" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <mat-checkbox formControlName="consent" class="demo-consent" data-testid="request-demo-consent">{{ 'requestDemo.consent' | transloco }}</mat-checkbox>
+        @if (form.controls.consent.touched && form.controls.consent.invalid) {
+          <p class="demo-consent__error" role="alert">{{ 'requestDemo.errors.consent' | transloco }}</p>
+        }
+
+        <button mat-flat-button type="submit" class="wi-full-width auth-card__submit" [disabled]="busy()" data-testid="request-demo-submit">
+          {{ (busy() ? 'requestDemo.sending' : 'requestDemo.submit') | transloco }}
+        </button>
+        <p class="wi-muted demo-privacy">{{ 'requestDemo.privacy' | transloco }}</p>
+        <a routerLink="/" class="auth-card__link">{{ 'requestDemo.backHome' | transloco }}</a>
+      </form>
+    }
+  </main>
+</div>

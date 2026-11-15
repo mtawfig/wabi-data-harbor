@@ -51,4 +51,5 @@ public static class NotificationTypes
     public const string ReportSubscriptionPaused = "Reports.SubscriptionPaused";
     public const string AiSpendingNear = "Ai.SpendingNear";
     public const string AiSpendingReached = "Ai.SpendingReached";
+    public const string DemoRequestCreated = "DemoRequest.Created";
 }
