@@ -51,6 +51,8 @@ export const routes: Routes = [
           { path: 'metadata', loadComponent: () => import('./features/organization/admin/metadata.component').then((m) => m.MetadataComponent) },
           { path: 'permissions', loadComponent: () => import('./features/organization/admin/permissions.component').then((m) => m.PermissionsComponent) },
           { path: 'insights', loadComponent: () => import('./features/organization/insights/organization-insights.component').then((m) => m.OrganizationInsightsComponent) },
+          { path: 'verified-answers', loadComponent: () => import('./features/organization/admin/verified-answers/verified-answers-list.component').then((m) => m.VerifiedAnswersListComponent) },
+          { path: 'verified-answers/:id', loadComponent: () => import('./features/organization/admin/verified-answers/verified-answer-detail.component').then((m) => m.VerifiedAnswerDetailComponent) },
           { path: 'ai-spending', loadComponent: () => import('./features/organization/admin/ai-spending.component').then((m) => m.AiSpendingComponent) },
           { path: 'integrations', loadComponent: () => import('./features/organization/admin/integrations.component').then((m) => m.IntegrationsComponent) },
           { path: 'settings', loadComponent: () => import('./features/organization/settings/organization-settings.component').then((m) => m.OrganizationSettingsComponent) },

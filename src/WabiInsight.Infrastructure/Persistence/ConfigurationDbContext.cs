@@ -142,6 +142,10 @@ public class ConfigurationDbContext : DbContext
 
     public DbSet<AnalysisQueryLog> AnalysisQueryLogs => Set<AnalysisQueryLog>();
 
+    public DbSet<VerifiedAnswer> VerifiedAnswers => Set<VerifiedAnswer>();
+
+    public DbSet<AnswerFeedback> AnswerFeedbacks => Set<AnswerFeedback>();
+
     public DbSet<AccessBaseline> AccessBaselines => Set<AccessBaseline>();
 
     public DbSet<ScheduledJob> ScheduledJobs => Set<ScheduledJob>();
@@ -222,7 +226,7 @@ public class ConfigurationDbContext : DbContext
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent or ReportGenerationEvent or EmailDraftEvent or AnalysisAccessFact or AnalysisQueryLog or RuleEvaluation or AlertEvent or ReportDelivery or AiCall or DemoRequestEvent && entry.State is EntityState.Modified or EntityState.Deleted)
+            if (entry.Entity is AuditLog or UsageEvent or SupportTicketEvent or ReportGenerationEvent or EmailDraftEvent or AnalysisAccessFact or AnalysisQueryLog or RuleEvaluation or AlertEvent or ReportDelivery or AiCall or DemoRequestEvent or AnswerFeedback && entry.State is EntityState.Modified or EntityState.Deleted)
             {
                 throw new InvalidOperationException($"{entry.Metadata.ClrType.Name} rows are append-only.");
             }

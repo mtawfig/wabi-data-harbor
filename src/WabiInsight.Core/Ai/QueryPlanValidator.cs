@@ -373,6 +373,12 @@ public static partial class QueryPlanValidator
             {
                 errors.Add(new PlanError("plan_filter_value_too_long", condition.Column));
             }
+
+            // A value removed from a verified example (P13.53) must never reach a query: it is a marker, not data.
+            if (condition.Values is not null && condition.Values.Any(v => string.Equals(v?.Trim(), VerifiedExamples.RemovedValue, StringComparison.Ordinal)))
+            {
+                errors.Add(new PlanError("plan_example_value_copied", condition.Column));
+            }
         }
 
         foreach (var child in group.Groups)

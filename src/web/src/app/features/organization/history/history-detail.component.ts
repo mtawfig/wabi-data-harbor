@@ -17,6 +17,7 @@ import { CollectionSummary, ExportFormat, HistoryDetail, HistoryVersion } from '
 import { LanguageService } from '../../../core/i18n/language.service';
 import { AskResponse } from '../../../core/platform/ai.models';
 import { problemMessage } from '../../../core/problem-message';
+import { AnswerFeedbackComponent } from '../../../shared/analysis/answer-feedback.component';
 import { AnalysisAnswerComponent } from '../../../shared/analysis/analysis-answer.component';
 import { EmailDialogComponent, EmailDialogData } from '../sharing/email-dialog.component';
 import { ShareDialogComponent, ShareDialogData } from '../sharing/share-dialog.component';
@@ -33,7 +34,7 @@ interface Rejection {
  */
 @Component({
   selector: 'app-history-detail',
-  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule, MatProgressBarModule, MatSelectModule, TranslocoModule, AnalysisAnswerComponent, WiDatePipe, WiNumberPipe],
+  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule, MatProgressBarModule, MatSelectModule, TranslocoModule, AnalysisAnswerComponent, AnswerFeedbackComponent, WiDatePipe, WiNumberPipe],
   templateUrl: './history-detail.component.html',
   styleUrl: './history-detail.component.scss',
 })

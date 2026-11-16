@@ -88,6 +88,7 @@
     @if (answer(); as a) {
       <app-analysis-answer [answer]="a" [reportUrl]="reportUrl(a.analysisId)" [excelUrl]="a.historyId ? excelUrl(a.historyId, a.versionNumber) : null" />
       @if (a.historyId) {
+        <app-answer-feedback [historyId]="a.historyId" [versionNumber]="a.versionNumber" />
         <p class="ask__saved wi-muted small"><mat-icon>history</mat-icon>{{ 'ask.savedToHistory' | transloco }} <a [routerLink]="['/app/history', a.historyId]" data-testid="ask-open-history">{{ 'ask.openInHistory' | transloco }}</a></p>
       }
     } @else if (!busy() && !rejection() && !error()) {

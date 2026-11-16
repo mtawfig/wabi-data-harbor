@@ -17,6 +17,7 @@ import { AiService } from '../../../core/platform/ai.service';
 import { problemMessage } from '../../../core/problem-message';
 import { AiSpending, PlansService } from '../../../core/plans/plans.service';
 import { WiNumberPipe } from '../../../shared/format/locale-pipes';
+import { AnswerFeedbackComponent } from '../../../shared/analysis/answer-feedback.component';
 import { AnalysisAnswerComponent } from '../../../shared/analysis/analysis-answer.component';
 
 interface Rejection {
@@ -38,7 +39,7 @@ interface ExampleChip {
 
 @Component({
   selector: 'app-ask',
-  imports: [WiNumberPipe, FormsModule, RouterLink, MatButtonModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, AnalysisAnswerComponent],
+  imports: [WiNumberPipe, FormsModule, RouterLink, MatButtonModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, TranslocoModule, AnalysisAnswerComponent, AnswerFeedbackComponent],
   templateUrl: './ask.component.html',
   styleUrl: './ask.component.scss',
 })
