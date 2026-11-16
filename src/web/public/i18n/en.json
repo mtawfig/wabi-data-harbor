@@ -369,7 +369,8 @@
         "integrations": "Integrations",
         "settings": "Organization Settings",
         "supportAccess": "Support Access",
-        "aiSpending": "AI Spending"
+        "aiSpending": "AI Spending",
+        "verifiedAnswers": "Verified answers"
       },
       "alerts": "Alerts",
       "monitoringRules": "Monitoring Rules",
@@ -475,7 +476,8 @@
       "plan_asker_value_invalid": "Try rephrasing how the question refers to your own records.",
       "plan_relative_date_invalid": "Try rephrasing the period the question asks about, for example: this month, or from 1 to 31 March 2026.",
       "asker_value_missing": "The question refers to your own records, department or section, but your profile doesn't include them. Ask your organization administrator to complete your profile.",
-      "ai_spending_limit_reached": "Your organization has reached its monthly AI limit. Contact your Wabi Insight administrator."
+      "ai_spending_limit_reached": "Your organization has reached its monthly AI limit. Contact your Wabi Insight administrator.",
+      "plan_example_value_copied": "The answer copied a placeholder from an example instead of a value from the question."
     },
     "kpis": "Headline numbers",
     "charts": "Charts",
@@ -1097,7 +1099,17 @@
       "demo_scheduled_date_required": "A scheduled demo needs its date and time.",
       "demo_performed_details_required": "A performed demo needs when it took place and the name of the key person who attended.",
       "demo_attendee_email_invalid": "The attendee's e-mail address is not valid.",
-      "demo_assignee_invalid": "Choose an active Platform Administrator."
+      "demo_assignee_invalid": "Choose an active Platform Administrator.",
+      "feedback_verdict_invalid": "Choose correct or not correct.",
+      "feedback_reason_too_long": "The reason is too long (500 characters at most).",
+      "feedback_version_not_completed": "Only a completed answer can be marked.",
+      "verified_answer_not_found": "This answer is no longer in the list.",
+      "verified_answer_limit_reached": "This application already has 200 approved answers. Disable or delete some before approving more.",
+      "verified_answer_references_missing": "A table or column this answer uses is no longer in the catalogue.",
+      "verified_answer_not_disabled": "Only a disabled or set-aside answer can be enabled again.",
+      "verified_answer_not_approved": "Only an approved answer can be disabled.",
+      "verified_answer_plan_unreadable": "This answer's method can no longer be read.",
+      "verified_answer_note_too_long": "The note is too long (500 characters at most)."
     },
     "applications": {
       "title": "Applications",
@@ -2782,5 +2794,84 @@
     "back": "Back to the list",
     "notFound": "This demo request no longer exists.",
     "erased": "The personal details of this request were erased on {{date}}, at the end of the retention period."
+  },
+  "feedback": {
+    "question": "Is this answer correct?",
+    "correct": "Correct",
+    "notCorrect": "Not correct",
+    "reason": "What is wrong? (optional)",
+    "reasonHint": "For example: a missing period, a wrong total or the wrong list.",
+    "send": "Send",
+    "change": "Change",
+    "thanksCorrect": "Thank you. You marked this answer as correct.",
+    "thanksNotCorrect": "Thank you. You reported this answer as not correct.",
+    "note": "Your administrators review what you say. Answers they approve help the platform answer similar questions in your organization."
+  },
+  "verifiedAnswers": {
+    "title": "Verified answers",
+    "detailTitle": "Review an answer",
+    "subtitle": "Answers people in your organization marked as correct or not correct. Only the answers you approve are used to answer similar questions better.",
+    "filters": {
+      "Waiting": "Waiting for review",
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Disabled": "Disabled",
+      "SetAside": "Set aside",
+      "All": "All"
+    },
+    "statuses": {
+      "Pending": "Marked correct",
+      "Reported": "Reported not correct",
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Disabled": "Disabled",
+      "SetAside": "Set aside"
+    },
+    "verdicts": {
+      "Correct": "Correct",
+      "NotCorrect": "Not correct"
+    },
+    "fields": {
+      "question": "Question",
+      "askedBy": "Asked by",
+      "verdict": "Asker's verdict",
+      "status": "Status",
+      "feedbackAt": "Last feedback",
+      "application": "Application",
+      "used": "Used",
+      "reviewed": "Reviewed"
+    },
+    "usedTimes": "used {{count}} times",
+    "flagged": "Reported not correct since approval",
+    "flaggedNote": "The asker reported this approved answer as not correct after it was approved. It is still used until you reject or disable it.",
+    "setAsideNote": "A table or column this answer uses changed or was removed, so it is no longer used. Enable it again once the catalogue has it back.",
+    "resultHidden": "The result is not shown because you may not read everything it uses. The question and how it was computed are enough to judge it.",
+    "review": "Your decision",
+    "reviewHint": "Approve only answers you are sure of: their question and method become an example for similar questions in this application. The platform still checks every new answer against the asker's own permissions.",
+    "note": "Note (optional)",
+    "deleteConfirm": "Delete it for good?",
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "disable": "Disable",
+      "enable": "Enable again",
+      "delete": "Delete"
+    },
+    "done": {
+      "approve": "Approved. It will help answer similar questions.",
+      "reject": "Rejected. It will not be used.",
+      "disable": "Disabled. It is no longer used.",
+      "enable": "Enabled again."
+    },
+    "feedbackHistory": "What the asker said",
+    "empty": "No answers here.",
+    "emptyWaiting": "Nothing is waiting for a review.",
+    "how": {
+      "title": "How the platform learns",
+      "feedback": "Under each answer, the person who asked can say whether it is correct, with a reason when it is not.",
+      "approve": "You decide: only answers you approve are used. One person's click never changes how the platform answers.",
+      "use": "For a new question, up to three approved answers to the most similar questions of the same application are given to the AI as worked examples.",
+      "safety": "Examples never leave your organization, are used only for people allowed to read everything they use, and lose specific values such as customer numbers or names."
+    }
   }
 }

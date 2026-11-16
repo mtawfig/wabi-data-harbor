@@ -28,10 +28,12 @@ public sealed class QueryPlanner : IQueryPlanner
     private readonly IUsageEventWriter _usage;
 
     private readonly Core.Plans.IAiSpendingGuard? _spending;
+    private readonly Core.Analysis.IVerifiedExampleSource? _examples;
 
-    public QueryPlanner(ConfigurationDbContext context, ITenantContext tenantContext, IPermissionResolver permissions, IAiProviderResolver providers, IUsageEventWriter usage, Core.Plans.IAiSpendingGuard? spending = null)
+    public QueryPlanner(ConfigurationDbContext context, ITenantContext tenantContext, IPermissionResolver permissions, IAiProviderResolver providers, IUsageEventWriter usage, Core.Plans.IAiSpendingGuard? spending = null, Core.Analysis.IVerifiedExampleSource? examples = null)
     {
         _spending = spending;
+        _examples = examples;
         _context = context;
         _tenantContext = tenantContext;
         _permissions = permissions;
@@ -87,7 +89,11 @@ public sealed class QueryPlanner : IQueryPlanner
 
         var language = request.Language == "ar" ? "ar" : "en";
         var today = await TodayAsync(organizationId, cancellationToken);
-        var prompt = PromptBuilder.BuildPrompt(snapshot, request.Question, language, today);
+        // Approved answers of the organization to similar questions (P13.53), only those the asker may run themselves.
+        IReadOnlyList<VerifiedExample> examples = _examples is null || snapshot.DatabaseType == "PlatformInsights"
+            ? []
+            : await _examples.FindAsync(request.ApplicationId, request.Question, permissions, mappings, today, cancellationToken);
+        var prompt = PromptBuilder.BuildPrompt(snapshot, request.Question, language, today, examples);
         var resolved = await _providers.ResolveForOrganizationAsync(organizationId, cancellationToken);
         var watch = Stopwatch.StartNew();
         AiCompletion completion;
@@ -156,7 +162,7 @@ public sealed class QueryPlanner : IQueryPlanner
         }
 
         await _usage.AppendAndSaveAsync(UsageEventTypes.AiPlanGenerated, "Application", request.ApplicationId.ToString(), quantity: usage.InputTokens + usage.OutputTokens,
-            metadata: new { usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens, usage.CachedInputTokens, cacheWriteTokens = completion.Usage.CacheWriteTokens, usage.EstimatedCost, usage.DurationMs, queries = plan.Queries.Count, objects = authorizedPlans.Sum(a => a.Objects.Count), language }, cancellationToken: cancellationToken);
+            metadata: new { usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens, usage.CachedInputTokens, cacheWriteTokens = completion.Usage.CacheWriteTokens, usage.EstimatedCost, usage.DurationMs, queries = plan.Queries.Count, objects = authorizedPlans.Sum(a => a.Objects.Count), language, examples = examples.Count }, cancellationToken: cancellationToken);
         return new PlanResponse(plan, authorizedPlans, usage, HighestClassification(plan, authorizedPlans, permissions));
     }
 

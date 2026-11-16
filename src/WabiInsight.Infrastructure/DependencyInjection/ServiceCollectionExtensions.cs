@@ -247,6 +247,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAnalysisService, AnalysisService>();
         services.AddScoped<Core.Analysis.IAnalysisHistoryService, Analysis.AnalysisHistoryService>();
         services.AddScoped<Core.Analysis.ISharingService, Analysis.SharingService>();
+        services.AddScoped<Core.Analysis.IVerifiedAnswerService, Analysis.VerifiedAnswerService>();
+        services.AddScoped<Core.Analysis.IVerifiedExampleSource, Analysis.VerifiedExampleSource>();
         services.AddHostedService<AiProviderSeeder>();
         services.AddSingleton<IDatabaseAdapterFactory, DatabaseAdapterFactory>();
         services.AddScoped<IApplicationService, ApplicationService>();

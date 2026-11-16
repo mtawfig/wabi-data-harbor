@@ -1,0 +1,99 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow"><a routerLink="/app/admin/verified-answers">{{ 'verifiedAnswers.title' | transloco }}</a></p>
+      <h1>{{ 'verifiedAnswers.detailTitle' | transloco }}</h1>
+    </div>
+  </header>
+
+  @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (error(); as e) { <div class="banner banner--error" role="alert" data-testid="verified-error"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div> }
+  @if (done(); as key) { <div class="banner banner--ok" role="status" data-testid="verified-done"><mat-icon>check_circle</mat-icon><span>{{ key | transloco }}</span></div> }
+
+  @if (detail(); as d) {
+    <div class="detail">
+      <div>
+        <div class="wi-card">
+          <p class="wi-eyebrow">{{ 'verifiedAnswers.fields.question' | transloco }}</p>
+          <p class="detail__question" [attr.dir]="d.language === 'ar' ? 'rtl' : 'ltr'" data-testid="verified-question">{{ d.question }}</p>
+          <dl class="facts">
+            <dt>{{ 'verifiedAnswers.fields.application' | transloco }}</dt><dd>{{ applicationName() }}</dd>
+            <dt>{{ 'verifiedAnswers.fields.askedBy' | transloco }}</dt><dd>{{ d.askedByName }}</dd>
+            <dt>{{ 'verifiedAnswers.fields.status' | transloco }}</dt><dd><span class="status" [class]="'status status--' + d.status" data-testid="verified-status">{{ 'verifiedAnswers.statuses.' + d.status | transloco }}</span></dd>
+            @if (d.useCount > 0) { <dt>{{ 'verifiedAnswers.fields.used' | transloco }}</dt><dd>{{ 'verifiedAnswers.usedTimes' | transloco: { count: (d.useCount | wiNumber) } }}@if (d.lastUsedAt) { · {{ d.lastUsedAt | wiDate: 'medium' }} }</dd> }
+            @if (d.reviewedAt) { <dt>{{ 'verifiedAnswers.fields.reviewed' | transloco }}</dt><dd>{{ d.reviewedByName }} · {{ d.reviewedAt | wiDate: 'medium' }}@if (d.reviewNote) { <br /><span class="wi-muted" dir="auto">“{{ d.reviewNote }}”</span> }</dd> }
+          </dl>
+        </div>
+
+        @if (d.status === 'SetAside') {
+          <div class="banner banner--warn" data-testid="verified-set-aside"><mat-icon>warning</mat-icon><span>{{ 'verifiedAnswers.setAsideNote' | transloco }}@if (d.setAsideReason) { <br /><span class="wi-ltr">{{ d.setAsideReason }}</span> }</span></div>
+        }
+        @if (d.status === 'Approved' && d.latestVerdict === 'NotCorrect') {
+          <div class="banner banner--warn" data-testid="verified-flagged"><mat-icon>flag</mat-icon><span>{{ 'verifiedAnswers.flaggedNote' | transloco }}</span></div>
+        }
+
+        @if (result(); as a) {
+          <app-analysis-answer [answer]="a" [reportUrl]="reportUrl()" />
+        } @else {
+          <div class="wi-card" data-testid="verified-how">
+            <h2>{{ 'ask.how' | transloco }}</h2>
+            @if (d.resultHidden) { <div class="banner banner--note" data-testid="verified-result-hidden"><mat-icon>lock</mat-icon><span>{{ 'verifiedAnswers.resultHidden' | transloco }}</span></div> }
+            @if (d.plan?.assumptions?.length) { <h4>{{ 'ask.assumptions' | transloco }}</h4><ul>@for (s of d.plan!.assumptions; track $index) { <li>{{ s }}</li> }</ul> }
+            @for (q of descriptions(); track $index) {
+              <section class="how-query">
+                @if (descriptions().length > 1 && q.title) { <h4>{{ q.title }}</h4> }
+                <dl class="how-list">
+                  @if (q.sources.length) { <dt>{{ 'ask.plan.from' | transloco }}</dt><dd>{{ join(q.sources) }}</dd> }
+                  @if (q.measures.length) { <dt>{{ 'ask.plan.measures' | transloco }}</dt><dd>{{ join(q.measures) }}</dd> }
+                  @if (q.columns.length) { <dt>{{ 'ask.plan.columns' | transloco }}</dt><dd>{{ join(q.columns) }}</dd> }
+                  @if (q.groups.length) { <dt>{{ 'ask.plan.groups' | transloco }}</dt><dd>{{ join(q.groups) }}</dd> }
+                  @if (q.filters) { <dt>{{ 'ask.plan.filters' | transloco }}</dt><dd>{{ q.filters }}</dd> }
+                  @if (q.having.length) { <dt>{{ 'ask.plan.having' | transloco }}</dt><dd>{{ join(q.having) }}</dd> }
+                  @if (q.order.length) { <dt>{{ 'ask.plan.order' | transloco }}</dt><dd>{{ join(q.order) }}</dd> }
+                  @if (q.limit) { <dt>{{ 'ask.plan.rows' | transloco }}</dt><dd>{{ 'ask.plan.limit' | transloco: { count: q.limit } }}</dd> }
+                </dl>
+              </section>
+            }
+          </div>
+        }
+      </div>
+
+      <aside>
+        <div class="wi-card" data-testid="verified-actions">
+          <h2>{{ 'verifiedAnswers.review' | transloco }}</h2>
+          <p class="wi-muted small">{{ 'verifiedAnswers.reviewHint' | transloco }}</p>
+          <div class="actions">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'verifiedAnswers.note' | transloco }}</mat-label>
+              <textarea matInput rows="2" maxlength="500" [ngModel]="note()" (ngModelChange)="note.set($event)" data-testid="verified-note"></textarea>
+            </mat-form-field>
+            @if (can('approve')) { <button mat-flat-button color="primary" type="button" [disabled]="saving()" (click)="review('approve')" data-testid="verified-approve"><mat-icon>verified</mat-icon>{{ 'verifiedAnswers.actions.approve' | transloco }}</button> }
+            @if (can('enable')) { <button mat-flat-button color="primary" type="button" [disabled]="saving()" (click)="review('enable')" data-testid="verified-enable"><mat-icon>play_circle</mat-icon>{{ 'verifiedAnswers.actions.enable' | transloco }}</button> }
+            @if (can('reject')) { <button mat-stroked-button type="button" [disabled]="saving()" (click)="review('reject')" data-testid="verified-reject"><mat-icon>block</mat-icon>{{ 'verifiedAnswers.actions.reject' | transloco }}</button> }
+            @if (can('disable')) { <button mat-stroked-button type="button" [disabled]="saving()" (click)="review('disable')" data-testid="verified-disable"><mat-icon>pause_circle</mat-icon>{{ 'verifiedAnswers.actions.disable' | transloco }}</button> }
+            @if (!confirmingDelete()) {
+              <button mat-button type="button" color="warn" [disabled]="saving()" (click)="confirmingDelete.set(true)" data-testid="verified-delete"><mat-icon>delete</mat-icon>{{ 'verifiedAnswers.actions.delete' | transloco }}</button>
+            } @else {
+              <span class="wi-muted small">{{ 'verifiedAnswers.deleteConfirm' | transloco }}</span>
+              <button mat-flat-button color="warn" type="button" [disabled]="saving()" (click)="remove()" data-testid="verified-delete-confirm">{{ 'verifiedAnswers.actions.delete' | transloco }}</button>
+              <button mat-button type="button" (click)="confirmingDelete.set(false)">{{ 'common.cancel' | transloco }}</button>
+            }
+          </div>
+        </div>
+
+        <div class="wi-card" style="margin-top: 16px">
+          <h2>{{ 'verifiedAnswers.feedbackHistory' | transloco }}</h2>
+          <ul class="history" data-testid="verified-feedback">
+            @for (f of d.feedback; track $index) {
+              <li [class.bad]="f.verdict === 'NotCorrect'" [class.good]="f.verdict === 'Correct'">
+                <strong>{{ 'verifiedAnswers.verdicts.' + f.verdict | transloco }}</strong>
+                <div class="history__meta">{{ f.userName }} · {{ f.createdAt | wiDate: 'medium' }}</div>
+                @if (f.reason) { <p class="wi-muted" style="margin: 4px 0 0" dir="auto">“{{ f.reason }}”</p> }
+              </li>
+            }
+          </ul>
+        </div>
+      </aside>
+    </div>
+  }
+</section>

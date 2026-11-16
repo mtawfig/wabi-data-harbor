@@ -1,0 +1,74 @@
+<section class="wi-page">
+  <header class="wi-page__header">
+    <div>
+      <p class="wi-eyebrow">{{ 'nav.org.admin.title' | transloco }}</p>
+      <h1>{{ 'verifiedAnswers.title' | transloco }}</h1>
+      <p class="wi-muted">{{ 'verifiedAnswers.subtitle' | transloco }}</p>
+    </div>
+  </header>
+
+  <div class="chips" role="tablist" data-testid="verified-filters">
+    @for (f of filters; track f) {
+      <button type="button" role="tab" class="chip" [class.chip--active]="filter() === f" [attr.aria-selected]="filter() === f" (click)="select(f)" [attr.data-testid]="'verified-filter-' + f">
+        {{ 'verifiedAnswers.filters.' + f | transloco }}
+        @if (count(f); as n) { <span class="chip__count">{{ n | wiNumber }}</span> }
+      </button>
+    }
+  </div>
+
+  <div class="wi-card">
+    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+
+    <div class="table-wrap">
+      <table mat-table [dataSource]="items()" data-testid="verified-table">
+        <ng-container matColumnDef="question">
+          <th mat-header-cell *matHeaderCellDef>{{ 'verifiedAnswers.fields.question' | transloco }}</th>
+          <td mat-cell *matCellDef="let r" data-cell="title">
+            <strong class="question" [attr.dir]="r.language === 'ar' ? 'rtl' : 'ltr'">{{ r.question }}</strong>
+            <br /><span class="wi-muted small">{{ application(r) }}@if (r.useCount > 0) { · {{ 'verifiedAnswers.usedTimes' | transloco: { count: (r.useCount | wiNumber) } }} }</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="askedBy">
+          <th mat-header-cell *matHeaderCellDef>{{ 'verifiedAnswers.fields.askedBy' | transloco }}</th>
+          <td mat-cell *matCellDef="let r">{{ r.askedByName }}</td>
+        </ng-container>
+        <ng-container matColumnDef="verdict">
+          <th mat-header-cell *matHeaderCellDef>{{ 'verifiedAnswers.fields.verdict' | transloco }}</th>
+          <td mat-cell *matCellDef="let r">
+            <span class="verdict" [class.verdict--bad]="r.latestVerdict === 'NotCorrect'"><mat-icon>{{ r.latestVerdict === 'Correct' ? 'thumb_up' : 'thumb_down' }}</mat-icon>{{ 'verifiedAnswers.verdicts.' + r.latestVerdict | transloco }}</span>
+            @if (r.latestReason) { <br /><span class="wi-muted small reason" dir="auto">“{{ r.latestReason }}”</span> }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>{{ 'verifiedAnswers.fields.status' | transloco }}</th>
+          <td mat-cell *matCellDef="let r">
+            <span class="status" [class]="'status status--' + r.status">{{ 'verifiedAnswers.statuses.' + r.status | transloco }}</span>
+            @if (r.status === 'Approved' && r.latestVerdict === 'NotCorrect') { <br /><span class="flag"><mat-icon>flag</mat-icon>{{ 'verifiedAnswers.flagged' | transloco }}</span> }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="feedbackAt">
+          <th mat-header-cell *matHeaderCellDef>{{ 'verifiedAnswers.fields.feedbackAt' | transloco }}</th>
+          <td mat-cell *matCellDef="let r">{{ r.latestFeedbackAt | wiDate: 'medium' }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns" class="row" (click)="open(row)" tabindex="0" role="link" (keydown.enter)="open(row)" (keydown.space)="$event.preventDefault(); open(row)" [attr.data-testid]="'verified-row-' + row.verifiedAnswerId"></tr>
+      </table>
+    </div>
+
+    @if (!loading() && items().length === 0) {
+      <p class="empty wi-muted" data-testid="verified-empty">{{ (filter() === 'Waiting' ? 'verifiedAnswers.emptyWaiting' : 'verifiedAnswers.empty') | transloco }}</p>
+    }
+
+    <mat-paginator [length]="total()" [pageIndex]="page() - 1" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50]" (page)="onPage($event)" />
+  </div>
+
+  <aside class="wi-card how-it-works">
+    <h2><mat-icon>school</mat-icon>{{ 'verifiedAnswers.how.title' | transloco }}</h2>
+    <ul>
+      <li>{{ 'verifiedAnswers.how.feedback' | transloco }}</li>
+      <li>{{ 'verifiedAnswers.how.approve' | transloco }}</li>
+      <li>{{ 'verifiedAnswers.how.use' | transloco }}</li>
+      <li>{{ 'verifiedAnswers.how.safety' | transloco }}</li>
+    </ul>
+  </aside>
+</section>

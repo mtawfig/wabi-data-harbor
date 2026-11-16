@@ -182,6 +182,14 @@ The "Request a demo" form is the only endpoint, with the password-reset steps, t
 - **Tenancy.** Subscriptions, recipients and deliveries are tenant-owned with composite foreign keys to the organization's users; Platform Administrators are refused on every subscription endpoint.
 - **Whose consent (P13.27).** A report is built on an analysis its **creator** owns or was given a share of. That is checked for the creator when an Organization Administrator edits or resumes someone else's report (they can change the schedule, recipients, format and name, and choose among the creator's analyses, not put their own or a third person's under it), and again at every scheduled run: when the owner withdraws the share or it expires, the report is stopped at once (`subscription_share_ended`), nothing is sent, and its creator is notified.
 
+## Verified answers (P13.53)
+
+- **Organization only.** Verdicts (`AnswerFeedback`, append-only) and verified answers are tenant-owned; Platform Administrators are refused on every endpoint and the tenant filter scopes every read. Only the owner of a saved answer gives a verdict on it; only Organization Administrators review.
+- **Human decision.** Only answers an administrator approved are used; a verdict alone changes nothing. Every review step is audited.
+- **Examples under the asker's permissions.** An example reaches the model only when every query in it passes the authorizer for the asker; the model's new plan is still validated and authorized as before. Examples are data inside a delimited block and can never add an object or column outside the asker's catalogue.
+- **No identifying values.** Filter values on confidential or restricted columns, keys, identifiers, contact data, the employee row-scope column and references to objects with personal data are replaced with `[value]` in the example's plan and question; a plan that copies `[value]` is rejected. Approved answers whose columns changed are set aside.
+- **Result shown to the reviewer** only when the administrator may read everything it uses with no row limit; otherwise the plan in plain words and the catalogue's display names only.
+
 ## Audit
 `AuditLogs` is append-only (application guard plus `scripts/sql/create-runtime-login.sql`). Records carry actor type/id, event code, entity, JSON details without secrets, correlation id and client IP.
 

@@ -27,6 +27,10 @@ public static class AuditEvents
     public const string OrganizationUpdated = "Organization.Updated";
 
     public const string HistoryDeleted = "History.Deleted";
+    public const string AnswerFeedbackGiven = "Answer.FeedbackGiven";
+    public const string VerifiedAnswerReviewed = "VerifiedAnswer.Reviewed";
+    public const string VerifiedAnswerDeleted = "VerifiedAnswer.Deleted";
+    public const string VerifiedAnswerSetAside = "VerifiedAnswer.SetAside";
     public const string OrganizationStatusChanged = "Organization.StatusChanged";
     public const string OrganizationUserCreated = "OrganizationUser.Created";
     public const string OrganizationUserPasswordReissued = "OrganizationUser.PasswordReissued";
