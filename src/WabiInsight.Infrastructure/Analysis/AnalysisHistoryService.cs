@@ -392,17 +392,7 @@ public sealed class AnalysisHistoryService : IAnalysisHistoryService
         return new ReportBranding(buffer.ToArray(), organization.LogoContentType);
     }
 
-    private static string Slug(string title)
-    {
-        var slug = new string(title.Select(c => char.IsLetterOrDigit(c) && c < 128 ? char.ToLowerInvariant(c) : '-').ToArray());
-        while (slug.Contains("--", StringComparison.Ordinal))
-        {
-            slug = slug.Replace("--", "-", StringComparison.Ordinal);
-        }
-
-        slug = slug.Trim('-');
-        return slug.Length == 0 ? "analysis" : slug.Length > 60 ? slug[..60].TrimEnd('-') : slug;
-    }
+    private static string Slug(string title) => Core.Common.FileNames.Slug(title, "analysis");
 
     public async Task<IReadOnlyList<CollectionSummaryDto>> ListCollectionsAsync(CancellationToken cancellationToken = default)
         => await _context.AnalysisCollections.AsNoTracking().Where(c => c.OwnerUserId == UserId).OrderBy(c => c.Name)

@@ -9,6 +9,8 @@ namespace WabiInsight.Infrastructure.Email;
 /// <summary>SMTP delivery through MailKit. Port 465 uses implicit TLS, otherwise STARTTLS is required when EnableSsl is true.</summary>
 public sealed class SmtpEmailSender : IEmailSender
 {
+    public bool DeliversToRealMailboxes => true;
+
     private readonly EmailOptions _options;
 
     public SmtpEmailSender(IOptions<EmailOptions> options)

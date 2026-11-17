@@ -14,6 +14,7 @@ import { baseChartOption } from '../ui/chart-theme';
 import { answerAccess } from './answer-access';
 import { longList, shownRows } from './long-list';
 import { PlanDescription, describePanel } from './plan-description';
+import { downloadFileName } from '../files/download-name';
 import { WiNumberPipe } from '../format/locale-pipes';
 
 interface KpiCard {
@@ -95,11 +96,10 @@ export class AnalysisAnswerComponent {
         if (!blob) {
           return;
         }
-        const named = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(response.headers.get('Content-Disposition') ?? '');
         const link = document.createElement('a');
         const href = URL.createObjectURL(blob);
         link.href = href;
-        link.download = named ? decodeURIComponent(named[1]) : 'analysis.xlsx';
+        link.download = downloadFileName(response.headers.get('Content-Disposition'), 'analysis.xlsx');
         link.click();
         setTimeout(() => URL.revokeObjectURL(href), 10_000);
       },

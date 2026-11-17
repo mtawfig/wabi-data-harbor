@@ -123,7 +123,9 @@ public sealed class ReportTests
         var arabicPdf = renderer.RenderPdf(new ReportRenderRequest(arabic, SamplePanels(), new ReportBranding(null, null), "ar", "أكمي", "SHJ-OPS", "أكمي", DateTimeOffset.UtcNow));
         Assert.Equal("%PDF", Encoding.ASCII.GetString(arabicPdf, 0, 4));
         Assert.Equal("sharjah-airport-2025-punctuality-study-20261106.pdf", Infrastructure.Ai.AnalysisService.FileName(content.Title, new DateTimeOffset(2026, 11, 6, 0, 0, 0, TimeSpan.Zero)));
-        Assert.Equal("report-20261106.pdf", Infrastructure.Ai.AnalysisService.FileName("دراسة", new DateTimeOffset(2026, 11, 6, 0, 0, 0, TimeSpan.Zero)));
+        // An Arabic title keeps its words in the file name (P13.55); a title with nothing to keep falls back to "report".
+        Assert.Equal("دراسة-انضباط-المواعيد-2025-20261106.pdf", Infrastructure.Ai.AnalysisService.FileName("دراسة انضباط المواعيد 2025", new DateTimeOffset(2026, 11, 6, 0, 0, 0, TimeSpan.Zero)));
+        Assert.Equal("report-20261106.pdf", Infrastructure.Ai.AnalysisService.FileName("—  ؟", new DateTimeOffset(2026, 11, 6, 0, 0, 0, TimeSpan.Zero)));
         Assert.Equal("Monthly Traffic", QuestPdfReportRenderer.StripNumbering("2. 2. Monthly Traffic"));
         Assert.Equal("Overview", QuestPdfReportRenderer.StripNumbering("Overview"));
     }

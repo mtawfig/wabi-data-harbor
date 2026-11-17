@@ -85,7 +85,15 @@ public sealed class EmailOutboxHealthCheck : IHealthCheck
         var notSentBeforeRestart = failedLastDay == 0
             ? 0
             : await _context.EmailMessages.AsNoTracking().LongCountAsync(e => e.Status == EmailDeliveryStatus.Failed && e.CreatedAt >= now.AddDays(-1) && e.LastError == EmailFailureReasons.ProcessRestartedBeforeDelivery, cancellationToken);
-        var data = new Dictionary<string, object> { ["staleQueued"] = stale, ["failedLast24h"] = failedLastDay, ["notSentBeforeRestartLast24h"] = notSentBeforeRestart };
+        // Messages to sample addresses are skipped on purpose and are not failures; they are counted so nobody wonders where they went.
+        var skipped = await _context.EmailMessages.AsNoTracking().LongCountAsync(e => e.Status == EmailDeliveryStatus.Skipped && e.CreatedAt >= now.AddDays(-1), cancellationToken);
+        // Which kinds of message failed (template codes only: no recipient, no content), so the cause can be looked for.
+        var byTemplate = failedLastDay == 0
+            ? []
+            : await _context.EmailMessages.AsNoTracking().Where(e => e.Status == EmailDeliveryStatus.Failed && e.CreatedAt >= now.AddDays(-1))
+                .GroupBy(e => e.TemplateCode).Select(g => new { Template = g.Key, Count = g.LongCount() }).OrderByDescending(g => g.Count).Take(5).ToListAsync(cancellationToken);
+        var templates = string.Join(", ", byTemplate.Select(t => $"{t.Template} {t.Count}"));
+        var data = new Dictionary<string, object> { ["staleQueued"] = stale, ["failedLast24h"] = failedLastDay, ["notSentBeforeRestartLast24h"] = notSentBeforeRestart, ["skippedSampleAddressesLast24h"] = skipped, ["failedByTemplate"] = templates };
         if (stale > 0)
         {
             return HealthCheckResult.Degraded($"{stale} email(s) queued for more than 10 minutes.", data: data);
@@ -93,13 +101,13 @@ public sealed class EmailOutboxHealthCheck : IHealthCheck
 
         if (failedLastDay == 0)
         {
-            return HealthCheckResult.Healthy("Outbox is draining normally.", data);
+            return HealthCheckResult.Healthy(skipped > 0 ? $"Outbox is draining normally. {skipped} message(s) to sample addresses were not sent in the last 24 hours." : "Outbox is draining normally.", data);
         }
 
         return HealthCheckResult.Degraded(
             notSentBeforeRestart > 0
                 ? $"{failedLastDay} email delivery failure(s) in the last 24 hours; {notSentBeforeRestart} of them were not sent because the service restarted and have to be sent again."
-                : $"{failedLastDay} email delivery failure(s) in the last 24 hours.",
+                : $"{failedLastDay} email delivery failure(s) in the last 24 hours ({templates}). The reason of each is in the application log.",
             data: data);
     }
 }

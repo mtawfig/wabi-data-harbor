@@ -124,6 +124,46 @@ public sealed class EmailOutboxRecoveryTests
         }
     }
 
+    [Fact]
+    public async Task SystemHealth_DoesNotCountSkippedSampleAddressesAsFailures_AndNamesTheKindsThatFailed()
+    {
+        var now = DateTimeOffset.UtcNow;
+        // The schema accepts the new status (migration AllowSkippedEmails).
+        var skipped = await InsertAsync(_db.Data.OrganizationAId, EmailDeliveryStatus.Skipped, now.AddMinutes(-5), lastError: EmailFailureReasons.RecipientAddressReserved);
+        try
+        {
+            using var factory = new ApiFactory(_db.ConnectionString);
+            using var platform = factory.CreateClient();
+            await platform.LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
+            var before = Outbox(await (await platform.GetAsync("/api/platform/health")).ReadJsonAsync());
+            Assert.True(before.GetProperty("data").GetProperty("skippedSampleAddressesLast24h").GetInt64() >= 1);
+            var failedBefore = before.GetProperty("data").GetProperty("failedLast24h").GetInt64();
+
+            var failed = await InsertAsync(_db.Data.OrganizationBId, EmailDeliveryStatus.Failed, now.AddMinutes(-4), attempts: 3, lastError: "550 mailbox unavailable");
+            try
+            {
+                var after = Outbox(await (await platform.GetAsync("/api/platform/health")).ReadJsonAsync());
+                // One more failure, and it is the failed row, not the skipped one; the kind of message is named, never the recipient.
+                Assert.Equal(failedBefore + 1, after.GetProperty("data").GetProperty("failedLast24h").GetInt64());
+                Assert.Equal("Degraded", after.GetProperty("status").GetString());
+                Assert.Contains(EmailTemplateCodes.AccountCreated, after.GetProperty("description").GetString(), StringComparison.Ordinal);
+                Assert.Contains(EmailTemplateCodes.AccountCreated, after.GetProperty("data").GetProperty("failedByTemplate").GetString(), StringComparison.Ordinal);
+                Assert.DoesNotContain("recipient@org.test", after.GetRawText(), StringComparison.Ordinal);
+                Assert.DoesNotContain("mailbox unavailable", after.GetRawText(), StringComparison.Ordinal);
+            }
+            finally
+            {
+                await DeleteAsync(failed);
+            }
+        }
+        finally
+        {
+            await DeleteAsync(skipped);
+        }
+
+        static System.Text.Json.JsonElement Outbox(System.Text.Json.JsonElement report) => report.GetProperty("checks").EnumerateArray().Single(c => c.GetProperty("name").GetString() == "email-outbox");
+    }
+
     private async Task<Guid> InsertAsync(Guid? organizationId, EmailDeliveryStatus status, DateTimeOffset createdAt, int attempts = 0, string? lastError = null)
     {
         await using var context = _db.CreateContext(TestData.SystemPrincipal);

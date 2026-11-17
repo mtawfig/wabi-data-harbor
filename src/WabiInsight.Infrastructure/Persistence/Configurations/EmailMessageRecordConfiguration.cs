@@ -18,7 +18,7 @@ internal sealed class EmailMessageRecordConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.TemplateCode).HasMaxLength(100).IsRequired();
         builder.Property(e => e.Language).HasMaxLength(2).IsRequired();
         builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
-        builder.ToTable(t => t.HasCheckConstraint("CK_EmailMessages_Status", "[Status] IN ('Queued','Sent','Failed')"));
+        builder.ToTable(t => t.HasCheckConstraint("CK_EmailMessages_Status", "[Status] IN ('Queued','Sent','Failed','Skipped')"));
         builder.Property(e => e.LastError).HasMaxLength(1000);
         builder.Property(e => e.RequestedByType).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(e => e.CorrelationId).HasMaxLength(64);

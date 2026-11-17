@@ -1124,7 +1124,7 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
 
                     b.ToTable("EmailMessages", null, t =>
                         {
-                            t.HasCheckConstraint("CK_EmailMessages_Status", "[Status] IN ('Queued','Sent','Failed')");
+                            t.HasCheckConstraint("CK_EmailMessages_Status", "[Status] IN ('Queued','Sent','Failed','Skipped')");
                         });
                 });
 
