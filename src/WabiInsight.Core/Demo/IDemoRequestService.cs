@@ -8,6 +8,13 @@ public sealed class DemoRequestOptions
 {
     public const string SectionName = "DemoRequests";
 
+    /// <summary>
+    /// Whether the public "Request a demo" form is open (P13.56). Off by default: the landing page shows no button, the
+    /// form page sends visitors to the home page and a submission is refused. Requests already received stay with the
+    /// Platform Administrators. Switch it on with <c>DemoRequests:Enabled</c> = true.
+    /// </summary>
+    public bool Enabled { get; set; }
+
     /// <summary>The mailbox told about every new request. Empty sends no e-mail to the team (the in-app notification stays).</summary>
     public string NotifyEmail { get; set; } = "support@wabitex.com";
 

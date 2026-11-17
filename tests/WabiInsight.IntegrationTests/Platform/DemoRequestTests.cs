@@ -28,7 +28,7 @@ public sealed class DemoRequestTests : IDisposable
     public DemoRequestTests(SqlServerTestDatabase db)
     {
         _db = db;
-        _factory = new ApiFactory(db.ConnectionString, new Dictionary<string, string?> { ["Security:DemoRequestRateLimitPerMinute"] = "1000" });
+        _factory = new ApiFactory(db.ConnectionString, new Dictionary<string, string?> { ["Security:DemoRequestRateLimitPerMinute"] = "1000", ["DemoRequests:Enabled"] = "true" });
     }
 
     public void Dispose() => _factory.Dispose();
@@ -75,6 +75,35 @@ public sealed class DemoRequestTests : IDisposable
     {
         await using var context = _db.CreateContext(_db.Data.PlatformAdministrator);
         return await context.DemoRequests.AsNoTracking().SingleOrDefaultAsync(r => r.Email == email);
+    }
+
+    [Fact]
+    public async Task SwitchedOff_TheFormIsClosedToEveryone_AndNothingIsStored_WhileEarlierRequestsStay()
+    {
+        // Off is the default (P13.56): no setting is given here.
+        using var closed = new ApiFactory(_db.ConnectionString, new Dictionary<string, string?> { ["Security:DemoRequestRateLimitPerMinute"] = "1000" });
+        using var visitor = await AnonymousAsync(closed);
+        Assert.False((await (await visitor.GetAsync("/api/public/demo-requests/availability")).ReadJsonAsync()).GetProperty("enabled").GetBoolean());
+        var email = $"closed.{Guid.NewGuid():N}@falcon.test";
+        Assert.Equal(HttpStatusCode.NotFound, (await SubmitAsync(visitor, Form(email))).StatusCode);
+        // Signed-in people are refused the same way: an organization user and a Platform Administrator.
+        using var alice = closed.CreateClient();
+        await alice.LoginAsync(TestData.AliceEmail, TestData.UserPassword);
+        Assert.Equal(HttpStatusCode.NotFound, (await SubmitAsync(alice, Form(email))).StatusCode);
+        using var admin = closed.CreateClient();
+        await admin.LoginAsync(TestData.AdminEmail, TestData.AdminPassword);
+        Assert.Equal(HttpStatusCode.NotFound, (await SubmitAsync(admin, Form(email))).StatusCode);
+        await using (var context = _db.CreateContext(_db.Data.PlatformAdministrator))
+        {
+            Assert.False(await context.DemoRequests.AnyAsync(r => r.Email == email));
+        }
+
+        // Nothing is removed: the administrators still open the list of requests received earlier.
+        Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync("/api/platform/demo-requests")).StatusCode);
+
+        // Switched on, the same address answers that the form is open.
+        using var open = _factory.CreateClient();
+        Assert.True((await (await open.GetAsync("/api/public/demo-requests/availability")).ReadJsonAsync()).GetProperty("enabled").GetBoolean());
     }
 
     [Fact]
@@ -191,7 +220,7 @@ public sealed class DemoRequestTests : IDisposable
     [Fact]
     public async Task PublicForm_IsLimitedPerClientAddress()
     {
-        using var strict = new ApiFactory(_db.ConnectionString, new Dictionary<string, string?> { ["Security:DemoRequestRateLimitPerMinute"] = "2" });
+        using var strict = new ApiFactory(_db.ConnectionString, new Dictionary<string, string?> { ["Security:DemoRequestRateLimitPerMinute"] = "2", ["DemoRequests:Enabled"] = "true" });
         using var visitor = await AnonymousAsync(strict);
         Assert.Equal(HttpStatusCode.NoContent, (await SubmitAsync(visitor, Form(NewEmail()))).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await SubmitAsync(visitor, Form(NewEmail()))).StatusCode);

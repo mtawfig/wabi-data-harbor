@@ -6,7 +6,7 @@
     </nav>
     <div class="site-header__actions">
       <app-language-switcher />
-      <a mat-stroked-button routerLink="/request-demo" class="site-header__demo" data-testid="header-request-demo">{{ 'landing.requestDemo' | transloco }}</a>
+      @if (demoRequestsOpen()) { <a mat-stroked-button routerLink="/request-demo" class="site-header__demo" data-testid="header-request-demo">{{ 'landing.requestDemo' | transloco }}</a> }
       <a mat-flat-button [routerLink]="auth.isAuthenticated() ? auth.homeUrl() : '/login'" data-testid="header-sign-in">{{ 'common.signIn' | transloco }}</a>
     </div>
   </div>
@@ -21,7 +21,7 @@
       <p class="hero__subtitle">{{ 'landing.hero.subtitle' | transloco }}</p>
       <div class="hero__actions">
         <a mat-flat-button class="hero__cta" routerLink="/login" data-testid="hero-sign-in">{{ 'landing.hero.cta' | transloco }}</a>
-        <a mat-stroked-button class="hero__secondary" routerLink="/request-demo" data-testid="hero-request-demo">{{ 'landing.requestDemo' | transloco }}</a>
+        @if (demoRequestsOpen()) { <a mat-stroked-button class="hero__secondary" routerLink="/request-demo" data-testid="hero-request-demo">{{ 'landing.requestDemo' | transloco }}</a> }
         <a mat-button class="hero__tertiary" href="#demo">{{ 'landing.hero.secondary' | transloco }}</a>
       </div>
       <ul class="hero__facts">
@@ -181,7 +181,7 @@
       <p>{{ 'landing.cta.text' | transloco }}</p>
       <div class="cta__actions">
         <a mat-flat-button class="hero__cta" routerLink="/login">{{ 'landing.cta.button' | transloco }}</a>
-        <a mat-stroked-button class="hero__secondary" routerLink="/request-demo" data-testid="cta-request-demo">{{ 'landing.requestDemo' | transloco }}</a>
+        @if (demoRequestsOpen()) { <a mat-stroked-button class="hero__secondary" routerLink="/request-demo" data-testid="cta-request-demo">{{ 'landing.requestDemo' | transloco }}</a> }
       </div>
       <p class="cta__hint">{{ 'landing.cta.demoHint' | transloco }}</p>
       <p class="cta__hint">{{ 'landing.cta.hint' | transloco }}</p>

@@ -1,4 +1,5 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { DemoRequestsService } from '../../../core/demo/demo-requests.service';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,6 +23,12 @@ import { LanguageSwitcherComponent } from '../../../shared/ui/language-switcher.
 export class LandingComponent {
   readonly auth = inject(AuthService);
   readonly language = inject(LanguageService);
+  /** The "Request a demo" buttons are drawn only while the form is switched on (P13.56). */
+  readonly demoRequestsOpen = signal(false);
+
+  constructor() {
+    void inject(DemoRequestsService).available().then((open) => this.demoRequestsOpen.set(open));
+  }
   readonly year = new Date().getFullYear();
   readonly nav = ['capabilities', 'demo', 'useCases', 'how', 'security', 'organizations'];
   readonly capabilities = [

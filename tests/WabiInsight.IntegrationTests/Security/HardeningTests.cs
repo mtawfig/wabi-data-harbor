@@ -121,7 +121,7 @@ public sealed class HardeningTests : IDisposable
         Assert.True(controllers.Count > 20, "controller discovery failed");
         // The three steps of the self-service password reset (P13.32) are public by nature: the person cannot sign in.
         // So is the landing page's "Request a demo" form (P13.52): the visitor has no account.
-        string[] publicActions = ["AuthController.Csrf", "AuthController.Login", "AuthController.ForgotPassword", "AuthController.CheckResetLink", "AuthController.ResetPassword", "BootstrapController.Status", "BootstrapController.Initialize", "PlatformInfoController.Get", "PublicDemoRequestsController.Submit"];
+        string[] publicActions = ["AuthController.Csrf", "AuthController.Login", "AuthController.ForgotPassword", "AuthController.CheckResetLink", "AuthController.ResetPassword", "BootstrapController.Status", "BootstrapController.Initialize", "PlatformInfoController.Get", "PublicDemoRequestsController.Submit", "PublicDemoRequestsController.Availability"];
         var seen = new List<string>();
         foreach (var controller in controllers)
         {
