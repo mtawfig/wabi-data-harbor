@@ -28,6 +28,12 @@ public sealed record EmailAttachment(string FileName, string ContentType, byte[]
 public interface IEmailSender
 {
     Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// True for a sender that hands messages to a real mail server. Such a sender is never given a message for an
+    /// address that cannot receive mail (<see cref="EmailAddresses.IsReserved"/>); a sink that only writes files takes everything.
+    /// </summary>
+    bool DeliversToRealMailboxes => false;
 }
 
 /// <summary>
@@ -63,6 +69,9 @@ public static class EmailFailureReasons
 {
     /// <summary>The API stopped or restarted while the message was still waiting; its content was held in memory only and is gone.</summary>
     public const string ProcessRestartedBeforeDelivery = "process_restarted_before_delivery";
+
+    /// <summary>Not sent on purpose: the recipient's address is on a domain reserved for samples and tests and cannot receive mail.</summary>
+    public const string RecipientAddressReserved = "recipient_address_reserved";
 }
 
 /// <summary>

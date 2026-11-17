@@ -7,6 +7,9 @@ public enum EmailDeliveryStatus
     Queued = 1,
     Sent = 2,
     Failed = 3,
+
+    /// <summary>Not sent on purpose (P13.55): the address cannot receive mail (a sample user's address). Not a failure.</summary>
+    Skipped = 4,
 }
 
 /// <summary>

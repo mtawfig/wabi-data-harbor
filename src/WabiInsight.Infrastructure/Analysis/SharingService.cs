@@ -317,11 +317,7 @@ public sealed class SharingService : ISharingService
         }
     }
 
-    private static string Slug(string title)
-    {
-        var slug = new string(title.Where(c => char.IsLetterOrDigit(c) || c is ' ' or '-').ToArray()).Trim().Replace(' ', '-');
-        return slug.Length == 0 ? "analysis" : slug.Length > 60 ? slug[..60] : slug;
-    }
+    private static string Slug(string title) => Core.Common.FileNames.Slug(title, "analysis");
 
     public async Task<ArtifactDownload?> OpenSharedVersionReportAsync(Guid historyId, int versionNumber, CancellationToken cancellationToken = default)
     {

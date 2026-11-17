@@ -469,23 +469,8 @@ public sealed partial class AnalysisService : IAnalysisService
         return new ReportBranding(buffer.ToArray(), organization.LogoContentType);
     }
 
-    /// <summary>A safe file name from the title: letters, digits, dashes; ASCII only so every browser and mail client keeps it.</summary>
-    internal static string FileName(string title, DateTimeOffset at)
-    {
-        var slug = new string(title.Select(c => char.IsLetterOrDigit(c) && c < 128 ? char.ToLowerInvariant(c) : '-').ToArray());
-        while (slug.Contains("--", StringComparison.Ordinal))
-        {
-            slug = slug.Replace("--", "-", StringComparison.Ordinal);
-        }
-
-        slug = slug.Trim('-');
-        if (slug.Length > 60)
-        {
-            slug = slug[..60].TrimEnd('-');
-        }
-
-        return $"{(slug.Length > 0 ? slug : "report")}-{at:yyyyMMdd}.pdf";
-    }
+    /// <summary>A safe file name from the title: letters and digits of every script (an Arabic title stays Arabic) and dashes.</summary>
+    internal static string FileName(string title, DateTimeOffset at) => $"{Core.Common.FileNames.Slug(title, "report")}-{at:yyyyMMdd}.pdf";
 
     /// <summary>Step 15: the model explains verified numbers. Rows are passed as data inside delimiters, capped per panel and in total, and never as instructions.</summary>
     private async Task<Interpretation> InterpretAsync(Guid organizationId, string question, string language, AnalysisPlan plan, List<AnalysisPanel> panels, CancellationToken cancellationToken)

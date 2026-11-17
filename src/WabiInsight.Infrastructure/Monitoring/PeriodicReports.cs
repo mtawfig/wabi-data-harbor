@@ -178,17 +178,7 @@ public sealed class PeriodicReportRenderer
 
     private static RenderedReport Failed(string code) => new(ReportDeliveryStatus.Failed, null, null, null, 0, code);
 
-    internal static string Slug(string title)
-    {
-        var slug = new string(title.Select(c => char.IsLetterOrDigit(c) && c < 128 ? char.ToLowerInvariant(c) : '-').ToArray());
-        while (slug.Contains("--", StringComparison.Ordinal))
-        {
-            slug = slug.Replace("--", "-", StringComparison.Ordinal);
-        }
-
-        slug = slug.Trim('-');
-        return slug.Length == 0 ? "report" : slug.Length <= 60 ? slug : slug[..60].TrimEnd('-');
-    }
+    internal static string Slug(string title) => Core.Common.FileNames.Slug(title, "report");
 }
 
 public sealed record SubscriptionRunResult(Guid RunId, IReadOnlyList<ReportDelivery> Deliveries, string? ErrorCode);

@@ -53,6 +53,7 @@ public static class UsageEventTypes
     public const string EmailQueued = "Email.Queued";
     public const string EmailSent = "Email.Sent";
     public const string EmailFailed = "Email.Failed";
+    public const string EmailSkipped = "Email.Skipped";
     public const string ApiError = "Api.Error";
     public const string TicketCreated = "Support.TicketCreated";
     public const string TicketResolved = "Support.TicketResolved";

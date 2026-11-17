@@ -66,6 +66,40 @@ public sealed class EmailOutboxWorkerTests
     }
 
     [Fact]
+    public async Task AMessageToASampleAddress_IsSkippedWithoutAnAttempt_ByARealMailServer_AndTakenByAFileSink()
+    {
+        var sample = Guid.NewGuid();
+        var real = Guid.NewGuid();
+        var sender = new FakeSender { DeliversToRealMailboxes = true };
+        var log = new FakeDeliveryLog();
+        using (var harness = new Harness(sender, log))
+        {
+            await harness.EnqueueAsync(sample, "khalid.alsuwaidi@gulfaviation.example");
+            await harness.EnqueueAsync(real, "owner@wabitex.com");
+            await harness.Worker.StartAsync(CancellationToken.None);
+            await log.WaitForAsync(r => r.Id == real && r.Status == EmailDeliveryStatus.Sent);
+            await harness.Worker.StopAsync(CancellationToken.None);
+        }
+
+        // Never handed to the server, recorded as skipped (not failed) with the reason and no attempt.
+        Assert.Equal(["owner@wabitex.com"], sender.Attempts);
+        var skipped = Assert.Single(log.Records, r => r.Id == sample);
+        Assert.Equal(EmailDeliveryStatus.Skipped, skipped.Status);
+        Assert.Equal(0, skipped.Attempts);
+        Assert.Equal(EmailFailureReasons.RecipientAddressReserved, skipped.Error);
+
+        // The development file sink writes every message, sample addresses included.
+        var sink = new FakeSender();
+        var sinkLog = new FakeDeliveryLog();
+        using var local = new Harness(sink, sinkLog);
+        await local.EnqueueAsync(sample, "khalid.alsuwaidi@gulfaviation.example");
+        await local.Worker.StartAsync(CancellationToken.None);
+        await sinkLog.WaitForAsync(r => r.Id == sample && r.Status == EmailDeliveryStatus.Sent);
+        await local.Worker.StopAsync(CancellationToken.None);
+        Assert.Equal(["khalid.alsuwaidi@gulfaviation.example"], sink.Delivered);
+    }
+
+    [Fact]
     public async Task FailedDelivery_IsRetried_AndRecordedAsFailedAfterTheLastAttempt()
     {
         var id = Guid.NewGuid();
@@ -251,6 +285,9 @@ public sealed class EmailOutboxWorkerTests
         private int _sends;
 
         public string? FailFor { get; init; }
+
+        /// <summary>A real mail server (true) or a sink that takes anything (false, the default).</summary>
+        public bool DeliversToRealMailboxes { get; init; }
 
         /// <summary>The first send waits until <see cref="ReleaseFirstSend"/> is set (or the delivery is cancelled).</summary>
         public bool HoldFirstSend { get; init; }

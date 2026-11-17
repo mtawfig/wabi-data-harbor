@@ -119,10 +119,10 @@ public sealed class EmailDeliveryLog : IEmailDeliveryLog
         if (status != EmailDeliveryStatus.Queued)
         {
             _usage.Append(
-                status == EmailDeliveryStatus.Sent ? UsageEventTypes.EmailSent : UsageEventTypes.EmailFailed,
+                status switch { EmailDeliveryStatus.Sent => UsageEventTypes.EmailSent, EmailDeliveryStatus.Skipped => UsageEventTypes.EmailSkipped, _ => UsageEventTypes.EmailFailed },
                 "EmailMessage",
                 emailMessageId.ToString(),
-                succeeded: status == EmailDeliveryStatus.Sent,
+                succeeded: status != EmailDeliveryStatus.Failed,
                 metadata: new { record.TemplateCode, attempts, error = lastError is null ? null : lastError[..Math.Min(lastError.Length, 200)] },
                 organizationId: record.OrganizationId,
                 actorType: record.RequestedByType,
@@ -283,12 +283,22 @@ public sealed partial class EmailOutboxWorker : BackgroundService
 
     private async Task DeliverAsync(Guid id, EmailMessage message, CancellationToken stoppingToken, CancellationToken deliveryToken)
     {
+        var sender = _route.SenderFor(message.OrganizationId);
+        if (sender.DeliversToRealMailboxes && EmailAddresses.IsReserved(message.ToEmail))
+        {
+            // A sample user's address (…@….example) cannot receive mail: a real server refuses it every time. The message
+            // is recorded as skipped, without an attempt, instead of failing three times a day and degrading System Health.
+            LogSkipped(_logger, id);
+            await RecordAsync(id, 0, EmailDeliveryStatus.Skipped, EmailFailureReasons.RecipientAddressReserved, deliveryToken);
+            return;
+        }
+
         for (var attempt = 1; attempt <= _options.MaxAttempts; attempt++)
         {
             Exception? failure = null;
             try
             {
-                await _route.SenderFor(message.OrganizationId).SendAsync(message, deliveryToken);
+                await sender.SendAsync(message, deliveryToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !deliveryToken.IsCancellationRequested)
             {
@@ -382,6 +392,9 @@ public sealed partial class EmailOutboxWorker : BackgroundService
             LogRecoveryFailed(_logger, ex);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Email {EmailMessageId} not sent: the recipient's address is on a domain reserved for samples and tests.")]
+    private static partial void LogSkipped(ILogger logger, Guid emailMessageId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Email {EmailMessageId} sent to {Recipient} (attempt {Attempt}).")]
     private static partial void LogSent(ILogger logger, Guid emailMessageId, string recipient, int attempt);
