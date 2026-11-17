@@ -297,7 +297,7 @@ public sealed partial class OrganizationService : IOrganizationService
         var organizationId = _tenantContext.RequireOrganizationId();
         return await _context.Organizations.AsNoTracking()
             .Where(o => o.OrganizationId == organizationId)
-            .Select(o => new OrganizationProfile(o.OrganizationId, o.OrganizationCode, o.OrganizationName, o.OrganizationNameAr, o.Description, o.ContactEmail, o.ContactPhone, o.CountryCode, o.TimeZone, o.DefaultLanguage, o.Status, o.CreatedAt, o.RequireSecondAdminApprovalForSupportAccess, o.LogoArtifactKey != null))
+            .Select(o => new OrganizationProfile(o.OrganizationId, o.OrganizationCode, o.OrganizationName, o.OrganizationNameAr, o.Description, o.ContactEmail, o.ContactPhone, o.CountryCode, o.TimeZone, o.DefaultLanguage, o.Status, o.CreatedAt, o.RequireSecondAdminApprovalForSupportAccess, o.LogoArtifactKey != null, o.AskClarifyingQuestions))
             .SingleAsync(cancellationToken);
     }
 
@@ -431,7 +431,8 @@ public sealed partial class OrganizationService : IOrganizationService
         organization.TimeZone = command.TimeZone.Trim();
         organization.DefaultLanguage = command.DefaultLanguage;
         organization.RequireSecondAdminApprovalForSupportAccess = command.RequireSecondAdminApprovalForSupportAccess;
-        _audit.Append(AuditEvents.OrganizationUpdated, "Organization", organizationId.ToString(), new { before, after = Snapshot(organization), requireSecondAdminApproval = command.RequireSecondAdminApprovalForSupportAccess }, organizationId);
+        organization.AskClarifyingQuestions = command.AskClarifyingQuestions ?? organization.AskClarifyingQuestions;
+        _audit.Append(AuditEvents.OrganizationUpdated, "Organization", organizationId.ToString(), new { before, after = Snapshot(organization), requireSecondAdminApproval = command.RequireSecondAdminApprovalForSupportAccess, askClarifyingQuestions = organization.AskClarifyingQuestions }, organizationId);
         await _context.SaveChangesAsync(cancellationToken);
 
         return new OrganizationOperationResult(OrganizationOperationOutcome.Success, []);

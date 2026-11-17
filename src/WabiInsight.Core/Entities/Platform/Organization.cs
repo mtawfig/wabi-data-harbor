@@ -38,6 +38,12 @@ public class Organization : AuditableEntity
     /// <summary>When true, a requester who is an OrganizationAdmin cannot approve their own support-access grant (review A12).</summary>
     public bool RequireSecondAdminApprovalForSupportAccess { get; set; }
 
+    /// <summary>
+    /// When a request on the Ask page is too open to answer, the platform asks the asker one question with suggested
+    /// answers instead of choosing for them (P13.54). On by default; an Organization Administrator can switch it off.
+    /// </summary>
+    public bool AskClarifyingQuestions { get; set; } = true;
+
     /// <summary>Months the access ledger, rule evaluations and alerts are kept (Phase 14, owner decision D3: 24; capped by the platform maximum).</summary>
     public int MonitoringRetentionMonths { get; set; } = 24;
 

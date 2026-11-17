@@ -122,7 +122,11 @@ public sealed class AiController : ControllerBase
     {
         try
         {
-            return Ok(await _analysis.AskAsync(new AskRequest(request.ApplicationId, request.Question, request.Language, request.Interpret), cancellationToken));
+            return Ok(await _analysis.AskAsync(new AskRequest(request.ApplicationId, request.Question, request.Language, request.Interpret,
+                Clarification: string.IsNullOrWhiteSpace(request.Clarification) ? null : request.Clarification,
+                // One question at most: the first request of the Ask page may be answered with a question, never the one that answers or skips it.
+                AllowClarification: string.IsNullOrWhiteSpace(request.Clarification) && !request.SkipClarification,
+                ClarificationSkipped: request.SkipClarification && string.IsNullOrWhiteSpace(request.Clarification)), cancellationToken));
         }
         catch (PlanRejectedException ex)
         {

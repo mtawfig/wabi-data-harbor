@@ -1,11 +1,19 @@
 namespace WabiInsight.Core.Ai;
 
-public sealed record PlanRequest(Guid ApplicationId, string Question, string Language);
+/// <param name="AllowClarification">The model may answer an open request with one question back instead of a plan (P13.54). Only the Ask page's first request allows it.</param>
+public sealed record PlanRequest(Guid ApplicationId, string Question, string Language, bool AllowClarification = false);
+
+/// <summary>A question back to the asker with the answers suggested to them (P13.54), as the browser receives it.</summary>
+public sealed record ClarifyingQuestion(string Question, IReadOnlyList<string> Options);
 
 public sealed record PlanUsage(string Provider, string Model, long InputTokens, long OutputTokens, long CachedInputTokens, decimal EstimatedCost, double DurationMs);
 
 /// <summary>Validated and authorized answer plan ready for the compiler: one authorized plan per query, in order. Nothing here has touched the business database.</summary>
-public sealed record PlanResponse(AnalysisPlan Plan, IReadOnlyList<AuthorizedPlan> Authorized, PlanUsage Usage, Entities.Metadata.DataClassification Classification = Entities.Metadata.DataClassification.Internal);
+public sealed record PlanResponse(AnalysisPlan Plan, IReadOnlyList<AuthorizedPlan> Authorized, PlanUsage Usage, Entities.Metadata.DataClassification Classification = Entities.Metadata.DataClassification.Internal)
+{
+    /// <summary>Set when the model asked the asker a question instead of planning; then there are no queries and nothing is run.</summary>
+    public ClarifyingQuestion? Clarification { get; init; }
+}
 
 /// <summary>Thrown when the model's plan is rejected: shape errors or authorization errors, with stable codes for the UI.</summary>
 public sealed class PlanRejectedException : Exception

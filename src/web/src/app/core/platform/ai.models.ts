@@ -209,6 +209,20 @@ export interface AskResponse {
   planUsage: PlanUsage;
   totalEstimatedCost: number;
   totalDurationMs: number;
+  /** Set instead of an answer when the request was too open (P13.54): the page asks this question first. */
+  clarification?: ClarifyingQuestion | null;
+}
+
+/** The platform's question back to the asker, with the answers it suggests. */
+export interface ClarifyingQuestion {
+  question: string;
+  options: string[];
+}
+
+/** How a request on the Ask page follows a clarifying question: with the asker's answer, or without one. */
+export interface AskFollowUp {
+  clarification?: string;
+  skipClarification?: boolean;
 }
 
 export interface PlanUsage {

@@ -190,6 +190,13 @@ The "Request a demo" form is the only endpoint, with the password-reset steps, t
 - **No identifying values.** Filter values on confidential or restricted columns, keys, identifiers, contact data, the employee row-scope column and references to objects with personal data are replaced with `[value]` in the example's plan and question; a plan that copies `[value]` is rejected. Approved answers whose columns changed are set aside.
 - **Result shown to the reviewer** only when the administrator may read everything it uses with no row limit; otherwise the plan in plain words and the catalogue's display names only.
 
+## Clarifying question (P13.54)
+
+- **Nothing runs.** A question back carries no query: nothing is validated, authorized, compiled, executed or saved until the asker answers, and the request then goes through the whole workflow as usual.
+- **Suggestions under the asker's permissions.** The model sees only the asker's own snapshot, and each suggestion must name the catalogue objects it would be answered from; a suggestion naming any object outside that snapshot, or none, is dropped before it reaches the browser. Question and suggestions are sanitized and bounded.
+- **One question at most.** The request that answers or skips a question tells the model that asking is not allowed; a model that asks anyway is rejected. Re-runs, periodic reports, monitoring rules and the plan endpoint never allow it.
+- **Organization switch and record.** Organization Administrators can switch clarifying questions off; each question asked and each answer or skip is a usage event, and the model call is in the AI usage ledger.
+
 ## Audit
 `AuditLogs` is append-only (application guard plus `scripts/sql/create-runtime-login.sql`). Records carry actor type/id, event code, entity, JSON details without secrets, correlation id and client IP.
 

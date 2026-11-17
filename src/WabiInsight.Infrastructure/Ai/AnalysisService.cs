@@ -95,6 +95,18 @@ public sealed partial class AnalysisService : IAnalysisService
         var userId = _tenantContext.Principal.UserId!.Value;
         var language = request.Language == "ar" ? "ar" : "en";
         var total = Stopwatch.StartNew();
+        // The asker's answer to the clarifying question becomes part of the question: what is planned, saved and logged
+        // (P13.54). A question is asked at most once: never after an answer, a skip or for a re-run, and only when the
+        // organization has not switched clarifying questions off.
+        var clarified = !string.IsNullOrWhiteSpace(request.Clarification);
+        var followUp = clarified || request.ClarificationSkipped;
+        var mayAsk = request.AllowClarification && !followUp && request.HistoryId is null
+            && await _context.Organizations.AsNoTracking().Where(o => o.OrganizationId == organizationId).Select(o => o.AskClarifyingQuestions).FirstOrDefaultAsync(cancellationToken);
+        if (clarified)
+        {
+            request = request with { Question = Clarifications.Compose(request.Question, request.Clarification!), Clarification = null };
+        }
+
         var metric = new AnalysisExecutionMetric { MetricId = Ids.New(), OrganizationId = organizationId, UserId = userId, ApplicationId = request.ApplicationId, Language = language, CreatedAt = _clock.UtcNow };
         // The answer's place in My History is known from the start, so a document made on the way can point to it.
         var historyId = request.HistoryId ?? Ids.New();
@@ -107,7 +119,7 @@ public sealed partial class AnalysisService : IAnalysisService
         PlanResponse planned;
         try
         {
-            planned = await _planner.PlanAsync(new PlanRequest(request.ApplicationId, request.Question, language), cancellationToken);
+            planned = await _planner.PlanAsync(new PlanRequest(request.ApplicationId, request.Question, language, mayAsk), cancellationToken);
         }
         catch (PlanRejectedException ex)
         {
@@ -124,8 +136,22 @@ public sealed partial class AnalysisService : IAnalysisService
         }
         catch (AiProviderException ex)
         {
+            // The provider's own words go to the application log (never to the browser): without them a refused request cannot be diagnosed.
+            LogPlanProviderFailed(_logger, ex.Code, ex.Message);
             await FailAsync(metric, AnalysisStatus.Failed, "provider", ex.Code, total, cancellationToken, request.HistoryId, QueryLog(request, metric, null, []));
             throw;
+        }
+
+        if (planned.Clarification is not null)
+        {
+            // Nothing was run and nothing is saved in My History: the asker answers the question (or skips it) and the
+            // request comes back once. The model call itself is in the AI usage ledger like every other.
+            return new AskResponse(metric.MetricId, null, 0, string.Empty, [], [], null, null, null, planned.Usage, planned.Usage.EstimatedCost, total.Elapsed.TotalMilliseconds) { Clarification = planned.Clarification };
+        }
+
+        if (followUp)
+        {
+            _usage.Append(UsageEventTypes.AiClarificationAnswered, "Application", request.ApplicationId.ToString(), metadata: new { skipped = request.ClarificationSkipped, metric.MetricId, language });
         }
 
         metric.ProviderId = (await _providers.ResolveForOrganizationAsync(organizationId, cancellationToken)).Descriptor.ProviderId;
@@ -605,6 +631,9 @@ public sealed partial class AnalysisService : IAnalysisService
     }
 
     private sealed record InterpretationJson(string? Narrative, List<string>? Highlights);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The AI provider did not return a plan ({Code}): {ProviderMessage}")]
+    private static partial void LogPlanProviderFailed(ILogger logger, string code, string providerMessage);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "The AI spending alert could not be sent.")]
     private static partial void LogSpendingAlertFailed(ILogger logger, Exception exception);

@@ -34,7 +34,8 @@ public sealed record UpdateOrganizationProfileCommand(
     string? ContactPhone,
     string TimeZone,
     string DefaultLanguage,
-    bool RequireSecondAdminApprovalForSupportAccess = false);
+    bool RequireSecondAdminApprovalForSupportAccess = false,
+    bool? AskClarifyingQuestions = null);
 
 public enum OrganizationOperationOutcome
 {
@@ -92,7 +93,8 @@ public sealed record OrganizationProfile(
     OrganizationStatus Status,
     DateTimeOffset CreatedAt,
     bool RequireSecondAdminApprovalForSupportAccess = false,
-    bool HasLogo = false);
+    bool HasLogo = false,
+    bool AskClarifyingQuestions = true);
 
 public sealed record LogoUpload(string FileName, string ContentType, long Length, Stream Content);
 

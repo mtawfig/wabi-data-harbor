@@ -41,7 +41,7 @@ describe('AiService', () => {
   });
 
   it('asks with the application id, question, language and interpretation flag', () => {
-    service.ask('app1', 'Tickets by status', 'en', false).subscribe();
+    service.ask('app1', 'Tickets by status', 'en', {}, false).subscribe();
     const ask = http.expectOne({ method: 'POST', url: '/api/ai/ask' });
     expect(ask.request.body).toEqual({ applicationId: 'app1', question: 'Tickets by status', language: 'en', interpret: false });
     ask.flush({});

@@ -25,7 +25,10 @@ public sealed record Interpretation(string Narrative, IReadOnlyList<string> High
 public sealed record AskableApplication(Guid ApplicationId, string ApplicationCode, string ApplicationName, string ApplicationNameAr, string DatabaseType, bool IsBuiltIn, int ObjectCount, IReadOnlyList<Applications.ApplicationExampleQuestion> ExampleQuestions);
 
 /// <summary>HistoryId set means "re-run this saved analysis": the outcome becomes its next version instead of a new history entry.</summary>
-public sealed record AskRequest(Guid ApplicationId, string Question, string Language, bool Interpret = true, Guid? HistoryId = null);
+/// <param name="Clarification">The asker's answer to the platform's clarifying question (P13.54); it becomes part of the question.</param>
+/// <param name="AllowClarification">An open request may be answered with one question back. Never for a re-run, a clarified or a skipped request.</param>
+/// <param name="ClarificationSkipped">The asker chose "Answer anyway" on the clarifying question.</param>
+public sealed record AskRequest(Guid ApplicationId, string Question, string Language, bool Interpret = true, Guid? HistoryId = null, string? Clarification = null, bool AllowClarification = false, bool ClarificationSkipped = false);
 
 /// <summary>
 /// One executed query of the answer: a KPI, a chart or a table, with its own plan and verified rows. The SQL it ran is not part
@@ -108,6 +111,12 @@ public sealed record AskResponse(
     decimal? TotalEstimatedCost,
     double TotalDurationMs)
 {
+    /// <summary>
+    /// Set when the request was too open to answer and the platform asks the asker one question first (P13.54): there are
+    /// then no panels and nothing was saved or run.
+    /// </summary>
+    public ClarifyingQuestion? Clarification { get; init; }
+
     /// <summary>
     /// The answer as a business user receives it: the provider, model, token counts and cost are left out entirely (F5);
     /// Organization Administrators see them on the AI usage and insights pages.
