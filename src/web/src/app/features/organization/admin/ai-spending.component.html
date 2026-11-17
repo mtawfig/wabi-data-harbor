@@ -11,7 +11,9 @@
 
   @if (report(); as r) {
     <div class="spend__summary" data-testid="spend-summary">
-      <div class="wi-card spend__plan" [attr.data-state]="r.state">
+      <!-- The plan card is drawn only while plans are shown to organizations (P13.57); the other cards share the row. -->
+      @if (r.planShown !== false) {
+      <div class="wi-card spend__plan" [attr.data-state]="r.state" data-testid="spend-plan">
         <span class="spend__label">{{ 'aiSpending.plan' | transloco }}</span>
         @if (r.planCode) {
           <strong class="spend__value">{{ planName() }}</strong>
@@ -20,6 +22,7 @@
           <span class="spend__meta">{{ 'aiSpending.noPlan' | transloco }}</span>
         }
       </div>
+      }
       <div class="wi-card spend__plan" [attr.data-state]="r.state">
         <span class="spend__label">{{ 'aiSpending.monthSpend' | transloco }}</span>
         <strong class="spend__value"><span class="wi-ltr">{{ r.monthSpend | wiNumber: '1.2-2' }} USD</span></strong>

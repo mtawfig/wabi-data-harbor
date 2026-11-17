@@ -77,6 +77,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
         services.AddScoped<IPasswordResetService, PasswordResetService>();
+        services.AddOptions<Core.Plans.PlanDisplayOptions>().Bind(configuration.GetSection(Core.Plans.PlanDisplayOptions.SectionName));
         services.AddOptions<Core.Demo.DemoRequestOptions>().Bind(configuration.GetSection(Core.Demo.DemoRequestOptions.SectionName)).ValidateDataAnnotations().ValidateOnStart();
         services.AddScoped<Core.Demo.IDemoRequestService, Platform.DemoRequestService>();
         services.AddScoped<IAdministratorAccountService, AdministratorAccountService>();

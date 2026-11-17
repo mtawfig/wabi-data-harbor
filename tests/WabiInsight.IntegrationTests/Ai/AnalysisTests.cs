@@ -22,7 +22,7 @@ public sealed class AnalysisTests : IDisposable
     public AnalysisTests(SqlServerTestDatabase db)
     {
         _db = db;
-        _factory = new AiApiFactory(db.ConnectionString, new Dictionary<string, string?> { ["DataProtection:KeyRingPath"] = _keyRing, ["Ai:Anthropic:ApiKey"] = "sk-ant-seeded-platform-key-0002" });
+        _factory = new AiApiFactory(db.ConnectionString, new Dictionary<string, string?> { ["DataProtection:KeyRingPath"] = _keyRing, ["Ai:Anthropic:ApiKey"] = "sk-ant-seeded-platform-key-0002", ["Plans:ShowToOrganizations"] = "true" });
     }
 
     public void Dispose() => _factory.Dispose();
@@ -254,6 +254,37 @@ public sealed class AnalysisTests : IDisposable
             Assert.Equal(6, report.GetProperty("months").GetArrayLength());
             var monthlyManager = report.GetProperty("monthly").EnumerateArray().Single(r => r.GetProperty("userId").GetGuid() == managerId);
             Assert.Equal(managerRow.GetProperty("spend").GetDecimal(), monthlyManager.GetProperty("spend")[5].GetDecimal());
+
+            // Plans not shown to organizations (the default, P13.57): the plan's name, its limit and the share used never
+            // leave the server, for the page or for the band; the state and every usage amount stay, and the limit still holds.
+            using (var noPlans = new AiApiFactory(_db.ConnectionString, new Dictionary<string, string?> { ["DataProtection:KeyRingPath"] = _keyRing, ["Ai:Anthropic:ApiKey"] = "sk-ant-seeded-platform-key-0002" }))
+            {
+                using var hiddenAlice = noPlans.CreateClient();
+                Assert.Equal(HttpStatusCode.OK, (await hiddenAlice.LoginAsync(TestData.AliceEmail, TestData.UserPassword)).StatusCode);
+                var hiddenReport = await (await hiddenAlice.GetAsync("/api/ai/spending/report")).ReadJsonAsync();
+                Assert.False(hiddenReport.GetProperty("planShown").GetBoolean());
+                Assert.Equal("reached", hiddenReport.GetProperty("state").GetString());
+                foreach (var field in new[] { "planCode", "planNameEn", "planNameAr", "monthlyAiSpendLimit", "percentUsed" })
+                {
+                    Assert.False(hiddenReport.TryGetProperty(field, out _), field);
+                }
+
+                Assert.Equal(report.GetProperty("monthSpend").GetDecimal(), hiddenReport.GetProperty("monthSpend").GetDecimal());
+                Assert.Equal(report.GetProperty("totalSpend").GetDecimal(), hiddenReport.GetProperty("totalSpend").GetDecimal());
+                Assert.Equal(rows.Count, hiddenReport.GetProperty("rows").GetArrayLength());
+                var hiddenBand = await (await hiddenAlice.GetAsync("/api/ai/spending")).ReadJsonAsync();
+                Assert.False(hiddenBand.GetProperty("planShown").GetBoolean());
+                Assert.Equal("reached", hiddenBand.GetProperty("state").GetString());
+                Assert.True(hiddenBand.GetProperty("monthSpend").GetDecimal() > 0);
+                foreach (var field in new[] { "planCode", "nameEn", "nameAr", "monthlyAiSpendLimit", "percentUsed" })
+                {
+                    Assert.False(hiddenBand.TryGetProperty(field, out _), field);
+                }
+
+                using var hiddenManager = noPlans.CreateClient();
+                Assert.Equal(HttpStatusCode.OK, (await hiddenManager.LoginAsync(managerEmail, TestData.UserPassword)).StatusCode);
+                Assert.Equal(HttpStatusCode.UnprocessableEntity, (await hiddenManager.PostJsonAsync("/api/ai/ask", new { applicationId, question = "Tickets per status", language = "en" })).StatusCode);
+            }
 
             var successful = await (await alice.GetAsync("/api/ai/spending/report?successfulOnly=true")).ReadJsonAsync();
             Assert.Equal(3, successful.GetProperty("rows").EnumerateArray().Single(r => r.GetProperty("userId").GetGuid() == managerId).GetProperty("requests").GetInt32());

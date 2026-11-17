@@ -29,8 +29,11 @@ public sealed partial class ServicePlanService : IServicePlanService, IAiSpendin
 
     private readonly INotificationDispatcher? _notifications;
 
-    public ServicePlanService(ConfigurationDbContext context, IAuditWriter audit, ITenantContext tenantContext, IClock clock, INotificationDispatcher? notifications = null)
+    private readonly bool _showPlan;
+
+    public ServicePlanService(ConfigurationDbContext context, IAuditWriter audit, ITenantContext tenantContext, IClock clock, INotificationDispatcher? notifications = null, Microsoft.Extensions.Options.IOptions<PlanDisplayOptions>? display = null)
     {
+        _showPlan = display?.Value.ShowToOrganizations ?? false;
         _notifications = notifications;
         _context = context;
         _audit = audit;
@@ -199,7 +202,9 @@ public sealed partial class ServicePlanService : IServicePlanService, IAiSpendin
         _context.AiSpendingNotices.Add(notice);
         var reached = threshold == AiSpendingState.Reached;
         _notifications.Notify(recipients, reached ? NotificationTypes.AiSpendingReached : NotificationTypes.AiSpendingNear, "AiSpending", month,
-            new { month, planCode = described.PlanCode, planNameEn = described.NameEn, planNameAr = described.NameAr, limit = Money(limit), spend = Money(described.MonthSpend), percent = percent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) }, organizationId);
+            _showPlan
+                ? new { month, planCode = described.PlanCode, planNameEn = described.NameEn, planNameAr = described.NameAr, limit = Money(limit), spend = Money(described.MonthSpend), percent = percent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) }
+                : new { month, spend = Money(described.MonthSpend) }, organizationId);
         try
         {
             await _context.SaveChangesAsync(cancellationToken);
@@ -215,17 +220,22 @@ public sealed partial class ServicePlanService : IServicePlanService, IAiSpendin
             return;
         }
 
-        var figuresEn = $"Plan: {described.NameEn}. Spent this month: {Money(described.MonthSpend)} USD of {Money(limit)} USD ({percent:0.#}%).";
-        var figuresAr = $"الخطة: {described.NameAr}. الإنفاق هذا الشهر: {Money(described.MonthSpend)} دولار من {Money(limit)} دولار ({percent:0.#}%).";
+        // The plan's name and its limit are written only while they are shown to organizations (P13.57); the amount spent always is.
+        var figuresEn = _showPlan
+            ? $"Plan: {described.NameEn}. Spent this month: {Money(described.MonthSpend)} USD of {Money(limit)} USD ({percent:0.#}%)."
+            : $"Spent this month: {Money(described.MonthSpend)} USD.";
+        var figuresAr = _showPlan
+            ? $"الخطة: {described.NameAr}. الإنفاق هذا الشهر: {Money(described.MonthSpend)} دولار من {Money(limit)} دولار ({percent:0.#}%)."
+            : $"الإنفاق هذا الشهر: {Money(described.MonthSpend)} دولار.";
         await _notifications.EmailAsync(recipients, reached ? "AiSpendingReached" : "AiSpendingNear",
             reached ? "Wabi Insight: the monthly AI limit is reached" : "Wabi Insight: close to the monthly AI limit",
             reached ? "وابي إنسايت: تم بلوغ الحد الشهري للذكاء الاصطناعي" : "وابي إنسايت: اقتراب من الحد الشهري للذكاء الاصطناعي",
             reached
-                ? $"Your organization has reached its plan's AI limit for this month. New AI questions are refused until next month or a plan change; saved answers and reports stay available. {figuresEn} Open AI Spending to see the spending of each employee."
-                : $"Your organization has used {percent:0.#}% of its plan's AI limit for this month. {figuresEn} Open AI Spending to see the spending of each employee.",
+                ? $"Your organization has reached its {(_showPlan ? "plan's AI limit" : "AI limit")} for this month. New AI questions are refused until next month{(_showPlan ? " or a plan change" : string.Empty)}; saved answers and reports stay available. {figuresEn} Open AI Spending to see the spending of each employee."
+                : $"{(_showPlan ? $"Your organization has used {percent:0.#}% of its plan's AI limit for this month." : "Your organization is close to its AI limit for this month.")} {figuresEn} Open AI Spending to see the spending of each employee.",
             reached
-                ? $"بلغت مؤسستكم حد الذكاء الاصطناعي في خطتها لهذا الشهر. تُرفض أسئلة الذكاء الاصطناعي الجديدة حتى الشهر التالي أو تغيير الخطة، وتبقى الإجابات والتقارير المحفوظة متاحة. {figuresAr} افتحوا صفحة إنفاق الذكاء الاصطناعي لمعرفة إنفاق كل موظف."
-                : $"استخدمت مؤسستكم {percent:0.#}% من حد الذكاء الاصطناعي في خطتها لهذا الشهر. {figuresAr} افتحوا صفحة إنفاق الذكاء الاصطناعي لمعرفة إنفاق كل موظف.",
+                ? $"بلغت مؤسستكم حد الذكاء الاصطناعي {(_showPlan ? "في خطتها " : string.Empty)}لهذا الشهر. تُرفض أسئلة الذكاء الاصطناعي الجديدة حتى الشهر التالي{(_showPlan ? " أو تغيير الخطة" : string.Empty)}، وتبقى الإجابات والتقارير المحفوظة متاحة. {figuresAr} افتحوا صفحة إنفاق الذكاء الاصطناعي لمعرفة إنفاق كل موظف."
+                : $"{(_showPlan ? $"استخدمت مؤسستكم {percent:0.#}% من حد الذكاء الاصطناعي في خطتها لهذا الشهر." : "اقتربت مؤسستكم من حد الذكاء الاصطناعي لهذا الشهر.")} {figuresAr} افتحوا صفحة إنفاق الذكاء الاصطناعي لمعرفة إنفاق كل موظف.",
             "/app/admin/ai-spending", organizationId, cancellationToken);
     }
 

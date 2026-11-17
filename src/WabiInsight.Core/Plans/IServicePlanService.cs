@@ -11,7 +11,25 @@ public sealed record OrganizationPlanDto(Guid OrganizationId, Guid? PlanId, stri
 /// What an organization user is told about the month's AI spending. Everyone gets the state; the plan, the limit and
 /// the amount spent are for Organization Administrators only (usage figures are theirs, P13.28).
 /// </summary>
-public sealed record AiSpendingDto(string State, string? PlanCode, string? NameEn, string? NameAr, decimal? MonthlyAiSpendLimit, decimal? MonthSpend, decimal? PercentUsed);
+/// <param name="PlanShown">False while the plan and its limit are not shown to organizations (P13.57): the plan fields are then empty.</param>
+public sealed record AiSpendingDto(string State, string? PlanCode, string? NameEn, string? NameAr, decimal? MonthlyAiSpendLimit, decimal? MonthSpend, decimal? PercentUsed, bool PlanShown = true)
+{
+    /// <summary>The same position without the plan's name, its limit and the share of it used; the state and the amount spent stay.</summary>
+    public AiSpendingDto WithoutPlan() => this with { PlanCode = null, NameEn = null, NameAr = null, MonthlyAiSpendLimit = null, PercentUsed = null, PlanShown = false };
+}
+
+/// <summary>What organizations see of the platform's plans (P13.57).</summary>
+public sealed class PlanDisplayOptions
+{
+    public const string SectionName = "Plans";
+
+    /// <summary>
+    /// Whether organizations see their plan's name, its monthly limit and the share of it used (AI Spending page, the
+    /// band on the Ask page, the limit e-mails). Off by default: only the state and the AI usage amounts are shown. The
+    /// limit itself works either way, and Platform Administrators always see the plans.
+    /// </summary>
+    public bool ShowToOrganizations { get; set; }
+}
 
 /// <summary>States of an organization's AI spending against its plan's monthly limit.</summary>
 public static class AiSpendingState
@@ -83,7 +101,11 @@ public sealed record AiSpendingReportDto(
     string State, string? PlanCode, string? PlanNameEn, string? PlanNameAr, decimal? MonthlyAiSpendLimit, decimal MonthSpend, decimal? PercentUsed,
     DateOnly From, DateOnly To, int TotalRequests, decimal TotalSpend, IReadOnlyList<AiSpendingUserRow> Rows,
     IReadOnlyList<string> Months, IReadOnlyList<AiSpendingMonthlyRow> Monthly, IReadOnlyList<decimal> MonthlyTotals,
-    IReadOnlyList<AiSpendingUserOption> Users, long TotalInputTokens = 0, long TotalOutputTokens = 0);
+    IReadOnlyList<AiSpendingUserOption> Users, long TotalInputTokens = 0, long TotalOutputTokens = 0, bool PlanShown = true)
+{
+    /// <summary>The same report without the plan's name, its limit and the share of it used; every usage amount stays.</summary>
+    public AiSpendingReportDto WithoutPlan() => this with { PlanCode = null, PlanNameEn = null, PlanNameAr = null, MonthlyAiSpendLimit = null, PercentUsed = null, PlanShown = false };
+}
 
 /// <summary>Per-employee AI spending of the signed-in administrator's own organization.</summary>
 public interface IAiSpendingReportService

@@ -105,3 +105,24 @@ describe('AskComponent — clarifying question (P13.54)', () => {
     expect(byId('ask-examples')).not.toBeNull();
   });
 });
+
+describe('AskComponent — the limit band while plans are not shown (P13.57)', () => {
+  it('tells an administrator the position in words, with the way to the details and no plan or amounts', async () => {
+    await TestBed.configureTestingModule({
+      imports: [AskComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideTestTransloco(), provideRouter([])],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(AskComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/ai/applications').flush([]);
+    http.expectOne('/api/ai/spending').flush({ state: 'near', monthSpend: 8.5, planShown: false });
+    fixture.detectChanges();
+    const band = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="ask-spending"]')!;
+    expect(band.textContent).toContain('Your organization is close to its AI limit for this month.');
+    expect(band.querySelector('[data-testid="ask-spending-details"]')).not.toBeNull();
+    expect(band.textContent).not.toContain('USD');
+    expect(band.textContent).not.toContain('plan');
+    expect(band.textContent).not.toContain('8.5');
+  });
+});
