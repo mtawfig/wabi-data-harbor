@@ -390,6 +390,12 @@ public sealed class AnalysisPlan
     public bool WantsEmail => Deliverables.Contains("email", StringComparer.OrdinalIgnoreCase);
 }
 
+/// <summary>The model's question back to the asker, with the answers it suggests (P13.54), as read from a plan without queries.</summary>
+public sealed record PlanClarification(string Question, IReadOnlyList<PlanClarificationOption> Options);
+
+/// <summary>One suggested answer and the catalogue objects ("schema.name") it would be answered from.</summary>
+public sealed record PlanClarificationOption(string Label, IReadOnlyList<string> Objects);
+
 /// <summary>Structured-output schema for the whole answer: the query definition of <see cref="QueryPlanSchema"/> inside a "queries" array.</summary>
 public static class AnalysisPlanSchema
 {
@@ -400,6 +406,12 @@ public static class AnalysisPlanSchema
     /// <summary>A dashboard of eight strict-schema queries needs about 6,000 output tokens; the planning call never gets less than this, whatever the provider row says.</summary>
     public const int MinPlanOutputTokens = 8192;
 
+    /// <remarks>
+    /// The schema is at the provider's limit for a strict output format: adding even one text property is refused with
+    /// "the compiled grammar is too large" (found with P13.54). That is why the clarifying question travels in the
+    /// existing fields (a plan without queries: the question in objective, the suggestions in assumptions) and not in a
+    /// field of its own. Anything added here must be tried against the real provider first.
+    /// </remarks>
     public const string Json = JsonHead + QueryPlanSchema.Defs + "\n        }";
 
     private const string JsonHead = """

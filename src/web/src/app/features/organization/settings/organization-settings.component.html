@@ -31,6 +31,7 @@
     </mat-form-field>
     <h3 class="span">{{ 'organizations.settings.supportAccessTitle' | transloco }}</h3>
     <mat-checkbox formControlName="requireSecondAdminApprovalForSupportAccess" class="span" data-testid="org-second-approval">{{ 'organizations.settings.requireSecondAdmin' | transloco }}</mat-checkbox>
+    <mat-checkbox formControlName="askClarifyingQuestions" class="span" data-testid="org-clarifying-questions">{{ 'organizations.settings.askClarifyingQuestions' | transloco }}</mat-checkbox>
     <p class="wi-muted span" style="font-size: 13px">{{ 'organizations.settings.requireSecondAdminHint' | transloco }}</p>
     <div class="actions span"><button mat-flat-button type="submit" [disabled]="busy()" data-testid="org-settings-save">{{ 'common.save' | transloco }}</button></div>
   </form>

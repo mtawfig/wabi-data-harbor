@@ -293,3 +293,96 @@ public static class VerifiedExamples
         return true;
     }
 }
+
+/// <summary>
+/// The clarifying question (P13.54): how the model's question is cleaned before the asker sees it, and how the asker's
+/// answer becomes part of the question.
+/// </summary>
+public static class Clarifications
+{
+    public const int MaxQuestionLength = 200;
+    public const int MaxOptionLength = 80;
+    public const int MaxOptions = 4;
+    public const int MaxAnswerLength = 300;
+
+    /// <summary>The bar that separates a suggestion's words from the catalogue objects it would be answered from.</summary>
+    public const char ObjectsSeparator = '|';
+
+    /// <summary>
+    /// Reads the question out of a plan without queries: the question is the objective, and each assumption is one
+    /// suggestion written as "label | schema.name, schema.name". The answer format has no field of its own for it (see
+    /// <see cref="AnalysisPlanSchema.Json"/>). Null when the plan has queries or no objective.
+    /// </summary>
+    public static PlanClarification? Read(AnalysisPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (plan.Queries.Count > 0 || string.IsNullOrWhiteSpace(plan.Objective))
+        {
+            return null;
+        }
+
+        var options = new List<PlanClarificationOption>();
+        foreach (var line in plan.Assumptions.Where(a => !string.IsNullOrWhiteSpace(a)))
+        {
+            var bar = line.LastIndexOf(ObjectsSeparator);
+            var label = bar < 0 ? line : line[..bar];
+            var objects = bar < 0 ? [] : line[(bar + 1)..].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            options.Add(new PlanClarificationOption(label.Trim(), objects));
+        }
+
+        return new PlanClarification(plan.Objective, options);
+    }
+
+    /// <summary>
+    /// The question as the asker sees it: sanitized text, at most four distinct options, and only options answered from
+    /// objects in the asker's own snapshot (what they may read), so a suggestion never hints at data they cannot see.
+    /// The object names stay on the server. Null when there is no question.
+    /// </summary>
+    public static ClarifyingQuestion? Clean(PlanClarification? clarification, MetadataSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var question = PromptBuilder.Sanitize(clarification?.Question, MaxQuestionLength);
+        if (clarification is null || question.Length == 0)
+        {
+            return null;
+        }
+
+        var permitted = snapshot.Objects.Select(o => $"{o.Schema}.{o.Name}").ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var options = new List<string>();
+        foreach (var option in clarification.Options)
+        {
+            var label = PromptBuilder.Sanitize(option.Label, MaxOptionLength);
+            if (label.Length == 0 || option.Objects.Count == 0 || !option.Objects.All(permitted.Contains) || options.Contains(label, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            options.Add(label);
+            if (options.Count == MaxOptions)
+            {
+                break;
+            }
+        }
+
+        return new ClarifyingQuestion(question, options);
+    }
+
+    /// <summary>The request with the asker's answer: what is planned, saved in My History and logged.</summary>
+    public static string Compose(string question, string answer)
+    {
+        var cleanAnswer = PromptBuilder.Sanitize(answer, MaxAnswerLength);
+        var cleanQuestion = (question ?? string.Empty).Trim();
+        if (cleanAnswer.Length == 0)
+        {
+            return cleanQuestion;
+        }
+
+        var room = PromptBuilder.MaxQuestionLength - cleanAnswer.Length - 3;
+        if (cleanQuestion.Length > room)
+        {
+            cleanQuestion = cleanQuestion[..Math.Max(0, room)].TrimEnd();
+        }
+
+        return $"{cleanQuestion} — {cleanAnswer}";
+    }
+}

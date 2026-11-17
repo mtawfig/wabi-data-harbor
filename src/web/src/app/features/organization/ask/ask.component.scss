@@ -33,3 +33,22 @@
 // The plan's monthly AI spending limit is near or reached (P13.46).
 .ask__spending { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; background: #fffbeb; color: #92400e; border-color: #fde68a; strong { display: block; } &[data-state='reached'] { background: #fef2f2; color: #991b1b; border-color: #fecaca; } }
 .ask__spending-figures { display: block; font-size: 13px; margin-top: 2px; }
+
+// The platform's question back to the asker (P13.54): where the sample questions were, so it cannot be missed.
+.ask__clarify:focus { outline: none; }
+.ask__clarify { margin: 4px 0 8px; padding: 16px 18px; border: 1px solid #93c5fd; border-inline-start: 4px solid var(--wi-ocean, #087df2); border-radius: var(--wi-radius-sm, 10px); background: #f5f9ff; }
+.ask__clarify-question { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 2px; font-size: 17px; font-weight: 600; color: #0f172a; mat-icon { flex: none; color: var(--wi-ocean, #087df2); } }
+.ask__clarify-hint { margin: 0 0 12px; padding-inline-start: 34px; font-size: 13px; color: #475569; }
+.ask__clarify-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.ask__clarify-option { height: auto; min-height: 40px; padding-block: 6px; white-space: normal; text-align: start; line-height: 1.3; background: #fff; }
+.ask__clarify-own { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; mat-form-field { flex: 1 1 280px; } }
+.ask__clarify-links { display: flex; gap: 8px; margin-top: 6px; margin-inline-start: -12px; }
+.ask__clarify-cancel { color: #64748b; }
+.ask__clarified { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; padding: 4px 12px; border-radius: var(--wi-radius-sm, 10px); background: #f0fdf4; color: #166534; font-size: 14px; mat-icon { font-size: 18px; width: 18px; height: 18px; } span { overflow-wrap: anywhere; } }
+.ask__examples--busy { opacity: 0.55; pointer-events: none; }
+@media (max-width: 720px) {
+  .ask__clarify-hint { padding-inline-start: 0; }
+  .ask__clarify-options { flex-direction: column; }
+  .ask__clarify-option { width: 100%; justify-content: flex-start; }
+  .ask__clarify-own button { width: 100%; }
+}

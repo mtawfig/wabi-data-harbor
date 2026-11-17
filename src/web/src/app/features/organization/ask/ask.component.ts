@@ -12,7 +12,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { AskResponse, AskableApplication } from '../../../core/platform/ai.models';
+import { AskFollowUp, AskResponse, AskableApplication, ClarifyingQuestion } from '../../../core/platform/ai.models';
 import { AiService } from '../../../core/platform/ai.service';
 import { problemMessage } from '../../../core/problem-message';
 import { AiSpending, PlansService } from '../../../core/plans/plans.service';
@@ -61,6 +61,14 @@ export class AskComponent {
   readonly error = signal<string | null>(null);
   readonly rejection = signal<Rejection | null>(null);
   readonly answer = signal<AskResponse | null>(null);
+  /** The platform's question back to the asker, while it waits for an answer (P13.54). It takes the place of the sample questions. */
+  readonly clarification = signal<ClarifyingQuestion | null>(null);
+  /** What the asker answered, shown under the question box once the request has gone on. */
+  readonly clarified = signal<string | null>(null);
+  /** The asker's own words instead of one of the suggested answers. */
+  readonly ownAnswer = signal('');
+  /** The last question asked and the request it belongs to, so "Change" can bring the choices back. */
+  private lastClarification: { question: string; clarification: ClarifyingQuestion } | null = null;
   readonly application = computed(() => this.applications().find((a) => a.applicationId === this.selectedApplication()) ?? null);
 
   /**
@@ -115,11 +123,60 @@ export class AskComponent {
     return this.language.current() === 'ar' ? a.applicationNameAr : a.applicationName;
   }
 
-  useExample(chip: ExampleChip): void {
-    this.prompt.set(chip.key ? this.transloco.translate(`ask.examples.${chip.key}`) : (chip.text ?? ''));
+  /** Editing the request while the question is open starts over: the choices belonged to the old wording. */
+  onPrompt(value: string): void {
+    this.prompt.set(value);
+    if (this.lastClarification && value.trim() !== this.lastClarification.question) {
+      this.clarification.set(null);
+      this.clarified.set(null);
+      this.lastClarification = null;
+    }
   }
 
-  submit(): void {
+  /** One of the suggested answers, or the asker's own words: the request goes on with it. */
+  answerClarification(answer: string): void {
+    const text = answer.trim();
+    if (!text || this.busy()) {
+      return;
+    }
+    this.clarified.set(text);
+    this.submit({ clarification: text });
+  }
+
+  /** "Answer anyway": the request is answered as understood, without a question. */
+  skipClarification(): void {
+    this.clarified.set(null);
+    this.submit({ skipClarification: true });
+  }
+
+  cancelClarification(): void {
+    this.clarification.set(null);
+  }
+
+  /** "Change": the choices of the last question again. */
+  changeClarification(): void {
+    if (this.lastClarification && !this.busy()) {
+      this.clarified.set(null);
+      this.ownAnswer.set('');
+      this.clarification.set(this.lastClarification.clarification);
+      this.focusClarification();
+    }
+  }
+
+  private focusClarification(): void {
+    // After the panel is drawn, focus moves to it: a screen reader announces the question and the next Tab is the first
+    // choice. The panel itself takes the focus, not a choice, so none of them looks chosen.
+    setTimeout(() => document.querySelector<HTMLElement>('[data-testid="ask-clarify"]')?.focus());
+  }
+
+  useExample(chip: ExampleChip): void {
+    if (this.busy()) {
+      return;
+    }
+    this.onPrompt(chip.key ? this.transloco.translate(`ask.examples.${chip.key}`) : (chip.text ?? ''));
+  }
+
+  submit(followUp: AskFollowUp = {}): void {
     const applicationId = this.selectedApplication();
     const question = this.prompt().trim();
     if (!applicationId || !question || this.busy()) {
@@ -131,10 +188,22 @@ export class AskComponent {
     this.error.set(null);
     this.rejection.set(null);
     this.answer.set(null);
-    this.ai.ask(applicationId, question, language).subscribe({
+    this.clarification.set(null);
+    this.ownAnswer.set('');
+    if (!followUp.clarification) {
+      this.clarified.set(null);
+    }
+    this.ai.ask(applicationId, question, language, followUp).subscribe({
       next: (a) => {
-        this.answer.set(a);
         this.busy.set(false);
+        if (a.clarification) {
+          // Too open to answer: the page asks first. Nothing was run or saved yet.
+          this.lastClarification = { question, clarification: a.clarification };
+          this.clarification.set(a.clarification);
+          this.focusClarification();
+          return;
+        }
+        this.answer.set(a);
       },
       error: (e: HttpErrorResponse) => {
         this.busy.set(false);

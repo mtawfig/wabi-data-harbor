@@ -3341,6 +3341,11 @@ namespace WabiInsight.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("AiProviderConfigurationId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AskClarifyingQuestions")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("ContactEmail")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");

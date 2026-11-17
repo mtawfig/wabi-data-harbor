@@ -477,7 +477,8 @@
       "plan_relative_date_invalid": "Try rephrasing the period the question asks about, for example: this month, or from 1 to 31 March 2026.",
       "asker_value_missing": "The question refers to your own records, department or section, but your profile doesn't include them. Ask your organization administrator to complete your profile.",
       "ai_spending_limit_reached": "Your organization has reached its monthly AI limit. Contact your Wabi Insight administrator.",
-      "plan_example_value_copied": "The answer copied a placeholder from an example instead of a value from the question."
+      "plan_example_value_copied": "The answer copied a placeholder from an example instead of a value from the question.",
+      "plan_clarification_not_allowed": "The request is too open to answer. Add what you want to know and ask again."
     },
     "kpis": "Headline numbers",
     "charts": "Charts",
@@ -606,6 +607,15 @@
         "is_null": "{{column}} is empty",
         "not_null": "{{column}} is not empty"
       }
+    },
+    "clarify": {
+      "hint": "Pick one, or describe it in your own words.",
+      "hintNoOptions": "Describe what you want in your own words.",
+      "own": "Or describe it yourself",
+      "continue": "Continue",
+      "skip": "Answer anyway",
+      "clarified": "Clarified:",
+      "change": "Change"
     }
   },
   "platform": {
@@ -721,7 +731,8 @@
       "logoNone": "No logo uploaded",
       "logoUpload": "Upload logo",
       "logoRemove": "Remove",
-      "logoSaved": "Logo saved."
+      "logoSaved": "Logo saved.",
+      "askClarifyingQuestions": "When a request on the Ask page is too open, ask the person one question with suggested answers before answering"
     }
   },
   "admin": {

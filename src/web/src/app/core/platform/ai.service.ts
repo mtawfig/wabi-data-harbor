@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AiProvider, AiProviderTestResult, AiProviderType, AskResponse, AskableApplication, OrganizationAiSettings, PlanResponse, SaveAiProviderRequest } from './ai.models';
+import { AiProvider, AiProviderTestResult, AiProviderType, AskFollowUp, AskResponse, AskableApplication, OrganizationAiSettings, PlanResponse, SaveAiProviderRequest } from './ai.models';
 
 /** AI provider configuration (platform and organization) and the planning endpoint. API keys are only ever sent, never read back. */
 @Injectable({ providedIn: 'root' })
@@ -72,8 +72,8 @@ export class AiService {
     return this.http.get<AskableApplication[]>('/api/ai/applications');
   }
 
-  ask(applicationId: string, question: string, language: 'en' | 'ar', interpret = true): Observable<AskResponse> {
-    return this.http.post<AskResponse>('/api/ai/ask', { applicationId, question, language, interpret });
+  ask(applicationId: string, question: string, language: 'en' | 'ar', followUp: AskFollowUp = {}, interpret = true): Observable<AskResponse> {
+    return this.http.post<AskResponse>('/api/ai/ask', { applicationId, question, language, interpret, ...followUp });
   }
 
   /** Download URL of the PDF report of an analysis the signed-in user ran (served by the API with the session cookie). */

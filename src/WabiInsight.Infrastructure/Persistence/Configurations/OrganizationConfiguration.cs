@@ -24,6 +24,8 @@ internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organ
         builder.Property(o => o.TimeZone).HasMaxLength(64).IsRequired();
         // Existing organizations get 07:00 / 08:00–18:00 / Monday–Friday from the migration's column defaults.
         builder.Property(o => o.WorkingDays).HasMaxLength(7).IsRequired();
+        // Existing organizations get clarifying questions too (P13.54): the column is added with the default on.
+        builder.Property(o => o.AskClarifyingQuestions).HasDefaultValue(true);
         builder.Property(o => o.MonthlyAiBudget).HasPrecision(14, 2);
         builder.HasOne<ServicePlan>().WithMany().HasForeignKey(o => o.ServicePlanId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(o => o.DefaultLanguage).HasMaxLength(2).IsRequired();

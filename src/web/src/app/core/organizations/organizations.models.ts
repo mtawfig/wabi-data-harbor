@@ -58,6 +58,8 @@ export interface OrganizationProfile {
   status: OrganizationStatus;
   createdAt: string;
   requireSecondAdminApprovalForSupportAccess: boolean;
+  /** Ask the asker one question when a request on the Ask page is too open, instead of choosing for them (P13.54). */
+  askClarifyingQuestions?: boolean;
   hasLogo?: boolean;
 }
 

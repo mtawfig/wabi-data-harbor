@@ -66,6 +66,12 @@ public static class UsageEventTypes
     public const string MetadataRefreshed = "Metadata.Refreshed";
     public const string InsightsQueried = "Insights.Queried";
     public const string AiPlanGenerated = "Ai.PlanGenerated";
+
+    /// <summary>The platform asked the asker one question instead of answering an open request (P13.54).</summary>
+    public const string AiClarificationAsked = "Ai.ClarificationAsked";
+
+    /// <summary>The asker answered the clarifying question, or chose to be answered without it (metadata: skipped).</summary>
+    public const string AiClarificationAnswered = "Ai.ClarificationAnswered";
     public const string AiPlanRejected = "Ai.PlanRejected";
     public const string AiProviderTested = "Ai.ProviderTested";
     public const string AnalysisCompleted = "Ai.AnalysisCompleted";

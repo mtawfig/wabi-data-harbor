@@ -50,6 +50,7 @@ export class OrganizationSettingsComponent {
     timeZone: ['UTC', Validators.required],
     defaultLanguage: ['en' as 'en' | 'ar', Validators.required],
     requireSecondAdminApprovalForSupportAccess: [false],
+    askClarifyingQuestions: [true],
   });
 
   constructor() {
@@ -64,6 +65,7 @@ export class OrganizationSettingsComponent {
         timeZone: p.timeZone,
         defaultLanguage: p.defaultLanguage,
         requireSecondAdminApprovalForSupportAccess: p.requireSecondAdminApprovalForSupportAccess ?? false,
+        askClarifyingQuestions: p.askClarifyingQuestions ?? true,
       });
     });
   }

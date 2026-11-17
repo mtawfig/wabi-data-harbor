@@ -56,24 +56,54 @@
 
       <mat-form-field appearance="outline" class="wi-full-width">
         <mat-label>{{ 'ask.prompt' | transloco }}</mat-label>
-        <textarea matInput rows="4" [ngModel]="prompt()" (ngModelChange)="prompt.set($event)" [placeholder]="'ask.promptPlaceholder' | transloco" (keydown.control.enter)="submit()" data-testid="ask-prompt"></textarea>
+        <textarea matInput rows="4" [ngModel]="prompt()" (ngModelChange)="onPrompt($event)" [placeholder]="'ask.promptPlaceholder' | transloco" (keydown.control.enter)="submit()" data-testid="ask-prompt"></textarea>
       </mat-form-field>
 
-      <div class="ask__actions">
-        <div class="ask__examples" data-testid="ask-examples">
-          @if (exampleChips().length > 0) {
-            <span class="wi-muted">{{ 'ask.examplesTitle' | transloco }}</span>
-            <mat-chip-set>
-              @for (chip of exampleChips(); track $index) {
-                <mat-chip (click)="useExample(chip)" class="ask__chip" [attr.data-testid]="'ask-example-' + $index">{{ chip.key ? ('ask.examples.' + chip.key | transloco) : chip.text }}</mat-chip>
+      @if (clarification(); as c) {
+        <!-- The request was too open: the platform asks first (P13.54). The question takes the place of the sample
+             questions and of the Ask button, so there is one thing to do: answer it, skip it or cancel. -->
+        <div class="ask__clarify" role="region" aria-live="polite" tabindex="-1" [attr.aria-label]="c.question" (keydown.escape)="cancelClarification()" data-testid="ask-clarify">
+          <p class="ask__clarify-question"><mat-icon>help</mat-icon><span data-testid="ask-clarify-question">{{ c.question }}</span></p>
+          <p class="ask__clarify-hint">{{ (c.options.length ? 'ask.clarify.hint' : 'ask.clarify.hintNoOptions') | transloco }}</p>
+          @if (c.options.length) {
+            <div class="ask__clarify-options">
+              @for (option of c.options; track option) {
+                <button mat-stroked-button type="button" class="ask__clarify-option" (click)="answerClarification(option)" [attr.data-testid]="'ask-clarify-option-' + $index">{{ option }}</button>
               }
-            </mat-chip-set>
+            </div>
           }
+          <div class="ask__clarify-own">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'ask.clarify.own' | transloco }}</mat-label>
+              <input matInput maxlength="300" [ngModel]="ownAnswer()" (ngModelChange)="ownAnswer.set($event)" (keydown.enter)="answerClarification(ownAnswer())" data-testid="ask-clarify-own" />
+            </mat-form-field>
+            <button mat-flat-button type="button" [disabled]="!ownAnswer().trim()" (click)="answerClarification(ownAnswer())" data-testid="ask-clarify-continue">{{ 'ask.clarify.continue' | transloco }}</button>
+          </div>
+          <div class="ask__clarify-links">
+            <button mat-button type="button" (click)="skipClarification()" data-testid="ask-clarify-skip">{{ 'ask.clarify.skip' | transloco }}</button>
+            <button mat-button type="button" class="ask__clarify-cancel" (click)="cancelClarification()" data-testid="ask-clarify-cancel">{{ 'common.cancel' | transloco }}</button>
+          </div>
         </div>
-        <button mat-flat-button type="button" (click)="submit()" [disabled]="busy() || !prompt().trim() || !selectedApplication()" data-testid="ask-submit">
-          <mat-icon>auto_awesome</mat-icon>{{ 'ask.submit' | transloco }}
-        </button>
-      </div>
+      } @else {
+        @if (clarified(); as chosen) {
+          <p class="ask__clarified" data-testid="ask-clarified"><mat-icon>check</mat-icon><span>{{ 'ask.clarify.clarified' | transloco }} <strong>{{ chosen }}</strong></span><button mat-button type="button" [disabled]="busy()" (click)="changeClarification()" data-testid="ask-clarified-change">{{ 'ask.clarify.change' | transloco }}</button></p>
+        }
+        <div class="ask__actions">
+          <div class="ask__examples" [class.ask__examples--busy]="busy()" data-testid="ask-examples">
+            @if (exampleChips().length > 0) {
+              <span class="wi-muted">{{ 'ask.examplesTitle' | transloco }}</span>
+              <mat-chip-set>
+                @for (chip of exampleChips(); track $index) {
+                  <mat-chip (click)="useExample(chip)" class="ask__chip" [attr.data-testid]="'ask-example-' + $index">{{ chip.key ? ('ask.examples.' + chip.key | transloco) : chip.text }}</mat-chip>
+                }
+              </mat-chip-set>
+            }
+          </div>
+          <button mat-flat-button type="button" (click)="submit()" [disabled]="busy() || !prompt().trim() || !selectedApplication()" data-testid="ask-submit">
+            <mat-icon>auto_awesome</mat-icon>{{ 'ask.submit' | transloco }}
+          </button>
+        </div>
+      }
       @if (busy()) { <mat-progress-bar mode="indeterminate" /><p class="wi-muted small ask__working">{{ 'ask.working' | transloco }}</p> }
     </div>
 

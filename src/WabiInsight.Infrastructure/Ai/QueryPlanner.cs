@@ -93,7 +93,7 @@ public sealed class QueryPlanner : IQueryPlanner
         IReadOnlyList<VerifiedExample> examples = _examples is null || snapshot.DatabaseType == "PlatformInsights"
             ? []
             : await _examples.FindAsync(request.ApplicationId, request.Question, permissions, mappings, today, cancellationToken);
-        var prompt = PromptBuilder.BuildPrompt(snapshot, request.Question, language, today, examples);
+        var prompt = PromptBuilder.BuildPrompt(snapshot, request.Question, language, today, examples, request.AllowClarification);
         var resolved = await _providers.ResolveForOrganizationAsync(organizationId, cancellationToken);
         var watch = Stopwatch.StartNew();
         AiCompletion completion;
@@ -125,6 +125,23 @@ public sealed class QueryPlanner : IQueryPlanner
         {
             await RejectAsync(request, usage, "format", [new PlanError("plan_json_invalid", ex.Message)], cancellationToken);
             throw new PlanRejectedException("format", [new PlanError("plan_json_invalid", "The model did not return a valid plan.")]);
+        }
+
+        // The request was too open and the model asked the asker instead of planning (P13.54): a plan without queries,
+        // the question as its objective and the suggestions as its assumptions. Nothing is validated, authorized or run.
+        // The suggestions are limited to what the asker's own snapshot holds.
+        if (Clarifications.Read(plan) is { } asked && Clarifications.Clean(asked, snapshot) is { } clarification)
+        {
+            if (!request.AllowClarification)
+            {
+                var notAllowed = new List<PlanError> { new("plan_clarification_not_allowed", "The model asked a question where none is allowed.") };
+                await RejectAsync(request, usage, "shape", notAllowed, cancellationToken);
+                throw new PlanRejectedException("shape", notAllowed);
+            }
+
+            await _usage.AppendAndSaveAsync(UsageEventTypes.AiClarificationAsked, "Application", request.ApplicationId.ToString(), quantity: usage.InputTokens + usage.OutputTokens,
+                metadata: new { usage.Provider, usage.Model, usage.InputTokens, usage.OutputTokens, usage.EstimatedCost, usage.DurationMs, options = clarification.Options.Count, suggested = asked.Options.Count, language }, cancellationToken: cancellationToken);
+            return new PlanResponse(plan, [], usage) { Clarification = clarification };
         }
 
         var shapeErrors = QueryPlanValidator.ValidateAnalysis(plan);
