@@ -47,6 +47,8 @@ export interface AiSpending {
   monthlyAiSpendLimit?: number | null;
   monthSpend?: number | null;
   percentUsed?: number | null;
+  /** False while the plan and its limit are not shown to organizations (P13.57): the plan fields are then empty. */
+  planShown?: boolean;
 }
 
 export interface AiSpendingFilter {
@@ -89,6 +91,8 @@ export interface AiSpendingReport {
   monthlyAiSpendLimit?: number | null;
   monthSpend: number;
   percentUsed?: number | null;
+  /** False while the plan and its limit are not shown to organizations (P13.57). */
+  planShown?: boolean;
   from: string;
   to: string;
   totalRequests: number;

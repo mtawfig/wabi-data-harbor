@@ -2610,7 +2610,9 @@
       "near": "Your organization is close to its plan's AI limit for this month.",
       "reached": "Your organization has reached its plan's AI limit for this month. New questions will be available next month.",
       "user": "Your organization has reached its monthly AI limit. Contact your Wabi Insight administrator.",
-      "details": "See the spending of each employee"
+      "details": "See the spending of each employee",
+      "nearNoPlan": "Your organization is close to its AI limit for this month.",
+      "reachedNoPlan": "Your organization has reached its AI limit for this month. New questions will be available next month."
     }
   },
   "aiSpending": {

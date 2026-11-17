@@ -62,14 +62,21 @@ public sealed class PlatformPlansController : ControllerBase
 public sealed class AiSpendingController : ControllerBase
 {
     private readonly IAiSpendingGuard _spending;
+    private readonly PlanDisplayOptions _display;
 
-    public AiSpendingController(IAiSpendingGuard spending)
+    public AiSpendingController(IAiSpendingGuard spending, Microsoft.Extensions.Options.IOptions<PlanDisplayOptions> display)
     {
         _spending = spending;
+        _display = display.Value;
     }
 
     [HttpGet]
-    public async Task<ActionResult<AiSpendingDto>> Get(CancellationToken cancellationToken) => Ok(await _spending.GetCurrentAsync(cancellationToken));
+    public async Task<ActionResult<AiSpendingDto>> Get(CancellationToken cancellationToken)
+    {
+        var current = await _spending.GetCurrentAsync(cancellationToken);
+        // The plan and its limit leave the server only while they are shown to organizations (P13.57).
+        return Ok(_display.ShowToOrganizations ? current : current.WithoutPlan());
+    }
 }
 
 /// <summary>The AI spending of each employee of the signed-in administrator's organization (P13.47): amounts and counts only.</summary>
@@ -79,14 +86,19 @@ public sealed class AiSpendingController : ControllerBase
 public sealed class AiSpendingReportController : ControllerBase
 {
     private readonly IAiSpendingReportService _report;
+    private readonly PlanDisplayOptions _display;
 
-    public AiSpendingReportController(IAiSpendingReportService report)
+    public AiSpendingReportController(IAiSpendingReportService report, Microsoft.Extensions.Options.IOptions<PlanDisplayOptions> display)
     {
         _report = report;
+        _display = display.Value;
     }
 
     [HttpGet]
     public async Task<ActionResult<AiSpendingReportDto>> Get([FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] Guid? userId,
         [FromQuery, Range(0, 1_000_000)] decimal? minSpend, [FromQuery, Range(0, 1_000_000)] decimal? maxSpend, [FromQuery] bool successfulOnly = false, CancellationToken cancellationToken = default)
-        => Ok(await _report.GetAsync(new AiSpendingReportFilter(from, to, userId, minSpend, maxSpend, successfulOnly), cancellationToken));
+    {
+        var report = await _report.GetAsync(new AiSpendingReportFilter(from, to, userId, minSpend, maxSpend, successfulOnly), cancellationToken);
+        return Ok(_display.ShowToOrganizations ? report : report.WithoutPlan());
+    }
 }
