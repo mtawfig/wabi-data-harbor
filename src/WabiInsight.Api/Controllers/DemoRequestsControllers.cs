@@ -46,6 +46,8 @@ public sealed record UpdateDemoRequestRequest(
     DateOnly? FollowUpDate,
     [MaxLength(2000)] string? Note);
 
+public sealed record DemoRequestAvailability(bool Enabled);
+
 /// <summary>The "Request a demo" form of the landing page (P13.52): no account, one endpoint, limited per client address.</summary>
 [ApiController]
 [Route("api/public/demo-requests")]
@@ -56,11 +58,18 @@ public sealed class PublicDemoRequestsController : ControllerBase
     internal static readonly TimeSpan Floor = TimeSpan.FromMilliseconds(400);
 
     private readonly IDemoRequestService _demoRequests;
+    private readonly DemoRequestOptions _options;
 
-    public PublicDemoRequestsController(IDemoRequestService demoRequests)
+    public PublicDemoRequestsController(IDemoRequestService demoRequests, Microsoft.Extensions.Options.IOptions<DemoRequestOptions> options)
     {
         _demoRequests = demoRequests;
+        _options = options.Value;
     }
+
+    /// <summary>Whether the form is open: the landing page shows its buttons, and the form page opens, only when it is.</summary>
+    [HttpGet("availability")]
+    [ProducesResponseType<DemoRequestAvailability>(StatusCodes.Status200OK)]
+    public ActionResult<DemoRequestAvailability> Availability() => Ok(new DemoRequestAvailability(_options.Enabled));
 
     /// <summary>
     /// 204 when the form is complete, whether the request was stored, counted on an earlier one of the same address or
@@ -72,6 +81,12 @@ public sealed class PublicDemoRequestsController : ControllerBase
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Submit([FromBody] SubmitDemoRequestRequest request, CancellationToken cancellationToken)
     {
+        if (!_options.Enabled)
+        {
+            // The form is switched off: nothing is stored, e-mailed or notified, whoever sends it.
+            return NotFound();
+        }
+
         var floor = Task.Delay(Floor, cancellationToken);
         var result = await _demoRequests.SubmitAsync(
             new SubmitDemoRequestCommand(

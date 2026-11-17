@@ -1,11 +1,12 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard, organizationAdminGuard, organizationUserGuard, platformAdministratorGuard, ruleAuthorGuard } from './core/auth/auth.guards';
+import { demoRequestsOpenGuard } from './core/demo/demo-requests.guard';
 
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./features/public/landing/landing.component').then((m) => m.LandingComponent) },
   { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./features/public/login/login.component').then((m) => m.LoginComponent) },
   { path: 'forgot-password', loadComponent: () => import('./features/public/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent) },
-  { path: 'request-demo', loadComponent: () => import('./features/public/request-demo/request-demo.component').then((m) => m.RequestDemoComponent) },
+  { path: 'request-demo', canActivate: [demoRequestsOpenGuard], loadComponent: () => import('./features/public/request-demo/request-demo.component').then((m) => m.RequestDemoComponent) },
   { path: 'reset-password', loadComponent: () => import('./features/public/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent) },
   { path: 'bootstrap', loadComponent: () => import('./features/public/bootstrap/bootstrap.component').then((m) => m.BootstrapComponent) },
   { path: 'change-password', canActivate: [authGuard], loadComponent: () => import('./features/auth/change-password.component').then((m) => m.ChangePasswordComponent) },

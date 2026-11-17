@@ -18,6 +18,18 @@ export interface DemoRequestFilters {
 export class DemoRequestsService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
+  private availabilityRequest: Promise<boolean> | null = null;
+
+  /**
+   * Whether the public form is open (P13.56). Asked once per visit; anything but a clear "yes" (also a failed request)
+   * counts as closed, so a closed form never shows a button or opens.
+   */
+  available(): Promise<boolean> {
+    this.availabilityRequest ??= firstValueFrom(this.http.get<{ enabled: boolean }>('/api/public/demo-requests/availability'))
+      .then((answer) => answer?.enabled === true)
+      .catch(() => false);
+    return this.availabilityRequest;
+  }
 
   /** Sends the public form. A visitor has no session: an antiforgery token that no longer matches is renewed and the form sent once more. */
   async submit(form: DemoRequestForm): Promise<void> {
