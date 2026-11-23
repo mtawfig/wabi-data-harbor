@@ -21,6 +21,8 @@ Each of 01–03 creates the database if missing, creates its owner and read-only
 
 A second, larger sample organization lives in [`wabi-bank/`](wabi-bank/README.md): **Wabi Bank** (`WBK`), a fictional UAE bank with five systems (Personnel and Attendance, Core Banking, Finance, Digital Banking, IT Help Desk), eight role-scoped users and Monitoring Rules on planted findings. Both organizations can be seeded into the same `WabiInsightDB`.
 
+A third set lives in [`demo-airport/`](demo-airport/README.md): **Demo Airport**, four larger source databases (HCM, AODB with 255,336 flights, Assets, RMS) generated inside the scripts from 1 January 2023 until the run date. They are source databases only; the organization is configured in the application.
+
 Department codes, section codes and employee numbers are shared by all three databases and by the Wabi Insight organization structure, so row scopes (`DEPARTMENT`, `SECTION`, `SELF`) work on real columns.
 
 ## Run order
