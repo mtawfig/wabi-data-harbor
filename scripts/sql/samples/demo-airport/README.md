@@ -28,13 +28,13 @@ sqlcmd -S localhost -E -C -b -i 01-create-demoairport-hcm.sql
 
 ## What is in each database
 
-### `DemoAirport_HCM` — Human Capital Management (28 tables)
+### `DemoAirport_HCM` — Human Capital Management (27 tables)
 
 **1,864 employees**: 1,268 in service; 596 left (352 resigned, 96 terminated, 84 end of contract, 52 retired, 8 absconded, 4 deceased). 1,180 were in service on 1 January 2023 and 684 joined since.
 
 | Schema | Tables | Rows (approx.) |
 |---|---|---|
-| `org` | Country, Grade, Department (14, EN/AR names), Section (48), Position (124) | |
+| `org` | Country, Grade, Department (14, EN/AR names), Section (48), Position (128) | |
 | `hr` | Employee, EmploymentHistory, Separation, Dependent, EmployeeDocument (passport, visa, Emirates ID, airport pass, airside permit, with expiry dates), DisciplinaryAction | 1,864 / 2,900 / 596 / 2,400 / 7,600 / 380 |
 | `pay` | EmployeeCompensation (yearly increments), PayComponent, PayrollRun (one per month), Payslip, PayslipLine | 5,700 / 10 / 46 / 59,000 / 306,000 |
 | `ta` | Shift, PublicHoliday, LeaveType, LeaveRequest, LeaveBalance, Attendance (daily, shift and office patterns) | 13,000 leave requests / 1,216,000 attendance |
@@ -53,7 +53,7 @@ Overtime and unpaid absence on a payslip come from that month's attendance; the 
 
 Every flight is linked to its other leg (`LinkedFlightId`): other airlines arrive and turn round, the base carrier departs and returns. Traffic grows from 2023 to 2026 with summer and December peaks. About 81 % of flights are on time (within 15 minutes); bad-weather days (fog, dust, thunderstorm) have more delays and cancellations. A few flights dated the day after the run date are return legs still to operate (`Scheduled`).
 
-### `DemoAirport_Assets` — Enterprise Asset Management (18 tables)
+### `DemoAirport_Assets` — Enterprise Asset Management (20 tables)
 
 **18,380 assets** in 60 categories under 12 families, worth about AED 2.75 billion.
 
@@ -62,12 +62,12 @@ Every flight is linked to its other leg (`LinkedFlightId`): other airlines arriv
 | `ref` | AssetCategory, Location, Manufacturer, Vendor, FailureCode, MaintenanceTeam | |
 | `eam` | Asset (tag, cost, life, criticality, condition, status), MeterReading, Inspection (statutory) | 18,380 / 107,000 / 9,000 |
 | `mnt` | Technician (from HCM), PMPlan, WorkOrder (preventive, corrective, emergency), WorkOrderLabour, WorkOrderPart, ServiceContract | 279 / 18,380 / 209,000 / 245,000 / 88,000 / 120 |
-| `inv` | Warehouse, SparePart, PurchaseOrder, PurchaseOrderLine | 3 / 1,200 / 9,500 / 27,000 |
+| `inv` | Warehouse, SparePart, PurchaseOrder, PurchaseOrderLine | 3 / 1,200 / 9,500 / 24,000 |
 | `fin` | AssetDepreciation (monthly, straight line) | 701,000 |
 
 Older assets fail more often; response-time targets depend on priority; work-order cost is labour plus parts plus contractor call-out.
 
-### `DemoAirport_RMS` — Resource Management System (23 tables)
+### `DemoAirport_RMS` — Resource Management System (22 tables)
 
 | Schema | Tables | Rows (approx.) |
 |---|---|---|
